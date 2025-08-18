@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, AlertTriangle, 
   Play, Clock, CheckCircle2, XCircle, AlertCircle, 
   Activity, ArrowRight,
-  Eye, Terminal, Cpu
+  Eye, Terminal, Cpu, Wifi, WifiOff
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogTitle } from '@/components/ui/dialog'
@@ -24,6 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
+import { useLogWebSocket } from '@/hooks/useLogWebSocket'
 import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 
@@ -157,17 +158,53 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
 
   const [logData, setLogData] = useState("")
   const [error, setError] = useState<string | null>(null)
+  
+  // WebSocket实时日志连接
+  const {
+    isConnected: wsConnected,
+    isConnecting: wsConnecting,
+    error: wsError
+  } = useLogWebSocket({
+    clusterId: cluster.id.toString(),
+    hostCommandId: currentPage === 4 && commandHostId ? commandHostId : undefined,
+    onLogUpdate: (content) => {
+      setLogData(content)
+      // 自动滚动到底部
+      if (logScrollContainerRef.current) {
+        setTimeout(() => {
+          logScrollContainerRef.current?.scrollTo({
+            top: logScrollContainerRef.current.scrollHeight,
+            behavior: 'smooth'
+          })
+        }, 100)
+      }
+    },
+    enabled: currentPage === 4 && !!commandHostId
+  })
   const [installStatus, setInstallStatus] = useState<InstallStatus>({
     isInstalling: false,
     hasStarted: false
   })
   // 添加一个锁，确保安装只启动一次
-  const installationStartedRef = useRef(false)
-
+    const installationStartedRef = useRef(false)
+    
+  // 首次显示日志时自动滚动到底部
+  useEffect(() => {
+    if (logData && logScrollContainerRef.current) {
+      logScrollContainerRef.current.scrollTo({
+        top: logScrollContainerRef.current.scrollHeight,
+        behavior: 'auto' // 首次加载使用instant滚动
+      })
+    }
+  }, [currentPage, logData]) // 当切换到日志页面时触发
+  
   // 定时器引用
   const timer1 = useRef<NodeJS.Timeout | null>(null)
   const timer2 = useRef<NodeJS.Timeout | null>(null)
   const timer3 = useRef<NodeJS.Timeout | null>(null)
+  
+  // 日志滚动容器引用
+  const logScrollContainerRef = useRef<HTMLDivElement>(null)
   // 保存最新的getServiceList函数引用，避免useEffect依赖问题
   const getServiceListRef = useRef<(flag?: boolean) => Promise<void>>(async () => {})
   // 保存最新的启动安装函数引用
@@ -390,33 +427,13 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     setPagination(prev => ({ ...prev, current: 1 }))
     
     if (currentPage === 3) {
-      setLoading(true)
+      // 设置日志查看页面参数，WebSocket会自动连接获取日志
       setHostname(row.hostname || "")
       setCommandHostId(String(row.commandHostId || ""))
-      
-      // 获取日志
-      try {
-        const headers = createClusterHeaders(cluster.id.toString())
-        const response = await apiV1.get(
-          `${API_PATHS_V1.GET_HOST_COMMAND_LOG}?hostCommandId=${row.commandHostId}`,
-          { headers }
-        )
-        
-        if (response.data?.code === 200) {
-          setLogData(response.data.data || "")
           setCurrentPage(4)
           setTitle("查看日志")
-        } else {
-          throw new Error(response.data?.message || '获取日志失败')
-        }
-      } catch (err: unknown) {
-        const error = err as { response?: { data?: { message?: string } }; message?: string }
-        const errorMsg = error.response?.data?.message || error.message || '获取日志失败'
-        setError(errorMsg)
-        toast.error(errorMsg)
-      } finally {
-        setLoading(false)
-      }
+      // 清空旧日志，WebSocket会推送新日志
+      setLogData("")
       return
     }
     
@@ -433,11 +450,11 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     const newPage = currentPage + 1
     
     // 同步设置页面状态和必需参数
-      if (newPage === 2) {
+    if (newPage === 2) {
       console.log('=== 进入第2页 ===');
       console.log('设置commandId:', row.commandId);
         setTitle(`${row.commandName || '服务'} - 主机列表`)
-        setCommandId(row.commandId || "")
+      setCommandId(row.commandId || "")
       setCurrentPage(2)
     } else if (newPage === 3) {
       console.log('=== 进入第3页 ===');
@@ -445,12 +462,12 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       console.log('设置commandHostId:', row.commandHostId);
         setTitle(`${row.hostname || '主机'} - 执行日志`)
       setCommandHostId(String(row.commandHostId || ""))
-        setHostname(row.hostname || "")
+      setHostname(row.hostname || "")
       setCurrentPage(3)
     }
     
     // useEffect会自动检测参数变化并触发数据加载
-  }, [currentPage, cluster.id])
+  }, [currentPage])
 
 
 
@@ -618,10 +635,10 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
           timer1.current = newTimer
         } else if (currentPage === 2) {
           timer2.current = newTimer
-        } else {
+      } else {
           timer3.current = newTimer
-        }
       }
+    }
     }
   }, [currentPage, open, commandId, hostname, commandHostId, installStatus.hasStarted])
 
@@ -726,13 +743,13 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                 {/* 标题 */}
                 <div className="flex items-center gap-3">
                   <h1 className="text-lg sm:text-xl font-semibold text-gray-900 leading-tight">
-                    {title}
-                  </h1>
-                </div>
+                  {title}
+                </h1>
               </div>
             </div>
+            </div>
           </div>
-        </div>
+          </div>
 
         {/* 主要内容区域 */}
         <div className="flex-1 min-h-0 bg-gradient-to-b from-white to-slate-50/50 overflow-y-auto">
@@ -925,8 +942,8 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                   ) : (
                                     <Terminal className={`h-4 w-4 ${statusConfig.text}`} />
                                   )}
-                                </div>
-                                
+                  </div>
+                  
                                 {/* 主要内容 */}
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between mb-1">
@@ -934,7 +951,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                     <div className="flex items-center gap-2 min-w-0">
                                       <span className="font-medium text-slate-800 truncate">
                                         {currentPage === 1 ? item.commandName : currentPage === 2 ? item.hostname : item.commandName}
-                                      </span>
+                      </span>
                                       <ArrowRight className="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
                                     </div>
                                     
@@ -958,7 +975,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                   
                                   {/* 底部信息 */}
                                   <div className="flex items-center justify-between text-xs text-slate-500">
-                                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                                       {item.createTime && (
                                         <span>{formatRelativeTime(String(item.createTimeFormatted || item.createTime || ''))}</span>
                                       )}
@@ -1037,18 +1054,18 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                             {/* 分页控件 */}
                             <div className="flex items-center gap-1">
                               {/* 上一页 */}
-                              <Button
-                                variant="outline"
-                                size="sm"
+                        <Button
+                          variant="outline"
+                          size="sm"
                                 disabled={currentPage <= 1}
-                                onClick={() => tableChange({ 
+                          onClick={() => tableChange({ 
                                   current: currentPage - 1, 
-                                  pageSize: pagination.pageSize 
-                                })}
+                            pageSize: pagination.pageSize 
+                          })}
                                 className="h-8 w-8 p-0 border-slate-200 hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
+                        >
                                 <ChevronLeft className="h-4 w-4" />
-                              </Button>
+                        </Button>
                               
                               {/* 页码按钮 */}
                               <div className="flex items-center gap-1 mx-2">
@@ -1057,7 +1074,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                     return (
                                       <span key={`ellipsis-${index}`} className="px-2 py-1 text-slate-400 text-sm">
                                         •••
-                                      </span>
+                        </span>
                                     )
                                   }
                                   
@@ -1084,20 +1101,20 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                               </div>
                               
                               {/* 下一页 */}
-                              <Button
-                                variant="outline"
-                                size="sm"
+                        <Button
+                          variant="outline"
+                          size="sm"
                                 disabled={currentPage >= totalPages}
-                                onClick={() => tableChange({ 
+                          onClick={() => tableChange({ 
                                   current: currentPage + 1, 
-                                  pageSize: pagination.pageSize 
-                                })}
+                            pageSize: pagination.pageSize 
+                          })}
                                 className="h-8 w-8 p-0 border-slate-200 hover:border-blue-300 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
+                        >
                                 <ChevronRight className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
+                        </Button>
+                      </div>
+                    </div>
                           
                           {/* 每页显示数量选择 */}
                           <div className="flex items-center justify-end mt-3 pt-3 border-t border-slate-100">
@@ -1163,16 +1180,46 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                   
                   {/* 日志内容区域 */}
                   <div className="flex-1 mx-3 mb-3 rounded-lg overflow-hidden border border-slate-200">
-                    <div className="h-full bg-slate-900 p-4 overflow-auto">
+                    {/* WebSocket连接状态栏 */}
+                    <div className="bg-slate-800 px-4 py-2 border-b border-slate-600 flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        {wsConnected ? (
+                          <Wifi className="w-4 h-4 text-green-400" />
+                        ) : wsConnecting ? (
+                          <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <WifiOff className="w-4 h-4 text-red-400" />
+                        )}
+                        <span className="text-sm text-slate-300">
+                          {wsConnected ? '实时日志连接已建立' : wsConnecting ? '正在连接...' : '连接已断开'}
+                        </span>
+                      </div>
+                      {(wsError || error) && (
+                        <span className="text-sm text-red-400">
+                          {wsError || error}
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* 日志内容 */}
+                    <div 
+                      ref={logScrollContainerRef}
+                      className="h-full bg-slate-900 p-4 overflow-auto rounded-b-md scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800"
+                    >
                       {logData ? (
-                        <pre className="text-green-400 font-mono text-sm whitespace-pre-wrap leading-relaxed">
+                        <pre className="text-gray-300 font-mono text-sm leading-relaxed whitespace-pre-wrap">
                           {logData}
                         </pre>
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full text-slate-400">
                           <Terminal className="h-8 w-8 mb-3 opacity-50" />
                           <p className="text-sm">暂无日志数据</p>
-                          <p className="text-xs mt-1 opacity-75">等待命令执行生成日志...</p>
+                          {wsConnecting && (
+                            <p className="text-xs mt-1 text-blue-400">正在连接实时日志...</p>
+                          )}
+                          {!wsConnecting && !wsConnected && (
+                            <p className="text-xs mt-1 opacity-75">等待命令执行生成日志...</p>
+                          )}
                         </div>
                       )}
                     </div>
@@ -1181,7 +1228,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
               </Card>
             )}
           </div>
-        </div>
+          </div>
         </div>
       </ClusterWizardLayout>
     </Dialog>

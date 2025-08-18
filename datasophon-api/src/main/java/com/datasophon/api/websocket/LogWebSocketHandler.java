@@ -46,8 +46,19 @@ public class LogWebSocketHandler implements WebSocketHandler {
     @Override
     public void afterConnectionEstablished(WebSocketSession session) throws Exception {
         String sessionId = session.getId();
+        
+        // 获取认证信息
+        Object auth = session.getAttributes().get("authentication");
+        if (auth != null) {
+            logger.info("WebSocket连接建立: sessionId={}, user={}", sessionId, auth.toString());
+        } else {
+            logger.warn("WebSocket连接建立但缺少认证信息: sessionId={}", sessionId);
+            // 理论上不应该到这里，因为拦截器已经验证过
+            session.close();
+            return;
+        }
+        
         sessions.put(sessionId, session);
-        logger.info("WebSocket连接建立: sessionId={}", sessionId);
         
         // 发送连接成功消息
         sendMessage(session, new LogMessage("connection", "WebSocket连接已建立", "INFO"));

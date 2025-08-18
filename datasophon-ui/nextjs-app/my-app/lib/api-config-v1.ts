@@ -140,6 +140,32 @@ export const API_PATHS_V1 = {
   START_EXECUTE_COMMAND: `${API_BASE}/cluster/service/command/execute`,
 };
 
+// WebSocket配置
+export const getWebSocketBaseURL = () => {
+  if (typeof window === 'undefined') {
+    // 服务端渲染时的默认配置
+    return API_BASE_URL.replace(/^https?/, 'ws')
+  }
+  
+  // 客户端：根据当前协议确定WebSocket协议
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+  // 开发环境端口映射：3000 -> 8081
+  const host = window.location.host.replace(':3000', ':8081')
+  return `${protocol}//${host}/ddh`
+}
+
+// WebSocket路径配置
+export const WS_PATHS_V1 = {
+  LOG: `${API_BASE}/websocket/log`,
+  TEST: `${API_BASE}/websocket/test`
+}
+
+// WebSocket URL构建工具
+export const buildWebSocketURL = (path: string) => {
+  const baseUrl = getWebSocketBaseURL()
+  return `${baseUrl}${path}`
+}
+
 // 创建版本化的axios实例
 export const apiClientV1 = axios.create({
   baseURL: API_BASE_URL,
