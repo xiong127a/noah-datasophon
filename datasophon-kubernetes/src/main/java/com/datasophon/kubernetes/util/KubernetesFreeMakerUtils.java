@@ -68,12 +68,12 @@ public class KubernetesFreeMakerUtils {
     @Setter
     private static Map<String, Map<String, ConfigMap>> configMapCache = new HashMap<>();
 
-    // Ìí¼ÓSecret»º´æ
+    // æ·»åŠ Secretç¼“å­˜
     @Getter
     @Setter
     private static Map<String, Map<String, Secret>> secretCache = new HashMap<>();
 
-    // Ìí¼ÓPrometheusÅäÖÃÎÄ¼ş»º´æ
+    // æ·»åŠ Prometheusé…ç½®æ–‡ä»¶ç¼“å­˜
     @Getter
     @Setter
     private static Map<String, Map<String, String>> prometheusConfigCache = new HashMap<>();
@@ -81,41 +81,41 @@ public class KubernetesFreeMakerUtils {
     private static final Logger logger = LoggerFactory.getLogger(KubernetesFreeMakerUtils.class);
 
     /**
-     * Ö§³Ö ´Ó¸½¼ÓµÄÄ¿Â¼¼ÓÔØ Ä£°æ
+     * æ”¯æŒ ä»é™„åŠ çš„ç›®å½•åŠ è½½ æ¨¡ç‰ˆ
      *
-     * @param generators Éú³ÉÆ÷¶ÔÏó£¬°üº¬Ä£°åÅäÖÃĞÅÏ¢
-     * @param configs    ·şÎñÅäÖÃÁĞ±í£¬°üº¬ĞèÒªäÖÈ¾µ½Ä£°åÖĞµÄÅäÖÃÏî
-     * @param extPath    ¸½¼ÓÄ£°åÂ·¾¶£¬ÓÃÓÚ¼ÓÔØ¶îÍâµÄÄ£°åÎÄ¼ş
-     * @throws IOException       µ±Ä£°å¼ÓÔØ»òĞ´Èë¹ı³ÌÖĞ·¢ÉúI/O´íÎóÊ±Å×³ö
-     * @throws TemplateException µ±Ä£°å´¦Àí¹ı³ÌÖĞ·¢ÉúÄ£°å´íÎóÊ±Å×³ö
+     * @param generators ç”Ÿæˆå™¨å¯¹è±¡ï¼ŒåŒ…å«æ¨¡æ¿é…ç½®ä¿¡æ¯
+     * @param configs    æœåŠ¡é…ç½®åˆ—è¡¨ï¼ŒåŒ…å«éœ€è¦æ¸²æŸ“åˆ°æ¨¡æ¿ä¸­çš„é…ç½®é¡¹
+     * @param extPath    é™„åŠ æ¨¡æ¿è·¯å¾„ï¼Œç”¨äºåŠ è½½é¢å¤–çš„æ¨¡æ¿æ–‡ä»¶
+     * @throws IOException       å½“æ¨¡æ¿åŠ è½½æˆ–å†™å…¥è¿‡ç¨‹ä¸­å‘ç”ŸI/Oé”™è¯¯æ—¶æŠ›å‡º
+     * @throws TemplateException å½“æ¨¡æ¿å¤„ç†è¿‡ç¨‹ä¸­å‘ç”Ÿæ¨¡æ¿é”™è¯¯æ—¶æŠ›å‡º
      */
 
     public static void generateConfigFile(String namespace, Generators generators,
             List<ServiceConfig> configs,
             String extPath, String serviceRoleFullName) throws IOException, TemplateException {
-        // 1.¼ÓÔØÄ£°å
-        // ´´½¨ºËĞÄÅäÖÃ¶ÔÏó
+        // 1.åŠ è½½æ¨¡æ¿
+        // åˆ›å»ºæ ¸å¿ƒé…ç½®å¯¹è±¡
         Configuration config = new Configuration(Configuration.DEFAULT_INCOMPATIBLE_IMPROVEMENTS);
-        // Ê¹ÓÃ·½À¨ºÅÓï·¨Ìæ´úºó£¬²»ÔÙĞèÒªÌØ±ğÉèÖÃÃüÃûÔ¼¶¨
-        // ÉèÖÃ¼ÓÔØµÄÄ¿Â¼
+        // ä½¿ç”¨æ–¹æ‹¬å·è¯­æ³•æ›¿ä»£åï¼Œä¸å†éœ€è¦ç‰¹åˆ«è®¾ç½®å‘½åçº¦å®š
+        // è®¾ç½®åŠ è½½çš„ç›®å½•
         List<TemplateLoader> loaderList = new ArrayList<>();
         loaderList.add(new ClassTemplateLoader(KubernetesFreeMakerUtils.class, "/worker/templates"));
         if (StringUtils.isNotBlank(extPath) && new File(extPath).exists()) {
-            // Èç¹û Èı·½µÄ package ÖĞ´æÔÚ templates Ä£°æ£¬ÔòÖ±½Ó¼ÓÔØ
+            // å¦‚æœ ä¸‰æ–¹çš„ package ä¸­å­˜åœ¨ templates æ¨¡ç‰ˆï¼Œåˆ™ç›´æ¥åŠ è½½
             loaderList.add(new FileTemplateLoader(new File(extPath)));
         }
         config.setTemplateLoader(new MultiTemplateLoader(loaderList.toArray(new TemplateLoader[0])));
 
-        // Ê¹ÓÃFreemarkerUtils»ñÈ¡Ä£°åÃû³Æ£¬±ÜÃâÖØ¸´Âß¼­
+        // ä½¿ç”¨FreemarkerUtilsè·å–æ¨¡æ¿åç§°ï¼Œé¿å…é‡å¤é€»è¾‘
         String templateName = FreemarkerUtils.determineTemplateName(generators);
         if (templateName == null) {
-            throw new IllegalArgumentException("²»Ö§³ÖµÄÅäÖÃ¸ñÊ½: " + generators.getConfigFormat());
+            throw new IllegalArgumentException("ä¸æ”¯æŒçš„é…ç½®æ ¼å¼: " + generators.getConfigFormat());
         }
 
         Template template = config.getTemplate(templateName);
         logger.info("load template: {} success.", Objects.requireNonNull(template).getSourceName());
 
-        // »ñÈ¡Ö÷»úÃûºÍIPÓÃÓÚ±äÁ¿Ìæ»»
+        // è·å–ä¸»æœºåå’ŒIPç”¨äºå˜é‡æ›¿æ¢
         Map<String, String> paramMap = new HashMap<>();
         try {
             String hostName = InetAddress.getLocalHost().getHostName();
@@ -124,75 +124,75 @@ public class KubernetesFreeMakerUtils {
             paramMap.put("${ip}", ip);
             paramMap.put("${user}", "root");
         } catch (Exception e) {
-            logger.error("»ñÈ¡Ö÷»úĞÅÏ¢Ê§°Ü: {}", e.getMessage());
+            logger.error("è·å–ä¸»æœºä¿¡æ¯å¤±è´¥: {}", e.getMessage());
         }
 
-        // Ê¹ÓÃFreemarkerUtils´¦ÀíÊı¾İ£¬±ÜÃâÖØ¸´Âß¼­
+        // ä½¿ç”¨FreemarkerUtilså¤„ç†æ•°æ®ï¼Œé¿å…é‡å¤é€»è¾‘
         Map<String, Object> data = FreemarkerUtils.prepareRenderData(generators, configs, paramMap, logger);
 
-        // 3.²úÉúÊä³ö
+        // 3.äº§ç”Ÿè¾“å‡º
         String configMapName = generateConfigMapName(serviceRoleFullName, generators);
         writeToConfigMap(namespace, template, data, configMapName, generators.getFilename(), serviceRoleFullName);
     }
 
     /**
-     * ½«Êı¾İĞ´ÈëÄ£°å²¢Éú³É±¾µØÎÄ¼ş
+     * å°†æ•°æ®å†™å…¥æ¨¡æ¿å¹¶ç”Ÿæˆæœ¬åœ°æ–‡ä»¶
      *
-     * @param template   Ä£°å¶ÔÏó
-     * @param data       Êı¾İÓ³Éä
-     * @param outputFile Êä³öÎÄ¼şÂ·¾¶
-     * @throws IOException       µ±Ğ´ÈëÎÄ¼ş¹ı³ÌÖĞ·¢Éú I/O ´íÎóÊ±Å×³ö
-     * @throws TemplateException µ±Ä£°å´¦Àí¹ı³ÌÖĞ·¢ÉúÄ£°å´íÎóÊ±Å×³ö
+     * @param template   æ¨¡æ¿å¯¹è±¡
+     * @param data       æ•°æ®æ˜ å°„
+     * @param outputFile è¾“å‡ºæ–‡ä»¶è·¯å¾„
+     * @throws IOException       å½“å†™å…¥æ–‡ä»¶è¿‡ç¨‹ä¸­å‘ç”Ÿ I/O é”™è¯¯æ—¶æŠ›å‡º
+     * @throws TemplateException å½“æ¨¡æ¿å¤„ç†è¿‡ç¨‹ä¸­å‘ç”Ÿæ¨¡æ¿é”™è¯¯æ—¶æŠ›å‡º
      */
     public static void writeToTemplate(Template template, Map<String, Object> data, String outputFile)
             throws IOException, TemplateException {
-        // Ö±½Óµ÷ÓÃFreemarkerUtilsÖĞµÄ¶ÔÓ¦·½·¨
+        // ç›´æ¥è°ƒç”¨FreemarkerUtilsä¸­çš„å¯¹åº”æ–¹æ³•
         FreemarkerUtils.writeToTemplate(template, data, outputFile);
     }
 
     /**
-     * ½«Êı¾İĞ´ÈëÄ£°å²¢Éú³É ConfigMap
+     * å°†æ•°æ®å†™å…¥æ¨¡æ¿å¹¶ç”Ÿæˆ ConfigMap
      *
-     * @param template      Ä£°å¶ÔÏó
-     * @param data          Êı¾İÓ³Éä
-     * @param configMapName ConfigMap µÄÃû³Æ
-     * @throws IOException       µ±Ğ´ÈëÎÄ¼ş¹ı³ÌÖĞ·¢Éú I/O ´íÎóÊ±Å×³ö
-     * @throws TemplateException µ±Ä£°å´¦Àí¹ı³ÌÖĞ·¢ÉúÄ£°å´íÎóÊ±Å×³ö
+     * @param template      æ¨¡æ¿å¯¹è±¡
+     * @param data          æ•°æ®æ˜ å°„
+     * @param configMapName ConfigMap çš„åç§°
+     * @throws IOException       å½“å†™å…¥æ–‡ä»¶è¿‡ç¨‹ä¸­å‘ç”Ÿ I/O é”™è¯¯æ—¶æŠ›å‡º
+     * @throws TemplateException å½“æ¨¡æ¿å¤„ç†è¿‡ç¨‹ä¸­å‘ç”Ÿæ¨¡æ¿é”™è¯¯æ—¶æŠ›å‡º
      */
     public static void writeToConfigMap(String namespace, Template template, Map<String, Object> data,
             String configMapName,
             String fileName, String serviceRoleFullName)
             throws IOException, TemplateException {
-        // Ê¹ÓÃFreemarkerUtilsÉú³ÉÄÚÈİ
+        // ä½¿ç”¨FreemarkerUtilsç”Ÿæˆå†…å®¹
         String generatedContent = FreemarkerUtils.renderTemplateToString(template, data);
 
-        // ½«ÄÚÈİ´´½¨Îª ConfigMap
+        // å°†å†…å®¹åˆ›å»ºä¸º ConfigMap
         cacheConfigMap(namespace, configMapName, generatedContent, fileName, serviceRoleFullName);
     }
 
     /**
-     * ´´½¨ Kubernetes ConfigMap
+     * åˆ›å»º Kubernetes ConfigMap
      *
-     * @param configMapName    ConfigMap µÄÃû³Æ
-     * @param generatedContent äÖÈ¾ºóµÄÅäÖÃÄÚÈİ
+     * @param configMapName    ConfigMap çš„åç§°
+     * @param generatedContent æ¸²æŸ“åçš„é…ç½®å†…å®¹
      */
     public static void cacheConfigMap(String namespace, String configMapName, String generatedContent,
             String fileName, String serviceRoleFullName) {
         if (StrUtil.startWith(fileName, Constants.KUBERNETES_CONFIG_PREFIX)) {
             return;
         }
-        // ´¦ÀíprometheusÅäÖÃĞ´ÈëPVC
+        // å¤„ç†prometheusé…ç½®å†™å…¥PVC
         if (StrUtil.equals(serviceRoleFullName, "prometheus-update")) {
-            // ½«prometheusÅäÖÃÎÄ¼ş±£´æµ½PVCÖĞ
+            // å°†prometheusé…ç½®æ–‡ä»¶ä¿å­˜åˆ°PVCä¸­
             savePrometheusConfigToPVC(fileName, generatedContent, serviceRoleFullName);
-            log.info("PrometheusÅäÖÃÎÄ¼ş {} ÒÑ×¼±¸ºÃĞ´ÈëPVC", fileName);
+            log.info("Prometheusé…ç½®æ–‡ä»¶ {} å·²å‡†å¤‡å¥½å†™å…¥PVC", fileName);
             return;
         }
-        // ´´½¨ ConfigMap ¶ÔÏó
+        // åˆ›å»º ConfigMap å¯¹è±¡
         ConfigMap configMap = new ConfigMap();
         configMap.setMetadata(new ObjectMeta());
-        configMap.getMetadata().setName(configMapName); // ÉèÖÃ ConfigMap Ãû³Æ
-        configMap.getMetadata().setNamespace(namespace); // ÉèÖÃ ConfigMap ÃüÃû¿Õ¼ä
+        configMap.getMetadata().setName(configMapName); // è®¾ç½® ConfigMap åç§°
+        configMap.getMetadata().setNamespace(namespace); // è®¾ç½® ConfigMap å‘½åç©ºé—´
         if (StrUtil.isNotBlank(serviceRoleFullName)) {
             Map<String, String> labels = configMap.getMetadata().getLabels();
             if (labels == null) {
@@ -201,7 +201,7 @@ public class KubernetesFreeMakerUtils {
             }
             labels.put("app", serviceRoleFullName);
         }
-        // ½«äÖÈ¾ºóµÄÄÚÈİ¼ÓÈëµ½ ConfigMap µÄ data ÖĞ
+        // å°†æ¸²æŸ“åçš„å†…å®¹åŠ å…¥åˆ° ConfigMap çš„ data ä¸­
         configMap.setData(Collections.singletonMap(fileName, generatedContent));
         Map<String, ConfigMap> cache = configMapCache.get(serviceRoleFullName);
         if (ObjectUtil.isNull(cache)) {
@@ -221,64 +221,64 @@ public class KubernetesFreeMakerUtils {
         Set<String> keySet = cache.keySet();
         for (String configMapName : keySet) {
             ConfigMap configMap = cache.get(configMapName);
-            // ±£´æConfigMap YAMLµ½±¾µØ
+            // ä¿å­˜ConfigMap YAMLåˆ°æœ¬åœ°
             KubernetesServiceHandler.saveConfigMapYaml(configMap);
-            // ´´½¨ĞÂµÄ ConfigMap
+            // åˆ›å»ºæ–°çš„ ConfigMap
             try {
-                // Ê¹ÓÃ createOrReplace ´´½¨»òÌæ»»ConfigMap
+                // ä½¿ç”¨ createOrReplace åˆ›å»ºæˆ–æ›¿æ¢ConfigMap
                 client.configMaps().inNamespace(namespace).resource(configMap).serverSideApply();
-                log.info("ConfigMap {} ÒÑ³É¹¦´´½¨ÔÚÃüÃû¿Õ¼ä {}", configMapName, namespace);
+                log.info("ConfigMap {} å·²æˆåŠŸåˆ›å»ºåœ¨å‘½åç©ºé—´ {}", configMapName, namespace);
 
-                // Ìí¼Ó²ÊÉ«ÈÕÖ¾Êä³ö
+                // æ·»åŠ å½©è‰²æ—¥å¿—è¾“å‡º
                 ColorLogUtils.printResourceCreated("ConfigMap", configMapName, namespace);
             } catch (Exception e) {
-                log.error("´´½¨ConfigMapÊ±³ö´í: {}", e.getMessage());
-                ColorLogUtils.printError("´´½¨ConfigMap " + configMapName + " Ê§°Ü£º" + e.getMessage());
-                throw new RuntimeException("´´½¨ConfigMapÊ±³ö´í: " + e.getMessage());
+                log.error("åˆ›å»ºConfigMapæ—¶å‡ºé”™: {}", e.getMessage());
+                ColorLogUtils.printError("åˆ›å»ºConfigMap " + configMapName + " å¤±è´¥ï¼š" + e.getMessage());
+                throw new RuntimeException("åˆ›å»ºConfigMapæ—¶å‡ºé”™: " + e.getMessage());
             }
         }
         configMapCache.remove(serviceRoleFullName);
     }
 
     /**
-     * ´´½¨Êı¾İ¿âÆ¾¾İSecret
+     * åˆ›å»ºæ•°æ®åº“å‡­æ®Secret
      * 
-     * @param serviceRoleFullName ·şÎñ½ÇÉ«È«Ãû£¬ÓÃ×÷SecretÃû³ÆÇ°×º
-     * @param secretData          °üº¬SecretÊı¾İµÄMap
-     * @param secretSuffix        SecretÃû³Æºó×º£¬Í¨³£Îª"-db-secret"
+     * @param serviceRoleFullName æœåŠ¡è§’è‰²å…¨åï¼Œç”¨ä½œSecretåç§°å‰ç¼€
+     * @param secretData          åŒ…å«Secretæ•°æ®çš„Map
+     * @param secretSuffix        Secretåç§°åç¼€ï¼Œé€šå¸¸ä¸º"-db-secret"
      */
     public static void cacheDatabaseSecret(String namespace, String serviceRoleFullName, Map<String, String> secretData,
             String secretSuffix) {
         if (secretData == null || secretData.isEmpty()) {
-            log.warn("Êı¾İ¿âÆ¾¾İÎª¿Õ£¬²»´´½¨Secret");
+            log.warn("æ•°æ®åº“å‡­æ®ä¸ºç©ºï¼Œä¸åˆ›å»ºSecret");
             return;
         }
 
         String secretName = serviceRoleFullName.toLowerCase() + secretSuffix;
 
-        // ½«ÆÕÍ¨×Ö·û´®Öµ×ª»»Îªbase64±àÂë
+        // å°†æ™®é€šå­—ç¬¦ä¸²å€¼è½¬æ¢ä¸ºbase64ç¼–ç 
         Map<String, String> encodedData = new HashMap<>();
         for (Map.Entry<String, String> entry : secretData.entrySet()) {
             encodedData.put(entry.getKey(),
                     Base64.getEncoder().encodeToString(entry.getValue().getBytes(StandardCharsets.UTF_8)));
         }
 
-        // ´´½¨Secret¶ÔÏó
+        // åˆ›å»ºSecretå¯¹è±¡
         Secret secret = new Secret();
         secret.setMetadata(new ObjectMeta());
         secret.getMetadata().setName(secretName);
         secret.getMetadata().setNamespace(namespace);
 
-        // ÉèÖÃ±êÇ©
+        // è®¾ç½®æ ‡ç­¾
         Map<String, String> labels = new HashMap<>();
         labels.put("app", serviceRoleFullName);
         secret.getMetadata().setLabels(labels);
 
-        // ÉèÖÃÊı¾İ
+        // è®¾ç½®æ•°æ®
         secret.setData(encodedData);
         secret.setType("Opaque");
 
-        // Ìí¼Óµ½»º´æ
+        // æ·»åŠ åˆ°ç¼“å­˜
         Map<String, Secret> cache = secretCache.get(serviceRoleFullName);
         if (cache == null) {
             cache = new HashMap<>();
@@ -286,14 +286,14 @@ public class KubernetesFreeMakerUtils {
         cache.put(secretName, secret);
         secretCache.put(serviceRoleFullName, cache);
 
-        log.info("Êı¾İ¿âSecret {} ÒÑÌí¼Óµ½»º´æ", secretName);
+        log.info("æ•°æ®åº“Secret {} å·²æ·»åŠ åˆ°ç¼“å­˜", secretName);
     }
 
     /**
-     * ´´½¨ËùÓĞ»º´æµÄSecret
+     * åˆ›å»ºæ‰€æœ‰ç¼“å­˜çš„Secret
      * 
-     * @param serviceRoleFullName ·şÎñ½ÇÉ«È«Ãû
-     * @param client              Kubernetes¿Í»§¶Ë
+     * @param serviceRoleFullName æœåŠ¡è§’è‰²å…¨å
+     * @param client              Kuberneteså®¢æˆ·ç«¯
      */
     public static void createSecrets(String namespace, String serviceRoleFullName, KubernetesClient client) {
         Map<String, Secret> cache = secretCache.get(serviceRoleFullName);
@@ -307,43 +307,43 @@ public class KubernetesFreeMakerUtils {
             Secret secret = entry.getValue();
 
             try {
-                // Ê¹ÓÃcreateOrReplace´´½¨»òÌæ»»Secret
+                // ä½¿ç”¨createOrReplaceåˆ›å»ºæˆ–æ›¿æ¢Secret
                 client.secrets().inNamespace(namespace).resource(secret).serverSideApply();
-                log.info("Secret {} ÒÑ³É¹¦´´½¨ÔÚÃüÃû¿Õ¼ä {}", secretName, namespace);
+                log.info("Secret {} å·²æˆåŠŸåˆ›å»ºåœ¨å‘½åç©ºé—´ {}", secretName, namespace);
 
-                // Ìí¼Ó²ÊÉ«ÈÕÖ¾Êä³ö
+                // æ·»åŠ å½©è‰²æ—¥å¿—è¾“å‡º
                 ColorLogUtils.printResourceCreated("Secret", secretName, namespace);
             } catch (Exception e) {
-                log.error("´´½¨SecretÊ±³ö´í: {}", e.getMessage());
-                ColorLogUtils.printError("´´½¨Secret " + secretName + " Ê§°Ü£º" + e.getMessage());
-                throw new RuntimeException("´´½¨SecretÊ±³ö´í: " + e.getMessage());
+                log.error("åˆ›å»ºSecretæ—¶å‡ºé”™: {}", e.getMessage());
+                ColorLogUtils.printError("åˆ›å»ºSecret " + secretName + " å¤±è´¥ï¼š" + e.getMessage());
+                throw new RuntimeException("åˆ›å»ºSecretæ—¶å‡ºé”™: " + e.getMessage());
             }
         }
 
         secretCache.remove(serviceRoleFullName);
     }
 
-    // »ñÈ¡»ò´´½¨»º´æ¿Í»§¶Ë[8](@ref)
+    // è·å–æˆ–åˆ›å»ºç¼“å­˜å®¢æˆ·ç«¯[8](@ref)
 
     /**
-     * Éú³ÉConfigMapÃû³Æ£¬¹æ·¶»¯Ãû³ÆÒÔ·ûºÏKubernetesÃüÃû¹æÔò
+     * ç”ŸæˆConfigMapåç§°ï¼Œè§„èŒƒåŒ–åç§°ä»¥ç¬¦åˆKuberneteså‘½åè§„åˆ™
      * 
-     * @param serviceRoleFullName ·şÎñ½ÇÉ«È«Ãû
-     * @param generators          ÅäÖÃÉú³ÉÆ÷
-     * @return ¹æ·¶»¯µÄConfigMapÃû³Æ
+     * @param serviceRoleFullName æœåŠ¡è§’è‰²å…¨å
+     * @param generators          é…ç½®ç”Ÿæˆå™¨
+     * @return è§„èŒƒåŒ–çš„ConfigMapåç§°
      */
     public static String generateConfigMapName(String serviceRoleFullName, Generators generators) {
         String configMapName = getConfigMapName(serviceRoleFullName, generators);
 
-        // È·±£Ãû³Æ·ûºÏKubernetesÃüÃû¹æÔò£ºĞ¡Ğ´×ÖÄ¸¡¢Êı×ÖºÍÁ¬×Ö·û
+        // ç¡®ä¿åç§°ç¬¦åˆKuberneteså‘½åè§„åˆ™ï¼šå°å†™å­—æ¯ã€æ•°å­—å’Œè¿å­—ç¬¦
         configMapName = configMapName.replaceAll("[^a-z0-9-]", "-");
 
-        // Kubernetes×ÊÔ´Ãû³Æ×î´ó³¤¶ÈÎª253¸ö×Ö·û£¬Îª°²È«Æğ¼ûÕâÀïÏŞÖÆÎª240
+        // Kubernetesèµ„æºåç§°æœ€å¤§é•¿åº¦ä¸º253ä¸ªå­—ç¬¦ï¼Œä¸ºå®‰å…¨èµ·è§è¿™é‡Œé™åˆ¶ä¸º240
         if (configMapName.length() > 240) {
             configMapName = configMapName.substring(0, 240);
         }
 
-        // È·±£Ãû³Æ²»ÒÔÁ¬×Ö·û¿ªÍ·»ò½áÎ²
+        // ç¡®ä¿åç§°ä¸ä»¥è¿å­—ç¬¦å¼€å¤´æˆ–ç»“å°¾
         configMapName = configMapName.replaceAll("^-+|-+$", "");
 
         return configMapName;
@@ -354,58 +354,58 @@ public class KubernetesFreeMakerUtils {
             throw new IllegalArgumentException("serviceRoleFullName and generators must not be null");
         }
 
-        // »ñÈ¡ÎÄ¼şÃû
+        // è·å–æ–‡ä»¶å
         String filename = generators.getFilename();
 
-        // ×ª»»ÎÄ¼şÃûÎªÓĞĞ§µÄKubernetes×ÊÔ´Ãû³Æ
-        // - Ìæ»»µã¡¢ÏÂ»®ÏßÎªÁ¬×Ö·û
-        // - ÏŞÖÆ³¤¶È±ÜÃâ³¬¹ıKubernetesÃüÃûÏŞÖÆ
+        // è½¬æ¢æ–‡ä»¶åä¸ºæœ‰æ•ˆçš„Kubernetesèµ„æºåç§°
+        // - æ›¿æ¢ç‚¹ã€ä¸‹åˆ’çº¿ä¸ºè¿å­—ç¬¦
+        // - é™åˆ¶é•¿åº¦é¿å…è¶…è¿‡Kuberneteså‘½åé™åˆ¶
         String normalizedFilename = filename.replace('.', '-').replace("_", "-");
 
-        // ¹¹½¨ÍêÕûµÄConfigMapÃû³Æ
+        // æ„å»ºå®Œæ•´çš„ConfigMapåç§°
         return serviceRoleFullName.toLowerCase() + "-" + normalizedFilename;
     }
 
     /**
-     * ½«PrometheusÅäÖÃÎÄ¼ş±£´æµ½»º´æ£¬µÈ´ıÒ»´ÎĞÔĞ´ÈëPVC
+     * å°†Prometheusé…ç½®æ–‡ä»¶ä¿å­˜åˆ°ç¼“å­˜ï¼Œç­‰å¾…ä¸€æ¬¡æ€§å†™å…¥PVC
      *
-     * @param fileName            ÎÄ¼şÃû
-     * @param fileContent         ÎÄ¼şÄÚÈİ
-     * @param serviceRoleFullName ·şÎñ½ÇÉ«È«Ãû
+     * @param fileName            æ–‡ä»¶å
+     * @param fileContent         æ–‡ä»¶å†…å®¹
+     * @param serviceRoleFullName æœåŠ¡è§’è‰²å…¨å
      */
     private static void savePrometheusConfigToPVC(String fileName, String fileContent,
             String serviceRoleFullName) {
         try {
-            // »ñÈ¡¸Ã·şÎñ½ÇÉ«µÄÅäÖÃ»º´æ£¬Èç¹û²»´æÔÚÔò´´½¨
+            // è·å–è¯¥æœåŠ¡è§’è‰²çš„é…ç½®ç¼“å­˜ï¼Œå¦‚æœä¸å­˜åœ¨åˆ™åˆ›å»º
             Map<String, String> configsCache = prometheusConfigCache.computeIfAbsent(serviceRoleFullName,
                     k -> new HashMap<>());
 
-            // ½«ÅäÖÃÎÄ¼şÌí¼Óµ½»º´æ
+            // å°†é…ç½®æ–‡ä»¶æ·»åŠ åˆ°ç¼“å­˜
             configsCache.put(fileName, fileContent);
 
-            log.info("PrometheusÅäÖÃÎÄ¼ş {} ÒÑÌí¼Óµ½»º´æ£¬µ±Ç°»º´æÎÄ¼şÊı: {}", fileName, configsCache.size());
+            log.info("Prometheusé…ç½®æ–‡ä»¶ {} å·²æ·»åŠ åˆ°ç¼“å­˜ï¼Œå½“å‰ç¼“å­˜æ–‡ä»¶æ•°: {}", fileName, configsCache.size());
 
         } catch (Exception e) {
-            log.error("»º´æPrometheusÅäÖÃÊ±³ö´í: {}", e.getMessage(), e);
-            throw new RuntimeException("»º´æPrometheusÅäÖÃÊ§°Ü", e);
+            log.error("ç¼“å­˜Prometheusé…ç½®æ—¶å‡ºé”™: {}", e.getMessage(), e);
+            throw new RuntimeException("ç¼“å­˜Prometheusé…ç½®å¤±è´¥", e);
         }
     }
 
     /**
-     * ¼à¿ØJobÖ´ĞĞÍê³ÉÇé¿ö
+     * ç›‘æ§Jobæ‰§è¡Œå®Œæˆæƒ…å†µ
      *
-     * @param client  Kubernetes¿Í»§¶Ë
-     * @param jobName JobÃû³Æ
+     * @param client  Kuberneteså®¢æˆ·ç«¯
+     * @param jobName Jobåç§°
      */
     private static void watchJobCompletion(String namespace, KubernetesClient client, String jobName) {
         try {
-            // µÈ´ıJobÍê³É£¬×î¶àµÈ´ı30Ãë
+            // ç­‰å¾…Jobå®Œæˆï¼Œæœ€å¤šç­‰å¾…30ç§’
             int maxRetries = 30;
             int retryCount = 0;
             while (retryCount < maxRetries) {
                 Job job = client.batch().v1().jobs().inNamespace(namespace).withName(jobName).get();
                 if (job == null) {
-                    log.warn("Job {} ²»´æÔÚ", jobName);
+                    log.warn("Job {} ä¸å­˜åœ¨", jobName);
                     break;
                 }
 
@@ -415,13 +415,13 @@ public class KubernetesFreeMakerUtils {
                     Integer failed = status.getFailed();
 
                     if (succeeded != null && succeeded > 0) {
-                        log.info("PrometheusÅäÖÃÎÄ¼ş {} ¸üĞÂ³É¹¦", "ÅúÁ¿ÅäÖÃÎÄ¼ş");
+                        log.info("Prometheusé…ç½®æ–‡ä»¶ {} æ›´æ–°æˆåŠŸ", "æ‰¹é‡é…ç½®æ–‡ä»¶");
                         break;
                     }
 
                     if (failed != null && failed > 0) {
-                        log.error("¸üĞÂPrometheusÅäÖÃÎÄ¼ş {} Ê§°Ü", "ÅúÁ¿ÅäÖÃÎÄ¼ş");
-                        // »ñÈ¡JobµÄPodÈÕÖ¾
+                        log.error("æ›´æ–°Prometheusé…ç½®æ–‡ä»¶ {} å¤±è´¥", "æ‰¹é‡é…ç½®æ–‡ä»¶");
+                        // è·å–Jobçš„Podæ—¥å¿—
                         try {
                             PodList podList = client.pods().inNamespace(namespace)
                                     .withLabel("job-name", jobName).list();
@@ -429,71 +429,71 @@ public class KubernetesFreeMakerUtils {
                                 String podName = podList.getItems().getFirst().getMetadata().getName();
                                 String logs = client.pods().inNamespace(namespace)
                                         .withName(podName).getLog();
-                                log.error("Job Pod {} ÈÕÖ¾: {}", podName, logs);
+                                log.error("Job Pod {} æ—¥å¿—: {}", podName, logs);
                             }
                         } catch (Exception e) {
-                            log.error("ÎŞ·¨»ñÈ¡Job PodÈÕÖ¾", e);
+                            log.error("æ— æ³•è·å–Job Podæ—¥å¿—", e);
                         }
                         break;
                     }
                 }
 
-                // µÈ´ı1ÃëÔÙ¼ì²é
+                // ç­‰å¾…1ç§’å†æ£€æŸ¥
                 Thread.sleep(1000);
                 retryCount++;
             }
 
             if (retryCount >= maxRetries) {
-                log.warn("¼à¿ØJob {} ³¬Ê±£¬×´Ì¬Î´Öª", jobName);
+                log.warn("ç›‘æ§Job {} è¶…æ—¶ï¼ŒçŠ¶æ€æœªçŸ¥", jobName);
             }
 
         } catch (Exception e) {
-            log.error("¼à¿ØJobÖ´ĞĞ×´Ì¬Ê±³ö´í: {}", e.getMessage(), e);
+            log.error("ç›‘æ§Jobæ‰§è¡ŒçŠ¶æ€æ—¶å‡ºé”™: {}", e.getMessage(), e);
         }
     }
 
     /**
-     * ½«»º´æµÄËùÓĞPrometheusÅäÖÃÎÄ¼şÒ»´ÎĞÔĞ´ÈëPVC
+     * å°†ç¼“å­˜çš„æ‰€æœ‰Prometheusé…ç½®æ–‡ä»¶ä¸€æ¬¡æ€§å†™å…¥PVC
      * 
-     * @param kubeConfig          KubernetesÅäÖÃ
-     * @param serviceRoleFullName ·şÎñ½ÇÉ«È«Ãû
-     * @param namespace           KubernetesÃüÃû¿Õ¼ä
+     * @param kubeConfig          Kubernetesé…ç½®
+     * @param serviceRoleFullName æœåŠ¡è§’è‰²å…¨å
+     * @param namespace           Kuberneteså‘½åç©ºé—´
      */
     public static void flushPrometheusConfigsToPVC(String kubeConfig, String serviceRoleFullName, String namespace) {
-        // »ñÈ¡¸Ã·şÎñ½ÇÉ«µÄÅäÖÃ»º´æ
+        // è·å–è¯¥æœåŠ¡è§’è‰²çš„é…ç½®ç¼“å­˜
         Map<String, String> configsCache = prometheusConfigCache.get(serviceRoleFullName);
         if (StrUtil.equals("prometheus-update", serviceRoleFullName)) {
             serviceRoleFullName = "prometheus-prometheus";
         }
-        // Èç¹û»º´æÎª¿Õ£¬Ö±½Ó·µ»Ø
+        // å¦‚æœç¼“å­˜ä¸ºç©ºï¼Œç›´æ¥è¿”å›
         if (configsCache == null || configsCache.isEmpty()) {
-            log.info("Ã»ÓĞĞèÒªĞ´ÈëPVCµÄPrometheusÅäÖÃÎÄ¼ş");
+            log.info("æ²¡æœ‰éœ€è¦å†™å…¥PVCçš„Prometheusé…ç½®æ–‡ä»¶");
             return;
         }
 
         try {
-            // ¹¹½¨Kubernetes API¿Í»§¶Ë
+            // æ„å»ºKubernetes APIå®¢æˆ·ç«¯
             KubernetesClient client = KubeUtil.getKubeClientByConfig(kubeConfig);
 
-            // ´´½¨ÁÙÊ±JobÀ´¸üĞÂPrometheusÅäÖÃÎÄ¼ş
+            // åˆ›å»ºä¸´æ—¶Jobæ¥æ›´æ–°Prometheusé…ç½®æ–‡ä»¶
             String jobName = "prometheus-configs-updater-" + System.currentTimeMillis();
-            // È·¶¨PVCÃû³Æ
+            // ç¡®å®šPVCåç§°
 
-            // È·¶¨PodÃû³Æ - Ê¹ÓÃË÷ÒıÎª0µÄPod
+            // ç¡®å®šPodåç§° - ä½¿ç”¨ç´¢å¼•ä¸º0çš„Pod
             String podName = serviceRoleFullName + "-0";
 
-            // ÅäÖÃ¹ÒÔØÂ·¾¶ - ÓëPrometheus PodÏàÍ¬
+            // é…ç½®æŒ‚è½½è·¯å¾„ - ä¸Prometheus Podç›¸åŒ
             String configMountPath = "/opt/datasophon/prometheus/configs";
 
-            log.info("×¼±¸´´½¨Job {} Ğ´Èë {} ¸öÅäÖÃÎÄ¼şµ½PVC: {}", jobName, configsCache.size(), serviceRoleFullName);
+            log.info("å‡†å¤‡åˆ›å»ºJob {} å†™å…¥ {} ä¸ªé…ç½®æ–‡ä»¶åˆ°PVC: {}", jobName, configsCache.size(), serviceRoleFullName);
 
-            // ¹¹½¨ÃüÁî½Å±¾
+            // æ„å»ºå‘½ä»¤è„šæœ¬
             StringBuilder scriptBuilder = new StringBuilder();
             scriptBuilder.append("#!/bin/sh\n");
-            scriptBuilder.append("echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ¿ªÊ¼¸üĞÂ ").append(configsCache.size())
-                    .append(" ¸öPrometheusÅäÖÃÎÄ¼ş\"\n");
+            scriptBuilder.append("echo \"[$(date '+%Y-%m-%d %H:%M:%S')] å¼€å§‹æ›´æ–° ").append(configsCache.size())
+                    .append(" ä¸ªPrometheusé…ç½®æ–‡ä»¶\"\n");
 
-            // ÎªÃ¿¸öÅäÖÃÎÄ¼şÌí¼ÓĞ´ÈëÃüÁî
+            // ä¸ºæ¯ä¸ªé…ç½®æ–‡ä»¶æ·»åŠ å†™å…¥å‘½ä»¤
             int fileIndex = 0;
             for (Map.Entry<String, String> entry : configsCache.entrySet()) {
                 String fileName = entry.getKey();
@@ -502,31 +502,31 @@ public class KubernetesFreeMakerUtils {
                 String fileBase64 = Base64.getEncoder().encodeToString(fileContent.getBytes(StandardCharsets.UTF_8));
 
                 fileIndex++;
-                scriptBuilder.append("\n# ´¦ÀíÎÄ¼ş ").append(fileIndex).append(": ").append(fileName).append("\n");
-                scriptBuilder.append("echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ´¦ÀíÎÄ¼ş ").append(fileIndex).append("/")
+                scriptBuilder.append("\n# å¤„ç†æ–‡ä»¶ ").append(fileIndex).append(": ").append(fileName).append("\n");
+                scriptBuilder.append("echo \"[$(date '+%Y-%m-%d %H:%M:%S')] å¤„ç†æ–‡ä»¶ ").append(fileIndex).append("/")
                         .append(configsCache.size()).append(": ").append(fileName).append("\"\n");
-                scriptBuilder.append("echo \"[$(date '+%Y-%m-%d %H:%M:%S')] Ä¿±êÂ·¾¶: ").append(configPath).append("\"\n");
+                scriptBuilder.append("echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ç›®æ ‡è·¯å¾„: ").append(configPath).append("\"\n");
                 scriptBuilder.append("mkdir -p $(dirname ").append(configPath).append(")\n");
                 scriptBuilder.append("echo ").append(fileBase64).append(" | base64 -d > ").append(configPath)
                         .append("\n");
                 scriptBuilder.append("if [ $? -eq 0 ]; then\n");
-                scriptBuilder.append("  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ³É¹¦Ğ´ÈëÅäÖÃÎÄ¼ş ").append(fileName)
+                scriptBuilder.append("  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] æˆåŠŸå†™å…¥é…ç½®æ–‡ä»¶ ").append(fileName)
                         .append("\"\n");
-                scriptBuilder.append("  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ÎÄ¼şÏêÇé: $(ls -la ").append(configPath)
+                scriptBuilder.append("  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] æ–‡ä»¶è¯¦æƒ…: $(ls -la ").append(configPath)
                         .append(")\"\n");
-                scriptBuilder.append("  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ÎÄ¼ş´óĞ¡: $(stat -c %s ").append(configPath)
-                        .append(") ×Ö½Ú\"\n");
+                scriptBuilder.append("  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] æ–‡ä»¶å¤§å°: $(stat -c %s ").append(configPath)
+                        .append(") å­—èŠ‚\"\n");
                 scriptBuilder.append("else\n");
-                scriptBuilder.append("  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] ´íÎó: Ğ´ÈëÅäÖÃÎÄ¼ş ").append(fileName)
-                        .append(" Ê§°Ü\"\n");
+                scriptBuilder.append("  echo \"[$(date '+%Y-%m-%d %H:%M:%S')] é”™è¯¯: å†™å…¥é…ç½®æ–‡ä»¶ ").append(fileName)
+                        .append(" å¤±è´¥\"\n");
                 scriptBuilder.append("  exit 1\n");
                 scriptBuilder.append("fi\n");
             }
 
-            scriptBuilder.append("\necho \"[$(date '+%Y-%m-%d %H:%M:%S')] ËùÓĞ ").append(configsCache.size())
-                    .append(" ¸öÅäÖÃÎÄ¼ş¸üĞÂ³É¹¦Íê³É\n");
+            scriptBuilder.append("\necho \"[$(date '+%Y-%m-%d %H:%M:%S')] æ‰€æœ‰ ").append(configsCache.size())
+                    .append(" ä¸ªé…ç½®æ–‡ä»¶æ›´æ–°æˆåŠŸå®Œæˆ\n");
 
-            // ´´½¨Job¶ÔÏó
+            // åˆ›å»ºJobå¯¹è±¡
             Job job = new JobBuilder()
                     .withNewMetadata()
                     .withName(jobName)
@@ -536,8 +536,8 @@ public class KubernetesFreeMakerUtils {
                     .addToLabels("job-type", "config-update-batch")
                     .endMetadata()
                     .withNewSpec()
-                    .withBackoffLimit(2) // Ê§°ÜÖØÊÔ´ÎÊı
-                    .withTtlSecondsAfterFinished(300) // Íê³Éºó5·ÖÖÓÉ¾³ı
+                    .withBackoffLimit(2) // å¤±è´¥é‡è¯•æ¬¡æ•°
+                    .withTtlSecondsAfterFinished(300) // å®Œæˆå5åˆ†é’Ÿåˆ é™¤
                     .withNewTemplate()
                     .withNewMetadata()
                     .addToLabels("app", jobName)
@@ -574,20 +574,20 @@ public class KubernetesFreeMakerUtils {
                     .endSpec()
                     .build();
 
-            // Ìá½»Jobµ½Kubernetes
+            // æäº¤Jobåˆ°Kubernetes
             client.batch().v1().jobs().inNamespace(namespace).resource(job).serverSideApply();
 
-            log.info("´´½¨ÅúÁ¿ÅäÖÃ¸üĞÂJob: {}, Ğ´Èë {} ¸öÅäÖÃÎÄ¼ş", jobName, configsCache.size());
+            log.info("åˆ›å»ºæ‰¹é‡é…ç½®æ›´æ–°Job: {}, å†™å…¥ {} ä¸ªé…ç½®æ–‡ä»¶", jobName, configsCache.size());
 
-            // ¼à¿ØJobÖ´ĞĞ×´Ì¬
+            // ç›‘æ§Jobæ‰§è¡ŒçŠ¶æ€
             watchJobCompletion(namespace, client, jobName);
 
-            // Çå¿Õ»º´æ
+            // æ¸…ç©ºç¼“å­˜
             prometheusConfigCache.remove(serviceRoleFullName);
 
         } catch (Exception e) {
-            log.error("ÅúÁ¿±£´æPrometheusÅäÖÃµ½PVCÊ±³ö´í: {}", e.getMessage(), e);
-            throw new RuntimeException("ÅúÁ¿±£´æPrometheusÅäÖÃÊ§°Ü", e);
+            log.error("æ‰¹é‡ä¿å­˜Prometheusé…ç½®åˆ°PVCæ—¶å‡ºé”™: {}", e.getMessage(), e);
+            throw new RuntimeException("æ‰¹é‡ä¿å­˜Prometheusé…ç½®å¤±è´¥", e);
         }
     }
 }
