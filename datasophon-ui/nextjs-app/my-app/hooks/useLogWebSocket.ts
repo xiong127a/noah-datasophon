@@ -13,7 +13,7 @@ interface LogMessage {
 interface UseLogWebSocketProps {
   clusterId?: string
   hostCommandId?: string
-  onLogUpdate?: (logContent: string) => void
+  onLogUpdate?: (logContent: string, updateType?: 'replace' | 'append') => void
   enabled?: boolean
 }
 
@@ -81,14 +81,14 @@ export const useLogWebSocket = ({
                 case 'full':
                   // 历史日志或完整日志 - 直接覆盖
                   setLogContent(logMessage.data)
-                  onLogUpdateRef.current?.(logMessage.data)
+                  onLogUpdateRef.current?.(logMessage.data, 'replace')
                   break
                 case 'increment':
                 case 'log':
                   // 增量日志 - 追加模式
                   setLogContent(prevContent => {
                     const newContent = prevContent + logMessage.data
-                    onLogUpdateRef.current?.(newContent)
+                    onLogUpdateRef.current?.(newContent, 'append')
                     return newContent
                   })
                   break

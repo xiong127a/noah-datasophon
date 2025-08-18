@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { 
   ChevronLeft, ChevronRight, AlertTriangle, 
   Play, Clock, CheckCircle2, XCircle, AlertCircle, 
-  Activity, ArrowRight,
+  Activity, ArrowRight, ArrowDown,
   Eye, Terminal, Cpu, Wifi, WifiOff
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -158,6 +158,47 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
 
   const [logData, setLogData] = useState("")
   const [error, setError] = useState<string | null>(null)
+  const [userScrolledUp, setUserScrolledUp] = useState(false) // 跟踪用户是否向上滚动
+  
+  // 自动滚动到底部的函数
+  const scrollToBottom = useCallback((force = false) => {
+    const container = logScrollContainerRef.current
+    if (!container) return
+    
+    // 如果用户手动向上滚动了，且不是强制滚动，则不自动滚动
+    if (userScrolledUp && !force) return
+    
+    // 使用requestAnimationFrame确保DOM已更新
+    requestAnimationFrame(() => {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: 'smooth'
+      })
+    })
+  }, [userScrolledUp])
+  
+  // 检查是否滚动到底部
+  const checkScrollPosition = useCallback(() => {
+    const container = logScrollContainerRef.current
+    if (!container) return
+    
+    const { scrollTop, scrollHeight, clientHeight } = container
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 20 // 减小容差到20px
+    const hasScrolled = !isAtBottom
+    
+    // 调试信息
+    console.log('🔍 滚动位置检查:', {
+      scrollTop,
+      scrollHeight, 
+      clientHeight,
+      差值: scrollHeight - scrollTop - clientHeight,
+      isAtBottom,
+      hasScrolled,
+      userScrolledUp: hasScrolled
+    })
+    
+    setUserScrolledUp(hasScrolled)
+  }, [])
   
   // WebSocket实时日志连接
   const {
@@ -167,36 +208,27 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   } = useLogWebSocket({
     clusterId: cluster.id.toString(),
     hostCommandId: currentPage === 4 && commandHostId ? commandHostId : undefined,
-    onLogUpdate: (content) => {
+    onLogUpdate: (content, updateType) => {
       setLogData(content)
-      // 自动滚动到底部
-      if (logScrollContainerRef.current) {
-        setTimeout(() => {
-          logScrollContainerRef.current?.scrollTo({
-            top: logScrollContainerRef.current.scrollHeight,
-            behavior: 'smooth'
-          })
-        }, 100)
+      
+      // 只有在追加新日志时才自动滚动
+      if (updateType === 'append') {
+        scrollToBottom()
+      } else if (updateType === 'replace') {
+        // 历史日志加载完成，强制滚动到底部
+        scrollToBottom(true)
+        setUserScrolledUp(false)
       }
     },
     enabled: currentPage === 4 && !!commandHostId
   })
+  
   const [installStatus, setInstallStatus] = useState<InstallStatus>({
     isInstalling: false,
     hasStarted: false
   })
   // 添加一个锁，确保安装只启动一次
-    const installationStartedRef = useRef(false)
-    
-  // 首次显示日志时自动滚动到底部
-  useEffect(() => {
-    if (logData && logScrollContainerRef.current) {
-      logScrollContainerRef.current.scrollTo({
-        top: logScrollContainerRef.current.scrollHeight,
-        behavior: 'auto' // 首次加载使用instant滚动
-      })
-    }
-  }, [currentPage, logData]) // 当切换到日志页面时触发
+  const installationStartedRef = useRef(false)
   
   // 定时器引用
   const timer1 = useRef<NodeJS.Timeout | null>(null)
@@ -205,6 +237,17 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
   
   // 日志滚动容器引用
   const logScrollContainerRef = useRef<HTMLDivElement>(null)
+  
+  // 当切换到日志页面时，重置滚动状态并自动滚动到底部
+  useEffect(() => {
+    if (currentPage === 4) {
+      setUserScrolledUp(false)
+      // 延迟一点确保日志内容已加载
+      setTimeout(() => {
+        scrollToBottom(true)
+      }, 200)
+    }
+  }, [currentPage, scrollToBottom])
   // 保存最新的getServiceList函数引用，避免useEffect依赖问题
   const getServiceListRef = useRef<(flag?: boolean) => Promise<void>>(async () => {})
   // 保存最新的启动安装函数引用
@@ -1179,7 +1222,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                   </div>
                   
                   {/* 日志内容区域 */}
-                  <div className="flex-1 mx-3 mb-3 rounded-lg overflow-hidden border border-slate-200">
+                  <div className="flex-1 mx-3 mb-3 rounded-lg overflow-hidden border border-slate-200 relative">
                     {/* WebSocket连接状态栏 */}
                     <div className="bg-slate-800 px-4 py-2 border-b border-slate-600 flex items-center justify-between">
                       <div className="flex items-center space-x-2">
@@ -1204,6 +1247,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                     {/* 日志内容 */}
                     <div 
                       ref={logScrollContainerRef}
+                      onScroll={checkScrollPosition}
                       className="h-full bg-slate-900 p-4 overflow-auto rounded-b-md scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800"
                     >
                       {logData ? (
@@ -1223,6 +1267,18 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                         </div>
                       )}
                     </div>
+                    
+
+                    
+                    {/* 临时调试信息 - 显示当前状态 */}
+                    {logData && (
+                      <div className="absolute top-4 right-4 bg-black/70 text-white text-xs px-2 py-1 rounded z-40">
+                        滚动状态: {userScrolledUp ? '已向上滚动' : '在底部'} | 差值检查等待控制台
+                      </div>
+                    )}
+                    
+
+
                   </div>
                 </CardContent>
               </Card>
@@ -1231,6 +1287,35 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
           </div>
         </div>
       </ClusterWizardLayout>
+      
+      {/* 苹果风格悬浮按钮 - 使用固定定位相对于整个视窗 */}
+      {(() => {
+        console.log('🔍 按钮显示条件:', { userScrolledUp, hasLogData: !!logData, currentPage })
+        return null
+      })()}
+      {currentPage === 4 && (userScrolledUp || true) && logData && (
+        <div className="fixed bottom-6 right-6 z-[9999]">
+          <div 
+            onClick={() => {
+              console.log('🔄 点击回到底部按钮')
+              scrollToBottom(true)
+            }}
+            className="group cursor-pointer"
+          >
+            {/* iOS风格的精美圆形悬浮按钮 */}
+            <div className="w-12 h-12 bg-white/15 backdrop-blur-xl border border-white/25 rounded-full flex items-center justify-center shadow-2xl hover:bg-white/25 transition-all duration-300 hover:scale-110 active:scale-95 shadow-black/20">
+              <ArrowDown className="h-5 w-5 text-white drop-shadow-lg group-hover:translate-y-1 transition-transform duration-300" />
+            </div>
+            
+            {/* 悬停提示 - iOS风格 */}
+            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-black/90 backdrop-blur-sm text-white text-sm px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap shadow-lg">
+              回到底部
+              {/* 小箭头 */}
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black/90"></div>
+            </div>
+          </div>
+        </div>
+      )}
     </Dialog>
   )
 }
