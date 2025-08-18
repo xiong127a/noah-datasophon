@@ -116,7 +116,6 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
                 system: typeof host.osType === 'string' ? host.osType : undefined,
                 version: typeof host.osVersion === 'string' ? host.osVersion : undefined
               } : undefined
-              // 移除used字段，因为后端返回的不是使用率而是绝对值
             }
             
 

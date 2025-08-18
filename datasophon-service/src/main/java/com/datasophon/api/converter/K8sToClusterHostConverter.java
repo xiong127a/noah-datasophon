@@ -60,9 +60,7 @@ public class K8sToClusterHostConverter {
                 .hostname(k8sNodeInfo.getHostname())
                 .coreNum(k8sNodeInfo.getCoreNum())
                 .totalMem(k8sNodeInfo.getTotalMem())
-                .usedMem(k8sNodeInfo.getUsedMem())
                 .totalDisk(k8sNodeInfo.getTotalDisk())
-                .usedDisk(k8sNodeInfo.getUsedDisk())
                 .cpuArchitecture(k8sNodeInfo.getCpuArchitecture())
                 .createTime(k8sNodeInfo.getCreateTime())
                 .hostState(convertToHostState(k8sNodeInfo.getStatus()))
@@ -112,9 +110,7 @@ public class K8sToClusterHostConverter {
         hostInfoDTO.setHostname(k8sNodeInfo.getHostname());
         hostInfoDTO.setCoreNum(k8sNodeInfo.getCoreNum());
         hostInfoDTO.setTotalMem(k8sNodeInfo.getTotalMem());
-        hostInfoDTO.setUsedMem(k8sNodeInfo.getUsedMem());
         hostInfoDTO.setTotalDisk(k8sNodeInfo.getTotalDisk());
-        hostInfoDTO.setUsedDisk(k8sNodeInfo.getUsedDisk());
         hostInfoDTO.setCpuArchitecture(k8sNodeInfo.getCpuArchitecture());
         hostInfoDTO.setCreateTime(k8sNodeInfo.getCreateTime());
         hostInfoDTO.setHostState(convertToHostState(k8sNodeInfo.getStatus()));
@@ -171,8 +167,6 @@ public class K8sToClusterHostConverter {
         hostInfoDTO.setCoreNum(clusterHost.getCoreNum());
         hostInfoDTO.setTotalMem(clusterHost.getTotalMem());
         hostInfoDTO.setTotalDisk(clusterHost.getTotalDisk());
-        hostInfoDTO.setUsedMem(clusterHost.getUsedMem());
-        hostInfoDTO.setUsedDisk(clusterHost.getUsedDisk());
         hostInfoDTO.setAverageLoad(clusterHost.getAverageLoad());
         hostInfoDTO.setCheckTime(clusterHost.getCheckTime());
         hostInfoDTO.setClusterId(clusterHost.getClusterId());

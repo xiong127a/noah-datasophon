@@ -6,8 +6,34 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { ChevronDown, Search, Server } from "lucide-react"
+import { ChevronDown, Search, Server, Cpu, MemoryStick, HardDrive } from "lucide-react"
 
+// 简单资源显示组件 - 只显示总量
+interface ResourceDisplayProps {
+  icon: React.ReactNode
+  total?: number
+  unit: string
+}
+
+const ResourceDisplay: React.FC<ResourceDisplayProps> = ({ icon, total, unit }) => {
+  if (total === undefined) {
+    return (
+      <div className="flex items-center gap-1.5 text-gray-400">
+        <div className="w-3.5 h-3.5">{icon}</div>
+        <span className="text-xs">--</span>
+      </div>
+    )
+  }
+  
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="w-3.5 h-3.5 text-gray-600">{icon}</div>
+      <span className="text-xs text-gray-600 font-medium">
+        {total}{unit}
+      </span>
+    </div>
+  )
+}
 
 // 全局下拉框管理器 - 实现互斥逻辑
 class DropdownManager {
@@ -61,12 +87,6 @@ export interface HostInfo {
   osInfo?: {
     system?: string
     version?: string
-  }
-  // 资源使用率
-  used?: {
-    cpu: number    // 使用率 0-100
-    memory: number // 使用率 0-100
-    disk: number   // 使用率 0-100
   }
 }
 
@@ -270,14 +290,24 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
                             {host.ip && (
                               <p className="text-xs text-gray-500 font-mono truncate">{host.ip}</p>
                             )}
-                            {/* 资源信息 - 简洁显示 */}
-                            {(host.cpuCore !== undefined || host.memory !== undefined || host.disk !== undefined) && (
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                {host.cpuCore !== undefined ? `${host.cpuCore}C ` : ''}
-                                {host.memory !== undefined ? `${host.memory}G ` : ''}
-                                {host.disk !== undefined ? `${host.disk}GB` : ''}
-                              </p>
-                            )}
+                            {/* 资源信息 - 简洁显示总量 */}
+                            <div className="flex items-center gap-3 mt-2">
+                              <ResourceDisplay
+                                icon={<Cpu className="w-full h-full" />}
+                                total={host.cpuCore}
+                                unit="C"
+                              />
+                              <ResourceDisplay
+                                icon={<MemoryStick className="w-full h-full" />}
+                                total={host.memory}
+                                unit="G"
+                              />
+                              <ResourceDisplay
+                                icon={<HardDrive className="w-full h-full" />}
+                                total={host.disk}
+                                unit="G"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>

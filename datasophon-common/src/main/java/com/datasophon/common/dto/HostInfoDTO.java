@@ -84,15 +84,7 @@ public class HostInfoDTO implements Serializable {
      */
     private Integer totalDisk;
 
-    /**
-     * 已用内存(GB)
-     */
-    private Integer usedMem;
 
-    /**
-     * 已用磁盘(GB)
-     */
-    private Integer usedDisk;
 
     /**
      * 平均负载

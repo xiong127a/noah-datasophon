@@ -73,14 +73,7 @@ public class ClusterHostEntity extends BaseEntity {
      * 总磁盘
      */
     private Integer totalDisk;
-    /**
-     * 已用内存
-     */
-    private Integer usedMem;
-    /**
-     * 已用磁盘
-     */
-    private Integer usedDisk;
+
     /**
      * 平均负载
      */

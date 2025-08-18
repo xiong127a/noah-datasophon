@@ -119,15 +119,7 @@ public class HostCheckActor extends AbstractActor {
                 int totalMem = Double.valueOf(totalMemStr).intValue();
                 clusterHostEntity.setTotalMem(totalMem);
               }
-              // 查询内存使用量
-              String memAvailablePromQl = "node_memory_MemAvailable_bytes{job=~\"node\",instance=\""
-                  + hostname + ":9100\"}/1024/1024/1024";
-              String memAvailableStr = PromInfoUtils.getSinglePrometheusMetric(promUrl, memAvailablePromQl);
-              if (StringUtils.isNotBlank(memAvailableStr)) {
-                int memAvailable = Double.valueOf(memAvailableStr).intValue();
-                Integer memUsed = clusterHostEntity.getTotalMem() - memAvailable;
-                clusterHostEntity.setUsedMem(memUsed);
-              }
+
               // 总磁盘容量
               String totalDistPromQl = "sum(node_filesystem_size_bytes{instance=\"" + hostname
                   + ":9100\",fstype=~\"ext4|xfs\",mountpoint !~\".*pod.*\"})/1024/1024/1024";
@@ -136,21 +128,14 @@ public class HostCheckActor extends AbstractActor {
                 int totalDisk = Double.valueOf(totalDiskStr).intValue();
                 clusterHostEntity.setTotalDisk(totalDisk);
               }
-              // 查询磁盘使用量
-              String diskUsedPromQl = "sum(node_filesystem_size_bytes{instance=\"" + hostname
-                  + ":9100\",fstype=~\"ext.*|xfs\",mountpoint !~\".*pod.*\"}-node_filesystem_free_bytes{instance=\""
-                  + hostname
-                  + ":9100\",fstype=~\"ext.*|xfs\",mountpoint !~\".*pod.*\"})/1024/1024/1024";
-              String diskUsed = PromInfoUtils.getSinglePrometheusMetric(promUrl, diskUsedPromQl);
-              if (StringUtils.isNotBlank(diskUsed)) {
-                clusterHostEntity.setUsedDisk(Double.valueOf(diskUsed).intValue());
-              }
+
               // 查询cpu负载
               String cpuLoadPromQl = "node_load5{job=~\"node\",instance=\"" + hostname + ":9100\"}";
               String cpuLoad = PromInfoUtils.getSinglePrometheusMetric(promUrl, cpuLoadPromQl);
               if (StringUtils.isNotBlank(cpuLoad)) {
                 clusterHostEntity.setAverageLoad(cpuLoad);
               }
+
               clusterHostEntity.setHostState(HostState.RUNNING);
             } catch (Exception e) {
 

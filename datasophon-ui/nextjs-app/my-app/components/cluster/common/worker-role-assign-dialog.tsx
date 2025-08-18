@@ -119,48 +119,24 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
       })
       
       if (response?.success && response?.data) {
-        // 构建完整的主机信息，包含资源数据
-        const hostsWithResources = response.data.map((host: any) => ({
-          id: host.id || Math.random(),
-          hostname: host.hostname,
-          ip: host.ip || '未知',
-          cpuCore: host.cpuCore || Math.floor(Math.random() * 16 + 4), // 4-20核
-          memory: host.memory || Math.floor(Math.random() * 64 + 8),   // 8-72GB
-          disk: host.disk || Math.floor(Math.random() * 500 + 100),    // 100-600GB
-          cpuArchitecture: host.cpuArchitecture || 'x86_64',
-          osInfo: {
-            system: host.osType || 'Linux',
-            version: host.osVersion || 'Ubuntu 20.04'
-          },
-          // 模拟资源使用率
-          used: {
-            cpu: Math.floor(Math.random() * 80 + 10),    // 10-90%
-            memory: Math.floor(Math.random() * 70 + 15), // 15-85%
-            disk: Math.floor(Math.random() * 60 + 20)    // 20-80%
-          }
-        }))
+        // 构建完整的主机信息，使用后端返回的真实字段
+        const hostsWithResources = response.data
+          .filter((host: Record<string, unknown>) => host.id && host.hostname && host.ip) // 过滤掉必须字段为空的数据
+          .map((host: Record<string, unknown>) => ({
+            id: String(host.id),
+            hostname: String(host.hostname),
+            ip: String(host.ip),
+            cpuCore: typeof host.coreNum === 'number' ? host.coreNum : undefined,
+            memory: typeof host.totalMem === 'number' ? host.totalMem : undefined,
+            disk: typeof host.totalDisk === 'number' ? host.totalDisk : undefined,
+            cpuArchitecture: typeof host.cpuArchitecture === 'string' ? host.cpuArchitecture : undefined,
+            osInfo: host.osType || host.osVersion ? {
+              system: typeof host.osType === 'string' ? host.osType : undefined,
+              version: typeof host.osVersion === 'string' ? host.osVersion : undefined
+            } : undefined
+          }))
         
-        // 调试：检查主机数据重复
-        const hostnames = hostsWithResources.map(h => h.hostname)
-        const uniqueHostnames = [...new Set(hostnames)]
-        if (hostnames.length !== uniqueHostnames.length) {
-          console.warn('⚠️ 主机数据重复:', hostnames)
-          console.warn('去重后:', uniqueHostnames)
-        }
-        
-        // 去重处理：基于hostname去重
-        const uniqueHosts = hostsWithResources.filter((host, index, self) => 
-          index === self.findIndex(h => h.hostname === host.hostname)
-        )
-        
-        console.log('🏠 主机数据加载:', {
-          originalCount: hostsWithResources.length,
-          uniqueCount: uniqueHosts.length,
-          hostnames: uniqueHosts.map(h => h.hostname)
-        })
-        
-        setAvailableHosts(uniqueHosts)
-        return uniqueHosts.map(h => h.hostname)
+        setAvailableHosts(hostsWithResources)
       } else {
         throw new Error(response?.message || '获取主机列表失败')
       }
@@ -196,13 +172,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
       if (response?.success && response?.data) {
         const roleData = response.data
         
-        // 调试：检查API返回的角色数据
-        console.log('🔍 Worker角色API响应:', {
-          roleCount: roleData.length,
-          roles: roleData.map((r: any) => r.serviceRoleName),
-          availableHostsCount: availableHosts.length,
-          availableHostnames: availableHosts.map(h => h.hostname)
-        })
+
         
         // API响应数据处理
         

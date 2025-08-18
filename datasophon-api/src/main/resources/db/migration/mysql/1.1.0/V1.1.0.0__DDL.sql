@@ -151,8 +151,6 @@ CREATE TABLE `t_ddh_cluster_host`  (
   `core_num` int(11) DEFAULT NULL COMMENT '核数',
   `total_mem` int(11) DEFAULT NULL COMMENT '总内存',
   `total_disk` int(11) DEFAULT NULL COMMENT '总磁盘',
-  `used_mem` int(11) DEFAULT NULL COMMENT '已用内存',
-  `used_disk` int(11) DEFAULT NULL COMMENT '已用磁盘',
   `average_load` varchar(32)  DEFAULT NULL COMMENT '平均负载',
   `check_time` datetime DEFAULT NULL COMMENT '检测时间',
   `cluster_id` varchar(32)  DEFAULT NULL COMMENT '集群id',
