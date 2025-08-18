@@ -293,7 +293,7 @@ public class LogWebSocketController {
     record LogFileInfo(ClusterInfoEntity clusterInfo, ClusterServiceCommandHostCommandEntity hostCommand, 
                       String fullPath, String relativePath) {}
 
-    // JDK21 record简化请求类
+    // JDK21 record简化请求类 - Spring自动处理字符串到Long转换
     public record LogStartRequest(Long clusterId, Long hostCommandId) {}
     public record LogStopRequest(Long clusterId, Long hostCommandId) {}
     

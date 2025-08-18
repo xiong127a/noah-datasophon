@@ -107,8 +107,8 @@ export const useLogWebSocket = ({
             client.publish({
               destination: '/app/logs/start',
               body: JSON.stringify({
-                clusterId: parseInt(clusterId),
-                hostCommandId: parseInt(hostCommandId)
+                clusterId: clusterId,     // 保持字符串格式，避免精度丢失
+                hostCommandId: hostCommandId  // 保持字符串格式
               })
             })
           }
@@ -164,8 +164,8 @@ export const useLogWebSocket = ({
         stompClientRef.current.publish({
           destination: '/app/logs/stop',
           body: JSON.stringify({
-            clusterId: parseInt(clusterId),
-            hostCommandId: parseInt(hostCommandId)
+            clusterId: clusterId,        // 保持字符串格式
+            hostCommandId: hostCommandId // 保持字符串格式
           })
         })
       }
