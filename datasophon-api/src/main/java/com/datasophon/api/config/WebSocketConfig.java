@@ -1,38 +1,37 @@
 package com.datasophon.api.config;
 
-import com.datasophon.api.websocket.LogWebSocketHandler;
-import com.datasophon.api.websocket.WebSocketAuthInterceptor;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.socket.config.annotation.EnableWebSocket;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 /**
- * WebSocket配置类
- * 用于配置实时日志推送
+ * WebSocket STOMP配置类
+ * 使用标准的STOMP协议和注解方式
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-01-15
+ * @date 2025-01-18
  */
 @Configuration
-@EnableWebSocket
-public class WebSocketConfig implements WebSocketConfigurer {
+@EnableWebSocketMessageBroker
+public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    private final LogWebSocketHandler logWebSocketHandler;
-    private final WebSocketAuthInterceptor authInterceptor;
-
-    public WebSocketConfig(LogWebSocketHandler logWebSocketHandler,
-                          WebSocketAuthInterceptor authInterceptor) {
-        this.logWebSocketHandler = logWebSocketHandler;
-        this.authInterceptor = authInterceptor;
+    @Override
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        // 启用简单的内存消息代理
+        config.enableSimpleBroker("/topic", "/queue");
+        // 设置应用程序目的地前缀
+        config.setApplicationDestinationPrefixes("/app");
+        // 设置用户目的地前缀  
+        config.setUserDestinationPrefix("/user");
     }
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        // 注册日志WebSocket处理器，添加认证拦截器
-        registry.addHandler(logWebSocketHandler, "/api/v1/websocket/log")
-                .addInterceptors(authInterceptor)
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        // 注册STOMP端点
+        registry.addEndpoint("/api/v1/websocket/stomp")
                 .setAllowedOrigins("*"); // 生产环境应该配置具体的允许域名
     }
 }
