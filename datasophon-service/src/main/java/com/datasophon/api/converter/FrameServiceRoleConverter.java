@@ -202,4 +202,19 @@ public interface FrameServiceRoleConverter extends BaseConverter<FrameServiceRol
     default Boolean checkIsClientRole(Integer serviceRoleType) {
         return serviceRoleType != null && serviceRoleType.equals(3);
     }
+
+    /**
+     * 从现有DTO创建新DTO并更新serviceName - MapStruct完美支持Record
+     * MapStruct会自动推断字段映射，只需指定要更新的字段
+     */
+    @Mapping(target = "serviceName", source = "serviceName")
+    FrameServiceRoleDTO updateServiceName(FrameServiceRoleDTO dto, String serviceName);
+    
+    /**
+     * 从Entity直接创建DTO并填充serviceName - 复合映射
+     */
+    @Mapping(target = "serviceRoleType", source = "entity.serviceRoleType", qualifiedByName = "roleTypeToInteger")
+    @Mapping(target = "serviceName", source = "serviceName") 
+    @Mapping(target = "hosts", ignore = true) // 运行时填充
+    FrameServiceRoleDTO entityToDtoWithServiceName(FrameServiceRoleEntity entity, String serviceName);
 }

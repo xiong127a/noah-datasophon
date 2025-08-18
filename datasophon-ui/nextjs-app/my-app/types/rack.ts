@@ -1,8 +1,8 @@
 // 机架相关类型定义
 export interface Rack {
-  id: number
+  id: string // 修复：20位long精度问题
   rack: string
-  clusterId: number
+  clusterId: string // 修复：20位long精度问题
 }
 
 export interface RackListResponse {
@@ -13,5 +13,5 @@ export interface RackListResponse {
 
 export interface AddRackRequest {
   rack: string
-  clusterId: number
+  clusterId: string // 修复：20位long精度问题
 }

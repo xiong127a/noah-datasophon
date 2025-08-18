@@ -20,6 +20,7 @@ package com.datasophon.api.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.converter.FrameServiceRoleConverter;
 import com.datasophon.api.service.FrameServiceRoleService;
+import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.dto.FrameServiceRoleDTO;
@@ -62,6 +63,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     // 依赖注入 - 使用构造器注入
     private final FrameServiceRoleConverter frameServiceRoleConverter;
     private final ClusterServiceRoleInstanceMapper clusterServiceRoleInstanceMapper;
+    private final FrameServiceService frameServiceService;
 
     @Override
     public List<FrameServiceRoleDTO> getServiceRoleList(Long clusterId, String serviceIds,
@@ -94,10 +96,15 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
         // 调用Dao层方法查询服务角色
         List<FrameServiceRoleEntity> roles = getMapper().selectByServiceIdsAndRoleType(ids, serviceRoleType);
 
-        // 转换为DTO并填充主机信息
+        // 转换为DTO并填充serviceName和主机信息 - 使用优化的MapStruct映射
         return roles.stream()
                 .map(role -> {
-                    FrameServiceRoleDTO dto = frameServiceRoleConverter.entityToDto(role);
+                    // 优化：直接从Entity转换并填充serviceName，避免二次转换
+                    String serviceName = getServiceNameByServiceId(role.getServiceId());
+                    FrameServiceRoleDTO dto = serviceName != null 
+                        ? frameServiceRoleConverter.entityToDtoWithServiceName(role, serviceName)
+                        : frameServiceRoleConverter.entityToDto(role);
+                    
                     // 查询并设置主机信息
                     List<String> hosts = getHostsForRole(clusterId, dto.serviceRoleName());
                     return dto.withHosts(hosts);
@@ -193,6 +200,25 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
         return frameServiceRoleConverter.entityToDto(entity);
     }
 
+    /**
+     * 根据serviceId获取serviceName - 辅助方法
+     */
+    private String getServiceNameByServiceId(Long serviceId) {
+        if (serviceId == null) {
+            return null;
+        }
+        
+        try {
+            var frameService = frameServiceService.getById(serviceId);
+            return frameService != null ? frameService.getServiceName() : null;
+        } catch (Exception e) {
+            log.warn("获取serviceName失败: serviceId={}", serviceId, e);
+            return null;
+        }
+    }
+
+
+
     @Override
     public List<FrameServiceRoleDTO> getNonMasterRoleList(Long clusterId, String serviceIds) {
         if (clusterId == null) {
@@ -223,10 +249,15 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
         // 调用Dao层方法查询非MASTER角色
         List<FrameServiceRoleEntity> roles = getMapper().selectNonMasterRoles(ids);
 
-        // 转换为DTO并填充主机信息
+        // 转换为DTO并填充serviceName和主机信息 - 使用优化的MapStruct映射
         return roles.stream()
                 .map(role -> {
-                    FrameServiceRoleDTO dto = frameServiceRoleConverter.entityToDto(role);
+                    // 优化：直接从Entity转换并填充serviceName，避免二次转换
+                    String serviceName = getServiceNameByServiceId(role.getServiceId());
+                    FrameServiceRoleDTO dto = serviceName != null 
+                        ? frameServiceRoleConverter.entityToDtoWithServiceName(role, serviceName)
+                        : frameServiceRoleConverter.entityToDto(role);
+                    
                     // 查询并设置主机信息
                     List<String> hosts = getHostsForRole(clusterId, dto.serviceRoleName());
                     return dto.withHosts(hosts);
@@ -245,7 +276,7 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
 
         // 特殊处理NODE服务
         if (SERVICE_NODE.equals(serviceName)) {
-            FrameServiceRoleDTO nodeRole = FrameServiceRoleDTO.of(null, null, ROLE_NODE, 2, "1+", null);
+            FrameServiceRoleDTO nodeRole = FrameServiceRoleDTO.of(null, null, SERVICE_NODE, ROLE_NODE, 2, "1+", null);
             return Collections.singletonList(nodeRole);
         }
 

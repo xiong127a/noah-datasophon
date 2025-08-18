@@ -11,8 +11,8 @@ export interface WorkerRoleAssignDialogProps {
 }
 
 export interface Step4Data {
-  serviceIds: number[]
-  serviceNames: { serviceId: number; serviceName: string }[]
+  serviceIds: string[] // 修复：20位long精度问题
+  serviceNames: { serviceId: string; serviceName: string }[] // 修复：20位long精度问题
   serviceType: string
 }
 
@@ -34,7 +34,7 @@ export interface HostRoleAssignment {
 }
 
 export interface NonMasterRole {
-  id: number
+  id: string // 修复：20位long精度问题
   serviceRoleName: string
   serviceName: string
   serviceRoleType: number
@@ -48,7 +48,7 @@ export interface NonMasterRoleResponse {
 }
 
 export interface TableRowData {
-  id: number
+  id: string // 修复：20位long精度问题
   hostname: string
   checkedList: string[]
   [key: string]: any // 动态添加角色字段

@@ -5,6 +5,8 @@
  */
 
 export interface ServiceRole {
+  /** 服务名称 */
+  serviceName: string
   /** 服务角色名称 */
   serviceRoleName: string
   /** 基数限制：1表示单选，大于1表示多选 */

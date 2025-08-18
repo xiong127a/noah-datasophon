@@ -7,7 +7,7 @@
 
 export interface Service {
   /** 服务ID */
-  id: number
+  id: string // 修复：20位long精度问题
   /** 服务名称 */
   serviceName: string
   /** 服务显示标签 */
@@ -26,14 +26,14 @@ export interface Service {
 
 export interface ServiceSelection {
   /** 选中的服务ID */
-  serviceId: number
+  serviceId: string // 修复：20位long精度问题
   /** 选中的服务名称 */
   serviceName: string
 }
 
 export interface Step3Data {
   /** 选中的服务ID列表 */
-  serviceIds: number[]
+  serviceIds: string[] // 修复：20位long精度问题
   /** 选中的服务信息列表 */
   serviceNames: ServiceSelection[]
   /** 服务类型筛选 */

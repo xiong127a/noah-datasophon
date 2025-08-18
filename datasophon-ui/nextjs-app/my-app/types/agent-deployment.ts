@@ -7,7 +7,7 @@
 
 export interface HostInfo {
   /** 主机ID */
-  id: number
+  id: string // 修复：20位long精度问题
   /** 主机名 */
   hostname: string
   /** IP地址 */
@@ -36,7 +36,7 @@ export interface AgentDistributionTask {
   /** 任务ID */
   taskId: string
   /** 主机ID */
-  hostId: number
+  hostId: string // 修复：20位long精度问题
   /** 主机IP */
   hostIp: string
   /** 任务状态 */

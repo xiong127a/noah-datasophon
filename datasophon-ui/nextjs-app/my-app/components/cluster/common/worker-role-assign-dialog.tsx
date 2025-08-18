@@ -25,6 +25,18 @@ import type {
 } from '@/types/worker-role-assign'
 
 /**
+ * 从服务角色名中提取服务名
+ * 例如：HDFS_DataNode → HDFS，YARN_NodeManager → YARN
+ */
+const extractServiceName = (serviceRoleName: string): string => {
+  if (!serviceRoleName) return ''
+  
+  // 服务角色名格式通常是：ServiceName_RoleName
+  const parts = serviceRoleName.split('_')
+  return parts[0] || serviceRoleName
+}
+
+/**
  * 集群步骤6：分配服务Worker与Client角色对话框
  * 作者：任相鹏
  * 邮箱：635887935@qq.com
@@ -390,7 +402,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
                     {/* 角色名称 */}
                     <div className="flex items-center gap-2 min-w-0 w-48 flex-shrink-0">
                       <ServiceIcon
-                        serviceName={item.name}
+                        serviceName={roles.find(r => r.serviceRoleName === item.name)?.serviceName || extractServiceName(item.name)}
                         size={16}
                         className="w-4 h-4 flex-shrink-0"
                       />

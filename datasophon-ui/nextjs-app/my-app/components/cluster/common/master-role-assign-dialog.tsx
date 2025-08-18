@@ -13,6 +13,18 @@ import SuperHostSelector, { type HostInfo } from './super-host-selector'
 import ServiceIcon from '@/components/ui/service-icon'
 
 /**
+ * 从服务角色名中提取服务名
+ * 例如：HDFS_NameNode → HDFS，YARN_ResourceManager → YARN
+ */
+const extractServiceName = (serviceRoleName: string): string => {
+  if (!serviceRoleName) return ''
+  
+  // 服务角色名格式通常是：ServiceName_RoleName
+  const parts = serviceRoleName.split('_')
+  return parts[0] || serviceRoleName
+}
+
+/**
  * Step5 Dialog组件 - 分配服务Master角色
  * 作者：任相鹏
  * 邮箱：635887935@qq.com
@@ -27,9 +39,9 @@ interface MasterRoleAssignDialogProps {
   cluster: ClusterInfo
   /** Step4数据 - 选择的服务 */
   step4Data: {
-    serviceIds: number[]
+    serviceIds: string[] // 修复：20位long精度问题
     selectedServices: Array<{
-      id: number
+      id: string // 修复：20位long精度问题
       name: string
       [key: string]: unknown
     }>
@@ -83,8 +95,19 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
       
       if (response.success && response.data) {
         // 构建完整的主机信息，包含资源数据
-        const hostsWithResources = response.data.map((host: any) => ({
-          id: host.id || Math.random(),
+        const hostsWithResources = response.data.map((host: {
+          id?: number;
+          hostname: string;
+          ip?: string;
+          cpuCore?: number;
+          memory?: number;
+          disk?: number;
+          cpuArchitecture?: string;
+          osType?: string;
+          osVersion?: string;
+          [key: string]: unknown;
+        }) => ({
+          id: (host.id || Math.random()).toString(),
           hostname: host.hostname,
           ip: host.ip || '未知',
           cpuCore: host.cpuCore || Math.floor(Math.random() * 16 + 4), // 4-20核
@@ -104,10 +127,6 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
         }))
         
         setAvailableHosts(hostsWithResources)
-        
-        // 立即获取服务角色信息
-        await fetchServiceRoles(hostsWithResources)
-        
         return hostsWithResources.map(h => h.hostname)
       } else {
         throw new Error(response.message || '获取主机列表失败')
@@ -164,17 +183,17 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
   }, [cluster.id, step4Data?.serviceIds])
 
   // 初始化数据
-  const initializeData = useCallback(async () => {
+  useEffect(() => {
     const serviceIds = Array.isArray(step4Data?.serviceIds) ? step4Data.serviceIds : []
     if (open && serviceIds.length > 0) {
-      await fetchAllHosts() // 这会设置availableHosts状态并自动获取服务角色
-    }
-  }, [open, step4Data?.serviceIds, fetchAllHosts])
-
-  useEffect(() => {
-    if (open) {
-      initializeData()
-    } else {
+      const init = async () => {
+        const hosts = await fetchAllHosts()
+        if (hosts.length > 0) {
+          await fetchServiceRoles(availableHosts)
+        }
+      }
+      init()
+    } else if (!open) {
       // 重置状态
       setServiceRoles([])
       setAvailableHosts([])
@@ -182,7 +201,7 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
       setErrors({})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open])
+  }, [open, step4Data?.serviceIds])
 
 
 
@@ -354,7 +373,7 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
                     {/* 角色名称 */}
                     <div className="flex items-center gap-2 min-w-0 w-48 flex-shrink-0">
                       <ServiceIcon
-                        serviceName={item.name}
+                        serviceName={serviceRoles.find(r => r.serviceRoleName === item.name)?.serviceName || extractServiceName(item.name)}
                         size={16}
                         className="w-4 h-4 flex-shrink-0"
                       />

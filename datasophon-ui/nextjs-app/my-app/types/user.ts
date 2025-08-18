@@ -1,6 +1,6 @@
 // 用户数据类型定义
 export interface User {
-  id: number;
+  id: string; // 修复：20位long精度问题
   username: string;
   email: string;
   phone: string;
@@ -46,12 +46,12 @@ export interface CreateUserRequest extends UserFormData {
 
 // 更新用户请求数据
 export interface UpdateUserRequest extends UserFormData {
-  id: number;
+  id: string; // 修复：20位long精度问题
 }
 
 // 删除用户请求参数
 export interface DeleteUserRequest {
-  id: number;
+  id: string; // 修复：20位long精度问题
 }
 
 // 检查用户名请求参数

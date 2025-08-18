@@ -1,11 +1,11 @@
 export interface OperationLog {
-  id: number
+  id: string // 修复：20位long精度问题
   url: string
   ip: string
   operationModule: string
   operationType: string
   param: string
-  clusterId: number
+  clusterId: string // 修复：20位long精度问题
   hostIds: string
   serviceName: string
   serviceRoleInstancesIds: string

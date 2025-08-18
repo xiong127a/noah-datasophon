@@ -34,6 +34,7 @@ import java.util.List;
 public record FrameServiceRoleDTO(
         Long id,
         Integer serviceId,
+        String serviceName,     // 新增：服务名称字段
         String serviceRoleName,
         Integer serviceRoleType,
         String cardinality,
@@ -51,19 +52,19 @@ public record FrameServiceRoleDTO(
     /**
      * 创建基础FrameServiceRoleDTO，不包含主机列表
      */
-    public static FrameServiceRoleDTO of(Long id, Integer serviceId, String serviceRoleName,
+    public static FrameServiceRoleDTO of(Long id, Integer serviceId, String serviceName, String serviceRoleName,
             Integer serviceRoleType, String cardinality, String frameCode) {
-        return new FrameServiceRoleDTO(id, serviceId, serviceRoleName, serviceRoleType, cardinality,
+        return new FrameServiceRoleDTO(id, serviceId, serviceName, serviceRoleName, serviceRoleType, cardinality,
                 null, null, frameCode, null, null, null);
     }
 
     /**
      * 创建包含主机列表的FrameServiceRoleDTO
      */
-    public static FrameServiceRoleDTO withHosts(Long id, Integer serviceId, String serviceRoleName,
+    public static FrameServiceRoleDTO withHosts(Long id, Integer serviceId, String serviceName, String serviceRoleName,
             Integer serviceRoleType, String cardinality, String serviceRoleJson, String serviceRoleJsonMd5,
             String frameCode, String jmxPort, String logFile, List<String> hosts) {
-        return new FrameServiceRoleDTO(id, serviceId, serviceRoleName, serviceRoleType, cardinality,
+        return new FrameServiceRoleDTO(id, serviceId, serviceName, serviceRoleName, serviceRoleType, cardinality,
                 serviceRoleJson, serviceRoleJsonMd5, frameCode, jmxPort, logFile, hosts);
     }
 
@@ -71,7 +72,7 @@ public record FrameServiceRoleDTO(
      * 创建新的DTO，设置主机列表
      */
     public FrameServiceRoleDTO withHosts(List<String> newHosts) {
-        return new FrameServiceRoleDTO(id, serviceId, serviceRoleName, serviceRoleType, cardinality,
+        return new FrameServiceRoleDTO(id, serviceId, serviceName, serviceRoleName, serviceRoleType, cardinality,
                 serviceRoleJson, serviceRoleJsonMd5, frameCode, jmxPort, logFile, newHosts);
     }
 

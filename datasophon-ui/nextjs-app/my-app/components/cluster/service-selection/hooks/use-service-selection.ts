@@ -15,7 +15,7 @@ import type { Service, Step3Data } from '@/types/service-selection'
  */
 
 interface UseServiceSelectionOptions {
-  clusterId?: number
+  clusterId?: string // 修复：20位long精度问题
   initialServiceType?: ServiceType
   onComplete?: (data: Step3Data) => void
 }
@@ -41,7 +41,7 @@ interface UseServiceSelectionReturn {
   
   // 操作方法
   setServiceTypeFilter: (type: ServiceType) => void
-  toggleService: (serviceId: number) => void
+  toggleService: (serviceId: string) => void // 修复：20位long精度问题
   selectAllRequired: () => void
   clearSelection: () => void
   fetchServices: () => Promise<void>
@@ -178,7 +178,7 @@ export const useServiceSelection = ({
   }, [clusterId, serviceTypeFilter])
 
   // 服务选择切换
-  const toggleService = useCallback((serviceId: number) => {
+  const toggleService = useCallback((serviceId: string) => { // 修复：20位long精度问题
     const service = services.find(s => s.id === serviceId)
     const isCurrentlySelected = selectedServiceIds.includes(serviceId)
     

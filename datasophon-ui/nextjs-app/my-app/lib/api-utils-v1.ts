@@ -328,7 +328,7 @@ export const clusterApiV1 = {
   // Agent分发相关 API (Step3)
   agent: {
     /** 开始Agent分发 */
-    startDistribution: async (clusterId: string, hostIds: number[]) => {
+    startDistribution: async (clusterId: string, hostIds: string[]) => { // 修复：20位long精度问题
       const headers = createClusterHeaders(clusterId)
       const response = await apiV1.post(API_PATHS_V1.START_AGENT_DISTRIBUTION, { hostIds }, { headers })
       return response.data
@@ -343,7 +343,7 @@ export const clusterApiV1 = {
     },
 
     /** 重试失败的Agent分发 */
-    retryDistribution: async (clusterId: string, hostIds: number[]) => {
+    retryDistribution: async (clusterId: string, hostIds: string[]) => { // 修复：20位long精度问题
       const headers = createClusterHeaders(clusterId)
       const response = await apiV1.post(API_PATHS_V1.RETRY_AGENT_DISTRIBUTION, { hostIds }, { headers })
       return response.data
