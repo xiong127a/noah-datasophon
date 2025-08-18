@@ -61,13 +61,13 @@ public class UserPermissionHandler implements HandlerInterceptor {
         if (handler instanceof HandlerMethod handlerMethod) {
             UserPermission annotation = handlerMethod.getMethod().getAnnotation(UserPermission.class);
             if (annotation != null) {
-                // 从Spring Security上下文中获取认证信息
+                // 浠嶴pring Security涓婁笅鏂囦腑鑾峰彇璁よ瘉淇℃伅
                 Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
                 if (authentication == null || !authentication.isAuthenticated()) {
                     throw new ServiceException(Status.USER_NO_OPERATION_PERM);
                 }
 
-                // 获取用户信息
+                // 鑾峰彇鐢ㄦ埛淇℃伅
                 String username = authentication.getName();
                 UserInfoDTO userInfoDTO = userInfoService.getUserByUsername(username);
                 UserInfoEntity authUser = userInfoDTO != null ? userInfoConverter.dtoToEntity(userInfoDTO) : null;
