@@ -30,10 +30,10 @@ import org.mapstruct.Named;
 import java.util.List;
 
 /**
- * é›†ç¾¤é˜Ÿåˆ—å®¹é‡è½¬æ¢å™¨
- * è´Ÿè´£ClusterQueueCapacity Entityã€DTOã€VOä¹‹é—´çš„è½¬æ¢
+ * ¼¯Èº¶ÓÁĞÈİÁ¿×ª»»Æ÷
+ * ¸ºÔğClusterQueueCapacity Entity¡¢DTO¡¢VOÖ®¼äµÄ×ª»»
  *
- * @author ä»»ç›¸é¹
+ * @author ÈÎÏàÅô
  * @email 635887935@qq.com
  * @date 2025-08-04
  */
@@ -42,7 +42,7 @@ public interface ClusterQueueCapacityConverter extends
         BaseConverter<ClusterQueueCapacityEntity, ClusterQueueCapacityDTO, ClusterQueueCapacityVO> {
 
     /**
-     * ClusterQueueCapacityList è½¬æ¢ä¸º ClusterQueueCapacityListVO
+     * ClusterQueueCapacityList ×ª»»Îª ClusterQueueCapacityListVO
      */
     @Named("capacityListToListVO")
     default ClusterQueueCapacityListVO capacityListToListVO(ClusterQueueCapacityList capacityList) {
@@ -62,7 +62,7 @@ public interface ClusterQueueCapacityConverter extends
     }
 
     /**
-     * Links è½¬æ¢ä¸º LinksVO
+     * Links ×ª»»Îª LinksVO
      */
     @Named("linksToLinksVO")
     default ClusterQueueCapacityListVO.LinksVO linksToLinksVO(Links links) {
