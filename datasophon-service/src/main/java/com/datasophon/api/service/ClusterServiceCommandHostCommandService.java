@@ -70,6 +70,7 @@ public interface ClusterServiceCommandHostCommandService extends IService<Cluste
     /**
      * 获取主机命令日志
      */
+    @Deprecated(since = "2025-01-18", forRemoval = true)
     String getHostCommandLog(Long clusterId, Long hostCommandId) throws Exception;
 
     /**

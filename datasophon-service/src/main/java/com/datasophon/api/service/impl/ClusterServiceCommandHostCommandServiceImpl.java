@@ -151,7 +151,9 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
     }
 
     @Override
+    @Deprecated(since = "2025-01-18", forRemoval = true)
     public String getHostCommandLog(Long clusterId, Long hostCommandId) throws Exception {
+        logger.warn("getHostCommandLog已废弃，请使用WebSocket实时日志功能");
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         ClusterServiceCommandHostCommandEntity hostCommand = getMapper().selectByHostCommandId(hostCommandId);
 

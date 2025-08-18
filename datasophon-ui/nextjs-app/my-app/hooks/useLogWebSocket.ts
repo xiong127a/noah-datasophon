@@ -58,7 +58,7 @@ export const useLogWebSocket = ({
           token: token || '' // 备用方式
         },
         debug: function (str) {
-          console.log('[STOMP] ' + str)
+          // console.log('[STOMP] ' + str) // 生产环境可以注释掉
         },
         reconnectDelay: 5000,
         heartbeatIncoming: 20000,
