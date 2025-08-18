@@ -155,7 +155,8 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
             serviceInstanceService.updateById(clusterServiceInstance);
         }
 
-        Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + clusterServiceInstance.getId());
+        // 🔧 修复：安全处理Long/Integer类型转换
+        Integer roleGroupId = CacheUtils.getInteger("UseRoleGroup_" + clusterServiceInstance.getId());
         ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupService.getById(roleGroupId);
 
         // save role instance
