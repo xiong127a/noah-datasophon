@@ -68,12 +68,6 @@ public interface ClusterServiceCommandHostCommandService extends IService<Cluste
     Integer getHostCommandTotalProgressByHostnameAndCommandHostId(String hostname, Long commandHostId);
 
     /**
-     * 获取主机命令日志
-     */
-    @Deprecated(since = "2025-01-18", forRemoval = true)
-    String getHostCommandLog(Long clusterId, Long hostCommandId) throws Exception;
-
-    /**
      * 查找失败的主机命令
      */
     List<ClusterServiceCommandHostCommandDTO> findFailedHostCommand(String hostname, Long commandHostId);

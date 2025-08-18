@@ -150,54 +150,7 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
         return getMapper().getHostCommandTotalProgressByHostnameAndCommandHostId(hostname, commandHostId);
     }
 
-    @Override
-    @Deprecated(since = "2025-01-18", forRemoval = true)
-    public String getHostCommandLog(Long clusterId, Long hostCommandId) throws Exception {
-        logger.warn("getHostCommandLog已废弃，请使用WebSocket实时日志功能");
-        ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        ClusterServiceCommandHostCommandEntity hostCommand = getMapper().selectByHostCommandId(hostCommandId);
-
-        if (hostCommand == null) {
-            return "";
-        }
-
-        ClusterServiceCommandDTO commandDto = commandService.getCommandById(hostCommand.getCommandId());
-
-        ExecResult logResult = new ExecResult();
-        // 获取服务名称，优先使用serviceName字段，如果为空则使用commandName作为备选
-        String serviceName = commandDto.serviceName();
-        if (serviceName == null || serviceName.trim().isEmpty()) {
-            serviceName = commandDto.commandName();
-            logger.warn("Command ID {} serviceName is null, using commandName: {}", hostCommand.getCommandId(), serviceName);
-        }
-        String serviceRoleName = hostCommand.getServiceRoleName();
-        String logFile = String.format("%s/%s/%s.log", "logs", serviceName, serviceRoleName);
-
-        Timeout timeout = new Timeout(Duration.create(DEFAULT_LOG_TIMEOUT_SECONDS, TimeUnit.SECONDS));
-        if (clusterInfo.getDepType() != null && clusterInfo.getDepType().isKubernetes()) {
-            String baseDir = System.getProperty("user.dir");
-            String logStr = KubernetesMinaUtils
-                    .readLastRows(
-                            baseDir + Constants.SLASH + logFile,
-                            Charset.defaultCharset(), PropertyUtils.getInt("rows"));
-            logResult.setExecResult(true);
-            logResult.setExecOut(logStr);
-        } else {
-            GetLogCommand command = new GetLogCommand();
-            command.setLogFile(logFile);
-            command.setDecompressPackageName("datasophon-worker");
-            logger.info("Start to get {} install log from host {}", serviceRoleName, hostCommand.getHostname());
-            ActorSelection configActor = ActorUtils.actorSystem
-                    .actorSelection(
-                            AKKA_TCP_PREFIX + hostCommand.getHostname() + ":2552/user/worker/logActor");
-            Future<Object> logFuture = Patterns.ask(configActor, command, timeout);
-            logResult = (ExecResult) Await.result(logFuture, timeout.duration());
-        }
-        if (Objects.nonNull(logResult) && logResult.getExecResult()) {
-            return logResult.getExecOut();
-        }
-        return "";
-    }
+    // 已删除，功能迁移到WebSocket Controller
 
     @Override
     public List<ClusterServiceCommandHostCommandDTO> findFailedHostCommand(String hostname, Long commandHostId) {

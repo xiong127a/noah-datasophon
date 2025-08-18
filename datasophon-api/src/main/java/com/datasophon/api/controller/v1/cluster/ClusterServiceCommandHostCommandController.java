@@ -87,21 +87,6 @@ public class ClusterServiceCommandHostCommandController {
     }
 
     /**
-     * 获取主机命令日志
-     */
-    @GetMapping("/getHostCommandLog")
-    @Timed(value = "command.host.command.log", description = "获取主机命令日志的时间")
-    public Result<String> getHostCommandLog(
-            @ClusterId Long clusterId,
-            @RequestParam("hostCommandId") Long hostCommandId) throws Exception {
-        
-        log.debug("获取主机命令日志: clusterId={}, hostCommandId={}", clusterId, hostCommandId);
-        
-        var logContent = clusterServiceCommandHostCommandService.getHostCommandLog(clusterId, hostCommandId);
-        return Result.success(logContent);
-    }
-
-    /**
      * 根据ID获取主机命令信息
      */
     @GetMapping("/info/{id}")
