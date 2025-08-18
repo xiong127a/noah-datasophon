@@ -100,7 +100,6 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
       
       if (response.success && response.data) {
         // 构建完整的主机信息，使用后端返回的真实字段
-        console.log('🔍 [调试] 后端返回的原始数据:', response.data[0])
         
         const hostsWithResources = response.data
           .filter((host: Record<string, unknown>) => host.id && host.hostname && host.ip) // 过滤掉必须字段为空的数据
@@ -120,10 +119,7 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
               // 移除used字段，因为后端返回的不是使用率而是绝对值
             }
             
-            console.log('🔍 [调试] 映射后的主机数据:', {
-              原始: { coreNum: host.coreNum, totalMem: host.totalMem, totalDisk: host.totalDisk, ip: host.ip },
-              映射: { cpuCore: mappedHost.cpuCore, memory: mappedHost.memory, disk: mappedHost.disk, ip: mappedHost.ip }
-            })
+
             
             return mappedHost
           })

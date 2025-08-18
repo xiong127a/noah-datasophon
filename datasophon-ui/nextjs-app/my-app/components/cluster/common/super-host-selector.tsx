@@ -125,20 +125,7 @@ const SuperHostSelector: React.FC<SuperHostSelectorProps> = ({
 
   // 过滤主机列表
   const filteredHosts = useMemo(() => {
-    // 临时调试：查看主机数据
-    if (hosts.length > 0) {
-      console.log('🔍 [SuperHostSelector] 主机数据检查:', {
-        总数: hosts.length,
-        第一个主机: hosts[0],
-        主机字段: Object.keys(hosts[0] || {}),
-        资源字段检查: {
-          cpuCore: hosts[0]?.cpuCore,
-          memory: hosts[0]?.memory, 
-          disk: hosts[0]?.disk,
-          ip: hosts[0]?.ip
-        }
-      })
-    }
+
     
     if (!searchTerm) return hosts
     return hosts.filter(host => 
