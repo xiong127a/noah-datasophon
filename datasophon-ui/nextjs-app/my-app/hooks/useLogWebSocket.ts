@@ -57,8 +57,8 @@ export const useLogWebSocket = ({
           Authorization: token ? `Bearer ${token}` : '',
           token: token || '' // 备用方式
         },
-        debug: function (str) {
-          // console.log('[STOMP] ' + str) // 生产环境可以注释掉
+        debug: () => {
+          // 生产环境关闭调试日志
         },
         reconnectDelay: 5000,
         heartbeatIncoming: 20000,
@@ -73,10 +73,8 @@ export const useLogWebSocket = ({
           
           // 订阅用户的私有日志队列
           client.subscribe('/user/queue/logs', (message: IMessage) => {
-            console.log('收到STOMP消息:', message.body)
             try {
               const logMessage: LogMessage = JSON.parse(message.body)
-              console.log('解析后的消息:', logMessage)
               
               switch (logMessage.type) {
                 case 'log':

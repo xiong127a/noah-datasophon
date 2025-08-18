@@ -35,9 +35,21 @@ public class ExecResult implements Serializable {
 
     @Getter
     private Object object;
+    
+    // 新增：标记是否为流式日志
+    @Getter
+    private boolean streamingLog = false;
 
     public boolean getExecResult() {
         return execResult;
+    }
+    
+    // 便利构造函数
+    public ExecResult() {}
+    
+    public ExecResult(boolean execResult, String execOut) {
+        this.execResult = execResult;
+        this.execOut = execOut;
     }
 
 }

@@ -5,6 +5,7 @@ import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.service.LogTailService;
 import com.datasophon.common.command.GetLogCommand;
+
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -129,19 +130,19 @@ public class LogWebSocketController {
                 logTailService.startTailing(session);
                 
             } else {
-                // 非K8s模式：完全复用原有Actor逻辑，定时轮询
-                logger.info("非K8s模式 - 启动定时Actor日志获取");
+                // 非K8s模式：优化的Actor轮询（高频率，智能缓存）
+                logger.info("非K8s模式 - 启动优化Actor日志获取: host={}", logInfo.hostCommand().getHostname());
                 
-                // 启动定时任务，每2秒通过Actor获取日志（完全复用原有逻辑）
+                // 启动高频轮询，1秒一次，带智能去重
                 ScheduledFuture<?> task = scheduler.scheduleWithFixedDelay(() -> {
                     try {
                         String newLogContent = getActorLogContent(logInfo);
                         String lastContent = lastLogContent.get(sessionKey);
                         
-                        // 只有内容变化时才推送（避免重复）
+                        // 智能去重：只有内容真正变化才推送
                         if (!newLogContent.equals(lastContent)) {
                             lastLogContent.put(sessionKey, newLogContent);
-                            if (!newLogContent.isEmpty()) {
+                            if (!newLogContent.isEmpty() && !"can not find log file".equals(newLogContent)) {
                                 messagingTemplate.convertAndSendToUser(username, "/queue/logs", 
                                     new LogMessage("log", newLogContent, "INFO"));
                             }
@@ -151,7 +152,7 @@ public class LogWebSocketController {
                         messagingTemplate.convertAndSendToUser(username, "/queue/logs", 
                             new LogMessage("error", "获取日志失败: " + e.getMessage(), "ERROR"));
                     }
-                }, 0, 2, TimeUnit.SECONDS);
+                }, 0, 1, TimeUnit.SECONDS); // 优化：1秒轮询，比原来的2秒更实时
                 
                 scheduledTasks.put(sessionKey, task);
             }
@@ -263,14 +264,14 @@ public class LogWebSocketController {
     }
     
     /**
-     * 非K8s模式：通过Actor获取日志内容（完全复用原有逻辑）
+     * 非K8s模式：通过Actor获取日志内容（保持兼容）
      */
     private String getActorLogContent(LogFileInfo logInfo) throws Exception {
         GetLogCommand command = new GetLogCommand();
         command.setLogFile(logInfo.relativePath());
         command.setDecompressPackageName("datasophon-worker");
         
-        logger.debug("通过Actor获取日志: host={}, file={}", 
+        logger.debug("通过Actor获取历史日志: host={}, file={}", 
                     logInfo.hostCommand().getHostname(), logInfo.relativePath());
         
         Timeout timeout = new Timeout(Duration.create(DEFAULT_LOG_TIMEOUT_SECONDS, TimeUnit.SECONDS));
@@ -285,6 +286,8 @@ public class LogWebSocketController {
         }
         return "";
     }
+    
+
     
     // JDK21 record - 日志文件信息
     record LogFileInfo(ClusterInfoEntity clusterInfo, ClusterServiceCommandHostCommandEntity hostCommand, 
