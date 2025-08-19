@@ -53,7 +53,7 @@ public class FrameServiceRoleController {
     @GetMapping("/getServiceRoleList")
     public Result<List<FrameServiceRoleVO>> getServiceRoleOfMaster(
             @ClusterId Long clusterId,
-            @RequestParam("serviceIds") String serviceIds,
+            @RequestParam("serviceIds") List<Long> serviceIds,
             @RequestParam("serviceRoleType") Integer serviceRoleType) {
         try {
             List<FrameServiceRoleDTO> roleList = frameServiceRoleService.getServiceRoleList(clusterId, serviceIds,
@@ -72,7 +72,7 @@ public class FrameServiceRoleController {
     @GetMapping("/getNonMasterRoleList")
     public Result<List<FrameServiceRoleVO>> getNonMasterRoleList(
             @ClusterId Long clusterId,
-            @RequestParam("serviceIds") String serviceIds) {
+            @RequestParam("serviceIds") List<Long> serviceIds) {
         try {
             List<FrameServiceRoleDTO> roleList = frameServiceRoleService.getNonMasterRoleList(clusterId, serviceIds);
             List<FrameServiceRoleVO> roleVOList = frameServiceRoleConverter.dtoListToVoList(roleList);

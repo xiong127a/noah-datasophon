@@ -12,17 +12,7 @@ import ClusterWizardActionBar, { type ActionButton, type StatusInfo, type Status
 import SuperHostSelector, { type HostInfo } from './super-host-selector'
 import ServiceIcon from '@/components/ui/service-icon'
 
-/**
- * 从服务角色名中提取服务名
- * 例如：HDFS_NameNode → HDFS，YARN_ResourceManager → YARN
- */
-const extractServiceName = (serviceRoleName: string): string => {
-  if (!serviceRoleName) return ''
-  
-  // 服务角色名格式通常是：ServiceName_RoleName
-  const parts = serviceRoleName.split('_')
-  return parts[0] || serviceRoleName
-}
+
 
 /**
  * Step5 Dialog组件 - 分配服务Master角色
@@ -148,11 +138,9 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
         return
       }
       
-      const serviceIdsStr = serviceIds.join(',')
-      
       const response = await clusterApiV1.serviceRole.getList({
         clusterId: cluster.id,
-        serviceIds: serviceIdsStr,
+        serviceIds: serviceIds, // 直接传递数组，不再转换为逗号分隔字符串
         serviceRoleType: 1 // 1表示Master角色
       })
       
@@ -373,7 +361,7 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
                     {/* 角色名称 */}
                     <div className="flex items-center gap-2 min-w-0 w-48 flex-shrink-0">
                       <ServiceIcon
-                        serviceName={serviceRoles.find(r => r.serviceRoleName === item.name)?.serviceName || extractServiceName(item.name)}
+                        serviceName={serviceRoles.find(r => r.serviceRoleName === item.name)?.serviceName || ''}
                         size={16}
                         className="w-4 h-4 flex-shrink-0"
                       />

@@ -38,11 +38,11 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * 根据集群ID、服务ID列表和角色类型获取服务角色列表（包含主机信息）
      * 
      * @param clusterId       集群ID
-     * @param serviceIds      服务ID列表（逗号分隔）
+     * @param serviceIds      服务ID列表
      * @param serviceRoleType 服务角色类型
      * @return 服务角色DTO列表
      */
-    List<FrameServiceRoleDTO> getServiceRoleList(Long clusterId, String serviceIds, Integer serviceRoleType);
+    List<FrameServiceRoleDTO> getServiceRoleList(Long clusterId, List<Long> serviceIds, Integer serviceRoleType);
 
     /**
      * 根据服务ID和服务角色名称获取服务角色
@@ -75,10 +75,10 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * 获取非Master角色列表（包含主机信息）
      * 
      * @param clusterId  集群ID
-     * @param serviceIds 服务ID列表（逗号分隔）
+     * @param serviceIds 服务ID列表
      * @return 非Master角色DTO列表
      */
-    List<FrameServiceRoleDTO> getNonMasterRoleList(Long clusterId, String serviceIds);
+    List<FrameServiceRoleDTO> getNonMasterRoleList(Long clusterId, List<Long> serviceIds);
 
     /**
      * 根据服务名称获取服务角色列表

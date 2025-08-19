@@ -163,10 +163,9 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
         setError('服务ID列表为空')
         return
       }
-      const serviceIds = serviceIdsArray.join(',')
       const response = await clusterApiV1.serviceRole.getNonMasterRoleList(
         cluster.id,
-        serviceIds
+        serviceIdsArray // 直接传递数组，不再转换为逗号分隔字符串
       )
       
       if (response?.success && response?.data) {

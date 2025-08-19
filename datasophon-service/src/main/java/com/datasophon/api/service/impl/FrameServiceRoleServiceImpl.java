@@ -23,6 +23,7 @@ import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.utils.CacheOperateUtils;
 import com.datasophon.common.Constants;
+import com.datasophon.common.dto.FrameServiceDTO;
 import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.common.enums.TypeRefs;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -34,11 +35,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 框架服务角色表服务实现
@@ -66,41 +66,41 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     private final FrameServiceService frameServiceService;
 
     @Override
-    public List<FrameServiceRoleDTO> getServiceRoleList(Long clusterId, String serviceIds,
+    public List<FrameServiceRoleDTO> getServiceRoleList(Long clusterId, List<Long> serviceIds,
             Integer serviceRoleType) {
         if (clusterId == null) {
             throw new RuntimeException("集群ID不能为空");
         }
-        if (serviceIds == null || serviceIds.trim().isEmpty()) {
+        if (serviceIds == null || serviceIds.isEmpty()) {
             throw new RuntimeException("服务ID列表不能为空");
         }
 
-        // 分割服务ID字符串为列表并转换为Integer
-        List<Long> ids = Arrays.stream(serviceIds.split(","))
-                .filter(id -> !id.trim().isEmpty())
-                .map(id -> {
-                    try {
-                        return Long.parseLong(id.trim());
-                    } catch (NumberFormatException e) {
-                        log.warn("无效的服务ID: {}", id);
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .toList();
+        // 调用Dao层方法查询服务角色
+        List<FrameServiceRoleEntity> roles = getMapper().selectByServiceIdsAndRoleType(serviceIds, serviceRoleType);
 
-        if (ids.isEmpty()) {
+        if (roles.isEmpty()) {
             return List.of();
         }
 
-        // 调用Dao层方法查询服务角色
-        List<FrameServiceRoleEntity> roles = getMapper().selectByServiceIdsAndRoleType(ids, serviceRoleType);
+        // 🚀 批量查询服务名称 - 只查1次，提高效率
+        List<Long> uniqueServiceIds = roles.stream()
+                .map(FrameServiceRoleEntity::getServiceId)
+                .distinct()
+                .toList();
+        
+        Map<Long, String> serviceIdToNameMap = frameServiceService.getServiceListByServiceIds(uniqueServiceIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        FrameServiceDTO::id,
+                        FrameServiceDTO::serviceName,
+                    (existing, replacement) -> existing // 处理重复key
+                ));
 
         // 转换为DTO并填充serviceName和主机信息 - 使用优化的MapStruct映射
         return roles.stream()
                 .map(role -> {
-                    // 优化：直接从Entity转换并填充serviceName，避免二次转换
-                    String serviceName = getServiceNameByServiceId(role.getServiceId());
+                    // 从批量查询结果中获取serviceName
+                    String serviceName = serviceIdToNameMap.get(role.getServiceId());
                     FrameServiceRoleDTO dto = serviceName != null 
                         ? frameServiceRoleConverter.entityToDtoWithServiceName(role, serviceName)
                         : frameServiceRoleConverter.entityToDto(role);
@@ -200,60 +200,45 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
         return frameServiceRoleConverter.entityToDto(entity);
     }
 
-    /**
-     * 根据serviceId获取serviceName - 辅助方法
-     */
-    private String getServiceNameByServiceId(Long serviceId) {
-        if (serviceId == null) {
-            return null;
-        }
-        
-        try {
-            var frameService = frameServiceService.getById(serviceId);
-            return frameService != null ? frameService.getServiceName() : null;
-        } catch (Exception e) {
-            log.warn("获取serviceName失败: serviceId={}", serviceId, e);
-            return null;
-        }
-    }
+
 
 
 
     @Override
-    public List<FrameServiceRoleDTO> getNonMasterRoleList(Long clusterId, String serviceIds) {
+    public List<FrameServiceRoleDTO> getNonMasterRoleList(Long clusterId, List<Long> serviceIds) {
         if (clusterId == null) {
             throw new RuntimeException("集群ID不能为空");
         }
-        if (serviceIds == null || serviceIds.trim().isEmpty()) {
+        if (serviceIds == null || serviceIds.isEmpty()) {
             throw new RuntimeException("服务ID列表不能为空");
         }
 
-        // 分割服务ID字符串为列表并转换为Integer
-        List<Long> ids = Arrays.stream(serviceIds.split(","))
-                .filter(id -> !id.trim().isEmpty())
-                .map(id -> {
-                    try {
-                        return Long.parseLong(id.trim());
-                    } catch (NumberFormatException e) {
-                        log.warn("无效的服务ID: {}", id);
-                        return null;
-                    }
-                })
-                .filter(Objects::nonNull)
-                .toList();
+        // 调用Dao层方法查询非MASTER角色
+        List<FrameServiceRoleEntity> roles = getMapper().selectNonMasterRoles(serviceIds);
 
-        if (ids.isEmpty()) {
+        if (roles.isEmpty()) {
             return List.of();
         }
 
-        // 调用Dao层方法查询非MASTER角色
-        List<FrameServiceRoleEntity> roles = getMapper().selectNonMasterRoles(ids);
+        // 🚀 批量查询服务名称 - 只查1次，提高效率
+        List<Long> uniqueServiceIds = roles.stream()
+                .map(FrameServiceRoleEntity::getServiceId)
+                .distinct()
+                .toList();
+        
+        Map<Long, String> serviceIdToNameMap = frameServiceService.getServiceListByServiceIds(uniqueServiceIds)
+                .stream()
+                .collect(Collectors.toMap(
+                        FrameServiceDTO::id,
+                        FrameServiceDTO::serviceName,
+                    (existing, replacement) -> existing // 处理重复key
+                ));
 
         // 转换为DTO并填充serviceName和主机信息 - 使用优化的MapStruct映射
         return roles.stream()
                 .map(role -> {
-                    // 优化：直接从Entity转换并填充serviceName，避免二次转换
-                    String serviceName = getServiceNameByServiceId(role.getServiceId());
+                    // 从批量查询结果中获取serviceName
+                    String serviceName = serviceIdToNameMap.get(role.getServiceId());
                     FrameServiceRoleDTO dto = serviceName != null 
                         ? frameServiceRoleConverter.entityToDtoWithServiceName(role, serviceName)
                         : frameServiceRoleConverter.entityToDto(role);
