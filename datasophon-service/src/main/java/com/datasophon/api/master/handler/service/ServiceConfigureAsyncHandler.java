@@ -46,6 +46,7 @@ public class ServiceConfigureAsyncHandler extends ServiceHandler {
     // config
     GenerateServiceConfigCommand generateServiceConfigCommand = new GenerateServiceConfigCommand();
     generateServiceConfigCommand.setServiceName(serviceRoleInfo.getParentName());
+    generateServiceConfigCommand.setClusterId(serviceRoleInfo.getClusterId()); // 设置集群ID
     String namespace = ClusterInfoUtils.getKubernetesNamespace(serviceRoleInfo.getClusterId());
     generateServiceConfigCommand.setNamespace(namespace);
     generateServiceConfigCommand.setCofigFileMap(serviceRoleInfo.getConfigFileMap());

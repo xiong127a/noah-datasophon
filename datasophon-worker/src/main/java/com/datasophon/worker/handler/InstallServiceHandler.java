@@ -54,7 +54,7 @@ public class InstallServiceHandler {
     public InstallServiceHandler(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
-        String loggerName = String.format("%s-%s-%s", TaskConstants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        var loggerName = "%s-%s-%s".formatted(TaskConstants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
 
@@ -65,8 +65,12 @@ public class InstallServiceHandler {
      * @return 执行结果
      */
     public ExecResult install(InstallServiceRoleCommand command) {
-        ExecResult execResult = new ExecResult();
+        var execResult = new ExecResult();
         try {
+            // 使用集群ID创建日志路径
+            var loggerName = "%s-%s-%s-%s".formatted(
+                TaskConstants.TASK_LOG_LOGGER_NAME, command.getClusterId(), serviceName, serviceRoleName);
+            logger = LoggerFactory.getLogger(loggerName);
             String destDir = Constants.INSTALL_PATH + Constants.SLASH + "DDP/packages" + Constants.SLASH;
             String packageName = command.getPackageName();
             String packagePath = destDir + packageName;

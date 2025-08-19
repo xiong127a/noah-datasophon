@@ -62,6 +62,7 @@ public class KubernetesServiceInstallHandler extends ServiceHandler {
         installServiceRoleCommand.setPackageName(serviceRoleInfo.getPackageName());
         installServiceRoleCommand.setHostName(serviceRoleInfo.getHostname());
         installServiceRoleCommand.setLogFile(serviceRoleInfo.getLogFile());
+        installServiceRoleCommand.setClusterId(serviceRoleInfo.getClusterId()); // 设置集群ID
         installServiceRoleCommand.setCofigFileMap(configFileMap);
 
         ActorRef actorRef =

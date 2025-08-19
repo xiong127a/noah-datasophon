@@ -1265,9 +1265,18 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                       className="flex-1 overflow-auto bg-white"
                     >
                       {logData ? (
-                        <pre className="p-4 text-gray-800 font-mono text-sm leading-6 whitespace-pre-wrap">
-                          {logData}
-                        </pre>
+                        <div className="p-4">
+                          <pre className="text-gray-800 font-mono text-sm leading-6 whitespace-pre-wrap">
+                            {logData.split('\n').map((line, index) => (
+                              <div key={index} className="flex">
+                                <span className="text-gray-400 text-xs mr-3 select-none w-12 text-right flex-shrink-0">
+                                  {index + 1}
+                                </span>
+                                <span className="flex-1">{line}</span>
+                              </div>
+                            ))}
+                          </pre>
+                        </div>
                       ) : (
                         <div className="flex flex-col items-center justify-center h-full p-8">
                           <Activity className="h-12 w-12 text-gray-300 mb-4" />

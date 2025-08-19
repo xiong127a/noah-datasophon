@@ -65,6 +65,7 @@ public class ServiceInstallHandler extends ServiceHandler {
         installServiceRoleCommand.setDecompressPackageName(serviceRoleInfo.getDecompressPackageName());
         installServiceRoleCommand.setRunAs(serviceRoleInfo.getRunAs());
         installServiceRoleCommand.setServiceRoleType(serviceRoleInfo.getRoleType());
+        installServiceRoleCommand.setClusterId(serviceRoleInfo.getClusterId()); // 设置集群ID
 
         String md5 ;
         if ("aarch64".equals(hostEntity.getCpuArchitecture()) && FileUtil.exist(Constants.MASTER_MANAGE_PACKAGE_PATH

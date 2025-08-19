@@ -38,6 +38,8 @@ public class ConfigureServiceActor extends AbstractActor {
                     logger.info("start configure {}", command.getServiceName());
                     ConfigureServiceHandler serviceHandler = new ConfigureServiceHandler(command.getServiceName(),
                             command.getServiceRoleName());
+                    // 设置集群ID到handler，更新logger路径
+                    serviceHandler.setClusterId(command.getClusterId());
                     ExecResult startResult = serviceHandler.configure(command.getCofigFileMap(),
                             command.getDecompressPackageName(),
                             command.getMyid(),

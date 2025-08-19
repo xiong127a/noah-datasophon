@@ -19,6 +19,8 @@ public class KubernetesConfigureServiceActor extends AbstractActor {
                     logger.info("start configure {}", command.getServiceName());
                     KubernetesConfigureServiceHandler serviceHandler = new KubernetesConfigureServiceHandler(
                             command.getServiceName(), command.getServiceRoleName());
+                    // 设置集群ID到handler，更新logger路径
+                    serviceHandler.setClusterId(command.getClusterId());
                     ExecResult startResult = serviceHandler.configure(
                             command.getNamespace(),
                             command.getCofigFileMap(),

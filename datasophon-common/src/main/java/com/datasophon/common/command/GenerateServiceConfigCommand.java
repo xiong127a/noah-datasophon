@@ -50,4 +50,6 @@ public class GenerateServiceConfigCommand implements Serializable {
     private String kubeConfig;
 
     private String namespace;
+    
+    private Long clusterId;
 }

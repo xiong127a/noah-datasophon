@@ -28,6 +28,7 @@ public class KubernetesServiceConfigureHandler extends ServiceHandler {
         ServiceRoleInfo cloneByStream = ObjectUtil.cloneByStream(serviceRoleInfo);
         GenerateServiceConfigCommand generateServiceConfigCommand = new GenerateServiceConfigCommand();
         generateServiceConfigCommand.setServiceName(serviceRoleInfo.getParentName());
+        generateServiceConfigCommand.setClusterId(serviceRoleInfo.getClusterId()); // 设置集群ID
         generateServiceConfigCommand.setCofigFileMap(serviceRoleInfo.getConfigFileMap());
         generateServiceConfigCommand.setDecompressPackageName(serviceRoleInfo.getDecompressPackageName());
         generateServiceConfigCommand.setRunAs(serviceRoleInfo.getRunAs());

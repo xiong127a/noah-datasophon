@@ -64,7 +64,16 @@ public class ConfigureServiceHandler {
     public ConfigureServiceHandler(String serviceName, String serviceRoleName) {
         this.serviceName = serviceName;
         this.serviceRoleName = serviceRoleName;
-        String loggerName = String.format("%s-%s-%s", TaskConstants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        var loggerName = "%s-%s-%s".formatted(TaskConstants.TASK_LOG_LOGGER_NAME, serviceName, serviceRoleName);
+        logger = LoggerFactory.getLogger(loggerName);
+    }
+    
+    /**
+     * 设置集群ID，重新创建包含集群ID的logger
+     */
+    public void setClusterId(Long clusterId) {
+        var loggerName = "%s-%s-%s-%s".formatted(
+            TaskConstants.TASK_LOG_LOGGER_NAME, clusterId, serviceName, serviceRoleName);
         logger = LoggerFactory.getLogger(loggerName);
     }
 
