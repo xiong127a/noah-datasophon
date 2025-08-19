@@ -26,7 +26,11 @@ import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
+import com.datasophon.dao.entity.ClusterHostEntity;
+import com.datasophon.common.enums.ManagementStatus;
+import com.datasophon.common.enums.ClusterState;
 import com.datasophon.common.command.StartExecuteCommandCommand;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
 import com.datasophon.common.enums.CommandType;
@@ -82,7 +86,8 @@ public class DAGBuildActor extends AbstractActor {
         try {
             DAGGraph<String, ServiceNode, String> dag = new DAGGraph<>();
             CommandType commandType = executeCommandCommand.getCommandType();
-            logger.info("start execute command");
+            logger.info("start execute command: commandType={}", commandType);
+            
             ClusterServiceCommandHostCommandService hostCommandService = SpringUtil
                     .getBean(ClusterServiceCommandHostCommandService.class);
             FrameServiceRoleService frameServiceRoleService = SpringUtil.getBean(FrameServiceRoleService.class);
@@ -90,6 +95,12 @@ public class DAGBuildActor extends AbstractActor {
             ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
             ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(executeCommandCommand.getClusterId());
+            
+            // 如果是安装服务命令，立即更新主机和集群状态
+            if (commandType == CommandType.INSTALL_SERVICE) {
+                logger.info("检测到安装服务命令，立即更新集群和主机状态: clusterId={}", clusterInfo.id());
+                updateClusterAndHostStatusForInstall(clusterInfo);
+            }
             // 获取命令列表
             ClusterServiceCommandService clusterServiceCommandService = SpringUtil.getBean(ClusterServiceCommandService.class);
             List<ClusterServiceCommandDTO> commandList = new ArrayList<>();
@@ -199,6 +210,50 @@ public class DAGBuildActor extends AbstractActor {
             submitTaskNodeActor.tell(submitActiveTaskNodeCommand, getSelf());
         } catch (Exception e) {
             logger.error("Error handling StartExecuteCommandCommand", e);
+        }
+    }
+    
+    /**
+     * 为安装服务更新集群和主机状态
+     */
+    private void updateClusterAndHostStatusForInstall(ClusterInfoDTO clusterInfo) {
+        try {
+            // 1. 更新集群内所有主机状态为已受管
+            try {
+                ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
+                List<ClusterHostEntity> hosts = clusterHostService.getHostListByClusterId(clusterInfo.id());
+                if (!hosts.isEmpty()) {
+                    hosts.forEach(host -> {
+                        if (host.getManagementStatus() != ManagementStatus.MANAGED) {
+                            logger.info("更新主机 {} 管理状态为已受管", host.getHostname());
+                            host.setManagementStatus(ManagementStatus.MANAGED);
+                        }
+                    });
+                    clusterHostService.updateBatchHostStatus(hosts);
+                    logger.info("成功更新 {} 个主机为已受管状态", hosts.size());
+                }
+            } catch (Exception e) {
+                logger.error("更新主机管理状态失败: clusterId={}", clusterInfo.id(), e);
+            }
+            
+            // 2. 更新集群状态为运行中
+            try {
+                if (clusterInfo.clusterState() != ClusterState.RUNNING.getValue()) {
+                    ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+                    boolean updateResult = clusterInfoService.updateClusterState(clusterInfo.id(), ClusterState.RUNNING.getValue());
+                    if (updateResult) {
+                        logger.info("成功更新集群状态为运行中: clusterId={}", clusterInfo.id());
+                    } else {
+                        logger.warn("更新集群状态为运行中失败: clusterId={}", clusterInfo.id());
+                    }
+                } else {
+                    logger.info("集群已处于运行中状态: clusterId={}", clusterInfo.id());
+                }
+            } catch (Exception e) {
+                logger.error("更新集群状态失败: clusterId={}", clusterInfo.id(), e);
+            }
+        } catch (Exception e) {
+            logger.error("更新集群和主机状态失败", e);
         }
     }
 }

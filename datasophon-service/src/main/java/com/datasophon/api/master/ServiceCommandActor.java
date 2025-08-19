@@ -167,12 +167,15 @@ public class ServiceCommandActor extends AbstractActor {
 
                 // update cluster state
                 if (command.commandType() == 1) {
-
                     if (ClusterState.NEED_CONFIG.getValue()==(clusterInfo.clusterState())) {
                         clusterInfoService.updateClusterState(clusterInfo.id(), ClusterState.RUNNING.getValue());
                     }
-
-                    if (HDFS.equalsIgnoreCase(serviceName)) {
+                } else if (command.commandType() == 4 && HDFS.equalsIgnoreCase(serviceName)) {
+                    // update web ui
+                    updateHDFSWebUi(clusterInfo.id(), command.serviceInstanceId());
+                }
+                
+                if (command.commandType() == 1 && HDFS.equalsIgnoreCase(serviceName)) {
                         ActorRef hdfsECActor = ActorUtils.getLocalActor(HdfsECActor.class,
                                 ActorUtils.getActorRefName(HdfsECActor.class));
                         HdfsEcCommand hdfsEcCommand = new HdfsEcCommand();
@@ -200,8 +203,6 @@ public class ServiceCommandActor extends AbstractActor {
                     }
                     enableAlertConfig(serviceName, clusterInfo.id());
                 }
-            }
-            // 命令已通过上面的方法更新，这里不需要重复更新
         } catch (Exception e) {
             logger.error("处理UpdateCommandHostMessage消息时出错", e);
         }
