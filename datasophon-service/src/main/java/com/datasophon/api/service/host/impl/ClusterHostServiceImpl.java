@@ -108,6 +108,11 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
+    public List<ClusterHostEntity> getHostListByClusterIdAndManaged(Long clusterId) {
+        return clusterHostMapper.selectByClusterIdAndManaged(clusterId);
+    }
+
+    @Override
     public List<ClusterHostEntity> getHostListByClusterId(Long clusterId) {
         return clusterHostMapper.selectByClusterId(clusterId);
     }

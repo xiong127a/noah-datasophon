@@ -118,7 +118,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         if (hasRepeatUserName(clusterId, username)) {
             throw new RuntimeException(Status.DUPLICATE_USER_NAME.getMsg());
         }
-        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterId);
 
         ClusterUserEntity clusterUserEntity = new ClusterUserEntity();
         clusterUserEntity.setUsername(username);
@@ -233,7 +233,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         if (hasRepeatUserName(clusterId, username)) {
             throw new RuntimeException(Status.DUPLICATE_USER_NAME.getMsg());
         }
-        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterId);
 
         ClusterUserEntity clusterUserEntity = new ClusterUserEntity();
         clusterUserEntity.setUsername(username);
@@ -374,7 +374,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         ClusterUserEntity clusterUserEntity = this.getById(id);
         // delete user and group
         userGroupService.deleteByUser(id);
-        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterUserEntity.getClusterId());
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterUserEntity.getClusterId());
         // sync to all hosts
         for (ClusterHostEntity clusterHost : hostList) {
             ActorSelection unixUserActor = ActorUtils.actorSystem.actorSelection(
@@ -434,7 +434,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         ClusterUserEntity clusterUserEntity = this.getById(id);
         // delete user and group
         userGroupService.deleteByUser(id);
-        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterUserEntity.getClusterId());
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterUserEntity.getClusterId());
         // sync to all hosts
         for (ClusterHostEntity clusterHost : hostList) {
             try {

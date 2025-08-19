@@ -80,10 +80,16 @@ public interface ClusterHostMapper extends BaseMapper<ClusterHostEntity> {
      * 根据集群ID查询所有受管理的主机
      * 注意：配置中状态的主机不计入受管统计
      */
-    default List<ClusterHostEntity> selectByClusterId(@Param("clusterId") Long clusterId) {
+    default List<ClusterHostEntity> selectByClusterIdAndManaged(@Param("clusterId") Long clusterId) {
         QueryWrapper query = QueryWrapper.create()
                 .where(ClusterHostEntity::getClusterId).eq(clusterId)
                 .and(ClusterHostEntity::getManagementStatus).eq(ManagementStatus.MANAGED);
+        return this.selectListByQuery(query);
+    }
+
+    default List<ClusterHostEntity> selectByClusterId(@Param("clusterId") Long clusterId) {
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterHostEntity::getClusterId).eq(clusterId);
         return this.selectListByQuery(query);
     }
 

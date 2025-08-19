@@ -253,7 +253,7 @@ public class ProcessUtils {
             ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
 
             // 获取集群中所有管理的主机
-            List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterId(clusterInfo.getId());
+            List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterIdAndManaged(clusterInfo.getId());
 
             for (ClusterHostEntity host : hostList) {
                 if (ManagementStatus.MANAGED.equals(host.getManagementStatus())) { // 只为受管理的主机创建Actor

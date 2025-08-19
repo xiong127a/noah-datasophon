@@ -91,7 +91,7 @@ public class RackActor extends AbstractActor {
 
         // 构建配置文件映射
         Map<Generators, List<ServiceConfig>> configFileMap = buildRackConfigFileMap(
-                hostService.getHostListByClusterId(command.getClusterId()));
+                hostService.getHostListByClusterIdAndManaged(command.getClusterId()));
 
         // 为每个NameNode生成rack.properties文件
         for (ClusterServiceRoleInstanceDTO nameNode : nameNodes) {

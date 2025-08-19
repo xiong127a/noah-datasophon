@@ -110,7 +110,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         clusterGroupEntity.setGroupName(groupName);
         this.save(clusterGroupEntity);
 
-        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterId);
         for (ClusterHostEntity clusterHost : hostList) {
             ActorRef unixGroupActor = ActorUtils.getRemoteActor(clusterHost.getHostname(), "unixGroupActor");
             CreateUnixGroupCommand createUnixGroupCommand = new CreateUnixGroupCommand();
@@ -167,7 +167,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
         int globalMaxGid = 0;
 
-        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterId);
 
         for (ClusterHostEntity clusterHost : hostList) {
             // 执行命令获取当前主机的最大 GID
@@ -222,7 +222,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
     @Override
     public void refreshUserGroupToHost(Long clusterId) {
-        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterId);
         List<ClusterGroupEntity> groupList = this.list();
         for (ClusterGroupEntity clusterGroupEntity : groupList) {
             hostGroupSyncService.syncUserGroupToHosts(hostList, clusterGroupEntity.getGroupName(), "groupadd");
@@ -240,7 +240,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             throw new RuntimeException(Status.USER_GROUP_TIPS_ONE.getMsg());
         }
         this.removeById(id);
-        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterGroupEntity.getClusterId());
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterGroupEntity.getClusterId());
         for (ClusterHostEntity clusterHost : hostList) {
             ActorRef unixGroupActor = ActorUtils.getRemoteActor(clusterHost.getHostname(), "unixGroupActor");
             DelUnixGroupCommand delUnixGroupCommand = new DelUnixGroupCommand();
@@ -273,7 +273,7 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
             throw new RuntimeException(Status.USER_GROUP_TIPS_ONE.getMsg());
         }
         this.removeById(id);
-        List<ClusterHostEntity> hostList = hostService.getHostListByClusterId(clusterGroupEntity.getClusterId());
+        List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterGroupEntity.getClusterId());
         for (ClusterHostEntity clusterHost : hostList) {
             try {
                 if (!delUnixGroup(clusterGroupEntity.getGroupName(), clusterHost.getHostname()).equals(Constants.FAILED)) {

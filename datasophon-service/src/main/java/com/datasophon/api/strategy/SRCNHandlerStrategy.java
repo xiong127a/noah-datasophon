@@ -86,7 +86,7 @@ public class SRCNHandlerStrategy implements ServiceRoleStrategy {
 
     private Map<String, String> getHostMap(Long clusterId) {
         ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
-        List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterIdAndManaged(clusterId);
         return hostList.stream().collect(Collectors.toMap(ClusterHostEntity::getIp, ClusterHostEntity::getHostname));
     }
 

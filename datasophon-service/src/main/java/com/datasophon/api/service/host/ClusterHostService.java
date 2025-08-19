@@ -36,7 +36,9 @@ public interface ClusterHostService extends IService<ClusterHostEntity> {
                                              Integer hostState,
                                              String orderField, String orderType, Integer page, Integer pageSize);
 
-    List<ClusterHostEntity> getHostListByClusterId(Long id);
+    List<ClusterHostEntity> getHostListByClusterIdAndManaged(Long id);
+
+    List<ClusterHostEntity> getHostListByClusterId(Long clusterId);
 
     /**
      * 获取集群所有受管理的主机，按主机名排序

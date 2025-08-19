@@ -720,7 +720,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     private void addHostNodeToPrometheus(
             Long clusterId, HashMap<Generators, List<ServiceConfig>> configFileMap) {
         // DAO层：使用Mapper查询受管理的主机列表
-        List<ClusterHostEntity> hostList = clusterHostMapper.selectByClusterId(clusterId);
+        List<ClusterHostEntity> hostList = clusterHostMapper.selectByClusterIdAndManaged(clusterId);
 
         Generators workerGenerators = new Generators();
         workerGenerators.setFilename("worker.json");

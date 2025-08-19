@@ -50,7 +50,6 @@ import scala.concurrent.duration.Duration;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -101,7 +100,7 @@ public class HostCheckActor extends AbstractActor {
             clusterId);
         if (Objects.nonNull(prometheusInstance)) {
           // 集群正常安装了 Prometheus
-          List<ClusterHostEntity> list = clusterHostService.getHostListByClusterId(clusterId);
+          List<ClusterHostEntity> list = clusterHostService.getHostListByClusterIdAndManaged(clusterId);
 
           String promUrl = "http://" + prometheusInstance.hostname() + ":" + prometheusPort + "/api/v1/query";
           for (ClusterHostEntity clusterHostEntity : list) {
@@ -148,7 +147,7 @@ public class HostCheckActor extends AbstractActor {
           }
         } else {
           // 没有 Prometheus？直接获取节点，通过 rpc 检测是否启动
-          List<ClusterHostEntity> hosts = clusterHostService.getHostListByClusterId(clusterId);
+          List<ClusterHostEntity> hosts = clusterHostService.getHostListByClusterIdAndManaged(clusterId);
           List<ClusterHostEntity> checkedHosts = new ArrayList<>(hosts.size());
           for (ClusterHostEntity host : hosts) {
             if (hostInfo != null && !StrUtil.equals(host.getHostname(), hostInfo.getIp())) {

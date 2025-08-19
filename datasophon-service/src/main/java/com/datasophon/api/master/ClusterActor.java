@@ -215,7 +215,7 @@ public class ClusterActor extends AbstractActor {
                         }
 
                         if (allInstancesDeleted) {
-                            List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterId(clusterId);
+                            List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterIdAndManaged(clusterId);
                             String hostIds = hostList.stream()
                                     .map(h -> String.valueOf(h.getId()))
                                     .collect(Collectors.joining(Constants.COMMA));
