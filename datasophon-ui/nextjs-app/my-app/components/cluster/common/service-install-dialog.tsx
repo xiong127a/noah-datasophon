@@ -5,7 +5,7 @@ import {
   ChevronLeft, ChevronRight, AlertTriangle, 
   Play, Clock, CheckCircle2, XCircle, AlertCircle, 
   Activity, ArrowRight,
-  Eye, Terminal, Cpu, Wifi, WifiOff
+  Eye, Terminal, Cpu
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Dialog, DialogTitle } from '@/components/ui/dialog'
@@ -1228,52 +1228,64 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                     </div>
                   </div>
                   
-                  {/* 日志内容区域 */}
-                  <div className="flex-1 mx-3 mb-3 rounded-lg overflow-hidden border border-slate-200 relative flex flex-col">
-                                         {/* WebSocket连接状态栏 */}
-                     <div className="bg-slate-800 px-4 py-2 border-b border-slate-600 flex items-center justify-between flex-shrink-0 rounded-t-md">
-                       <div className="flex items-center space-x-2">
-                         {wsConnected ? (
-                           <Wifi className="w-4 h-4 text-green-400" />
-                         ) : wsConnecting ? (
-                           <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                         ) : (
-                           <WifiOff className="w-4 h-4 text-red-400" />
-                         )}
-                         <span className="text-sm text-slate-300">
-                           {wsConnected ? '实时日志连接已建立' : wsConnecting ? '正在连接...' : '连接已断开'}
-                         </span>
-                       </div>
-                       {(wsError || error) && (
-                         <span className="text-sm text-red-400">
-                           {wsError || error}
-                         </span>
-                       )}
-                     </div>
+                                    {/* 简洁的日志查看器 */}
+                  <div className="flex-1 mx-3 mb-3 bg-white rounded-lg border border-gray-200 overflow-hidden flex flex-col">
+                    {/* 简洁状态栏 */}
+                    <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        {wsConnected ? (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                            <span className="text-sm text-gray-700">实时连接</span>
+                          </>
+                        ) : wsConnecting ? (
+                          <>
+                            <div className="w-2 h-2 border border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="text-sm text-blue-600">连接中</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-gray-400"></div>
+                            <span className="text-sm text-gray-500">已断开</span>
+                          </>
+                        )}
+                      </div>
+                      
+                      {logData && (
+                        <span className="text-xs text-gray-500">
+                          {logData.split('\n').length} 行
+                        </span>
+                      )}
+                    </div>
+                   
+                    {/* 日志内容 */}
+                    <div 
+                      ref={logScrollContainerRef}
+                      onScroll={checkScrollPosition}
+                      className="flex-1 overflow-auto bg-white"
+                    >
+                      {logData ? (
+                        <pre className="p-4 text-gray-800 font-mono text-sm leading-6 whitespace-pre-wrap">
+                          {logData}
+                        </pre>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full p-8">
+                          <Activity className="h-12 w-12 text-gray-300 mb-4" />
+                          <p className="text-gray-500 text-center">
+                            {wsConnecting ? '正在连接...' : 
+                             wsConnected ? '等待日志输出' :
+                             '准备连接'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                     
-                                         {/* 日志内容 - 可滚动区域 */}
-                     <div 
-                       ref={logScrollContainerRef}
-                       onScroll={checkScrollPosition}
-                       className="flex-1 bg-slate-900 p-4 overflow-auto rounded-b-md scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800"
-                     >
-                       {logData ? (
-                         <pre className="text-gray-300 font-mono text-sm leading-relaxed whitespace-pre-wrap">
-                           {logData}
-                         </pre>
-                       ) : (
-                         <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                           <Terminal className="h-8 w-8 mb-3 opacity-50" />
-                           <p className="text-sm">暂无日志数据</p>
-                           {wsConnecting && (
-                             <p className="text-xs mt-1 text-blue-400">正在连接实时日志...</p>
-                           )}
-                           {!wsConnecting && !wsConnected && (
-                             <p className="text-xs mt-1 opacity-75">等待命令执行生成日志...</p>
-                           )}
-                         </div>
-                       )}
-                     </div>
+                    {/* 错误提示 */}
+                    {(wsError || error) && (
+                      <div className="px-4 py-2 bg-red-50 border-t border-red-200 text-red-600 text-sm">
+                        {wsError || error}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
