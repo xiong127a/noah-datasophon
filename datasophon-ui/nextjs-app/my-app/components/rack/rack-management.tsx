@@ -35,9 +35,11 @@ const RackManagement = () => {
   const [selectedRack, setSelectedRack] = useState<Rack | null>(null)
   const [refreshTrigger, setRefreshTrigger] = useState(0)
 
+  // 🔧 修复：避免Number()转换导致20位长整型精度丢失，使用字符串
+  // 🔧 修复：集群配置阶段应从组件props获取clusterId，而不是localStorage
   const clusterId = typeof window !== 'undefined' 
-    ? Number(localStorage.getItem('clusterId') || -1) 
-    : -1
+    ? (localStorage.getItem('clusterId') || "-1") 
+    : "-1"
 
   const getRackList = async () => {
     setLoading(true)

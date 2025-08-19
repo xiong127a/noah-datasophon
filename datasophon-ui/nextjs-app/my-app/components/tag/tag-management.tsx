@@ -22,9 +22,10 @@ export default function TagManagement() {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [selectedTag, setSelectedTag] = useState<Tag | null>(null)
 
-  // 获取集群ID
+  // 🔧 修复：避免Number()转换导致20位长整型精度丢失，使用字符串
+  // 🔧 修复：集群配置阶段应从组件props获取clusterId，而不是localStorage
   const clusterId = typeof window !== 'undefined' ? 
-    Number(localStorage.getItem("clusterId") || -1) : -1
+    (localStorage.getItem("clusterId") || "-1") : "-1"
 
   // 获取标签列表
   const fetchTags = async () => {

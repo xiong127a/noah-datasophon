@@ -38,7 +38,8 @@ export default function AuditLogManagement() {
   // 获取服务名称列表
   const fetchServiceNameList = async () => {
     try {
-      const clusterId = localStorage.getItem('clusterId') || -1
+      // 🔧 修复：避免精度丢失，使用字符串形式的clusterId
+      const clusterId = localStorage.getItem('clusterId') || "-1"
       const response = await fetch(`/ddh/api/log/serviceNameList?clusterId=${clusterId}`)
       const result = await response.json()
       if (result.success) {

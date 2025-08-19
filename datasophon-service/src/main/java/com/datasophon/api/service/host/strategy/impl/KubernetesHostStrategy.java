@@ -108,6 +108,9 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
             
+            // 🔧 修复：合并数据库中已有主机的状态信息
+            hosts = mergeWithExistingHostStatus(hosts, request.getClusterId());
+            
             // 存储到临时存储中
             k8sHostsStorage.put(request.getClusterId(), hosts);
             
@@ -117,6 +120,60 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
         } catch (Exception e) {
             log.error("从K8S集群发现主机失败", e);
             throw new RuntimeException("从K8S集群发现主机失败: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 合并数据库中已有主机的状态信息
+     * 确保已有主机的管理状态等信息不会丢失
+     */
+    private List<ClusterHostEntity> mergeWithExistingHostStatus(List<ClusterHostEntity> discoveredHosts, Long clusterId) {
+        if (discoveredHosts == null || discoveredHosts.isEmpty()) {
+            return discoveredHosts;
+        }
+        
+        try {
+            // 获取数据库中已有的主机信息
+            List<ClusterHostEntity> existingHosts = clusterHostService.getHostListByClusterId(clusterId);
+            
+            if (existingHosts == null || existingHosts.isEmpty()) {
+                log.info("数据库中没有已存在的主机，直接返回发现的主机列表");
+                return discoveredHosts;
+            }
+            
+            // 创建IP到已有主机的映射
+            Map<String, ClusterHostEntity> existingHostMap = existingHosts.stream()
+                    .collect(Collectors.toMap(ClusterHostEntity::getIp, host -> host, (existing, replacement) -> existing));
+            
+            // 合并状态信息
+            List<ClusterHostEntity> mergedHosts = discoveredHosts.stream()
+                    .map(discoveredHost -> {
+                        ClusterHostEntity existingHost = existingHostMap.get(discoveredHost.getIp());
+                        if (existingHost != null) {
+                            // 🔧 发现的主机在数据库中已存在，优先使用数据库中的状态信息
+                            discoveredHost.setId(existingHost.getId());
+                            discoveredHost.setManagementStatus(existingHost.getManagementStatus());
+                            discoveredHost.setCreateTime(existingHost.getCreateTime());
+                            log.debug("合并主机状态 - IP: {}, 数据库状态: {} → 保留", 
+                                    discoveredHost.getIp(), 
+                                    existingHost.getManagementStatus() != null ? existingHost.getManagementStatus().getDesc() : "null");
+                        } else {
+                            // 🔧 新发现的主机，保持转换器设置的初始状态（UNMANAGED）
+                            log.debug("新发现主机 - IP: {}, 初始状态: {}", 
+                                    discoveredHost.getIp(), 
+                                    discoveredHost.getManagementStatus() != null ? discoveredHost.getManagementStatus().getDesc() : "null");
+                        }
+                        return discoveredHost;
+                    })
+                    .collect(Collectors.toList());
+            
+            log.info("主机状态合并完成 - 发现主机: {}台, 已有主机: {}台", 
+                    discoveredHosts.size(), existingHosts.size());
+            return mergedHosts;
+            
+        } catch (Exception e) {
+            log.error("合并主机状态失败，返回原始发现列表", e);
+            return discoveredHosts;
         }
     }
 

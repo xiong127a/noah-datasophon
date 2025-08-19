@@ -116,7 +116,8 @@ export default function ClusterAuthorizationDialogSuper({
       setLoading(true)
       try {
         // 使用GET请求，就像Vue2项目中一样，通过URL参数传递数据
-        const clusterIdValue = Number(clusterId || localStorage.getItem("clusterId") || -1)
+        // 🔧 修复：避免Number()转换导致20位长整型精度丢失，直接使用字符串
+        const clusterIdValue = clusterId || localStorage.getItem("clusterId") || "-1"
         const userIdsString = selectedUsers.join(',')
         const url = `${API_PATHS.CLUSTER_AUTH}?clusterId=${clusterIdValue}&userIds=${userIdsString}`
         
