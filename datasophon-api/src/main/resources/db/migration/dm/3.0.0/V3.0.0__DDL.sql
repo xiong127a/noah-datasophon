@@ -24,3 +24,19 @@ CREATE TABLE t_ddh_auth_token (
 -- 添加索引
 CREATE INDEX idx_user_id ON t_ddh_auth_token (user_id);
 CREATE INDEX idx_expires_at ON t_ddh_auth_token (expires_at);
+
+-- 添加表注释
+COMMENT ON TABLE t_ddh_auth_token IS 'JWT认证令牌表';
+
+-- 为updated_at字段创建自动更新触发器（达梦数据库不支持ON UPDATE CURRENT_TIMESTAMP）
+CREATE OR REPLACE TRIGGER trg_auth_token_updated_at
+BEFORE UPDATE ON t_ddh_auth_token
+FOR EACH ROW
+BEGIN
+    :NEW.updated_at := CURRENT_TIMESTAMP;
+END;
+/
+
+-- 添加外键约束（如果需要）
+-- ALTER TABLE t_ddh_auth_token
+--   ADD CONSTRAINT fk_auth_token_user_id FOREIGN KEY (user_id) REFERENCES t_ddh_user_info (id) ON DELETE CASCADE;

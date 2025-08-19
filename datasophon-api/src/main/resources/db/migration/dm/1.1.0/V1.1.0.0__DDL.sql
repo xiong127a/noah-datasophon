@@ -628,3 +628,45 @@ CREATE TABLE t_ddh_operation_log  (
   end_time datetime DEFAULT NULL, -- '操作结束时间'
   PRIMARY KEY (id)
 );
+
+-- ========================================================================
+-- 添加表注释（达梦数据库语法）
+-- ========================================================================
+COMMENT ON TABLE t_ddh_alert_group IS '告警组表';
+COMMENT ON TABLE t_ddh_cluster_alert_expression IS '表达式常量表';
+COMMENT ON TABLE t_ddh_cluster_alert_group_map IS '告警组关联主机组表';
+COMMENT ON TABLE t_ddh_cluster_alert_history IS '告警历史表';
+COMMENT ON TABLE t_ddh_cluster_alert_quota IS '告警配额表';
+COMMENT ON TABLE t_ddh_cluster_alert_rule IS '告警规则表';
+COMMENT ON TABLE t_ddh_cluster_group IS '主机组表';
+COMMENT ON TABLE t_ddh_cluster_host IS '集群主机表';
+COMMENT ON TABLE t_ddh_cluster_host_command IS '主机操作指令表';
+COMMENT ON TABLE t_ddh_cluster_info IS '集群信息表';
+COMMENT ON TABLE t_ddh_cluster_kafka_acl IS 'kafka acl表';
+COMMENT ON TABLE t_ddh_cluster_kerberos IS 'kerberos表';
+COMMENT ON TABLE t_ddh_cluster_node_label IS '集群主机节点标签表';
+COMMENT ON TABLE t_ddh_cluster_queue_capacity IS '集群队列容量表';
+COMMENT ON TABLE t_ddh_cluster_role_user_map IS '集群角色用户关联表';
+COMMENT ON TABLE t_ddh_cluster_service_command IS '集群服务操作指令表';
+COMMENT ON TABLE t_ddh_cluster_service_command_host_command IS '集群服务指令主机指令表';
+COMMENT ON TABLE t_ddh_cluster_service_dashboard IS '集群服务仪表盘表';
+COMMENT ON TABLE t_ddh_cluster_service_instance IS '集群服务实例表';
+COMMENT ON TABLE t_ddh_cluster_service_instance_config IS '集群服务实例配置表';
+COMMENT ON TABLE t_ddh_cluster_service_instance_role_group IS '角色组表';
+COMMENT ON TABLE t_ddh_cluster_service_instance_role_group_config IS '角色组配置表';
+COMMENT ON TABLE t_ddh_cluster_service_instance_web_uis IS '集群服务实例WEB UI表';
+COMMENT ON TABLE t_ddh_cluster_service_role_instance_webs IS '集群服务角色实例WEB表';
+COMMENT ON TABLE t_ddh_cluster_user IS '集群用户表';
+COMMENT ON TABLE t_ddh_cluster_user_group IS '集群用户组表';
+COMMENT ON TABLE t_ddh_cluster_variable IS '集群全局变量表';
+COMMENT ON TABLE t_ddh_frame_info IS '框架信息表';
+COMMENT ON TABLE t_ddh_frame_service IS '框架服务表';
+COMMENT ON TABLE t_ddh_frame_service_role IS '框架服务角色表';
+COMMENT ON TABLE t_ddh_master_role_group_config IS '主角色组配置表';
+COMMENT ON TABLE t_ddh_master_service_config IS '主服务配置表';
+COMMENT ON TABLE t_ddh_notice_group IS '通知组表';
+COMMENT ON TABLE t_ddh_notice_group_user IS '通知组用户表';
+COMMENT ON TABLE t_ddh_cluster_service_role_instance_webuis IS '集群服务角色实例WEBUI表';
+COMMENT ON TABLE t_ddh_session IS 'session表';
+COMMENT ON TABLE t_ddh_user_info IS '用户信息表';
+COMMENT ON TABLE t_ddh_operation_log IS '操作日志表';

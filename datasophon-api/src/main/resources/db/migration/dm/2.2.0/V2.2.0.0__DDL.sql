@@ -1,10 +1,13 @@
+-- 达梦数据库不支持SET FOREIGN_KEY_CHECKS，但可以注释说明
+-- SET FOREIGN_KEY_CHECKS=0; -- MySQL特有功能，DM不支持
+
 CREATE TABLE misval  (
-                                Id bigint NULL DEFAULT NULL,
-                                "Sepal.Length" double NULL DEFAULT NULL,
-                                "Sepal.Width" double NULL DEFAULT NULL,
-                                "Petal.Length" double NULL DEFAULT NULL,
-                                "Petal.Width" double NULL DEFAULT NULL,
-                                Species text NULL
+                               Id bigint NULL DEFAULT NULL,
+                               "Sepal.Length" double NULL DEFAULT NULL,
+                               "Sepal.Width" double NULL DEFAULT NULL,
+                               "Petal.Length" double NULL DEFAULT NULL,
+                               "Petal.Width" double NULL DEFAULT NULL,
+                               Species text NULL
 );
 
 CREATE TABLE t_ddh_config_version_info  (
@@ -27,3 +30,9 @@ ALTER TABLE t_ddh_frame_service MODIFY COLUMN service_json CLOB NULL;
 ALTER TABLE t_ddh_frame_service MODIFY COLUMN config_file_json CLOB NULL;
 
 ALTER TABLE t_ddh_operation_log MODIFY COLUMN param CLOB NULL;
+
+-- 添加表注释
+COMMENT ON TABLE t_ddh_config_version_info IS '配置版本详情表';
+
+-- 达梦数据库不支持SET FOREIGN_KEY_CHECKS，但可以注释说明
+-- SET FOREIGN_KEY_CHECKS=1; -- MySQL特有功能，DM不支持

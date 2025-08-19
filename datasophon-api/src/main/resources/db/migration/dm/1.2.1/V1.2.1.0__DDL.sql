@@ -17,3 +17,7 @@ CREATE TABLE t_ddh_cluster_user_tenant (
   tenant_id int DEFAULT NULL,
   PRIMARY KEY (id)
 );
+
+-- 添加表注释
+COMMENT ON TABLE t_ddh_cluster_tenant IS '租户表';
+COMMENT ON TABLE t_ddh_cluster_user_tenant IS '租户授权表';

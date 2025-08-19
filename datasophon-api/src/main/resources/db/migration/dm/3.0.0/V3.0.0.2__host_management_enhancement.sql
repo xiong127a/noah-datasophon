@@ -43,3 +43,23 @@ WHERE node_label IS NOT NULL AND node_label LIKE 'kubernetes-node|%';
 UPDATE t_ddh_cluster_host 
 SET management_status = 2 
 WHERE management_status IS NULL OR management_status NOT IN (1, 2, 3);
+
+-- =============================================================================
+-- 数据完整性检查（可选，用于验证迁移结果）
+-- =============================================================================
+
+-- 检查迁移结果（仅在需要时取消注释执行）
+-- SELECT 
+--     COUNT(*) as total_hosts,
+--     SUM(CASE WHEN k8s_node_info IS NOT NULL THEN 1 ELSE 0 END) as k8s_hosts,
+--     SUM(CASE WHEN management_status = 1 THEN 1 ELSE 0 END) as managed_hosts,
+--     SUM(CASE WHEN management_status = 2 THEN 1 ELSE 0 END) as unmanaged_hosts,
+--     SUM(CASE WHEN management_status = 3 THEN 1 ELSE 0 END) as configuring_hosts
+-- FROM t_ddh_cluster_host;
+
+-- 检查是否有不匹配的K8s数据（仅在需要时取消注释执行）
+-- SELECT COUNT(*) as orphaned_k8s_data 
+-- FROM t_ddh_cluster_host h
+-- JOIN t_ddh_cluster_info c ON h.cluster_id = c.id
+-- WHERE h.k8s_node_info IS NOT NULL
+--   AND c.dep_type != 'Kubernetes';
