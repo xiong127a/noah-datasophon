@@ -87,12 +87,13 @@ public class LogTailService {
             }
         };
         
-        // 创建Tailer（从文件末尾开始，只读取新内容）
+        // 创建Tailer（从文件开头开始，统一处理历史+新增内容）
         var tailer = Tailer.builder()
                 .setFile(logFile)
                 .setTailerListener(listener)
                 .setDelayDuration(java.time.Duration.ofMillis(500)) // 500ms检查一次
                 .setStartThread(false) // 手动启动
+                .setTailFromEnd(false) // 🔧 优化：从开头开始，让框架统一处理所有内容
                 .get();
         
         activeTailers.put(session.sessionKey(), tailer);

@@ -7,11 +7,9 @@ import com.datasophon.api.service.LogTailService;
 import com.datasophon.common.command.GetLogCommand;
 
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostCommandMapper;
-import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import com.datasophon.api.master.ActorUtils;
 import org.apache.pekko.actor.ActorSelection;
 import org.apache.pekko.pattern.Patterns;
@@ -27,7 +25,6 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
-import java.nio.charset.Charset;
 import java.security.Principal;
 import java.util.Map;
 import java.util.Objects;
@@ -102,29 +99,17 @@ public class LogWebSocketController {
                                   logInfo.clusterInfo().getDepType().isKubernetes();
             
             if (isKubernetes) {
-                // K8s模式：使用增量读取（优化版）
-                logger.info("K8s模式 - 启动增量日志跟踪: {}", logInfo.fullPath());
+                // K8s模式：完全交给Apache Commons IO Tailer统一处理
+                logger.info("K8s模式 - 启动统一日志跟踪: {}", logInfo.fullPath());
                 
-                // 先发送历史日志（复用原有readLastRows逻辑）
-                String historyLog = KubernetesMinaUtils.readLastRows(
-                    logInfo.fullPath(), 
-                    Charset.defaultCharset(), 
-                    PropertyUtils.getInt("rows")
-                );
-                
-                if (!historyLog.isEmpty()) {
-                    messagingTemplate.convertAndSendToUser(username, "/queue/logs", 
-                        new LogMessage("history", historyLog, "INFO")); // 标记为历史日志
-                }
-                
-                // 启动实时跟踪（使用Commons IO Tailer）
+                // 🔧 优化：去掉手动读取，让Tailer统一处理历史+新增内容
                 LogTailService.LogSession session = new LogTailService.LogSession(
                     sessionKey, 
                     username, 
                     logInfo.fullPath(),
-                    // 新内容回调 - 推送增量内容
+                    // Tailer会从文件开头开始处理所有内容（历史+新增）
                     newContent -> messagingTemplate.convertAndSendToUser(username, "/queue/logs", 
-                        new LogMessage("increment", newContent, "INFO")) // 标记为增量日志
+                        new LogMessage("log", newContent, "INFO")) // 统一为log类型，前端append处理
                 );
                 
                 logTailService.startTailing(session);

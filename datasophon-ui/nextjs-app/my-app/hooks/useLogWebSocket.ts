@@ -71,6 +71,10 @@ export const useLogWebSocket = ({
           setError(null)
           reconnectAttempts.current = 0
           
+          // 🔧 清空日志内容，准备接收Tailer统一处理的完整内容
+          setLogContent('')
+          onLogUpdateRef.current?.('', 'replace')
+          
           // 订阅用户的私有日志队列
           client.subscribe('/user/queue/logs', (message: IMessage) => {
             try {
@@ -79,13 +83,13 @@ export const useLogWebSocket = ({
               switch (logMessage.type) {
                 case 'history':
                 case 'full':
-                  // 历史日志或完整日志 - 直接覆盖
+                  // 非K8s模式：完整日志 - 直接覆盖
                   setLogContent(logMessage.data)
                   onLogUpdateRef.current?.(logMessage.data, 'replace')
                   break
                 case 'increment':
                 case 'log':
-                  // 增量日志 - 追加模式
+                  // K8s模式：Tailer统一处理的内容 - 追加模式
                   setLogContent(prevContent => {
                     const newContent = prevContent + logMessage.data
                     onLogUpdateRef.current?.(newContent, 'append')
