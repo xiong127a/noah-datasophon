@@ -55,7 +55,7 @@ import org.springframework.transaction.annotation.Transactional;
 import scala.concurrent.duration.FiniteDuration;
 
 import java.util.ArrayList;
-
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -209,11 +209,59 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public void saveHost(ClusterHostEntity clusterHostEntity) {
-        // 添加重复主机检查逻辑
-        if (clusterHostEntity.getClusterId() != null) {
-            checkForDuplicateHost(clusterHostEntity);
-        }
+        // 直接调用重写后的save方法，避免重复检查
         this.save(clusterHostEntity);
+    }
+
+    /**
+     * 重写父类save方法，添加重复检查
+     */
+    @Override
+    public boolean save(ClusterHostEntity entity) {
+        // 添加重复主机检查逻辑
+        if (entity.getClusterId() != null) {
+            checkForDuplicateHost(entity);
+        }
+        return super.save(entity);
+    }
+
+    /**
+     * 重写父类saveBatch方法，添加重复检查
+     * 使用synchronized防止并发插入重复数据
+     */
+    @Override
+    public synchronized boolean saveBatch(Collection<ClusterHostEntity> entityList) {
+        // 过滤重复主机，区分处理：已受管=报错，其他=跳过
+        List<ClusterHostEntity> filteredList = entityList.stream()
+                .filter(entity -> {
+                    try {
+                        if (entity.getClusterId() != null) {
+                            checkForDuplicateHost(entity);
+                        }
+                        return true; // 没有重复，保留
+                    } catch (BusinessException e) {
+                        // 根据异常消息区分处理方式
+                        if (e.getMessage().contains("受管状态，无法重复添加")) {
+                            // 已受管状态：直接抛出异常，中断整个批量操作
+                            logger.error("批量保存中断：{}", e.getMessage());
+                            throw e;
+                        } else {
+                            // 未受管或配置中状态：跳过该主机，继续处理其他主机
+                            logger.info("跳过重复主机 {}[{}]: {}", 
+                                       entity.getHostname(), entity.getIp(), e.getMessage());
+                            return false; // 跳过，过滤掉
+                        }
+                    }
+                })
+                .toList();
+        
+        if (filteredList.isEmpty()) {
+            logger.info("所有主机都已存在，跳过批量保存");
+            return true;
+        }
+        
+        logger.info("批量保存主机：原{}台，过滤后{}台", entityList.size(), filteredList.size());
+        return super.saveBatch(filteredList);
     }
 
     /**
@@ -251,27 +299,27 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     /**
      * 处理重复主机的逻辑
      * 根据用户需求：
-     * - 如果主机未受管：不再添加，抛出特殊异常
-     * - 如果主机已受管或配置中：报错
+     * - 如果主机已受管：报错，无法重复添加
+     * - 如果主机未受管或配置中：跳过添加
      * 
      * @param existingHost 已存在的主机
      * @param type 重复类型（IP或主机名）
      * @param value 重复的值
-     * @throws BusinessException 在所有情况下都抛出异常
+     * @throws BusinessException 只有已受管状态才抛出异常
      */
     private void handleDuplicateHost(ClusterHostEntity existingHost, String type, String value) {
         var managementStatus = existingHost.getManagementStatus();
         
-        if (managementStatus == ManagementStatus.UNMANAGED) {
-            // 未受管状态：记录日志，抛出提示异常
-            logger.info("主机{}[{}]已存在且为未受管状态，跳过添加", type, value);
-            throw new BusinessException("主机" + type + "[" + value + "]已存在且为未受管状态，跳过添加");
-        } else if (managementStatus == ManagementStatus.MANAGED || 
+        if (managementStatus == ManagementStatus.MANAGED) {
+            // 已受管状态：抛出错误异常
+            logger.error("主机{}[{}]已存在且为受管状态，无法重复添加", type, value);
+            throw new BusinessException("主机" + type + "[" + value + "]已存在且为受管状态，无法重复添加");
+        } else if (managementStatus == ManagementStatus.UNMANAGED || 
                    managementStatus == ManagementStatus.CONFIGURING) {
-            // 已受管或配置中状态：抛出错误异常
-            String statusText = managementStatus == ManagementStatus.MANAGED ? "受管" : "配置中";
-            logger.error("主机{}[{}]已存在且为{}状态，无法重复添加", type, value, statusText);
-            throw new BusinessException("主机" + type + "[" + value + "]已存在且为" + statusText + "状态，无法重复添加");
+            // 未受管或配置中状态：记录日志，抛出跳过异常
+            String statusText = managementStatus == ManagementStatus.UNMANAGED ? "未受管" : "配置中";
+            logger.info("主机{}[{}]已存在且为{}状态，跳过添加", type, value, statusText);
+            throw new BusinessException("主机" + type + "[" + value + "]已存在且为" + statusText + "状态，跳过添加");
         }
     }
 

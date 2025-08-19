@@ -68,32 +68,47 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
     @Override
     public List<FrameServiceRoleDTO> getServiceRoleList(Long clusterId, List<Long> serviceIds,
             Integer serviceRoleType) {
+        validateCommonParams(clusterId, serviceIds);
+
+        // 调用Dao层方法查询服务角色
+        List<FrameServiceRoleEntity> roles = getMapper().selectByServiceIdsAndRoleType(serviceIds, serviceRoleType);
+
+        return processServiceRoles(clusterId, serviceIds, roles);
+    }
+
+    /**
+     * 通用参数校验方法
+     */
+    private void validateCommonParams(Long clusterId, List<Long> serviceIds) {
         if (clusterId == null) {
             throw new RuntimeException("集群ID不能为空");
         }
         if (serviceIds == null || serviceIds.isEmpty()) {
             throw new RuntimeException("服务ID列表不能为空");
         }
+    }
 
-        // 调用Dao层方法查询服务角色
-        List<FrameServiceRoleEntity> roles = getMapper().selectByServiceIdsAndRoleType(serviceIds, serviceRoleType);
-
+    /**
+     * 通用服务角色处理方法 - 批量查询serviceName并转换为DTO
+     * 
+     * @param clusterId 集群ID
+     * @param serviceIds 服务ID列表
+     * @param roles 查询到的服务角色实体列表
+     * @return 转换后的DTO列表
+     */
+    private List<FrameServiceRoleDTO> processServiceRoles(Long clusterId, List<Long> serviceIds, 
+                                                          List<FrameServiceRoleEntity> roles) {
         if (roles.isEmpty()) {
             return List.of();
         }
-
-        // 🚀 批量查询服务名称 - 只查1次，提高效率
-        List<Long> uniqueServiceIds = roles.stream()
-                .map(FrameServiceRoleEntity::getServiceId)
-                .distinct()
-                .toList();
         
-        Map<Long, String> serviceIdToNameMap = frameServiceService.getServiceListByServiceIds(uniqueServiceIds)
+        // 🚀 批量查询服务名称 - 只查1次，提高效率
+        Map<Long, String> serviceIdToNameMap = frameServiceService.getServiceListByServiceIds(serviceIds)
                 .stream()
                 .collect(Collectors.toMap(
                         FrameServiceDTO::id,
                         FrameServiceDTO::serviceName,
-                    (existing, replacement) -> existing // 处理重复key
+                        (existing, replacement) -> existing // 处理重复key
                 ));
 
         // 转换为DTO并填充serviceName和主机信息 - 使用优化的MapStruct映射
@@ -206,48 +221,12 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
 
     @Override
     public List<FrameServiceRoleDTO> getNonMasterRoleList(Long clusterId, List<Long> serviceIds) {
-        if (clusterId == null) {
-            throw new RuntimeException("集群ID不能为空");
-        }
-        if (serviceIds == null || serviceIds.isEmpty()) {
-            throw new RuntimeException("服务ID列表不能为空");
-        }
+        validateCommonParams(clusterId, serviceIds);
 
         // 调用Dao层方法查询非MASTER角色
         List<FrameServiceRoleEntity> roles = getMapper().selectNonMasterRoles(serviceIds);
 
-        if (roles.isEmpty()) {
-            return List.of();
-        }
-
-        // 🚀 批量查询服务名称 - 只查1次，提高效率
-        List<Long> uniqueServiceIds = roles.stream()
-                .map(FrameServiceRoleEntity::getServiceId)
-                .distinct()
-                .toList();
-        
-        Map<Long, String> serviceIdToNameMap = frameServiceService.getServiceListByServiceIds(uniqueServiceIds)
-                .stream()
-                .collect(Collectors.toMap(
-                        FrameServiceDTO::id,
-                        FrameServiceDTO::serviceName,
-                    (existing, replacement) -> existing // 处理重复key
-                ));
-
-        // 转换为DTO并填充serviceName和主机信息 - 使用优化的MapStruct映射
-        return roles.stream()
-                .map(role -> {
-                    // 从批量查询结果中获取serviceName
-                    String serviceName = serviceIdToNameMap.get(role.getServiceId());
-                    FrameServiceRoleDTO dto = serviceName != null 
-                        ? frameServiceRoleConverter.entityToDtoWithServiceName(role, serviceName)
-                        : frameServiceRoleConverter.entityToDto(role);
-                    
-                    // 查询并设置主机信息
-                    List<String> hosts = getHostsForRole(clusterId, dto.serviceRoleName());
-                    return dto.withHosts(hosts);
-                })
-                .toList();
+        return processServiceRoles(clusterId, serviceIds, roles);
     }
 
     @Override

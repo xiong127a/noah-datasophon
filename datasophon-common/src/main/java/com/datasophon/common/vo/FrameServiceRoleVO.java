@@ -34,6 +34,7 @@ import java.util.List;
 public record FrameServiceRoleVO(
         Long id,
         Integer serviceId,
+        String serviceName, // 新增：服务名称字段
         String serviceRoleName,
         Integer serviceRoleType,
         String serviceRoleTypeText, // 角色类型显示文本
@@ -163,12 +164,12 @@ public record FrameServiceRoleVO(
     /**
      * 创建基础FrameServiceRoleVO
      */
-    public static FrameServiceRoleVO of(Long id, Integer serviceId, String serviceRoleName,
+    public static FrameServiceRoleVO of(Long id, Integer serviceId, String serviceName, String serviceRoleName,
             Integer serviceRoleType, String cardinality, String frameCode) {
         String roleTypeText = getRoleTypeText(serviceRoleType);
         String cardinalityDesc = getCardinalityDesc(cardinality);
 
-        return new FrameServiceRoleVO(id, serviceId, serviceRoleName, serviceRoleType, roleTypeText,
+        return new FrameServiceRoleVO(id, serviceId, serviceName, serviceRoleName, serviceRoleType, roleTypeText,
                 cardinality, cardinalityDesc, null, null, frameCode, null, null,
                 null, 0, "暂无主机", false,
                 serviceRoleType != null && serviceRoleType.equals(1),
@@ -179,7 +180,7 @@ public record FrameServiceRoleVO(
     /**
      * 创建包含主机信息的FrameServiceRoleVO
      */
-    public static FrameServiceRoleVO withHosts(Long id, Integer serviceId, String serviceRoleName,
+    public static FrameServiceRoleVO withHosts(Long id, Integer serviceId, String serviceName, String serviceRoleName,
             Integer serviceRoleType, String cardinality, String serviceRoleJson, String serviceRoleJsonMd5,
             String frameCode, String jmxPort, String logFile, List<String> hosts) {
         String roleTypeText = getRoleTypeText(serviceRoleType);
@@ -188,7 +189,7 @@ public record FrameServiceRoleVO(
         String hostsSummary = getHostsSummaryText(hosts);
         Boolean hasHosts = hosts != null && !hosts.isEmpty();
 
-        return new FrameServiceRoleVO(id, serviceId, serviceRoleName, serviceRoleType, roleTypeText,
+        return new FrameServiceRoleVO(id, serviceId, serviceName, serviceRoleName, serviceRoleType, roleTypeText,
                 cardinality, cardinalityDesc, serviceRoleJson, serviceRoleJsonMd5, frameCode,
                 jmxPort, logFile, hosts, hostsCount, hostsSummary, hasHosts,
                 serviceRoleType != null && serviceRoleType.equals(1),
