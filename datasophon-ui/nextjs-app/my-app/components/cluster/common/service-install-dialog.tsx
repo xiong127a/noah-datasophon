@@ -259,15 +259,13 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
 
   // 启动服务安装（对应Vue2的submitAllServices逻辑）
   const startInstallation = useCallback(async () => {
-    // 使用ref锁来防止重复调用
+    // 🔧 增强锁机制：防止React Strict Mode重复调用
     if (installationStartedRef.current) {
-      console.log('安装已经启动过，跳过重复启动');
+      console.log('🔒 安装已经启动过，跳过重复启动 (防止Strict Mode重复调用)');
       return;
     }
     
     installationStartedRef.current = true; // 设置锁
-
-    console.log('开始启动服务安装流程');
     setInstallStatus(prev => ({ ...prev, isInstalling: true }));
     setError(null);
 
@@ -290,16 +288,13 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         { headers }
       );
 
-      if (generateResponse.data?.code !== 200) {
-        throw new Error(generateResponse.data?.msg || '生成安装命令失败');
-      }
-
+      // 统一错误处理会自动处理业务错误，这里直接获取数据
       const commandIds = generateResponse.data.data;
       console.log('生成的命令ID:', commandIds);
 
       // 2. 启动执行命令
       console.log('正在启动执行命令...');
-      const executeResponse = await apiV1.post(
+      await apiV1.post(
         API_PATHS_V1.START_EXECUTE_COMMAND,
         {
           commandType: 'INSTALL_SERVICE',
@@ -308,9 +303,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         { headers }
       );
 
-      if (executeResponse.data?.code !== 200) {
-        throw new Error(executeResponse.data?.msg || '启动执行命令失败');
-      }
+      // 统一错误处理会自动处理业务错误，这里直接使用数据
 
       console.log('服务安装已成功启动');
       setInstallStatus({
@@ -329,8 +322,6 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
 
     } catch (err: unknown) {
       console.error('启动服务安装失败:', err);
-      const error = err as { response?: { data?: { message?: string } }; message?: string };
-      const errorMsg = error.response?.data?.message || error.message || '启动服务安装失败';
       
       // 清除所有定时器，防止无限重试
       if (timer1.current) {
@@ -346,6 +337,10 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         timer3.current = null;
       }
       
+      // 错误信息会通过API拦截器自动显示toast，这里只需要设置组件状态
+      const error = err as { message?: string };
+      const errorMsg = error.message || '启动服务安装失败';
+      
       setError(errorMsg);
       setInstallStatus({
         isInstalling: false,
@@ -354,7 +349,6 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       });
       // 重置锁，允许重新尝试
       installationStartedRef.current = false;
-      toast.error(errorMsg);
     }
   }, [cluster.id, serviceConfigData?.serviceConfigs]);
 
@@ -586,11 +580,15 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         total: 0
       }))
       
-      // 延迟一点再检查并启动安装流程
+      // 延迟一点再检查并启动安装流程  
       const timeoutId = setTimeout(() => {
-        // 直接启动安装，不先检查状态（避免重复调用）
-        console.log('对话框打开，直接启动安装流程');
-        startInstallationRef.current();
+        // 🔧 双重检查锁：防止React Strict Mode或其他原因导致的重复调用
+        if (!installationStartedRef.current) {
+          console.log('📋 对话框打开，启动安装流程');
+          startInstallationRef.current();
+        } else {
+          console.log('🔒 安装已启动，跳过重复调用 (useEffect保护)');
+        }
       }, 100)
     
       return () => {

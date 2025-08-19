@@ -192,23 +192,92 @@ apiClientV1.interceptors.request.use(config => {
   return Promise.reject(error);
 });
 
-// 响应拦截器 - 版本化
+// 响应拦截器 - 版本化（增强错误处理）
 apiClientV1.interceptors.response.use(
-  response => response,
-  error => {
-    if (error.response && error.response.status === 401) {
-      if (typeof window !== 'undefined') {
-        // 可以尝试刷新token，或直接重定向到登录页
-        // window.location.href = '/login';
+  response => {
+    // 检查业务逻辑错误（后端返回code != 200的情况）
+    if (response.data && typeof response.data === 'object') {
+      const { code, success, msg } = response.data;
+      
+      // 如果后端返回success: false或code不是200，视为业务错误
+      if (success === false || (code && code !== 200)) {
+        // 使用苹果样式的错误通知
+        import('./apple-toast').then(({ apiErrorToast }) => {
+          const errorMessage = msg || '操作失败，请重试';
+          apiErrorToast.business(errorMessage, {
+            url: response.config?.url,
+            code
+          });
+        });
+        
+        // 创建一个带有错误信息的Error对象
+        const businessError = new Error(msg || '业务操作失败') as Error & { 
+          name: string; 
+          response: typeof response 
+        };
+        businessError.name = 'BusinessError';
+        businessError.response = response;
+        return Promise.reject(businessError);
       }
     }
+    
+    return response;
+  },
+  error => {
+    console.error('API请求错误:', error);
+    
+    // 使用苹果样式的错误通知
+    import('./apple-toast').then(({ apiErrorToast }) => {
+      if (error.response) {
+        const { status, data } = error.response;
+        
+        switch (status) {
+          case 400:
+            apiErrorToast.business(data?.msg || data?.message || '请求参数错误');
+            break;
+          case 401:
+            apiErrorToast.auth('登录已过期，请重新登录');
+            if (typeof window !== 'undefined') {
+              // 清除本地存储的token
+              localStorage.removeItem('jwt_token');
+              localStorage.removeItem('refresh_token');
+              localStorage.removeItem('user_info');
+              // 可以选择重定向到登录页
+              // window.location.href = '/login';
+            }
+            break;
+          case 403:
+            apiErrorToast.permission('没有权限访问此资源');
+            break;
+          case 404:
+            apiErrorToast.network('请求的资源不存在', status);
+            break;
+          case 500:
+            apiErrorToast.network(data?.msg || data?.message || '服务器内部错误', status);
+            break;
+          case 502:
+            apiErrorToast.network('网关错误，服务暂时不可用', status);
+            break;
+          case 503:
+            apiErrorToast.network('服务暂时不可用，请稍后重试', status);
+            break;
+          default:
+            apiErrorToast.network(data?.msg || data?.message || `请求失败`, status);
+        }
+      } else if (error.request) {
+        apiErrorToast.network('网络连接失败，请检查网络设置');
+      } else {
+        apiErrorToast.business(error.message || '请求配置错误');
+      }
+    });
+
     return Promise.reject(error);
   }
 );
 
 // 导出版本化的API请求函数
 export const apiV1 = {
-  get: (url: string, params?: any, config?: any) => {
+  get: (url: string, params?: Record<string, unknown>, config?: Record<string, unknown>) => {
     // 如果 params 是一个对象且包含 headers，说明这是新的调用方式
     if (params && typeof params === 'object' && params.headers && !config) {
       // 新的调用方式：apiV1.get(url, { headers: {...} })
@@ -218,7 +287,7 @@ export const apiV1 = {
       return apiClientV1.get(url, { params, ...config })
     }
   },
-  post: (url: string, data: any, config?: any) => {
+  post: (url: string, data: unknown, config?: Record<string, unknown>) => {
     // 根据数据类型设置Content-Type
     let contentTypeHeaders = {}
     if (data instanceof FormData) {
@@ -243,9 +312,9 @@ export const apiV1 = {
     
     return apiClientV1.post(url, data, mergedConfig)
   },
-  put: (url: string, data: any, config?: any) => 
+  put: (url: string, data: unknown, config?: Record<string, unknown>) => 
     apiClientV1.put(url, data, config),
-  delete: (url: string, config?: any) => 
+  delete: (url: string, config?: Record<string, unknown>) => 
     apiClientV1.delete(url, config),
 };
 

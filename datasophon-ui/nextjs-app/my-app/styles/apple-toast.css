@@ -1,0 +1,282 @@
+/**
+ * 苹果样式的Toast通知CSS
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-20
+ */
+
+/* 苹果Toast基础样式 */
+.apple-toast {
+  /* 字体优化 */
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  
+  /* 动画效果 */
+  animation: apple-toast-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: center;
+  
+  /* 优化视觉效果 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  
+  /* 确保在高DPI屏幕上的清晰度 */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  
+  /* 确保模糊效果正常工作 */
+  isolation: isolate;
+}
+
+/* 进入动画 */
+@keyframes apple-toast-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 退出动画 */
+.apple-toast[data-state="closed"] {
+  animation: apple-toast-exit 0.2s cubic-bezier(0.4, 0, 1, 1);
+}
+
+@keyframes apple-toast-exit {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.96);
+  }
+}
+
+/* 成功Toast样式 */
+.apple-toast-success {
+  /* 可以添加特定的成功样式 */
+}
+
+.apple-toast-success::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: #34c759;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+/* 错误Toast样式 */
+.apple-toast-error {
+  /* 可以添加特定的错误样式 */
+}
+
+.apple-toast-error::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: #ff3b30;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+/* 警告Toast样式 */
+.apple-toast-warning {
+  /* 可以添加特定的警告样式 */
+}
+
+.apple-toast-warning::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: #ff9500;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+/* 信息Toast样式 */
+.apple-toast-info {
+  /* 可以添加特定的信息样式 */
+}
+
+.apple-toast-info::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: #007aff;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+/* 加载Toast样式 */
+.apple-toast-loading {
+  /* 可以添加特定的加载样式 */
+}
+
+.apple-toast-loading::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 4px;
+  background: #007aff;
+  border-radius: 50%;
+  opacity: 0.8;
+  animation: apple-loading-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes apple-loading-pulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: translateY(-50%) scale(1);
+  }
+  50% {
+    opacity: 0.8;
+    transform: translateY(-50%) scale(1.2);
+  }
+}
+
+/* Promise Toast样式 */
+.apple-toast-promise {
+  /* 可以添加特定的Promise样式 */
+}
+
+/* 悬停效果 */
+.apple-toast:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* 关闭按钮样式优化 */
+.apple-toast [data-close-button] {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: none !important;
+  border-radius: 50% !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: rgba(0, 0, 0, 0.5) !important;
+  font-size: 12px !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.apple-toast [data-close-button]:hover {
+  background: rgba(0, 0, 0, 0.1) !important;
+  color: rgba(0, 0, 0, 0.7) !important;
+  transform: scale(1.1) !important;
+}
+
+/* 在暗色模式下的适配 */
+@media (prefers-color-scheme: dark) {
+  .apple-toast {
+    background: rgba(28, 28, 30, 0.95) !important;
+    color: #f2f2f7 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  }
+  
+  .apple-toast-success {
+    border: 1px solid rgba(52, 199, 89, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(52, 199, 89, 0.2), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  .apple-toast-error {
+    border: 1px solid rgba(255, 59, 48, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(255, 59, 48, 0.2), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  .apple-toast-warning {
+    border: 1px solid rgba(255, 149, 0, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(255, 149, 0, 0.2), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  .apple-toast-info {
+    border: 1px solid rgba(0, 122, 255, 0.3) !important;
+    box-shadow: 0 8px 32px rgba(0, 122, 255, 0.2), 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+  }
+  
+  .apple-toast [data-close-button] {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: rgba(255, 255, 255, 0.6) !important;
+  }
+  
+  .apple-toast [data-close-button]:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+}
+
+/* 响应式适配 */
+@media (max-width: 640px) {
+  .apple-toast {
+    min-width: 280px !important;
+    max-width: calc(100vw - 32px) !important;
+    margin: 0 16px !important;
+  }
+}
+
+/* 高对比度模式适配 */
+@media (prefers-contrast: high) {
+  .apple-toast {
+    border-width: 2px !important;
+  }
+  
+  .apple-toast-success {
+    border-color: #34c759 !important;
+  }
+  
+  .apple-toast-error {
+    border-color: #ff3b30 !important;
+  }
+  
+  .apple-toast-warning {
+    border-color: #ff9500 !important;
+  }
+  
+  .apple-toast-info {
+    border-color: #007aff !important;
+  }
+}
+
+/* 减少动画模式适配 */
+@media (prefers-reduced-motion: reduce) {
+  .apple-toast {
+    animation: none !important;
+  }
+  
+  .apple-toast[data-state="closed"] {
+    animation: none !important;
+  }
+  
+  .apple-toast:hover {
+    transform: none !important;
+    transition: none !important;
+  }
+  
+  .apple-toast-loading::before {
+    animation: none !important;
+  }
+}

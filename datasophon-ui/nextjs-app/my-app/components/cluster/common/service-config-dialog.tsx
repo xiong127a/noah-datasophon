@@ -334,7 +334,8 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     }
   }
 
-  // 生成安装命令
+  // 生成安装命令（暂时保留，未来可能使用）
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const generateInstallCommand = async (): Promise<string> => {
     if (!cluster?.id) {
       throw new Error('缺少集群ID')
@@ -373,13 +374,22 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       // 保存服务角色主机映射（修复缺失步骤）
       await saveServiceRoleHostMapping()
       
-      // 生成安装命令
-      const commandIds = await generateInstallCommand()
+      // 🔧 修复：不在这里生成安装命令，移到service-install-dialog中
+      // 传递所有选择的服务，而不是只传递已配置的服务
+      console.log('🔍 所有选择的服务:', services)
+      console.log('🔍 已配置的服务:', Object.keys(serviceTemplates))
       
-      // 构建步骤7数据
+      const allServicesConfig: Record<string, any[]> = {}
+      services.forEach(serviceName => {
+        // 传递所有选择的服务，即使某些服务的配置加载失败也要包含
+        allServicesConfig[serviceName] = serviceTemplates[serviceName] || []
+      })
+      
+      console.log('🔍 最终传递的服务:', Object.keys(allServicesConfig))
+      
       const step7Data: Step7Data = {
-        serviceConfigs: serviceTemplates,
-        commandIds,
+        serviceConfigs: allServicesConfig, // 包含所有选择的服务
+        commandIds: undefined, // 不再在这里生成commandIds
         commandType: CommandType.INSTALL_SERVICE
       }
       
