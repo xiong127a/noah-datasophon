@@ -1,12 +1,13 @@
 package com.datasophon.api.controller;
 
 import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.converter.ClusterInfoConverter;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.LogTailService;
+import com.datasophon.common.dto.ClusterInfoDTO;
+import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.api.master.ActorUtils;
 import org.apache.pekko.pattern.Patterns;
 import org.apache.pekko.util.Timeout;
@@ -53,13 +54,15 @@ public class LogSSEController {
 
     
     private final ClusterInfoService clusterInfoService;
+    private final ClusterInfoConverter  clusterInfoConverter;
     private final ClusterServiceCommandHostCommandService hostCommandService;
     private final LogTailService logTailService;
 
-    public LogSSEController(ClusterInfoService clusterInfoService,
-                           ClusterServiceCommandHostCommandService hostCommandService,
-                           LogTailService logTailService) {
+    public LogSSEController(ClusterInfoService clusterInfoService, ClusterInfoConverter clusterInfoConverter,
+                            ClusterServiceCommandHostCommandService hostCommandService,
+                            LogTailService logTailService) {
         this.clusterInfoService = clusterInfoService;
+        this.clusterInfoConverter = clusterInfoConverter;
         this.hostCommandService = hostCommandService;
         this.logTailService = logTailService;
     }
@@ -72,8 +75,8 @@ public class LogSSEController {
      * Spring Security会自动处理认证（JwtTokenProviderBase已扩展支持URL参数token）
      */
     @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamLogs(@RequestParam String clusterId,
-                                @RequestParam String hostCommandId,
+    public SseEmitter streamLogs(@RequestParam Long clusterId,
+                                @RequestParam Long hostCommandId,
                                 Principal principal) {
         
         var username = principal.getName();
@@ -109,8 +112,8 @@ public class LogSSEController {
             }
             
             // 检查是否为K8s模式
-            boolean isKubernetes = logInfo.clusterInfo().getDepType() != null && 
-                                  logInfo.clusterInfo().getDepType().isKubernetes();
+            boolean isKubernetes = logInfo.clusterInfo().depType() != null &&
+                                  logInfo.clusterInfo().depType().isKubernetes();
             
             if (isKubernetes) {
                 // K8s模式：使用Apache Commons IO Tailer
@@ -164,7 +167,7 @@ public class LogSSEController {
      * 非K8s模式：使用Actor轮询
      */
     private void startActorLogPolling(String sessionKey, LogFileInfo logInfo, SseEmitter sseEmitter) {
-        logger.info("非K8s模式 - 启动SSE Actor轮询: host={}", logInfo.hostCommand().getHostname());
+        logger.info("非K8s模式 - 启动SSE Actor轮询: host={}", logInfo.hostCommand().hostname());
         
         ScheduledFuture<?> task = scheduler.scheduleWithFixedDelay(() -> {
             try {
@@ -220,23 +223,24 @@ public class LogSSEController {
     /**
      * 获取日志文件信息（复用原有逻辑）
      */
-    private LogFileInfo getLogFileInfo(String clusterId, String hostCommandId) {
+    private LogFileInfo getLogFileInfo(Long clusterId, Long hostCommandId) {
         try {
-            var clusterInfo = clusterInfoService.getById(Long.parseLong(clusterId));
+            var clusterInfo = clusterInfoService.getById(clusterId);
+
             if (clusterInfo == null) {
                 logger.error("未找到集群信息: clusterId={}", clusterId);
                 return null;
             }
-            
-            var hostCommand = hostCommandService.getById(Long.parseLong(hostCommandId));
+            ClusterInfoDTO clusterInfoDTO = clusterInfoConverter.entityToDto(clusterInfo);
+            var hostCommand = hostCommandService.getByHostCommandId(hostCommandId);
             if (hostCommand == null) {
                 logger.error("未找到主机命令: hostCommandId={}", hostCommandId);
                 return null;
             }
             
             // 获取服务名称和角色名称
-            String serviceName = hostCommand.getServiceName();
-            String serviceRoleName = hostCommand.getServiceRoleName();
+            String serviceName = hostCommand.serviceName();
+            String serviceRoleName = hostCommand.serviceRoleName();
             
             if (serviceName == null || serviceRoleName == null) {
                 logger.error("服务名称或角色名称为空: serviceName={}, serviceRoleName={}", serviceName, serviceRoleName);
@@ -246,7 +250,7 @@ public class LogSSEController {
             // 使用Java NIO进行安全的路径处理（参考项目中FrameServiceController的最佳实践）
             try {
                 Path basePath = Paths.get("logs");
-                Path targetPath = basePath.resolve(clusterId).resolve(serviceName).resolve(serviceRoleName + ".log").normalize();
+                Path targetPath = basePath.resolve(String.valueOf(clusterId)).resolve(serviceName).resolve(serviceRoleName + ".log").normalize();
                 
                 // 验证路径是否在允许的目录范围内，防止路径遍历攻击
                 if (!targetPath.startsWith(basePath)) {
@@ -258,7 +262,7 @@ public class LogSSEController {
                 String logFile = targetPath.toString();
                 String relativePath = "%s/%s.log".formatted(serviceName, serviceRoleName); // Java21特性
                 
-                return new LogFileInfo(clusterInfo, hostCommand, logFile, relativePath);
+                return new LogFileInfo(clusterInfoDTO, hostCommand, logFile, relativePath);
             } catch (Exception e) {
                 logger.error("路径处理失败: clusterId={}, serviceName={}, serviceRoleName={}", 
                            clusterId, serviceName, serviceRoleName, e);
@@ -279,11 +283,11 @@ public class LogSSEController {
         command.setDecompressPackageName("datasophon-worker");
         
         logger.debug("通过Actor获取历史日志: host={}, file={}", 
-                    logInfo.hostCommand().getHostname(), logInfo.relativePath());
+                    logInfo.hostCommand().hostname(), logInfo.relativePath());
         
         var timeout = new Timeout(Duration.create(DEFAULT_LOG_TIMEOUT_SECONDS, TimeUnit.SECONDS));
         var configActor = ActorUtils.actorSystem
-                .actorSelection(AKKA_TCP_PREFIX + logInfo.hostCommand().getHostname() + ":2552/user/worker/logActor");
+                .actorSelection(AKKA_TCP_PREFIX + logInfo.hostCommand().hostname() + ":2552/user/worker/logActor");
         
         var logFuture = Patterns.ask(configActor, command, timeout);
         var logResult = (ExecResult) Await.result(logFuture, timeout.duration());
@@ -297,7 +301,7 @@ public class LogSSEController {
 
     
     // JDK21 record - 日志文件信息
-    private record LogFileInfo(ClusterInfoEntity clusterInfo, 
-                              ClusterServiceCommandHostCommandEntity hostCommand,
-                              String fullPath, String relativePath) {}
+    private record LogFileInfo(ClusterInfoDTO clusterInfo,
+                               ClusterServiceCommandHostCommandDTO hostCommand,
+                               String fullPath, String relativePath) {}
 }
