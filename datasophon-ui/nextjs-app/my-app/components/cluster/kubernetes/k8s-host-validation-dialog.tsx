@@ -7,6 +7,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { clusterApi } from "@/lib/api"
+import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { toast } from 'sonner'
 import ClusterWizardLayout from '../common/cluster-wizard-layout'
 import ClusterWizardActionBar from '../common/cluster-wizard-action-bar'
@@ -335,6 +336,7 @@ export default function K8sHostValidationDialog({
           customNamespace: step1Data.customNamespace
         }
         
+        // 1. 保存K8S配置
         const configRes = await clusterApi.config.saveKubeConfig(
           clusterId,
           kubeConfigParams.kubeConfig || '',
@@ -345,9 +347,16 @@ export default function K8sHostValidationDialog({
         if (configRes.data?.code !== 200) {
           throw new Error('保存K8S配置失败: ' + (configRes.data?.msg || '未知错误'))
         }
+
+        // 2. 保存发现的主机到数据库
+        const hostRes = await clusterApiV1.hostManagement.saveDiscoveredHosts(clusterId)
+        
+        if (hostRes?.code !== 200) {
+          throw new Error('保存主机失败: ' + (hostRes?.msg || '未知错误'))
+        }
       }
       
-      toast.success('配置保存成功')
+      toast.success('K8S配置和主机保存成功')
       return Promise.resolve()
       
     } catch (error) {

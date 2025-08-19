@@ -96,19 +96,9 @@ public class UnifiedHostController {
             if (result.getSuccess()) {
                 log.info("主机发现成功，集群ID: {}, 发现主机数: {}", clusterId, result.getTotalCount());
                 
-                // 自动导入发现的主机到数据库（确保数据持久化）
-                try {
-                    if (result.getHosts() != null && !result.getHosts().isEmpty()) {
-                        hostManagementService.importHosts(clusterId, result.getHosts(), new HashMap<>(), new HashMap<>());
-                        log.info("自动导入主机成功，集群ID: {}, 导入主机数: {}", clusterId, result.getHosts().size());
-                    }
-                } catch (Exception e) {
-                    log.warn("自动导入主机失败，但不影响主机发现结果，集群ID: {}", clusterId, e);
-                    // 导入失败不影响发现结果，因为数据仍在临时存储中
-                }
-                
-                // Step1完成，保持"待配置"状态，直到所有配置步骤完成
-                log.info("Step1主机发现完成，集群ID: {}", clusterId);
+                // Step1完成，仅发现主机，不自动导入数据库
+                // 用户需要点击"下一步"才会保存主机到数据库
+                log.info("Step1主机发现完成，集群ID: {}，等待用户确认后导入", clusterId);
                 
                 // 转换为前端需要的DTO格式
                 HostDiscoveryResultDTO responseDto = convertToHostDiscoveryResultDTO(result, clusterId, step1Config.getClusterType());
@@ -125,6 +115,27 @@ public class UnifiedHostController {
         } catch (Exception e) {
             log.error("主机发现异常，集群ID: {}", clusterId, e);
             return Result.error("主机发现失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 保存发现的主机到数据库
+     * Step2校验完成后，用户点击下一步时调用此接口保存主机
+     */
+    @PostMapping("save-discovered-hosts")
+    public Result<String> saveDiscoveredHosts(@ClusterId Long clusterId) {
+        log.info("开始保存发现的主机到数据库，集群ID: {}", clusterId);
+        
+        try {
+            // 调用主机管理服务进行导入
+            hostManagementService.importHosts(clusterId, null, new HashMap<>(), new HashMap<>());
+            
+            log.info("成功保存主机到数据库，集群ID: {}", clusterId);
+            return Result.success("主机保存成功");
+            
+        } catch (Exception e) {
+            log.error("保存主机到数据库失败，集群ID: {}", clusterId, e);
+            return Result.error("保存主机失败: " + e.getMessage());
         }
     }
 

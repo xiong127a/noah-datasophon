@@ -29,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -171,10 +172,16 @@ public class UnifiedHostManagementService {
             // 选择策略
             HostManagementStrategy strategy = strategyFactory.getStrategyWithContext(clusterId, cluster.getDepType());
             
+            // 如果没有提供selectedHosts，尝试从临时存储中获取
+            List<ClusterHostEntity> hostsToImport = selectedHosts;
+            if (hostsToImport == null || hostsToImport.isEmpty()) {
+                hostsToImport = getDiscoveredHostsFromStorage(clusterId, strategy);
+            }
+            
             // 构建请求
             HostImportRequest request = HostImportRequest.builder()
                     .clusterId(clusterId)
-                    .selectedHosts(selectedHosts)
+                    .selectedHosts(hostsToImport)
                     .connectionParams(connectionParams)
                     .importOptions(importOptions)
                     .build();
@@ -183,11 +190,40 @@ public class UnifiedHostManagementService {
             strategy.importHosts(request);
             
             log.info("集群{}主机导入完成，策略: {}, 导入主机数: {}", 
-                    clusterId, strategy.getStrategyType().getCode(), selectedHosts.size());
+                    clusterId, strategy.getStrategyType().getCode(), hostsToImport != null ? hostsToImport.size() : 0);
             
         } catch (Exception e) {
             log.error("集群{}主机导入失败", clusterId, e);
             throw new RuntimeException("主机导入失败: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 从临时存储中获取已发现的主机列表
+     */
+    private List<ClusterHostEntity> getDiscoveredHostsFromStorage(Long clusterId, HostManagementStrategy strategy) {
+        try {
+            // 构建获取主机列表请求
+            HostListRequest request = HostListRequest.builder()
+                    .clusterId(clusterId)
+                    .page(1)
+                    .pageSize(1000) // 设置一个足够大的pageSize来获取所有主机
+                    .build();
+            
+            // 从策略获取主机列表（会优先从临时存储获取）
+            HostListResult result = strategy.getHostList(request);
+            
+            if (result != null && result.getHosts() != null && !result.getHosts().isEmpty()) {
+                log.info("从临时存储中获取到{}台已发现的主机", result.getHosts().size());
+                return result.getHosts();
+            } else {
+                log.warn("临时存储中未找到已发现的主机，集群ID: {}", clusterId);
+                return new ArrayList<>();
+            }
+            
+        } catch (Exception e) {
+            log.error("从临时存储获取已发现主机失败，集群ID: {}", clusterId, e);
+            return new ArrayList<>();
         }
     }
 

@@ -225,11 +225,11 @@ export const clusterApiV1 = {
       clusterVersion?: string
       namespaces?: string[]
       forceRefresh?: boolean
-    }, config?: any) => apiV1.post(API_PATHS_V1.HOST_DISCOVER_FROM_STEP1, step1Config, config),
+    }, config?: any) => apiV1.post(API_PATHS_V1.HOST_DISCOVER_STEP1, step1Config, config),
     
     // 校验所有主机状态（Step2下一步前的校验）
     validateForNextStep: (config?: any) => {
-      return apiV1.get(API_PATHS_V1.HOST_CHECK, undefined, config)
+      return apiV1.get(API_PATHS_V1.HOST_CHECK_VALIDATION, undefined, config)
     },
     
     // ========== 配置进度管理相关 (简化版) ==========
@@ -268,10 +268,6 @@ export const clusterApiV1 = {
       hostnames: string[]
       connectionParams: any
     }) => apiV1.post(API_PATHS_V1.HOST_PERFORM_CHECK, data),
-    
-    // 获取主机检查状态
-    getCheckStatus: () =>
-      apiV1.get(API_PATHS_V1.HOST_CHECK_STATUS),
     
     // 清理资源
     cleanup: () =>
@@ -353,6 +349,23 @@ export const clusterApiV1 = {
     cancelDistribution: async (clusterId: string, taskId: string) => {
       const headers = createClusterHeaders(clusterId)
       const response = await apiV1.post(API_PATHS_V1.CANCEL_AGENT_DISTRIBUTION, { taskId }, { headers })
+      return response.data
+    }
+  },
+
+  // 主机管理相关API - v1
+  hostManagement: {
+    /** Step1发现主机 */
+    discoverFromStep1: async (clusterId: string, step1Config: any) => {
+      const headers = createClusterHeaders(clusterId)
+      const response = await apiV1.post(API_PATHS_V1.HOST_DISCOVER_STEP1, step1Config, { headers })
+      return response.data
+    },
+
+    /** 保存发现的主机到数据库 */
+    saveDiscoveredHosts: async (clusterId: string) => {
+      const headers = createClusterHeaders(clusterId)
+      const response = await apiV1.post(API_PATHS_V1.HOST_SAVE_DISCOVERED, {}, { headers })
       return response.data
     }
   }

@@ -115,8 +115,6 @@ export const API_PATHS_V1 = {
   
   // 统一主机管理相关 - v1 (新架构)
   HOST_DISCOVER: `${API_BASE}/host/discover`,
-  HOST_DISCOVER_FROM_STEP1: `${API_BASE}/host/discover-from-step1`,
-  HOST_CHECK: `${API_BASE}/host/check-hosts`,
   
 
   HOST_LIST: `${API_BASE}/host/list`,
@@ -124,7 +122,6 @@ export const API_PATHS_V1 = {
   HOST_REFRESH: `${API_BASE}/host/refresh`,
   HOST_CHECK_CONNECTION: `${API_BASE}/host/check-connection`,
   HOST_PERFORM_CHECK: `${API_BASE}/host/check`,
-  HOST_CHECK_STATUS: `${API_BASE}/host/check-status`,
   HOST_CLEANUP: `${API_BASE}/host/cleanup`,
   HOST_STRATEGIES: `${API_BASE}/host/strategies`,
   
@@ -144,6 +141,11 @@ export const API_PATHS_V1 = {
 
   // SSE日志流相关 - v1
   LOG_STREAM_SSE: `${API_BASE}/logs/stream`,
+
+  // 主机管理相关API - v1  
+  HOST_DISCOVER_STEP1: `${API_BASE}/host/discover-from-step1`,
+  HOST_CHECK_VALIDATION: `${API_BASE}/host/check-hosts`,
+  HOST_SAVE_DISCOVERED: `${API_BASE}/host/save-discovered-hosts`,
 };
 
 // 创建版本化的axios实例
