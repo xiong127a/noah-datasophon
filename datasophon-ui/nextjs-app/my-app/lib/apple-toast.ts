@@ -50,9 +50,9 @@ const APPLE_TOAST_STYLES = {
 // 默认配置
 const DEFAULT_OPTIONS: ExternalToast = {
   duration: 4000,
-  position: 'top-right',
+  position: 'top-center',
   dismissible: true,
-  closeButton: true,
+  closeButton: false,
 }
 
 /**
@@ -130,6 +130,8 @@ export const apiErrorToast = {
     return appleToast.error(`❌ ${message}`, {
       description: details?.url ? `请求: ${details.url}` : undefined,
       duration: 6000,
+      position: 'top-center',
+      closeButton: false,
     })
   },
 
@@ -141,6 +143,8 @@ export const apiErrorToast = {
     return appleToast.error(`🌐 ${message}`, {
       description: status ? `状态码: ${status}` : undefined,
       duration: 6000,
+      position: 'top-center',
+      closeButton: false,
     })
   },
 
@@ -151,6 +155,8 @@ export const apiErrorToast = {
     console.error('API认证错误:', message)
     return appleToast.error(`🔐 ${message}`, {
       duration: 8000,
+      position: 'top-center',
+      closeButton: false,
     })
   },
 
@@ -161,6 +167,8 @@ export const apiErrorToast = {
     console.error('API权限错误:', message)
     return appleToast.error(`🚫 ${message}`, {
       duration: 6000,
+      position: 'top-center',
+      closeButton: false,
     })
   },
 }
@@ -177,6 +185,8 @@ export const operationToast = {
     return appleToast.success(message, {
       description: details,
       duration: 3000,
+      position: 'top-center',
+      closeButton: false,
     })
   },
 
@@ -188,6 +198,8 @@ export const operationToast = {
     return appleToast.error(message, {
       description: reason,
       duration: 5000,
+      position: 'top-center',
+      closeButton: false,
     })
   },
 
@@ -196,7 +208,10 @@ export const operationToast = {
    */
   loading: (operation: string) => {
     const message = `⏳ ${operation}中...`
-    return appleToast.loading(message)
+    return appleToast.loading(message, {
+      position: 'top-center',
+      closeButton: false,
+    })
   },
 
   /**
@@ -207,6 +222,8 @@ export const operationToast = {
     return appleToast.warning(message, {
       description: warning,
       duration: 5000,
+      position: 'top-center',
+      closeButton: false,
     })
   },
 }

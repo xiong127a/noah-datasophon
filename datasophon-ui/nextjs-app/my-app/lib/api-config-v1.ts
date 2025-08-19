@@ -1,5 +1,8 @@
 import axios from "axios";
 
+// 防重复登录过期通知的标志位
+let loginExpiredShown = false;
+
 // API版本化配置
 export const API_BASE_URL = "http://localhost:8081/ddh"; // 包含context-path
 export const API_PREFIX = "/api"; // 移除重复的/ddh，因为baseURL已包含
@@ -236,14 +239,22 @@ apiClientV1.interceptors.response.use(
             apiErrorToast.business(data?.msg || data?.message || '请求参数错误');
             break;
           case 401:
-            apiErrorToast.auth('登录已过期，请重新登录');
-            if (typeof window !== 'undefined') {
-              // 清除本地存储的token
-              localStorage.removeItem('jwt_token');
-              localStorage.removeItem('refresh_token');
-              localStorage.removeItem('user_info');
-              // 可以选择重定向到登录页
-              // window.location.href = '/login';
+            // 防重复显示登录过期通知
+            if (!loginExpiredShown) {
+              loginExpiredShown = true;
+              apiErrorToast.auth('登录已过期，请重新登录');
+              
+              if (typeof window !== 'undefined') {
+                // 清除本地存储的token
+                localStorage.removeItem('jwt_token');
+                localStorage.removeItem('refresh_token');
+                localStorage.removeItem('user_info');
+                
+                // 5秒后重置标志位，允许再次显示（防止页面长时间停留的情况）
+                setTimeout(() => {
+                  loginExpiredShown = false;
+                }, 5000);
+              }
             }
             break;
           case 403:

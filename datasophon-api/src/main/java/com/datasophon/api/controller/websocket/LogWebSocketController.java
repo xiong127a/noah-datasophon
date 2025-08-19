@@ -249,7 +249,8 @@ public class LogWebSocketController {
                 logger.warn("Command ID {} serviceName is null, using commandName: {}", hostCommand.getCommandId(), serviceName);
             }
             String serviceRoleName = hostCommand.getServiceRoleName();
-            String logFile = String.format("%s/%s/%s.log", "logs", serviceName, serviceRoleName);
+            // 增加集群ID层级，实现多集群日志隔离
+            String logFile = String.format("%s/%s/%s/%s.log", "logs", clusterId, serviceName, serviceRoleName);
             
             // K8s模式需要完整路径
             String fullPath = clusterInfo.getDepType() != null && clusterInfo.getDepType().isKubernetes() 
