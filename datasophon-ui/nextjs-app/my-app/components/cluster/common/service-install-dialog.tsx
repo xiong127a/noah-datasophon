@@ -24,7 +24,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
-import { useLogWebSocket } from '@/hooks/useLogWebSocket'
+import { useLogSSE } from '@/hooks/useLogSSE'
 import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 
@@ -204,12 +204,12 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     setUserScrolledUp(hasScrolled)
   }, [])
   
-  // WebSocket实时日志连接
+  // SSE实时日志连接
   const {
     isConnected: wsConnected,
     isConnecting: wsConnecting,
     error: wsError
-  } = useLogWebSocket({
+  } = useLogSSE({
     clusterId: cluster.id.toString(),
     hostCommandId: currentPage === 4 && commandHostId ? commandHostId : undefined,
     onLogUpdate: (content, updateType) => {
@@ -468,12 +468,12 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     setPagination(prev => ({ ...prev, current: 1 }))
     
     if (currentPage === 3) {
-      // 设置日志查看页面参数，WebSocket会自动连接获取日志
+      // 设置日志查看页面参数，SSE会自动连接获取日志
       setHostname(row.hostname || "")
       setCommandHostId(String(row.commandHostId || ""))
           setCurrentPage(4)
           setTitle("查看日志")
-      // 清空旧日志，WebSocket会推送新日志
+      // 清空旧日志，SSE会推送新日志
       setLogData("")
       return
     }

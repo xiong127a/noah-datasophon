@@ -141,25 +141,10 @@ export const API_PATHS_V1 = {
   GET_SERVICE_ROLE_ORDER_LIST: `${API_BASE}/cluster/service/command/host/command/list`,
   GET_HOST_COMMAND_LOG: `${API_BASE}/cluster/service/command/host/command/getHostCommandLog`,
   START_EXECUTE_COMMAND: `${API_BASE}/cluster/service/command/execute`,
+
+  // SSE日志流相关 - v1
+  LOG_STREAM_SSE: `${API_BASE}/logs/stream`,
 };
-
-// WebSocket配置
-export const getWebSocketBaseURL = () => {
-  // 统一使用API_BASE_URL配置，确保WebSocket和HTTP请求使用相同的服务器地址
-  return API_BASE_URL.replace(/^https?/, 'ws').replace(/^http/, 'ws')
-}
-
-// WebSocket路径配置
-export const WS_PATHS_V1 = {
-  STOMP: `${API_BASE}/websocket/stomp`,  // STOMP端点
-  LOG: `${API_BASE}/websocket/log`,      // 保留兼容（暂时）
-}
-
-// WebSocket URL构建工具
-export const buildWebSocketURL = (path: string) => {
-  const baseUrl = getWebSocketBaseURL()
-  return `${baseUrl}${path}`
-}
 
 // 创建版本化的axios实例
 export const apiClientV1 = axios.create({

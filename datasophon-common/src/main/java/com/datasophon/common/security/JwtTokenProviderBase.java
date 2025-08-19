@@ -163,10 +163,18 @@ public class JwtTokenProviderBase implements TokenProvider {
 
     @Override
     public String resolveToken(HttpServletRequest request) {
+        // 优先从Authorization header获取token（标准方式）
         String bearerToken = request.getHeader("Authorization");
         if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
             return bearerToken.substring(7);
         }
+        
+        // 如果header中没有token，尝试从URL参数获取（用于SSE等不支持自定义header的场景）
+        String tokenParam = request.getParameter("token");
+        if (StringUtils.hasText(tokenParam)) {
+            return tokenParam;
+        }
+        
         return null;
     }
 

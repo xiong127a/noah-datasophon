@@ -129,9 +129,6 @@ public class SecurityConfig {
                                 "/ssoEnable")
                         .permitAll()
 
-                        // WebSocket STOMP握手端点放行（认证由WebSocketSecurityConfig处理）
-                        .requestMatchers("/api/v1/websocket/stomp/**").permitAll()
-
                         // OPTIONS请求允许通过
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 

@@ -172,7 +172,7 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
         return getMapper().getHostCommandTotalProgressByHostnameAndCommandHostId(hostname, commandHostId);
     }
 
-    // 已删除，功能迁移到WebSocket Controller
+    // 日志流功能已迁移到SSE控制器
 
     @Override
     public List<ClusterServiceCommandHostCommandDTO> findFailedHostCommand(String hostname, Long commandHostId) {
