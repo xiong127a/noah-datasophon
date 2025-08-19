@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { 
   ChevronLeft, ChevronRight, AlertTriangle, 
   Play, Clock, CheckCircle2, XCircle, AlertCircle, 
-  Activity, ArrowRight, ArrowDown,
+  Activity, ArrowRight,
   Eye, Terminal, Cpu, Wifi, WifiOff
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -1229,63 +1229,51 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                   </div>
                   
                   {/* 日志内容区域 */}
-                  <div className="flex-1 mx-3 mb-3 rounded-lg overflow-hidden border border-slate-200 relative">
-                    {/* WebSocket连接状态栏 */}
-                    <div className="bg-slate-800 px-4 py-2 border-b border-slate-600 flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        {wsConnected ? (
-                          <Wifi className="w-4 h-4 text-green-400" />
-                        ) : wsConnecting ? (
-                          <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
-                        ) : (
-                          <WifiOff className="w-4 h-4 text-red-400" />
-                        )}
-                        <span className="text-sm text-slate-300">
-                          {wsConnected ? '实时日志连接已建立' : wsConnecting ? '正在连接...' : '连接已断开'}
-                        </span>
-                      </div>
-                      {(wsError || error) && (
-                        <span className="text-sm text-red-400">
-                          {wsError || error}
-                        </span>
-                      )}
-                    </div>
+                  <div className="flex-1 mx-3 mb-3 rounded-lg overflow-hidden border border-slate-200 relative flex flex-col">
+                                         {/* WebSocket连接状态栏 */}
+                     <div className="bg-slate-800 px-4 py-2 border-b border-slate-600 flex items-center justify-between flex-shrink-0 rounded-t-md">
+                       <div className="flex items-center space-x-2">
+                         {wsConnected ? (
+                           <Wifi className="w-4 h-4 text-green-400" />
+                         ) : wsConnecting ? (
+                           <div className="w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full animate-spin" />
+                         ) : (
+                           <WifiOff className="w-4 h-4 text-red-400" />
+                         )}
+                         <span className="text-sm text-slate-300">
+                           {wsConnected ? '实时日志连接已建立' : wsConnecting ? '正在连接...' : '连接已断开'}
+                         </span>
+                       </div>
+                       {(wsError || error) && (
+                         <span className="text-sm text-red-400">
+                           {wsError || error}
+                         </span>
+                       )}
+                     </div>
                     
-                    {/* 日志内容 */}
-                    <div 
-                      ref={logScrollContainerRef}
-                      onScroll={checkScrollPosition}
-                      className="h-full bg-slate-900 p-4 overflow-auto rounded-b-md scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800"
-                    >
-                      {logData ? (
-                        <pre className="text-gray-300 font-mono text-sm leading-relaxed whitespace-pre-wrap">
-                          {logData}
-                        </pre>
-                      ) : (
-                        <div className="flex flex-col items-center justify-center h-full text-slate-400">
-                          <Terminal className="h-8 w-8 mb-3 opacity-50" />
-                          <p className="text-sm">暂无日志数据</p>
-                          {wsConnecting && (
-                            <p className="text-xs mt-1 text-blue-400">正在连接实时日志...</p>
-                          )}
-                          {!wsConnecting && !wsConnected && (
-                            <p className="text-xs mt-1 opacity-75">等待命令执行生成日志...</p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    
-
-                    
-                    {/* 临时调试信息 - 显示当前状态 */}
-                    {logData && (
-                      <div className="absolute top-4 right-4 bg-black/70 text-white text-xs px-2 py-1 rounded z-40">
-                        滚动状态: {userScrolledUp ? '已向上滚动' : '在底部'} | 差值检查等待控制台
-                      </div>
-                    )}
-                    
-
-
+                                         {/* 日志内容 - 可滚动区域 */}
+                     <div 
+                       ref={logScrollContainerRef}
+                       onScroll={checkScrollPosition}
+                       className="flex-1 bg-slate-900 p-4 overflow-auto rounded-b-md scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800"
+                     >
+                       {logData ? (
+                         <pre className="text-gray-300 font-mono text-sm leading-relaxed whitespace-pre-wrap">
+                           {logData}
+                         </pre>
+                       ) : (
+                         <div className="flex flex-col items-center justify-center h-full text-slate-400">
+                           <Terminal className="h-8 w-8 mb-3 opacity-50" />
+                           <p className="text-sm">暂无日志数据</p>
+                           {wsConnecting && (
+                             <p className="text-xs mt-1 text-blue-400">正在连接实时日志...</p>
+                           )}
+                           {!wsConnecting && !wsConnected && (
+                             <p className="text-xs mt-1 opacity-75">等待命令执行生成日志...</p>
+                           )}
+                         </div>
+                       )}
+                     </div>
                   </div>
                 </CardContent>
               </Card>
@@ -1295,34 +1283,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         </div>
       </ClusterWizardLayout>
       
-      {/* 苹果风格悬浮按钮 - 使用固定定位相对于整个视窗 */}
-      {(() => {
-        console.log('🔍 按钮显示条件:', { userScrolledUp, hasLogData: !!logData, currentPage })
-        return null
-      })()}
-      {currentPage === 4 && (userScrolledUp || true) && logData && (
-        <div className="fixed bottom-6 right-6 z-[9999]">
-          <div 
-            onClick={() => {
-              console.log('🔄 点击回到底部按钮')
-              scrollToBottom(true)
-            }}
-            className="group cursor-pointer"
-          >
-            {/* iOS风格的精美圆形悬浮按钮 */}
-            <div className="w-12 h-12 bg-white/15 backdrop-blur-xl border border-white/25 rounded-full flex items-center justify-center shadow-2xl hover:bg-white/25 transition-all duration-300 hover:scale-110 active:scale-95 shadow-black/20">
-              <ArrowDown className="h-5 w-5 text-white drop-shadow-lg group-hover:translate-y-1 transition-transform duration-300" />
-            </div>
-            
-            {/* 悬停提示 - iOS风格 */}
-            <div className="absolute -top-12 left-1/2 transform -translate-x-1/2 bg-black/90 backdrop-blur-sm text-white text-sm px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-300 whitespace-nowrap shadow-lg">
-              回到底部
-              {/* 小箭头 */}
-              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-black/90"></div>
-            </div>
-          </div>
-        </div>
-      )}
+      
     </Dialog>
   )
 }
