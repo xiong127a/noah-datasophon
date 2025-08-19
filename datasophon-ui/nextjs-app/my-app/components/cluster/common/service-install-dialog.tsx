@@ -974,20 +974,25 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                   </div>
                                 )}
                                 
-                                {/* 服务图标 */}
-                                <div className={`flex items-center justify-center w-8 h-8 rounded ${statusConfig.bg} ${statusConfig.border} border flex-shrink-0`}>
-                                  {currentPage === 1 ? (
-                                    <ServiceIcon
-                                      serviceName={item.serviceName || ''}
-                                      size={16}
-                                      className="w-4 h-4"
-                                    />
-                                  ) : currentPage === 2 ? (
-                                    <Cpu className={`h-4 w-4 ${statusConfig.text}`} />
-                                  ) : (
-                                    <Terminal className={`h-4 w-4 ${statusConfig.text}`} />
-                                  )}
-                  </div>
+                                                                 {/* 服务图标 */}
+                                 <div className={`flex items-center justify-center w-8 h-8 rounded ${statusConfig.bg} ${statusConfig.border} border flex-shrink-0`}>
+                                   {currentPage === 1 ? (
+                                     <ServiceIcon
+                                       serviceName={item.serviceName || ''}
+                                       size={16}
+                                       className="w-4 h-4"
+                                     />
+                                   ) : currentPage === 2 ? (
+                                     <Cpu className={`h-4 w-4 ${statusConfig.text}`} />
+                                   ) : (
+                                     // 第3页（执行日志页面）也显示服务图标
+                                     <ServiceIcon
+                                       serviceName={item.serviceName || ''}
+                                       size={16}
+                                       className="w-4 h-4"
+                                     />
+                                   )}
+                   </div>
                   
                                 {/* 主要内容 */}
                                 <div className="flex-1 min-w-0">
