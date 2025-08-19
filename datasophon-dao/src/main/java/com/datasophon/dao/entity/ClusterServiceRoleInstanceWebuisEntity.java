@@ -48,15 +48,18 @@ public class ClusterServiceRoleInstanceWebuisEntity extends BaseEntity {
 
 
     /**
-     * 服务角色id
+     * 服务角色实例ID（外键）
      */
-    private Integer serviceRoleInstanceId;
+    private Long serviceRoleInstanceId;
     /**
      * URL地址
      */
     private String webUrl;
 
-    private Integer serviceInstanceId;
+    /**
+     * 服务实例ID（外键）
+     */
+    private Long serviceInstanceId;
 
     private String name;
 

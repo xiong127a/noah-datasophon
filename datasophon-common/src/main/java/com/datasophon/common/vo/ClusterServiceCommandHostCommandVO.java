@@ -19,7 +19,6 @@ package com.datasophon.common.vo;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * 集群服务命令主机命令视图对象
@@ -39,6 +38,7 @@ public record ClusterServiceCommandHostCommandVO(
         Long commandHostId,
         Long commandId,
         String hostname,
+        String serviceName, // 🔧 添加服务名称字段（用于显示SVG图标）
         String serviceRoleName,
         Integer serviceRoleType,
         String serviceRoleTypeText,

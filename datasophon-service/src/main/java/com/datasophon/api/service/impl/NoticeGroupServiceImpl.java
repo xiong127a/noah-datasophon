@@ -26,6 +26,7 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.NoticeGroupService;
 import com.datasophon.api.service.NoticeGroupUserService;
 import com.datasophon.api.service.ServiceInstallService;
+import com.datasophon.api.converter.NoticeGroupConverter;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
@@ -44,7 +45,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -62,6 +62,9 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
 
     @Autowired
     private NoticeGroupUserService noticeGroupUserService;
+
+    @Autowired
+    private NoticeGroupConverter noticeGroupConverter;
 
     @Autowired
     private ClusterAlertQuotaService clusterAlertQuotaService;
@@ -274,13 +277,8 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
         if (entity == null) {
             return null;
         }
-        return new NoticeGroupDTO(
-                entity.getId(),
-                entity.getClusterId(),
-                entity.getNoticeGroupName(),
-                entity.getCreateTime(),
-                null // userIds will be set by caller
-        );
+        // 使用MapStruct转换器进行Entity到DTO转换
+        return noticeGroupConverter.entityToDto(entity);
     }
 
     private NoticeGroupEntity dtoToEntity(NoticeGroupDTO dto) {

@@ -75,6 +75,13 @@ public class ClusterServiceCommandHostCommandEntity extends BaseEntity {
     private Long commandId;
 
     private String hostname;
+    
+    /**
+     * 服务名称（用于显示SVG图标）
+     */
+    @Column(ignore = true) // 不存储在数据库中，通过关联查询获取
+    private String serviceName;
+    
     /**
      * 服务角色名称
      */

@@ -25,6 +25,7 @@ import com.datasophon.api.master.ServiceCommandActor;
 import com.datasophon.api.master.ServiceExecuteResultActor;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.CommandExecutionService;
+import com.datasophon.api.converter.ClusterServiceCommandHostCommandConverter;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
@@ -71,7 +72,8 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
     @Autowired
     private ClusterServiceCommandHostCommandService hostCommandService;
 
-    // hostCommandConverter已移除，因为现在直接使用DTO操作
+    @Autowired
+    private ClusterServiceCommandHostCommandConverter hostCommandConverter;
 
     @Override
     public void updateCommandStateToFailed(List<Long> commandIds) {
@@ -86,22 +88,11 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
                     logger.info("{} host command  set to cancel", hostCommandDTO.commandName());
                     CancelCommandMap.put(hostCommandDTO.hostCommandId(), hostCommandDTO.commandName());
 
-                    // 创建更新后的DTO - JDK21 Record特性
-                    var updatedDTO = new ClusterServiceCommandHostCommandDTO(
-                        hostCommandDTO.hostCommandId(),
-                        hostCommandDTO.commandName(),
-                        CommandState.CANCEL.getValue(), // 设置为取消状态
-                        CommandState.CANCEL.getValue(),
-                        100, // 设置进度为100
-                        hostCommandDTO.commandHostId(),
-                        hostCommandDTO.commandId(),
-                        hostCommandDTO.hostname(),
-                        hostCommandDTO.serviceRoleName(),
-                        hostCommandDTO.serviceRoleType(),
-                        hostCommandDTO.resultMsg(),
-                        hostCommandDTO.createTime(),
-                        hostCommandDTO.commandType()
-                    );
+                    // 使用MapStruct转换器创建更新后的DTO - JDK21特性
+                    var hostCommandEntity = hostCommandConverter.dtoToEntity(hostCommandDTO);
+                    hostCommandEntity.setCommandState(CommandState.CANCEL); // 设置为取消状态
+                    hostCommandEntity.setCommandProgress(100); // 设置进度为100
+                    var updatedDTO = hostCommandConverter.entityToDto(hostCommandEntity);
                     hostCommandService.updateByHostCommandId(updatedDTO); // 传递DTO而不是Entity
 
                     var message = new UpdateCommandHostMessage(); // JDK21特性
@@ -128,22 +119,12 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
     public void handleCommandResult(Long hostCommandId, Boolean execResult, String execOut) {
         var hostCommandDTO = hostCommandService.getByHostCommandId(hostCommandId); // JDK21特性
 
-        // 创建更新后的DTO - JDK21 Record特性
-        var updatedDTO = new ClusterServiceCommandHostCommandDTO(
-            hostCommandDTO.hostCommandId(),
-            hostCommandDTO.commandName(),
-            execResult ? CommandState.SUCCESS.getValue() : CommandState.FAILED.getValue(),
-            execResult ? CommandState.SUCCESS.getValue() : CommandState.FAILED.getValue(),
-            100, // 设置进度为100
-            hostCommandDTO.commandHostId(),
-            hostCommandDTO.commandId(),
-            hostCommandDTO.hostname(),
-            hostCommandDTO.serviceRoleName(),
-            hostCommandDTO.serviceRoleType(),
-            execResult ? "success" : execOut, // 设置结果消息
-            hostCommandDTO.createTime(),
-            hostCommandDTO.commandType()
-        );
+        // 使用MapStruct转换器创建更新后的DTO - JDK21特性
+        var hostCommandEntity = hostCommandConverter.dtoToEntity(hostCommandDTO);
+        hostCommandEntity.setCommandState(execResult ? CommandState.SUCCESS : CommandState.FAILED);
+        hostCommandEntity.setCommandProgress(100); // 设置进度为100
+        hostCommandEntity.setResultMsg(execResult ? "success" : execOut); // 设置结果消息
+        var updatedDTO = hostCommandConverter.entityToDto(hostCommandEntity);
         
         if (execResult) {
             logger.info("{} in {} success", updatedDTO.commandName(), updatedDTO.hostname());

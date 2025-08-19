@@ -17,39 +17,22 @@
 
 package com.datasophon.api.service.impl;
 
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandService;
-import com.datasophon.common.Constants;
-import com.datasophon.common.command.GetLogCommand;
-import com.datasophon.common.dto.ClusterServiceCommandDTO;
-import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.api.converter.ClusterServiceCommandHostCommandConverter;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
-import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.common.enums.CommandState;
 import com.datasophon.dao.mapper.ClusterServiceCommandHostCommandMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import com.datasophon.common.model.PageResult;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
-import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 集群服务操作指令主机指令表实现
@@ -62,16 +45,9 @@ import java.util.concurrent.TimeUnit;
 public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<ClusterServiceCommandHostCommandMapper, ClusterServiceCommandHostCommandEntity> implements ClusterServiceCommandHostCommandService {
 
     private static final Logger logger = LoggerFactory.getLogger(ClusterServiceCommandHostCommandServiceImpl.class);
-    private static final int DEFAULT_LOG_TIMEOUT_SECONDS = 30;
-    private static final String AKKA_TCP_PREFIX = "akka.tcp://datasophon@";
-    private static final String AKKA_USER_WORKER_PATH = "/user/worker/commandLogActor";
-    private static final int MAXIMUM_LOG_LENGTH = 100000;
 
     @Autowired
     private ClusterServiceCommandHostCommandConverter converter;
-
-    @Autowired
-    private ClusterInfoService clusterInfoService;
 
     @Autowired
     private ClusterServiceCommandService commandService;
@@ -87,6 +63,9 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
         List<ClusterServiceCommandHostCommandEntity> entityRecords = entityPageResult.getRecords();
         entityRecords.forEach(this::updateCommandProgress);
         
+        // 🔧 批量查询serviceName并设置到实体中
+        populateServiceNames(entityRecords);
+        
         // Entity列表转DTO列表 - JDK21特性
         var dtoList = entityRecords.stream()
                 .map(converter::entityToDto)
@@ -94,6 +73,49 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
         
         // 返回DTO分页结果
         return PageResult.of(dtoList, entityPageResult.getTotal(), page, pageSize);
+    }
+    
+    /**
+     * 批量查询并填充serviceName字段
+     * 避免N+1查询问题
+     */
+    private void populateServiceNames(List<ClusterServiceCommandHostCommandEntity> hostCommands) {
+        if (hostCommands == null || hostCommands.isEmpty()) {
+            return;
+        }
+        
+        try {
+            // 提取所有的commandId（去重）
+            var commandIds = hostCommands.stream()
+                    .map(ClusterServiceCommandHostCommandEntity::getCommandId)
+                    .filter(Objects::nonNull)
+                    .distinct()
+                    .toList();
+            
+            if (commandIds.isEmpty()) {
+                return;
+            }
+            
+            // 批量查询服务命令获取serviceName映射
+            var serviceCommands = commandService.listByIds(commandIds);
+            var serviceNameMap = serviceCommands.stream()
+                    .collect(java.util.stream.Collectors.toMap(
+                            cmd -> cmd.getId(),
+                            cmd -> cmd.getServiceName() != null ? cmd.getServiceName() : ""
+                    ));
+            
+            // 设置serviceName到主机命令实体
+            hostCommands.forEach(hostCommand -> {
+                Long commandId = hostCommand.getCommandId();
+                if (commandId != null) {
+                    String serviceName = serviceNameMap.get(commandId);
+                    hostCommand.setServiceName(serviceName);
+                }
+            });
+            
+        } catch (Exception e) {
+            logger.warn("批量查询serviceName时出错，将使用空值", e);
+        }
     }
 
     /**

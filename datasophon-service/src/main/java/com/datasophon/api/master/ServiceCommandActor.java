@@ -34,7 +34,6 @@ import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostDTO;
-import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
 import com.datasophon.common.enums.ClusterState;
 import com.datasophon.common.enums.CommandState;
 import org.apache.commons.lang3.StringUtils;
@@ -44,7 +43,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 // 移除未使用的import，因为已使用JDK21的toList()方法
@@ -99,8 +97,8 @@ public class ServiceCommandActor extends AbstractActor {
                     .getBean(ClusterServiceCommandService.class);
 
             // 获取命令主机信息（用于后续扩展功能）
-            ClusterServiceCommandHostDTO commandHost = commandHostService
-                    .getCommandHostByCommandHostId(message.getCommandHostId());
+            // ClusterServiceCommandHostDTO commandHost = commandHostService
+            //         .getCommandHostByCommandHostId(message.getCommandHostId());
 
             long size = service.getHostCommandSizeByHostnameAndCommandHostId(message.getHostname(),
                     message.getCommandHostId());
@@ -227,26 +225,22 @@ public class ServiceCommandActor extends AbstractActor {
             for (var webUiDTO : webUiDTOs) {
                 if (TRUE.equals(variables.get(ENABLE_HDFS_KERBEROS)) && webUiDTO.webUrl().contains("9870")) {
                     var newWebUi = webUiDTO.webUrl().replace(HTTP, HTTPS).replace("9870", "9871");
-                    // 创建更新后的DTO - JDK21 Record特性
-                    var updatedDTO = new ClusterServiceRoleInstanceWebuisDTO(
-                        webUiDTO.id(),
-                        webUiDTO.serviceRoleInstanceId(),
-                        newWebUi,
-                        webUiDTO.serviceInstanceId(),
-                        webUiDTO.name()
-                    );
+                    // 使用MapStruct转换器修改WebUI DTO - JDK21特性
+                    var webuisConverter = SpringUtil.getBean("clusterServiceRoleInstanceWebuisConverter",
+                            com.datasophon.api.converter.ClusterServiceRoleInstanceWebuisConverter.class);
+                    var webuisEntity = webuisConverter.dtoToEntity(webUiDTO);
+                    webuisEntity.setWebUrl(newWebUi);
+                    var updatedDTO = webuisConverter.entityToDto(webuisEntity);
                     webuisService.updateWebUI(updatedDTO);
                 }
                 if (FALSE.equals(variables.get(ENABLE_HDFS_KERBEROS)) && webUiDTO.webUrl().contains("9871")) {
                     var newWebUi = webUiDTO.webUrl().replace(HTTPS, HTTP).replace("9871", "9870");
-                    // 创建更新后的DTO - JDK21 Record特性
-                    var updatedDTO = new ClusterServiceRoleInstanceWebuisDTO(
-                        webUiDTO.id(),
-                        webUiDTO.serviceRoleInstanceId(),
-                        newWebUi,
-                        webUiDTO.serviceInstanceId(),
-                        webUiDTO.name()
-                    );
+                    // 使用MapStruct转换器修改WebUI DTO - JDK21特性
+                    var webuisConverter = SpringUtil.getBean("clusterServiceRoleInstanceWebuisConverter",
+                            com.datasophon.api.converter.ClusterServiceRoleInstanceWebuisConverter.class);
+                    var webuisEntity = webuisConverter.dtoToEntity(webUiDTO);
+                    webuisEntity.setWebUrl(newWebUi);
+                    var updatedDTO = webuisConverter.entityToDto(webuisEntity);
                     webuisService.updateWebUI(updatedDTO);
                 }
             }

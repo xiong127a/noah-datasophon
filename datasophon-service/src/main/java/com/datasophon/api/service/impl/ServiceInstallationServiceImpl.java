@@ -23,6 +23,7 @@ import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson2.JSON;
 import com.datasophon.api.converter.ClusterInfoConverter;
 import com.datasophon.api.converter.ClusterServiceInstanceConverter;
+import com.datasophon.api.converter.ClusterServiceRoleInstanceWebuisConverter;
 
 import com.datasophon.api.kubernetes.handler.KubernetesDeploymentYamlHandler;
 import com.datasophon.api.kubernetes.handler.KubernetesHostTagHandler;
@@ -44,7 +45,6 @@ import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.common.dto.ClusterServiceRoleInstanceWebuisDTO;
 import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.model.ExternalLink;
 import com.datasophon.common.model.Generators;
@@ -95,6 +95,9 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
 
     @Autowired
     private ClusterServiceRoleInstanceWebuisService webuisService;
+
+    @Autowired
+    private ClusterServiceRoleInstanceWebuisConverter webuisConverter;
 
     @Autowired
     private ClusterServiceInstanceRoleGroupService roleGroupService;
@@ -292,14 +295,15 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
                                     }
                                 }
                                 
-                                // 创建WebUI DTO - JDK21 Record特性
-                                var webuisDTO = new ClusterServiceRoleInstanceWebuisDTO(
-                                    null, // id为空，由数据库生成
-                                    roleInstance.getId(),
-                                    replacePortInUrl(url, mappedPort),
-                                    clusterServiceInstance.getId(),
-                                    String.format("%s(%s)", externalLink.getName(), serviceRoleInfo.getHostname())
-                                );
+                                // 使用MapStruct转换器创建WebUI DTO - JDK21特性
+                                var webuisEntity = new ClusterServiceRoleInstanceWebuisEntity();
+                                webuisEntity.setServiceRoleInstanceId(roleInstance.getId()); // Long类型
+                                webuisEntity.setWebUrl(replacePortInUrl(url, mappedPort));
+                                webuisEntity.setServiceInstanceId(clusterServiceInstance.getId()); // Long类型
+                                webuisEntity.setName(String.format("%s(%s)", externalLink.getName(), serviceRoleInfo.getHostname()));
+                                webuisEntity.setCreateTime(LocalDateTime.now());
+                                
+                                var webuisDTO = webuisConverter.entityToDto(webuisEntity);
 
                                 webuisService.createWebUI(webuisDTO);
                             }
@@ -310,14 +314,15 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
 
                 // 如果没有找到端口映射，保存原始URL
                 if (!foundPortMapping) {
-                    // 创建WebUI DTO - JDK21 Record特性
-                    var webuisDTO = new ClusterServiceRoleInstanceWebuisDTO(
-                        null, // id为空，由数据库生成
-                        roleInstance.getId(),
-                        url,
-                        clusterServiceInstance.getId(),
-                        String.format("%s(%s)", externalLink.getName(), serviceRoleInfo.getHostname())
-                    );
+                    // 使用MapStruct转换器创建WebUI DTO - JDK21特性
+                    var webuisEntity = new ClusterServiceRoleInstanceWebuisEntity();
+                    webuisEntity.setServiceRoleInstanceId(roleInstance.getId()); // Long类型
+                    webuisEntity.setWebUrl(url);
+                    webuisEntity.setServiceInstanceId(clusterServiceInstance.getId()); // Long类型
+                    webuisEntity.setName(String.format("%s(%s)", externalLink.getName(), serviceRoleInfo.getHostname()));
+                    webuisEntity.setCreateTime(LocalDateTime.now());
+                    
+                    var webuisDTO = webuisConverter.entityToDto(webuisEntity);
                     webuisService.createWebUI(webuisDTO);
                 }
 

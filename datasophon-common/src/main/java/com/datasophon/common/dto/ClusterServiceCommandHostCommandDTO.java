@@ -37,6 +37,7 @@ public record ClusterServiceCommandHostCommandDTO(
         Long commandHostId,
         Long commandId,
         String hostname,
+        String serviceName, // 🔧 添加服务名称字段（用于显示SVG图标）
         String serviceRoleName,
         Integer serviceRoleType,
         String resultMsg,

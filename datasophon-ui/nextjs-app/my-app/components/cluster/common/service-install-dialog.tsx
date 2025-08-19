@@ -87,6 +87,7 @@ interface DataItem {
   commandId?: string
   hostCommandId?: string
   commandName: string
+  serviceName?: string // 🔧 添加服务名称字段（用于显示SVG图标）
   serviceRoleName?: string // 🔧 添加服务角色名称字段
   serviceRoleType?: number // 服务角色类型
   serviceRoleTypeText?: string // 服务角色类型文本
@@ -977,7 +978,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                 <div className={`flex items-center justify-center w-8 h-8 rounded ${statusConfig.bg} ${statusConfig.border} border flex-shrink-0`}>
                                   {currentPage === 1 ? (
                                     <ServiceIcon
-                                      serviceName={item.serviceRoleName || item.commandName || ''}
+                                      serviceName={item.serviceName || ''}
                                       size={16}
                                       className="w-4 h-4"
                                     />
