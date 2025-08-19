@@ -680,12 +680,64 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
           timer1.current = newTimer
         } else if (currentPage === 2) {
           timer2.current = newTimer
-      } else {
+        } else {
           timer3.current = newTimer
+        }
       }
     }
+    
+    // 🔧 修复：添加清理函数，防止定时器泄露
+    return () => {
+      console.log('useEffect清理：页面参数变化，清理定时器...');
+      if (timer1.current) {
+        clearInterval(timer1.current);
+        timer1.current = null;
+      }
+      if (timer2.current) {
+        clearInterval(timer2.current);
+        timer2.current = null;
+      }
+      if (timer3.current) {
+        clearInterval(timer3.current);
+        timer3.current = null;
+      }
     }
   }, [currentPage, open, commandId, hostname, commandHostId, installStatus.hasStarted])
+
+  // 🔧 修复：添加全局清理机制，处理浏览器关闭/刷新等情况
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      console.log('页面即将关闭，强制清理所有定时器...');
+      if (timer1.current) {
+        clearInterval(timer1.current);
+        timer1.current = null;
+      }
+      if (timer2.current) {
+        clearInterval(timer2.current);
+        timer2.current = null;
+      }
+      if (timer3.current) {
+        clearInterval(timer3.current);
+        timer3.current = null;
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        console.log('页面隐藏，暂停定时器...');
+        // 页面隐藏时可以选择暂停轮询以节省资源
+      }
+    };
+
+    // 监听页面关闭事件
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   // 分页变化时重新获取数据
   useEffect(() => {
