@@ -87,6 +87,9 @@ interface DataItem {
   commandId?: string
   hostCommandId?: string
   commandName: string
+  serviceRoleName?: string // 🔧 添加服务角色名称字段
+  serviceRoleType?: number // 服务角色类型
+  serviceRoleTypeText?: string // 服务角色类型文本
   hostname?: string
   commandProgress: number
   commandStateCode: number
@@ -490,7 +493,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
     if (newPage === 2) {
       console.log('=== 进入第2页 ===');
       console.log('设置commandId:', row.commandId);
-        setTitle(`${row.commandName || '服务'} - 主机列表`)
+        setTitle(`${row.serviceRoleName || row.commandName || '服务'} - 主机列表`)
       setCommandId(row.commandId || "")
       setCurrentPage(2)
     } else if (newPage === 3) {
@@ -888,7 +891,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                           {dataSource.map((item, index) => {
                             const isSelected = selectedRowKeys.includes(item.commandId || "")
                             // 稳定的key，避免图标闪烁 - 添加index确保唯一性
-                            const stableKey = `${currentPage}-${index}-${item.commandId || item.commandName || 'unknown'}`
+                            const stableKey = `${currentPage}-${index}-${item.commandId || item.serviceRoleName || item.commandName || 'unknown'}`
                             
                             const getStatusConfig = (stateCode: number) => {
                               switch (stateCode) {
@@ -974,7 +977,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                 <div className={`flex items-center justify-center w-8 h-8 rounded ${statusConfig.bg} ${statusConfig.border} border flex-shrink-0`}>
                                   {currentPage === 1 ? (
                                     <ServiceIcon
-                                      serviceName={item.commandName || ''}
+                                      serviceName={item.serviceRoleName || item.commandName || ''}
                                       size={16}
                                       className="w-4 h-4"
                                     />
@@ -991,7 +994,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
                                     {/* 标题 */}
                                     <div className="flex items-center gap-2 min-w-0">
                                       <span className="font-medium text-slate-800 truncate">
-                                        {currentPage === 1 ? item.commandName : currentPage === 2 ? item.hostname : item.commandName}
+                                        {currentPage === 1 ? (item.serviceRoleName || item.commandName) : currentPage === 2 ? item.hostname : (item.serviceRoleName || item.commandName)}
                       </span>
                                       <ArrowRight className="h-3 w-3 text-slate-400 group-hover:text-blue-500 transition-colors flex-shrink-0" />
                                     </div>
