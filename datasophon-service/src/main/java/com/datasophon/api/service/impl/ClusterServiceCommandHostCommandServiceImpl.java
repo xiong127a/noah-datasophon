@@ -157,7 +157,12 @@ public class ClusterServiceCommandHostCommandServiceImpl extends ServiceImpl<Clu
     public ClusterServiceCommandHostCommandDTO getByHostCommandId(Long hostCommandId) {
         // 使用Mapper查询
         ClusterServiceCommandHostCommandEntity entity = getMapper().selectByHostCommandId(hostCommandId);
-        return entity != null ? converter.entityToDto(entity) : null;
+        if (entity != null) {
+            // 填充serviceName字段（与getHostCommandList方法保持一致）
+            populateServiceNames(List.of(entity));
+            return converter.entityToDto(entity);
+        }
+        return null;
     }
 
     @Override

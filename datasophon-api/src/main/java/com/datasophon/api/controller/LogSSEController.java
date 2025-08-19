@@ -19,6 +19,8 @@ import scala.concurrent.Await;
 import scala.concurrent.duration.Duration;
 
 import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.Principal;
 import java.util.Map;
 import java.util.Objects;
@@ -48,8 +50,7 @@ public class LogSSEController {
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
     private final Map<String, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
     private final Map<String, String> lastLogContent = new ConcurrentHashMap<>();
-    // SSE连接管理
-    private final Map<String, SseEmitter> activeConnections = new ConcurrentHashMap<>();
+
     
     private final ClusterInfoService clusterInfoService;
     private final ClusterServiceCommandHostCommandService hostCommandService;
@@ -66,7 +67,7 @@ public class LogSSEController {
     /**
      * 建立SSE连接，开始推送日志
      * GET /ddh/api/v1/logs/stream?clusterId=xxx&hostCommandId=xxx&token=xxx
-     * 
+     * <p>
      * 由于EventSource API不支持自定义header，token通过URL参数传递
      * Spring Security会自动处理认证（JwtTokenProviderBase已扩展支持URL参数token）
      */
@@ -83,7 +84,6 @@ public class LogSSEController {
         
         // 创建SSE连接
         SseEmitter sseEmitter = new SseEmitter(SSE_TIMEOUT_MS);
-        activeConnections.put(sessionKey, sseEmitter);
         
         // 连接关闭时清理资源
         sseEmitter.onCompletion(() -> cleanup(sessionKey));
@@ -202,8 +202,7 @@ public class LogSSEController {
     private void cleanup(String sessionKey) {
         logger.info("清理SSE连接资源: {}", sessionKey);
         
-        // 清理SSE连接
-        activeConnections.remove(sessionKey);
+
         
         // 清理定时任务
         ScheduledFuture<?> task = scheduledTasks.remove(sessionKey);
@@ -244,11 +243,27 @@ public class LogSSEController {
                 return null;
             }
             
-            // 增加集群ID层级，实现多集群日志隔离
-            String logFile = String.format("%s/%s/%s/%s.log", "logs", clusterId, serviceName, serviceRoleName);
-            String relativePath = String.format("%s/%s.log", serviceName, serviceRoleName);
-            
-            return new LogFileInfo(clusterInfo, hostCommand, logFile, relativePath);
+            // 使用Java NIO进行安全的路径处理（参考项目中FrameServiceController的最佳实践）
+            try {
+                Path basePath = Paths.get("logs");
+                Path targetPath = basePath.resolve(clusterId).resolve(serviceName).resolve(serviceRoleName + ".log").normalize();
+                
+                // 验证路径是否在允许的目录范围内，防止路径遍历攻击
+                if (!targetPath.startsWith(basePath)) {
+                    logger.error("检测到路径遍历攻击: clusterId={}, serviceName={}, serviceRoleName={}, targetPath={}", 
+                               clusterId, serviceName, serviceRoleName, targetPath);
+                    return null;
+                }
+                
+                String logFile = targetPath.toString();
+                String relativePath = "%s/%s.log".formatted(serviceName, serviceRoleName); // Java21特性
+                
+                return new LogFileInfo(clusterInfo, hostCommand, logFile, relativePath);
+            } catch (Exception e) {
+                logger.error("路径处理失败: clusterId={}, serviceName={}, serviceRoleName={}", 
+                           clusterId, serviceName, serviceRoleName, e);
+                return null;
+            }
         } catch (Exception e) {
             logger.error("获取日志文件信息失败: clusterId={}, hostCommandId={}", clusterId, hostCommandId, e);
             return null;
@@ -278,6 +293,8 @@ public class LogSSEController {
         }
         return "";
     }
+    
+
     
     // JDK21 record - 日志文件信息
     private record LogFileInfo(ClusterInfoEntity clusterInfo, 
