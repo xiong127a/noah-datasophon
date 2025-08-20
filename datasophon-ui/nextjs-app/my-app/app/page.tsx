@@ -77,6 +77,10 @@ export default function ServiceLayout() {
   // 区分主页和大数据基础平台的URL
   const [mainDashboardUrl, setMainDashboardUrl] = useState<string>('')
   const [datasophonDashboardUrl, setDatasophonDashboardUrl] = useState<string>('')
+  
+  // 分组折叠状态
+  const [businessServicesExpanded, setBusinessServicesExpanded] = useState(true) // 服务组件默认展开
+  const [systemServicesExpanded, setSystemServicesExpanded] = useState(true) // 系统基础服务默认展开
 
   // 管理服务列表 - 按Vue2项目定义
   const managementServiceNames = ['PROMETHEUS', 'GRAFANA', 'ALERTMANAGER', 'DATASOPHON']
@@ -276,10 +280,10 @@ export default function ServiceLayout() {
   const handleServiceOptionClick = (event: React.MouseEvent) => {
     event.stopPropagation()
     const rect = event.currentTarget.getBoundingClientRect()
-    // 使用按钮位置，菜单出现在按钮下方左对齐
+    // 使用按钮位置，菜单出现在按钮下方右对齐
     setServiceOptionMenuPosition({
       top: rect.bottom + window.scrollY + 2, // 按钮下方2px
-      left: rect.right + window.scrollX - 220  // 按钮右边界左移220px (菜单宽度)
+      left: rect.left + window.scrollX  // 从按钮左边界开始
     })
     setShowServiceOptionMenu(true)
   }
@@ -354,27 +358,44 @@ export default function ServiceLayout() {
       {/* 主内容区域 */}
       <div className="flex">
         {/* 左侧服务列表 */}
-        <div className="w-72 bg-gradient-to-b from-gray-50 to-white shadow-lg border-r border-gray-200 min-h-screen">
+        <div className="w-72 bg-white shadow-lg border-r border-gray-200/60 min-h-screen">
           {/* 集群信息头部 */}
-          <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <div className="flex items-center space-x-2 mb-2">
-                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                  <h3 className="font-bold text-gray-900 text-base">{clusterData?.clusterName || currentCluster?.name}</h3>
+          <div className="relative p-4 border-b border-gray-200/60 bg-gradient-to-br from-slate-50 via-blue-50/30 to-indigo-50/40 overflow-hidden">
+            {/* 装饰性背景元素 */}
+            <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-100/20 to-indigo-100/30 rounded-full -translate-y-6 translate-x-6 blur-xl"></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-gradient-to-tr from-slate-100/30 to-blue-100/20 rounded-full translate-y-4 -translate-x-4 blur-lg"></div>
+            
+            <div className="relative flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center space-x-2.5 mb-2">
+                  <div className="relative">
+                    <div className="w-2.5 h-2.5 bg-gradient-to-r from-emerald-400 to-green-500 rounded-full animate-pulse shadow-sm"></div>
+                    <div className="absolute inset-0 w-2.5 h-2.5 bg-emerald-400/60 rounded-full animate-ping"></div>
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-sm truncate tracking-tight">{clusterData?.clusterName || currentCluster?.name}</h3>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-600 font-medium">{clusterData?.clusterFrame}</span>
-                  <span className="px-2.5 py-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-xs font-medium shadow-sm">
+                  <div className="flex items-center space-x-1.5 bg-white/70 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm border border-white/50">
+                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                    <span className="text-xs font-semibold text-gray-700">
+                      {clusterData?.clusterFrame}
+                    </span>
+                  </div>
+                  <div className={`px-2.5 py-1 rounded-lg text-xs font-bold shadow-sm border transition-all duration-200 ${
+                    clusterData?.depType === 'KUBERNETES' 
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-blue-400/20 shadow-blue-100/50' 
+                      : 'bg-gradient-to-r from-gray-600 to-gray-700 text-white border-gray-500/20 shadow-gray-100/50'
+                  }`}>
                     {clusterData?.depType === 'KUBERNETES' ? 'Kubernetes' : 'Linux'}
-                  </span>
+                  </div>
                 </div>
               </div>
               <button
-                className="p-2 hover:bg-white/80 rounded-lg transition-colors shadow-sm service-option-trigger"
+                className="relative p-2 hover:bg-white/70 backdrop-blur-sm rounded-xl transition-all duration-200 shadow-sm hover:shadow-md service-option-trigger group border border-white/30 hover:border-white/60"
                 onClick={handleServiceOptionClick}
               >
-                <MoreHorizontal className="w-5 h-5 text-gray-600" />
+                <MoreHorizontal className="w-4 h-4 text-gray-600 group-hover:text-gray-800 transition-colors" />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/10 transition-all duration-200"></div>
               </button>
             </div>
           </div>
@@ -392,132 +413,198 @@ export default function ServiceLayout() {
               </div>
             ) : (
               <>
-                {/* Core Service 分组 - 始终显示 */}
-                <div className="px-4 py-3">
-                  <div className="flex items-center justify-between mb-3">
+                {/* 服务组件分组 - 第三方大数据服务 */}
+                <div className="px-4 py-3 bg-gradient-to-r from-blue-50/50 via-indigo-50/30 to-blue-50/40">
+                  <div 
+                    className="flex items-center justify-between mb-3 cursor-pointer hover:bg-white/80 backdrop-blur-sm rounded-xl px-3 py-2 transition-all duration-200 border border-transparent hover:border-blue-200/50 hover:shadow-sm"
+                    onClick={() => setBusinessServicesExpanded(!businessServicesExpanded)}
+                  >
                     <div className="flex items-center">
-                      <ChevronDown className="w-4 h-4 text-blue-600 mr-2" />
-                      <span className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Core Service</span>
-                      <span className="ml-2 bg-blue-100 text-blue-600 text-xs rounded-full px-2 py-0.5">
-                        {coreServices.length}
-                      </span>
+                      <div className="p-1 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 shadow-sm mr-3">
+                        <ChevronDown 
+                          className={`w-3 h-3 text-white transition-transform duration-300 ${
+                            businessServicesExpanded ? 'rotate-0' : '-rotate-90'
+                          }`} 
+                        />
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 tracking-tight">服务组件</span>
+                      <div className="ml-3 flex items-center space-x-1 bg-white/70 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm border border-blue-200/30">
+                        <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                        <span className="text-xs font-semibold text-blue-700">
+                          {coreServices.length} 个组件
+                        </span>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="space-y-1">
+                  <div 
+                    className={`space-y-1 transition-all duration-300 ease-in-out ${
+                      businessServicesExpanded 
+                        ? 'opacity-100 max-h-screen' 
+                        : 'opacity-0 max-h-0 overflow-hidden'
+                    }`}
+                  >
                     {coreServices.length > 0 ? coreServices.map((service) => {
                       const statusInfo = getServiceStatusInfo(service.serviceStateCode)
                       
                       return (
                         <div
                           key={service.id}
-                          className={`group relative flex items-center p-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
+                          className={`group relative flex items-center p-3 cursor-pointer transition-all duration-300 rounded-xl mx-2 mb-1 ${
                             selectedService?.id === service.id 
-                              ? 'bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 shadow-sm' 
-                              : 'hover:bg-gray-50 hover:shadow-sm border border-transparent'
+                              ? 'bg-gradient-to-r from-blue-50 via-blue-100/70 to-indigo-50 border-2 border-blue-300 shadow-lg shadow-blue-100/50 scale-[1.02]' 
+                              : 'bg-white hover:bg-gradient-to-r hover:from-gray-50 hover:to-blue-50/30 border-2 border-gray-100 hover:border-blue-200 hover:shadow-lg hover:shadow-gray-100/50 hover:scale-[1.01]'
                           }`}
                           onClick={() => handleServiceItemClick(service)}
                         >
-                          <div className="flex items-center space-x-3 flex-1">
-                            <div className="relative w-8 h-8 flex-shrink-0 bg-white rounded-lg shadow-sm border border-gray-100 flex items-center justify-center">
+                          {/* 装饰性左边框 */}
+                          <div className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full transition-all duration-300 ${
+                            selectedService?.id === service.id ? 'bg-gradient-to-b from-blue-500 to-indigo-600' : 'bg-gray-200 group-hover:bg-blue-400'
+                          }`}></div>
+                          
+                          <div className="relative w-10 h-10 flex-shrink-0 mr-4">
+                            <div className={`w-9 h-9 bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md border flex items-center justify-center transition-all duration-200 group-hover:rotate-3 group-hover:shadow-lg ${
+                              selectedService?.id === service.id 
+                                ? 'border-blue-300 shadow-blue-100/50' 
+                                : 'border-gray-200 group-hover:border-blue-300'
+                            }`}>
                               <SvgIcon name={service.icon || service.serviceName.toLowerCase()} className="w-5 h-5" />
-                              <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${statusInfo.dotClassName}`}></div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-900 truncate">{service.name}</span>
-                                <div className="flex items-center space-x-2">
-                                  {service.alertNum > 0 && (
-                                    <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-medium">
+                            <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm transition-all duration-200 ${statusInfo.dotClassName} ${
+                              selectedService?.id === service.id ? 'scale-110' : 'group-hover:scale-105'
+                            }`}></div>
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-semibold text-gray-900 truncate">{service.name}</span>
+                              <div className="flex items-center space-x-2">
+                                {service.alertNum > 0 && (
+                                  <div className="relative">
+                                    <span className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full px-2 py-1 min-w-[1.5rem] text-center font-bold shadow-lg animate-pulse">
                                       {service.alertNum}
                                     </span>
-                                  )}
-                                  <button
-                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white hover:shadow-sm rounded-md transition-all action-trigger"
-                                    onClick={handleServiceActionClick}
-                                  >
-                                    <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                                  </button>
-                                </div>
+                                    <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-20"></div>
+                                  </div>
+                                )}
+                                <button
+                                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-blue-50 hover:shadow-md rounded-xl transition-all duration-200 action-trigger border border-transparent hover:border-blue-200"
+                                  onClick={handleServiceActionClick}
+                                >
+                                  <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                                </button>
                               </div>
                             </div>
                           </div>
                         </div>
                       )
                     }) : (
-                      <div className="text-center py-8">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
-                          <Server className="w-6 h-6 text-gray-400" />
+                      <div className="text-center py-8 px-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-sm">
+                          <Server className="w-8 h-8 text-blue-500" />
                         </div>
-                        <p className="text-sm text-gray-500">暂无核心服务</p>
-                        <p className="text-xs text-gray-400 mt-1">请安装HDFS、YARN等服务</p>
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">暂无服务组件</h4>
+                        <p className="text-xs text-gray-500 leading-relaxed">请安装 HDFS、YARN、Spark 等<br/>大数据处理组件来开始使用</p>
                       </div>
                     )}
                   </div>
                 </div>
 
-                {/* Management 分组 - 始终显示 */}
-                <div className="px-4 py-3 border-t border-gray-100">
-                  <div className="flex items-center justify-between mb-3">
+                {/* 系统基础服务分组 - 内置必要服务 */}
+                <div className="px-4 py-3 border-t border-gray-200/30 bg-gradient-to-r from-emerald-50/50 via-green-50/30 to-emerald-50/40 mt-1">
+                  <div 
+                    className="flex items-center justify-between mb-3 cursor-pointer hover:bg-white/80 backdrop-blur-sm rounded-xl px-3 py-2 transition-all duration-200 border border-transparent hover:border-emerald-200/50 hover:shadow-sm"
+                    onClick={() => setSystemServicesExpanded(!systemServicesExpanded)}
+                  >
                     <div className="flex items-center">
-                      <ChevronDown className="w-4 h-4 text-green-600 mr-2" />
-                      <span className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Management</span>
-                      <span className="ml-2 bg-green-100 text-green-600 text-xs rounded-full px-2 py-0.5">
-                        {managementServices.length}
-                      </span>
+                      <div className="p-1 rounded-lg bg-gradient-to-r from-emerald-500 to-green-600 shadow-sm mr-3">
+                        <ChevronDown 
+                          className={`w-3 h-3 text-white transition-transform duration-300 ${
+                            systemServicesExpanded ? 'rotate-0' : '-rotate-90'
+                          }`} 
+                        />
+                      </div>
+                      <span className="text-sm font-bold text-gray-900 tracking-tight">系统基础服务</span>
+                      <div className="ml-3 flex items-center space-x-1 bg-white/70 backdrop-blur-sm px-2.5 py-1 rounded-lg shadow-sm border border-emerald-200/30">
+                        <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></div>
+                        <span className="text-xs font-semibold text-emerald-700">
+                          {managementServices.length} 个服务
+                        </span>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="space-y-1">
+                  <div 
+                    className={`space-y-1 transition-all duration-300 ease-in-out ${
+                      systemServicesExpanded 
+                        ? 'opacity-100 max-h-screen' 
+                        : 'opacity-0 max-h-0 overflow-hidden'
+                    }`}
+                  >
                     {managementServices.length > 0 ? managementServices.map((service) => {
                       const statusInfo = getServiceStatusInfo(service.serviceStateCode)
                       
                       return (
                         <div
                           key={service.id}
-                          className={`group relative flex items-center p-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
+                          className={`group relative flex items-center p-3 cursor-pointer transition-all duration-300 rounded-xl mx-2 mb-1 ${
                             selectedService?.id === service.id 
-                              ? 'bg-gradient-to-r from-green-50 to-green-100 border border-green-200 shadow-sm' 
-                              : 'hover:bg-gray-50 hover:shadow-sm border border-transparent'
+                              ? 'bg-gradient-to-r from-emerald-50 via-emerald-100/70 to-green-50 border-2 border-emerald-300 shadow-lg shadow-emerald-100/50 scale-[1.02]' 
+                              : 'bg-white hover:bg-gradient-to-r hover:from-gray-50 hover:to-emerald-50/30 border-2 border-gray-100 hover:border-emerald-200 hover:shadow-lg hover:shadow-gray-100/50 hover:scale-[1.01]'
                           }`}
                           onClick={() => handleServiceItemClick(service)}
                         >
-                          <div className="flex items-center space-x-3 flex-1">
-                            <div className="relative w-8 h-8 flex-shrink-0 bg-white rounded-lg shadow-sm border border-gray-100 flex items-center justify-center">
+                          {/* 装饰性左边框 */}
+                          <div className={`absolute left-0 top-2 bottom-2 w-1 rounded-r-full transition-all duration-300 ${
+                            selectedService?.id === service.id ? 'bg-gradient-to-b from-emerald-500 to-green-600' : 'bg-gray-200 group-hover:bg-emerald-400'
+                          }`}></div>
+                          
+                          <div className="relative w-10 h-10 flex-shrink-0 mr-4">
+                            <div className={`w-9 h-9 bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-md border flex items-center justify-center transition-all duration-200 group-hover:rotate-3 group-hover:shadow-lg ${
+                              selectedService?.id === service.id 
+                                ? 'border-emerald-300 shadow-emerald-100/50' 
+                                : 'border-gray-200 group-hover:border-emerald-300'
+                            }`}>
                               <SvgIcon name={service.icon || service.serviceName.toLowerCase()} className="w-5 h-5" />
-                              <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${statusInfo.dotClassName}`}></div>
                             </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-900 truncate">{service.name}</span>
-                                <div className="flex items-center space-x-2">
-                                  {service.alertNum > 0 && (
-                                    <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-medium">
+                            <div className={`absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm transition-all duration-200 ${statusInfo.dotClassName} ${
+                              selectedService?.id === service.id ? 'scale-110' : 'group-hover:scale-105'
+                            }`}></div>
+                          </div>
+                          
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-semibold text-gray-900 truncate">{service.name}</span>
+                              <div className="flex items-center space-x-2">
+                                {service.alertNum > 0 && (
+                                  <div className="relative">
+                                    <span className="bg-gradient-to-r from-red-500 to-red-600 text-white text-xs rounded-full px-2 py-1 min-w-[1.5rem] text-center font-bold shadow-lg animate-pulse">
                                       {service.alertNum}
                                     </span>
-                                  )}
-                                  {/* 大数据基础平台不显示操作按钮，其他管理服务显示 */}
-                                  {service.serviceName !== 'DATASOPHON' && (
-                                    <button
-                                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white hover:shadow-sm rounded-md transition-all action-trigger"
-                                      onClick={handleServiceActionClick}
-                                    >
-                                      <MoreHorizontal className="w-4 h-4 text-gray-400" />
-                                    </button>
-                                  )}
-                                </div>
+                                    <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-20"></div>
+                                  </div>
+                                )}
+                                {/* 大数据基础平台不显示操作按钮，其他管理服务显示 */}
+                                {service.serviceName !== 'DATASOPHON' && (
+                                  <button
+                                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-emerald-50 hover:shadow-md rounded-xl transition-all duration-200 action-trigger border border-transparent hover:border-emerald-200"
+                                    onClick={handleServiceActionClick}
+                                  >
+                                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                                  </button>
+                                )}
                               </div>
                             </div>
                           </div>
                         </div>
                       )
                     }) : (
-                      <div className="text-center py-8">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
-                          <Monitor className="w-6 h-6 text-gray-400" />
+                      <div className="text-center py-8 px-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-green-100 rounded-2xl mx-auto mb-4 flex items-center justify-center shadow-sm">
+                          <Monitor className="w-8 h-8 text-emerald-500" />
                         </div>
-                        <p className="text-sm text-gray-500">暂无管理服务</p>
-                        <p className="text-xs text-gray-400 mt-1">请安装Grafana、Prometheus等服务</p>
+                        <h4 className="text-sm font-semibold text-gray-900 mb-2">暂无系统基础服务</h4>
+                        <p className="text-xs text-gray-500 leading-relaxed">系统基础服务包括平台管理、<br/>监控告警、数据可视化等功能</p>
                       </div>
                     )}
                   </div>
