@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { Check, ChevronDown, AlertCircle, BarChart3 } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -9,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
+
 import { useCluster, ClusterInfo } from '@/hooks/useCluster'
 import { clusterApi } from "@/lib/api"
 import { ClusterTypeUtil } from '@/types/cluster-type'
@@ -35,21 +36,21 @@ const ClusterIcon: React.FC<{ isK8s: boolean; className?: string }> = ({ isK8s, 
 // 紧凑型统计集成设计的样式常量
 const STYLES = {
   // 主按钮样式 - 紧凑型设计，集成统计信息
-  mainButton: "flex items-center space-x-3 bg-white/90 backdrop-blur-sm border border-slate-200/50 text-slate-700 font-medium shadow-sm hover:shadow-md rounded-2xl transition-all duration-200 ease-out hover:bg-white hover:border-slate-300/60 px-4 py-2 min-w-[200px]",
+  mainButton: "flex items-center space-x-2 bg-white/90 backdrop-blur-sm border border-slate-200/50 text-slate-700 font-medium shadow-sm hover:shadow-md rounded-2xl transition-all duration-200 ease-out hover:bg-white hover:border-slate-300/60 px-3 py-2 min-w-[160px]",
   
-  // 统计信息容器
-  statsContainer: "flex items-center space-x-4 ml-3 pl-3 border-l border-slate-200/60",
+  // 统计信息容器 - 更紧凑
+  statsContainer: "flex items-center space-x-3 ml-2 pl-2 border-l border-slate-200/60",
   statItem: "flex flex-col items-center",
   statNumber: "text-xs font-semibold leading-none",
-  statLabel: "text-[10px] text-slate-500 leading-none mt-0.5",
+  statLabel: "text-[9px] text-slate-500 leading-none mt-0.5",
   
   // 加载状态样式
-  loadingContainer: "flex items-center space-x-2 px-4 py-2 bg-white/90 backdrop-blur-sm border border-slate-200/50 rounded-2xl shadow-sm min-w-[200px]",
+  loadingContainer: "flex items-center space-x-2 px-3 py-2 bg-white/90 backdrop-blur-sm border border-slate-200/50 rounded-2xl shadow-sm min-w-[160px]",
   loadingSpinner: "w-3 h-3 animate-spin rounded-full border-2 border-slate-200 border-t-blue-500",
   loadingText: "text-sm text-slate-600 font-medium",
   
   // 未选择状态样式 - 紧凑化
-  unselectedContainer: "flex items-center space-x-2 px-4 py-2 bg-amber-50/50 backdrop-blur-sm border border-amber-200/40 rounded-2xl shadow-sm min-w-[200px]",
+  unselectedContainer: "flex items-center space-x-2 px-3 py-2 bg-amber-50/50 backdrop-blur-sm border border-amber-200/40 rounded-2xl shadow-sm min-w-[160px]",
   unselectedIcon: "w-3 h-3 text-amber-500",
   unselectedText: "text-sm text-amber-700 font-medium",
   unselectedButton: "ml-2 bg-amber-400 hover:bg-amber-500 text-white transition-all duration-200 rounded-xl px-3 py-1 text-xs font-medium shadow-sm hover:shadow-md",
@@ -60,14 +61,13 @@ const STYLES = {
   dropdownStats: "flex items-center space-x-1 text-xs text-slate-500",
   dropdownItem: "flex items-center justify-between p-3 cursor-pointer rounded-2xl hover:bg-slate-50/80 transition-all duration-150 ease-out",
   dropdownItemActive: "flex items-center justify-between p-3 cursor-pointer rounded-2xl bg-blue-50/60 border border-blue-200/40",
-  dropdownItemDanger: "p-3 text-red-500 cursor-pointer rounded-2xl hover:bg-red-50/80 transition-all duration-150 ease-out mt-2 border-t border-slate-100",
+
   
   // 图标样式 - 现代化色调
   checkIcon: "w-4 h-4 text-emerald-500",
   chevronIcon: "ml-2 h-3 w-3 text-slate-400 transition-transform duration-200",
   
   // Badge样式 - 精致设计
-  k8sBadge: "text-[10px] ml-2 bg-blue-100/90 text-blue-700 px-1.5 py-0.5 rounded-md font-medium",
   totalClusters: "text-blue-600",
   runningClusters: "text-emerald-600"
 }
@@ -77,6 +77,7 @@ const ClusterSelector: React.FC = () => {
   const [clusters, setClusters] = useState<ClusterInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
+  const router = useRouter()
 
   // 获取集群列表并处理统计
   const fetchClusters = async () => {
@@ -142,9 +143,11 @@ const ClusterSelector: React.FC = () => {
   }, [])
 
   const handleClusterSelect = (cluster: ClusterInfo) => {
+    // 更新集群状态和localStorage
     setCluster(cluster)
-    // 刷新页面以更新数据
-    window.location.reload()
+    
+    // 跳转到主页，让主页显示新选择的集群信息
+    router.push('/')
   }
 
   // 计算统计数据
@@ -230,9 +233,6 @@ const ClusterSelector: React.FC = () => {
                   {(cluster.clusterState === 3 || cluster.clusterStateCode === 3) && (
                     <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
                   )}
-                  {cluster.isK8s && (
-                    <Badge className={STYLES.k8sBadge}>K8s</Badge>
-                  )}
                 </div>
               </DropdownMenuItem>
             ))
@@ -252,10 +252,7 @@ const ClusterSelector: React.FC = () => {
       <DropdownMenuTrigger asChild>
         <Button className={STYLES.mainButton}>
           <ClusterIcon isK8s={currentCluster?.isK8s || false} />
-          <span className="font-medium truncate max-w-[80px]">{currentCluster?.name}</span>
-          {currentCluster?.isK8s && (
-            <Badge className={STYLES.k8sBadge}>K8s</Badge>
-          )}
+          <span className="font-medium truncate max-w-[60px]">{currentCluster?.name}</span>
           
           {/* 集成统计信息 */}
           <div className={STYLES.statsContainer}>
@@ -297,24 +294,13 @@ const ClusterSelector: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              {cluster.isK8s && (
-                <Badge className={STYLES.k8sBadge}>K8s</Badge>
-              )}
               {currentCluster?.id === cluster.id && (
                 <Check className={STYLES.checkIcon} />
               )}
             </div>
           </DropdownMenuItem>
         ))}
-        <div className={STYLES.dropdownItemDanger}>
-          <DropdownMenuItem
-            onClick={() => setCluster(null)}
-            className="flex items-center text-red-500 hover:bg-transparent"
-          >
-            <AlertCircle className="w-4 h-4 mr-2" />
-            取消选择集群
-          </DropdownMenuItem>
-        </div>
+
       </DropdownMenuContent>
     </DropdownMenu>
   )
