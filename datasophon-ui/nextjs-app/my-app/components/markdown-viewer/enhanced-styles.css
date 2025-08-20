@@ -1,0 +1,279 @@
+/**
+ * 增强的苹果风格样式
+ * 添加更多动画和交互效果
+ */
+
+/* 工具栏按钮动画增强 */
+.markdown-toolbar button {
+  position: relative;
+  overflow: hidden;
+}
+
+.markdown-toolbar button::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(59, 130, 246, 0.1);
+  transition: width 0.3s ease, height 0.3s ease;
+  transform: translate(-50%, -50%);
+  z-index: 0;
+}
+
+.markdown-toolbar button:hover::before {
+  width: 100px;
+  height: 100px;
+}
+
+.markdown-toolbar button > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* 标题链接悬浮效果增强 */
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  position: relative;
+  cursor: pointer;
+}
+
+.markdown-content h1::before,
+.markdown-content h2::before,
+.markdown-content h3::before,
+.markdown-content h4::before,
+.markdown-content h5::before,
+.markdown-content h6::before {
+  content: '#';
+  position: absolute;
+  left: -2rem;
+  color: rgba(59, 130, 246, 0.3);
+  opacity: 0;
+  transition: all 0.3s ease;
+  font-weight: normal;
+  pointer-events: none;
+}
+
+.markdown-content h1:hover::before,
+.markdown-content h2:hover::before,
+.markdown-content h3:hover::before,
+.markdown-content h4:hover::before,
+.markdown-content h5:hover::before,
+.markdown-content h6:hover::before {
+  opacity: 1;
+  left: -1.5rem;
+  color: rgba(59, 130, 246, 0.7);
+}
+
+/* 表格美化 */
+.markdown-content table {
+  border-collapse: separate;
+  border-spacing: 0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  background: white;
+}
+
+.markdown-content thead {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(147, 197, 253, 0.1) 100%);
+}
+
+.markdown-content th {
+  border: none;
+  border-bottom: 2px solid rgba(59, 130, 246, 0.1);
+  font-weight: 600;
+  color: rgb(51, 65, 85);
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.markdown-content td {
+  border: none;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  padding: 12px 16px;
+  vertical-align: top;
+}
+
+.markdown-content tr:last-child td {
+  border-bottom: none;
+}
+
+.markdown-content tr:hover {
+  background: rgba(59, 130, 246, 0.02);
+}
+
+/* 代码块增强 */
+.markdown-content pre {
+  position: relative;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.markdown-content pre::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.3) 50%, transparent 100%);
+  border-radius: 12px 12px 0 0;
+}
+
+/* 引用块增强 */
+.markdown-content blockquote {
+  position: relative;
+  border-left: 4px solid rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, rgba(147, 197, 253, 0.05) 100%);
+  border-radius: 0 8px 8px 0;
+  margin-left: 0;
+}
+
+.markdown-content blockquote::before {
+  content: '"';
+  position: absolute;
+  top: -5px;
+  left: -2px;
+  font-size: 2rem;
+  color: rgba(59, 130, 246, 0.3);
+  font-family: serif;
+}
+
+/* 列表美化 */
+.markdown-content ul li::marker {
+  color: rgb(59, 130, 246);
+}
+
+.markdown-content ol li::marker {
+  color: rgb(59, 130, 246);
+  font-weight: 600;
+}
+
+.markdown-content li {
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+/* 链接悬浮效果增强 */
+.markdown-content a {
+  position: relative;
+  display: inline-block;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
+}
+
+.markdown-content a:hover {
+  background: rgba(59, 130, 246, 0.05);
+  transform: translateY(-1px);
+}
+
+.markdown-content a::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 4px;
+  right: 4px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(59, 130, 246, 0) 0%, rgba(59, 130, 246, 0.6) 50%, rgba(59, 130, 246, 0) 100%);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+
+.markdown-content a:hover::after {
+  transform: scaleX(1);
+}
+
+/* 滚动条美化 */
+.markdown-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.markdown-content::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.1);
+  border-radius: 4px;
+}
+
+.markdown-content::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.4) 0%, rgba(147, 197, 253, 0.6) 100%);
+  border-radius: 4px;
+}
+
+.markdown-content::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(59, 130, 246, 0.6) 0%, rgba(147, 197, 253, 0.8) 100%);
+}
+
+/* 目录项悬浮动画 */
+.toc-item {
+  transition: all 0.2s ease;
+}
+
+.toc-item:hover {
+  transform: translateX(4px);
+}
+
+/* 图片加载动画 */
+@keyframes shimmer {
+  0% {
+    background-position: -200px 0;
+  }
+  100% {
+    background-position: calc(200px + 100%) 0;
+  }
+}
+
+.image-loading {
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 25%,
+    #e0e0e0 50%,
+    #f0f0f0 75%
+  );
+  background-size: 200px 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* 响应式增强 */
+@media (max-width: 768px) {
+  .markdown-content h1::before,
+  .markdown-content h2::before,
+  .markdown-content h3::before,
+  .markdown-content h4::before,
+  .markdown-content h5::before,
+  .markdown-content h6::before {
+    display: none;
+  }
+  
+  .markdown-content table {
+    font-size: 14px;
+  }
+  
+  .markdown-content th,
+  .markdown-content td {
+    padding: 8px 12px;
+  }
+
+  /* 移动端侧边栏隐藏 */
+  .markdown-sidebar {
+    position: fixed;
+    left: -280px;
+    transform: translateX(0);
+    transition: transform 0.3s ease;
+  }
+  
+  .markdown-sidebar.show {
+    transform: translateX(280px);
+  }
+  
+  .markdown-content {
+    margin-left: 0;
+  }
+}

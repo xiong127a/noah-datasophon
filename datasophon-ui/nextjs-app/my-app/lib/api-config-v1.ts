@@ -152,6 +152,12 @@ export const API_PATHS_V1 = {
   HOST_DISCOVER_STEP1: `${API_BASE}/host/discover-from-step1`,
   HOST_CHECK_VALIDATION: `${API_BASE}/host/check-hosts`,
   HOST_SAVE_DISCOVERED: `${API_BASE}/host/save-discovered-hosts`,
+
+  // 服务文档相关 - v1
+  SERVICE_DOC_GET: `${API_BASE}/service/doc/getServiceDoc`,
+  SERVICE_DOC_HAS: `${API_BASE}/service/doc/hasServiceDoc`,
+  SERVICE_DOC_SERVICE_NAME: `${API_BASE}/service/doc/serviceName`,
+  SERVICE_DOC_IMAGE: `${API_BASE}/service/doc/image`,
 };
 
 /**

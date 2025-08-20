@@ -1,0 +1,491 @@
+/**
+ * 苹果风格Markdown样式系统
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-20
+ */
+
+/* 苹果设计令牌 */
+:root {
+  /* 颜色 */
+  --apple-gray-50: #fafafa;
+  --apple-gray-100: #f4f4f5;
+  --apple-gray-200: #e4e4e7;
+  --apple-gray-300: #d4d4d8;
+  --apple-gray-400: #a1a1aa;
+  --apple-gray-500: #71717a;
+  --apple-gray-600: #52525b;
+  --apple-gray-700: #3f3f46;
+  --apple-gray-800: #27272a;
+  --apple-gray-900: #18181b;
+  
+  --apple-blue: #007aff;
+  --apple-blue-hover: #0056b3;
+  --apple-blue-light: rgba(0, 122, 255, 0.1);
+  
+  --apple-green: #34c759;
+  --apple-orange: #ff9500;
+  --apple-red: #ff3b30;
+  
+  /* 阴影 */
+  --apple-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --apple-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --apple-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  --apple-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+  
+  /* 圆角 */
+  --apple-radius-sm: 6px;
+  --apple-radius: 8px;
+  --apple-radius-md: 12px;
+  --apple-radius-lg: 16px;
+  --apple-radius-xl: 24px;
+  
+  /* 字体 */
+  --apple-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  --apple-font-mono: 'SF Mono', Monaco, Inconsolata, 'Roboto Mono', 'Consolas', monospace;
+  
+  /* 间距 */
+  --apple-spacing-xs: 0.25rem;
+  --apple-spacing-sm: 0.5rem;
+  --apple-spacing-md: 1rem;
+  --apple-spacing-lg: 1.5rem;
+  --apple-spacing-xl: 2rem;
+  --apple-spacing-2xl: 3rem;
+  
+  /* 过渡 */
+  --apple-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --apple-transition-slow: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 主容器样式 */
+.markdown-viewer {
+  font-family: var(--apple-font-family);
+  line-height: 1.6;
+  color: var(--apple-gray-800);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: var(--apple-radius-lg);
+  box-shadow: 
+    0 20px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(59, 130, 246, 0.05);
+  overflow: hidden;
+  transition: var(--apple-transition-slow);
+  backdrop-filter: blur(20px);
+}
+
+.markdown-viewer:hover {
+  box-shadow: var(--apple-shadow-lg), 0 0 0 1px rgba(0, 122, 255, 0.05);
+}
+
+/* 布局容器 */
+.markdown-layout {
+  display: flex;
+  min-height: 70vh;
+  background: white;
+  position: relative;
+}
+
+/* 侧边栏样式 */
+.markdown-sidebar {
+  width: 280px;
+  background: linear-gradient(180deg, rgba(248, 250, 252, 0.8) 0%, rgba(241, 245, 249, 0.9) 100%);
+  border-right: 1px solid rgba(148, 163, 184, 0.1);
+  overflow-y: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  z-index: 10;
+  backdrop-filter: blur(10px);
+  box-shadow: inset -1px 0 0 rgba(59, 130, 246, 0.1);
+}
+
+/* 自定义滚动条 */
+.markdown-sidebar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.markdown-sidebar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.markdown-sidebar::-webkit-scrollbar-thumb {
+  background: var(--apple-gray-300);
+  border-radius: 3px;
+  transition: var(--apple-transition);
+}
+
+.markdown-sidebar::-webkit-scrollbar-thumb:hover {
+  background: var(--apple-gray-400);
+}
+
+/* 内容区域 */
+.markdown-content {
+  flex: 1;
+  padding: var(--apple-spacing-2xl);
+  max-width: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.8) 100%);
+  position: relative;
+  margin-left: 280px; /* 为固定侧边栏让出空间 */
+}
+
+.markdown-content::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.2) 50%, transparent 100%);
+}
+
+/* 加载状态 */
+.markdown-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--apple-spacing-2xl);
+  min-height: 400px;
+  color: var(--apple-gray-500);
+}
+
+.loading-spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--apple-gray-200);
+  border-top: 3px solid var(--apple-blue);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: var(--apple-spacing-md);
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 错误状态 */
+.markdown-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--apple-spacing-2xl);
+  min-height: 400px;
+  text-align: center;
+  color: var(--apple-red);
+  background: rgba(255, 59, 48, 0.05);
+  border-radius: var(--apple-radius-md);
+  margin: var(--apple-spacing-md);
+}
+
+/* 空状态 */
+.markdown-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--apple-spacing-2xl);
+  min-height: 400px;
+  text-align: center;
+  color: var(--apple-gray-500);
+}
+
+/* Markdown内容样式 */
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  font-weight: 600;
+  line-height: 1.25;
+  margin-top: var(--apple-spacing-xl);
+  margin-bottom: var(--apple-spacing-md);
+  color: var(--apple-gray-900);
+  position: relative;
+  scroll-margin-top: 80px;
+}
+
+.markdown-content h1 {
+  font-size: 2.25rem;
+  border-bottom: 2px solid var(--apple-gray-200);
+  padding-bottom: var(--apple-spacing-sm);
+}
+
+.markdown-content h2 {
+  font-size: 1.875rem;
+  border-bottom: 1px solid var(--apple-gray-200);
+  padding-bottom: var(--apple-spacing-xs);
+}
+
+.markdown-content h3 {
+  font-size: 1.5rem;
+}
+
+.markdown-content h4 {
+  font-size: 1.25rem;
+}
+
+.markdown-content h5,
+.markdown-content h6 {
+  font-size: 1.125rem;
+}
+
+/* 段落样式 */
+.markdown-content p {
+  margin-bottom: var(--apple-spacing-md);
+  text-align: justify;
+}
+
+/* 列表样式 */
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: var(--apple-spacing-md);
+  padding-left: var(--apple-spacing-lg);
+}
+
+.markdown-content li {
+  margin-bottom: var(--apple-spacing-xs);
+}
+
+.markdown-content li::marker {
+  color: var(--apple-blue);
+}
+
+/* 引用样式 */
+.markdown-content blockquote {
+  margin: var(--apple-spacing-md) 0;
+  padding: var(--apple-spacing-md) var(--apple-spacing-lg);
+  border-left: 4px solid var(--apple-blue);
+  background: var(--apple-blue-light);
+  border-radius: 0 var(--apple-radius-sm) var(--apple-radius-sm) 0;
+  font-style: italic;
+}
+
+/* 表格样式 */
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: var(--apple-spacing-md) 0;
+  border-radius: var(--apple-radius);
+  overflow: hidden;
+  box-shadow: var(--apple-shadow);
+}
+
+.markdown-content th,
+.markdown-content td {
+  padding: var(--apple-spacing-sm) var(--apple-spacing-md);
+  text-align: left;
+  border-bottom: 1px solid var(--apple-gray-200);
+}
+
+.markdown-content th {
+  background: var(--apple-gray-50);
+  font-weight: 600;
+  color: var(--apple-gray-700);
+}
+
+.markdown-content tr:hover {
+  background: var(--apple-gray-50);
+}
+
+/* 代码样式 */
+.markdown-content code {
+  font-family: var(--apple-font-mono);
+  font-size: 0.875em;
+  background: var(--apple-gray-100);
+  padding: var(--apple-spacing-xs) var(--apple-spacing-sm);
+  border-radius: var(--apple-radius-sm);
+  color: var(--apple-red);
+}
+
+.markdown-content pre {
+  margin: var(--apple-spacing-md) 0;
+  padding: var(--apple-spacing-lg);
+  background: var(--apple-gray-900);
+  border-radius: var(--apple-radius-md);
+  overflow-x: auto;
+  box-shadow: var(--apple-shadow);
+}
+
+.markdown-content pre code {
+  background: transparent;
+  padding: 0;
+  color: var(--apple-gray-100);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* 图片样式 */
+.markdown-content img,
+.markdown-content .markdown-image {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--apple-radius-md);
+  box-shadow: 
+    0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05),
+    0 0 0 1px rgba(255, 255, 255, 0.5);
+  margin: var(--apple-spacing-md) 0;
+  transition: var(--apple-transition);
+  background: white;
+  padding: 8px;
+  display: block;
+  width: 100%;
+}
+
+.markdown-content img:hover,
+.markdown-content .markdown-image:hover {
+  transform: scale(1.02) translateY(-2px);
+  box-shadow: 
+    0 25px 25px -5px rgba(0, 0, 0, 0.1),
+    0 10px 10px -5px rgba(0, 0, 0, 0.04),
+    0 0 0 1px rgba(59, 130, 246, 0.2);
+}
+
+/* 图片容器样式 */
+.image-container {
+  display: block;
+  width: 100%;
+  margin: var(--apple-spacing-md) 0;
+}
+
+/* 图片加载状态 */
+.image-loading {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(248, 250, 252, 0.5);
+  border-radius: var(--apple-radius-md);
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+}
+
+/* 图片错误状态 */
+.image-error {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(254, 226, 226, 0.5);
+  border-radius: var(--apple-radius-md);
+  border: 1px dashed rgba(239, 68, 68, 0.3);
+}
+
+/* 加载动画 */
+.loading-spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f4f6;
+  border-top: 2px solid #3b82f6;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* 链接样式 */
+.markdown-content a {
+  color: var(--apple-blue);
+  text-decoration: none;
+  transition: var(--apple-transition);
+  position: relative;
+}
+
+.markdown-content a:hover {
+  color: var(--apple-blue-hover);
+}
+
+.markdown-content a:hover::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: var(--apple-blue-hover);
+}
+
+/* 分割线样式 */
+.markdown-content hr {
+  border: none;
+  height: 2px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--apple-gray-300),
+    transparent
+  );
+  margin: var(--apple-spacing-xl) 0;
+}
+
+/* 标题锚点悬浮效果 */
+.markdown-content h1:hover::before,
+.markdown-content h2:hover::before,
+.markdown-content h3:hover::before,
+.markdown-content h4:hover::before,
+.markdown-content h5:hover::before,
+.markdown-content h6:hover::before {
+  content: '#';
+  position: absolute;
+  left: -1.5rem;
+  color: var(--apple-blue);
+  opacity: 0.7;
+  transition: var(--apple-transition);
+}
+
+/* 高亮效果 */
+.markdown-content .highlighted {
+  background: var(--apple-blue-light);
+  border-radius: var(--apple-radius-sm);
+  padding: var(--apple-spacing-xs);
+  transition: var(--apple-transition);
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .markdown-layout {
+    flex-direction: column;
+  }
+  
+  .markdown-sidebar {
+    width: 100%;
+    max-height: 200px;
+    position: static;
+  }
+  
+  .markdown-content {
+    padding: var(--apple-spacing-lg);
+  }
+  
+  .markdown-content h1 {
+    font-size: 1.875rem;
+  }
+  
+  .markdown-content h2 {
+    font-size: 1.5rem;
+  }
+}
+
+/* 打印样式 */
+@media print {
+  .markdown-sidebar {
+    display: none;
+  }
+  
+  .markdown-content {
+    padding: 0;
+  }
+  
+  .markdown-viewer {
+    box-shadow: none;
+  }
+}

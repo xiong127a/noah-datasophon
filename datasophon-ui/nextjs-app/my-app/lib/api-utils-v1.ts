@@ -19,7 +19,7 @@ export const clusterApiV1 = {
   rack: {
     list: () => apiV1.post(API_PATHS_V1.RACK_LIST, {}),
     save: (rack: string) => apiV1.post(API_PATHS_V1.RACK_SAVE, { rack }),
-    delete: (rackId: number) => apiV1.post(API_PATHS_V1.RACK_DELETE, { rackId }),
+    delete: (rackId: string) => apiV1.post(API_PATHS_V1.RACK_DELETE, { rackId }),
   },
 
   // 主机管理
@@ -56,8 +56,8 @@ export const clusterApiV1 = {
   label: {
     list: () => apiV1.post(API_PATHS_V1.TAG_LIST, {}),
     save: (nodeLabel: string) => apiV1.post(API_PATHS_V1.TAG_SAVE, { nodeLabel }),
-    delete: (nodeLabelId: number) => apiV1.post(API_PATHS_V1.TAG_DELETE, { nodeLabelId }),
-    assign: (nodeLabelId: number, hostIds: string) => 
+    delete: (nodeLabelId: string) => apiV1.post(API_PATHS_V1.TAG_DELETE, { nodeLabelId }),
+    assign: (nodeLabelId: string, hostIds: string) => 
       apiV1.post(API_PATHS_V1.TAG_ASSIGN, { nodeLabelId, hostIds }),
   },
 
@@ -88,10 +88,10 @@ export const clusterApiV1 = {
   // 集群总览相关
   overview: {
     // 获取集群总览URL（主页默认）
-    getDashboardUrl: (clusterId: string | number, config?: any) => 
+    getDashboardUrl: (clusterId: string, config?: any) => 
       apiV1.post(API_PATHS_V1.CLUSTER_DASHBOARD_URL, { clusterId }, config),
     // 获取大数据基础平台总览URL
-    getDatasophonDashboard: (clusterId: string | number, config?: any) => 
+    getDatasophonDashboard: (clusterId: string, config?: any) => 
       apiV1.post(API_PATHS_V1.DATASOPHON_DASHBOARD_URL, { clusterId }, config),
   },
 
@@ -383,6 +383,73 @@ export const clusterApiV1 = {
       const headers = createClusterHeaders(clusterId)
       const response = await apiV1.post(API_PATHS_V1.HOST_SAVE_DISCOVERED, {}, { headers })
       return response.data
+    }
+  },
+
+  // 服务文档相关API - v1
+  doc: {
+    /** 获取服务文档内容 */
+    getServiceDoc: (params: {
+      clusterId: string
+      serviceId: string
+      type: 'component' | 'guide'
+    }) => {
+      const config = createClusterHeaders(params.clusterId)
+      return apiV1.post(API_PATHS_V1.SERVICE_DOC_GET, {
+        clusterId: params.clusterId,
+        serviceId: params.serviceId,
+        type: params.type
+      }, config)
+    },
+
+    /** 检查服务文档是否存在 */
+    hasServiceDoc: (params: {
+      clusterId: string
+      serviceId: string
+      type: 'component' | 'guide'
+    }) => {
+      const config = createClusterHeaders(params.clusterId)
+      return apiV1.get(API_PATHS_V1.SERVICE_DOC_HAS, {
+        serviceId: params.serviceId,
+        type: params.type
+      }, config)
+    },
+
+    /** 获取服务名称 */
+    getServiceName: (serviceId: string) => {
+      return apiV1.get(`${API_PATHS_V1.SERVICE_DOC_SERVICE_NAME}/${serviceId}`)
+    },
+
+    /** 获取图片资源 - 通过API调用获取blob数据 */
+    getImageBlob: async (imagePath: string) => {
+      if (!imagePath) throw new Error('图片路径不能为空')
+      
+      const encodedPath = encodeURIComponent(imagePath)
+      const response = await apiV1.get(API_PATHS_V1.SERVICE_DOC_IMAGE, {
+        imagePath: encodedPath
+      }, {
+        responseType: 'blob' // 重要：指定响应类型为blob
+      })
+      
+      return response.data
+    },
+
+    /** 获取图片资源URL - 兼容方法，但建议使用getImageBlob */
+    getImageUrl: (imagePath: string) => {
+      if (!imagePath) return ''
+      
+      // 如果已经是完整URL，直接返回
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        return imagePath
+      }
+      
+      // data URL直接返回
+      if (imagePath.startsWith('data:')) {
+        return imagePath
+      }
+      
+      // 对于相对路径，返回一个标记，让组件知道需要异步加载
+      return `__ASYNC_IMAGE__:${imagePath}`
     }
   }
 }

@@ -1,0 +1,132 @@
+/**
+ * Markdown组件全局样式覆盖
+ * 用于确保样式正确加载和优先级
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com  
+ * @date 2025-01-20
+ */
+
+/* 确保代码块样式正确 */
+.code-block-wrapper {
+  @apply relative my-4 rounded-lg overflow-hidden shadow-sm;
+}
+
+.code-block-header {
+  @apply flex items-center justify-between px-4 py-2 bg-gray-100 border-b;
+}
+
+.code-block-language {
+  @apply text-xs font-medium text-gray-600 uppercase tracking-wide;
+}
+
+.code-block-copy {
+  @apply text-xs px-2 py-1 bg-white border rounded text-gray-600 hover:bg-gray-50 transition-colors;
+}
+
+/* 图片容器样式 */
+.image-container {
+  @apply relative my-6 text-center;
+}
+
+.image-loading {
+  @apply flex flex-col items-center justify-center py-8 text-gray-500;
+}
+
+.image-error {
+  @apply flex flex-col items-center justify-center py-8 bg-gray-50 rounded-lg border border-gray-200;
+}
+
+.markdown-image {
+  @apply max-w-full h-auto rounded-lg shadow-md transition-transform duration-200 hover:scale-105;
+}
+
+/* 内联代码样式 */
+.inline-code {
+  @apply bg-gray-100 text-red-600 px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+/* 链接样式 */
+.markdown-link {
+  @apply text-blue-600 hover:text-blue-800 transition-colors relative;
+}
+
+.markdown-link:hover::after {
+  @apply absolute bottom-0 left-0 w-full h-0.5 bg-blue-600;
+  content: '';
+}
+
+/* 工具栏样式 */
+.markdown-toolbar {
+  @apply sticky top-0 z-30 bg-white border-b shadow-sm;
+}
+
+/* 全宽内容样式 */
+.markdown-content.full-width {
+  @apply max-w-none;
+}
+
+/* 目录相关样式增强 */
+.toc-item {
+  @apply transition-all duration-200;
+}
+
+.toc-item:hover {
+  @apply transform translate-x-1;
+}
+
+/* 阅读进度相关样式 */
+.reading-progress-circle {
+  @apply transition-all duration-300 ease-out;
+}
+
+.reading-progress-circle:hover {
+  @apply scale-110 shadow-lg;
+}
+
+/* 响应式优化 */
+@media (max-width: 640px) {
+  .markdown-toolbar {
+    @apply px-2;
+  }
+  
+  .markdown-content {
+    @apply px-4 py-6;
+  }
+  
+  .code-block-header {
+    @apply px-2 py-1;
+  }
+}
+
+/* 暗色主题支持（预留） */
+@media (prefers-color-scheme: dark) {
+  .dark .markdown-viewer {
+    @apply bg-gray-900 text-gray-100;
+  }
+  
+  .dark .markdown-sidebar {
+    @apply bg-gray-800 border-gray-700;
+  }
+  
+  .dark .inline-code {
+    @apply bg-gray-800 text-pink-400;
+  }
+}
+
+/* 打印样式优化 */
+@media print {
+  .markdown-toolbar,
+  .markdown-sidebar,
+  .reading-progress-circle {
+    @apply hidden;
+  }
+  
+  .markdown-content {
+    @apply max-w-none p-0;
+  }
+  
+  .code-block-header {
+    @apply bg-gray-100 text-black;
+  }
+}
