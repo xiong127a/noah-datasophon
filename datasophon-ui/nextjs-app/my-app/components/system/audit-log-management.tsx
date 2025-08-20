@@ -1,6 +1,35 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+
+/**
+ * 🔧 修复Long类型精度丢失的JSON解析器
+ * 将超过JavaScript安全整数范围的数字保持为字符串
+ */
+function parseJsonWithLongSupport(jsonString: string): unknown {
+  try {
+    // 使用正则表达式找到可能导致精度丢失的长整数
+    // JavaScript安全整数范围：-(2^53-1) 到 2^53-1
+    const safeMaxInt = Number.MAX_SAFE_INTEGER; // 9007199254740991
+    
+    // 匹配超长数字的正则表达式（15位以上的整数）
+    const longIntRegex = /"?(-?\d{15,})"?/g;
+    
+    // 将超长整数用引号包裹，确保解析为字符串
+    const processedJson = jsonString.replace(longIntRegex, (match, number) => {
+      const num = Math.abs(parseInt(number));
+      if (num > safeMaxInt) {
+        return `"${number}"`; // 强制转为字符串
+      }
+      return match; // 保持原样
+    });
+    
+    return JSON.parse(processedJson);
+  } catch (error) {
+    console.warn('JSON解析失败，使用原生解析:', error);
+    return JSON.parse(jsonString); // 回退到原生解析
+  }
+}
 import { Card } from '../ui/card'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -25,8 +54,10 @@ export default function AuditLogManagement() {
   // 获取操作模块列表
   const fetchModuleList = async () => {
     try {
+      // 🔧 修复：使用自定义JSON解析器防止Long类型精度丢失
       const response = await fetch('/ddh/api/log/moduleList')
-      const result = await response.json()
+      const responseText = await response.text()
+      const result = parseJsonWithLongSupport(responseText) as { success: boolean; data: string[] }
       if (result.success) {
         setModuleList(result.data)
       }
@@ -41,7 +72,8 @@ export default function AuditLogManagement() {
       // 🔧 修复：避免精度丢失，使用字符串形式的clusterId
       const clusterId = localStorage.getItem('clusterId') || "-1"
       const response = await fetch(`/ddh/api/log/serviceNameList?clusterId=${clusterId}`)
-      const result = await response.json()
+      const responseText = await response.text()
+      const result = parseJsonWithLongSupport(responseText) as { success: boolean; data: string[] }
       if (result.success) {
         setServiceNameList(result.data)
       }
@@ -51,7 +83,9 @@ export default function AuditLogManagement() {
   }
 
   // 获取日志列表
-  const fetchLogList = async (page = pagination.current, pageSize = pagination.size) => {
+  const fetchLogList = useCallback(async (page?: number, pageSize?: number) => {
+    const currentPage = page ?? pagination.current;
+    const currentPageSize = pageSize ?? pagination.size;
     setLoading(true)
     try {
       const response = await fetch('/ddh/api/log/list', {
@@ -60,12 +94,13 @@ export default function AuditLogManagement() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          current: page,
-          size: pageSize,
+          current: currentPage,
+          size: currentPageSize,
           param: filters
         })
       })
-      const result = await response.json()
+      const responseText = await response.text()
+      const result = parseJsonWithLongSupport(responseText) as { success: boolean; data: AuditLogListResponse }
       if (result.success) {
         const responseData: AuditLogListResponse = result.data
         setData(responseData.records)
@@ -80,7 +115,7 @@ export default function AuditLogManagement() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [filters, pagination])
 
   // 搜索
   const handleSearch = () => {
@@ -115,7 +150,7 @@ export default function AuditLogManagement() {
     fetchModuleList()
     fetchServiceNameList()
     fetchLogList()
-  }, [])
+  }, [fetchLogList])
 
   return (
     <div className="p-6 space-y-6">

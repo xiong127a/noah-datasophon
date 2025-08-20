@@ -148,6 +148,35 @@ export const API_PATHS_V1 = {
   HOST_SAVE_DISCOVERED: `${API_BASE}/host/save-discovered-hosts`,
 };
 
+/**
+ * 🔧 修复Long类型精度丢失的JSON解析器
+ * 将超过JavaScript安全整数范围的数字保持为字符串
+ */
+function parseJsonWithLongSupport(jsonString: string): unknown {
+  try {
+    // 使用正则表达式找到可能导致精度丢失的长整数
+    // JavaScript安全整数范围：-(2^53-1) 到 2^53-1
+    const safeMaxInt = Number.MAX_SAFE_INTEGER; // 9007199254740991
+    
+    // 匹配超长数字的正则表达式（15位以上的整数）
+    const longIntRegex = /"?(-?\d{15,})"?/g;
+    
+    // 将超长整数用引号包裹，确保解析为字符串
+    const processedJson = jsonString.replace(longIntRegex, (match, number) => {
+      const num = Math.abs(parseInt(number));
+      if (num > safeMaxInt) {
+        return `"${number}"`; // 强制转为字符串
+      }
+      return match; // 保持原样
+    });
+    
+    return JSON.parse(processedJson);
+  } catch (error) {
+    console.warn('JSON解析失败，使用原生解析:', error);
+    return JSON.parse(jsonString); // 回退到原生解析
+  }
+}
+
 // 创建版本化的axios实例
 export const apiClientV1 = axios.create({
   baseURL: API_BASE_URL,
@@ -155,6 +184,15 @@ export const apiClientV1 = axios.create({
     'Content-Type': 'application/json',
   },
   timeout: 30000,
+  // 🔧 添加自定义响应转换器，处理Long类型精度丢失
+  transformResponse: [
+    function (data: unknown) {
+      if (typeof data === 'string') {
+        return parseJsonWithLongSupport(data);
+      }
+      return data;
+    }
+  ]
 });
 
 // 请求拦截器 - 版本化

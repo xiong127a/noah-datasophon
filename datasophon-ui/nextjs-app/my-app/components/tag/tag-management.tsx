@@ -1,6 +1,27 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+
+/**
+ * 🔧 修复Long类型精度丢失的JSON解析器
+ */
+function parseJsonWithLongSupport(jsonString: string): unknown {
+  try {
+    const safeMaxInt = Number.MAX_SAFE_INTEGER;
+    const longIntRegex = /"?(-?\d{15,})"?/g;
+    const processedJson = jsonString.replace(longIntRegex, (match, number) => {
+      const num = Math.abs(parseInt(number));
+      if (num > safeMaxInt) {
+        return `"${number}"`;
+      }
+      return match;
+    });
+    return JSON.parse(processedJson);
+  } catch (error) {
+    console.warn('JSON解析失败，使用原生解析:', error);
+    return JSON.parse(jsonString);
+  }
+}
 import { Button } from "../ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card"
 import { Input } from "../ui/input"
@@ -41,7 +62,8 @@ export default function TagManagement() {
         }),
       })
       
-      const result: TagListResponse = await response.json()
+      const responseText = await response.text()
+      const result = parseJsonWithLongSupport(responseText) as TagListResponse
       
       if (result.code === 200) {
         setTags(result.data)

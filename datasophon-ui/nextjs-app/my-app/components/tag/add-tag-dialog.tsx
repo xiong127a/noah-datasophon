@@ -1,6 +1,27 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
+
+/**
+ * 🔧 修复Long类型精度丢失的JSON解析器
+ */
+function parseJsonWithLongSupport(jsonString: string): unknown {
+  try {
+    const safeMaxInt = Number.MAX_SAFE_INTEGER;
+    const longIntRegex = /"?(-?\d{15,})"?/g;
+    const processedJson = jsonString.replace(longIntRegex, (match, number) => {
+      const num = Math.abs(parseInt(number));
+      if (num > safeMaxInt) {
+        return `"${number}"`;
+      }
+      return match;
+    });
+    return JSON.parse(processedJson);
+  } catch (error) {
+    console.warn('JSON解析失败，使用原生解析:', error);
+    return JSON.parse(jsonString);
+  }
+}
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog"
 import { Button } from "../ui/button"
 import { Input } from "../ui/input"
@@ -13,7 +34,7 @@ interface AddTagDialogProps {
   open: boolean
   onClose: () => void
   onSuccess: () => void
-  clusterId: number
+  clusterId: string // 🔧 修复：避免精度丢失，使用字符串类型
 }
 
 export default function AddTagDialog({ open, onClose, onSuccess, clusterId }: AddTagDialogProps) {
@@ -74,7 +95,8 @@ export default function AddTagDialog({ open, onClose, onSuccess, clusterId }: Ad
         body: JSON.stringify(requestData),
       })
 
-      const result: TagOperationResponse = await response.json()
+      const responseText = await response.text()
+      const result = parseJsonWithLongSupport(responseText) as TagOperationResponse
 
       if (result.code === 200) {
         resetForm()

@@ -1,6 +1,27 @@
 "use client"
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
+
+/**
+ * 🔧 修复Long类型精度丢失的JSON解析器
+ */
+function parseJsonWithLongSupport(jsonString: string): unknown {
+  try {
+    const safeMaxInt = Number.MAX_SAFE_INTEGER;
+    const longIntRegex = /"?(-?\d{15,})"?/g;
+    const processedJson = jsonString.replace(longIntRegex, (match, number) => {
+      const num = Math.abs(parseInt(number));
+      if (num > safeMaxInt) {
+        return `"${number}"`;
+      }
+      return match;
+    });
+    return JSON.parse(processedJson);
+  } catch (error) {
+    console.warn('JSON解析失败，使用原生解析:', error);
+    return JSON.parse(jsonString);
+  }
+}
 import { 
   Loader2, RefreshCw, AlertCircle, Server, CheckCircle2, XCircle, Play, 
   Pause, Clock, Info, Download, Zap
@@ -68,7 +89,8 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
       })
 
       if (response.ok) {
-        const data = await response.json()
+        const responseText = await response.text()
+        const data = parseJsonWithLongSupport(responseText) as { success: boolean; data: any[] }
         if (data.success && data.data) {
           setHosts(data.data.map((host: any) => ({
             ...host,
