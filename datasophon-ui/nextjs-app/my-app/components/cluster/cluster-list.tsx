@@ -736,20 +736,7 @@ export default function ClusterListEnhanced() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-6">
-              <div className="bg-white/90 backdrop-blur-sm rounded-3xl p-6 shadow-xl border border-white/50">
-                <div className="flex items-center space-x-4">
-                  <Badge className={`${BADGE_STYLES.base} px-6 py-3 border-blue-200 text-blue-700 bg-blue-50/80 text-lg font-semibold`}>
-                    <Server className="h-5 w-5 mr-3 text-blue-600" />
-                    总集群: {clusters.length}
-                  </Badge>
-                  <Badge className={`${BADGE_STYLES.base} px-6 py-3 border-green-200 text-green-700 bg-green-50/80 text-lg font-semibold`}>
-                    <div className="w-3 h-3 bg-green-400 rounded-full mr-3 animate-pulse" />
-                    运行中: {clusters.filter((c) => c.clusterStateCode === 3).length}
-                  </Badge>
-                </div>
-              </div>
-            </div>
+            {/* 统计信息已移至集群选择器 */}
           </div>
         </div>
       </div>

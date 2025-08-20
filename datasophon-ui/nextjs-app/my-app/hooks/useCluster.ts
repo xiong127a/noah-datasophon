@@ -8,6 +8,8 @@ export interface ClusterInfo {
   clusterName: string
   isK8s?: boolean
   depType?: string
+  clusterState?: number // 修正：后端返回的是数字类型
+  clusterStateCode?: number // 保留向后兼容，但后端目前返回null
 }
 
 export const useCluster = () => {

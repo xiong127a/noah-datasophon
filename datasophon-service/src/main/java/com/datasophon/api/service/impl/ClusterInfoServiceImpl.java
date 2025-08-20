@@ -60,12 +60,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import java.util.Objects;
 
 /**
  * 集群信息服务实现类
@@ -237,7 +234,13 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
     @Override
     public List<ClusterInfoDTO> runningClusterList() {
         List<ClusterInfoEntity> entities = getMapper().selectByClusterState(ClusterState.RUNNING);
-        return clusterInfoConverter.entityListToDtoList(entities);
+        // 修复：设置clusterStateCode，与getClusterList()方法保持一致
+        return entities.stream()
+                .map(entity -> {
+                    entity.setClusterStateCode(entity.getClusterState().getValue());
+                    return clusterInfoConverter.entityToDto(entity);
+                })
+                .toList();
     }
 
     @Override
