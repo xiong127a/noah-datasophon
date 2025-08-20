@@ -25,6 +25,18 @@ import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { SvgIcon } from '@/components/ui/svg-icon'
 
+// 导入页签组件
+import OverviewTab from '@/components/service-tabs/overview-tab'
+import InstancesTab from '@/components/service-tabs/instances-tab'
+import ConfigTab from '@/components/service-tabs/config-tab'
+import ConnectionTab from '@/components/service-tabs/connection-tab'
+import IntroTab from '@/components/service-tabs/intro-tab'
+import GuideTab from '@/components/service-tabs/guide-tab'
+import QueueTab from '@/components/service-tabs/queue-tab'
+
+// 导入工具函数
+import { hasOverviewTab, hasConnectionTab } from '@/components/service-tabs/utils/service-tab-utils'
+
 // 服务状态枚举
 enum ServiceState {
   WAIT_INSTALL = 1,
@@ -63,42 +75,29 @@ interface ServiceDetailTabsProps {
 }
 
 function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
-  const [serviceDashboardUrl, setServiceDashboardUrl] = useState<string>('')
-  const { currentCluster } = useCluster()
-  
-  // 获取服务的Dashboard URL
-  const getServiceDashboardUrl = useCallback(async () => {
-    if (!currentCluster || !service) return
-    
-    try {
-      // 这里需要根据实际API获取服务的dashboardUrl
-      // 目前先用模拟逻辑
-      const mockUrl = service.serviceName === 'HDFS' 
-        ? 'http://example.com/hdfs-dashboard'
-        : service.serviceName === 'YARN'
-        ? 'http://example.com/yarn-dashboard' 
-        : ''
-      
-      setServiceDashboardUrl(mockUrl)
-    } catch (error) {
-      console.error('获取服务Dashboard URL失败:', error)
-    }
-  }, [currentCluster, service])
-  
   // 根据服务类型决定可用的页签
-  const getAvailableTabs = () => {
+  const getAvailableTabs = useCallback(() => {
     const baseTabs = []
     
-    // 只有当服务有dashboardUrl时才显示总览页签
-    const hasOverview = serviceDashboardUrl && serviceDashboardUrl.trim() !== ''
-    if (hasOverview) {
+    // 检查是否有总览页签（基于Vue2项目逻辑）
+    const showOverview = hasOverviewTab(service.serviceId)
+    if (showOverview) {
       baseTabs.push({ key: 'overview', label: '总览', icon: BarChart3 })
     }
     
+    // 基础页签
     baseTabs.push(
       { key: 'instances', label: '实例', icon: Server },
-      { key: 'config', label: '配置', icon: Settings },
-      { key: 'connection', label: '连接信息', icon: Link },
+      { key: 'config', label: '配置', icon: Settings }
+    )
+    
+    // 连接信息页签（只有部分服务支持）
+    if (hasConnectionTab(service.serviceName)) {
+      baseTabs.push({ key: 'connection', label: '连接信息', icon: Link })
+    }
+    
+    // 帮助页签
+    baseTabs.push(
       { key: 'intro', label: '组件介绍', icon: Info },
       { key: 'guide', label: '用户指南', icon: BookOpen }
     )
@@ -109,121 +108,43 @@ function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
     }
     
     return baseTabs
-  }
+  }, [service.serviceId, service.serviceName])
   
   const tabs = getAvailableTabs()
   
-  // 默认选中第一个可用页签
+  // 默认选中第一个可用页签（与Vue2逻辑一致：有总览选总览，没有选实例）
   const [activeTab, setActiveTab] = useState(tabs[0]?.key || 'instances')
   
-  // 当tabs变化时，更新activeTab
+  // 当服务切换时，重置页签
   useEffect(() => {
-    if (tabs.length > 0 && !tabs.find(tab => tab.key === activeTab)) {
-      setActiveTab(tabs[0].key)
+    const newTabs = getAvailableTabs()
+    if (newTabs.length > 0) {
+      setActiveTab(newTabs[0].key)
     }
-  }, [tabs, activeTab])
-  
-  // 获取服务Dashboard URL
-  useEffect(() => {
-    getServiceDashboardUrl()
-  }, [getServiceDashboardUrl])
+  }, [service.serviceId, service.serviceName, getAvailableTabs])
   
   // 渲染页签内容
   const renderTabContent = () => {
+    const commonProps = {
+      serviceId: service.serviceId,
+      serviceName: service.name
+    }
+
     switch (activeTab) {
       case 'overview':
-        return serviceDashboardUrl ? (
-          <div className="relative w-full h-full">
-            <iframe
-              src={serviceDashboardUrl}
-              className="w-full h-full border-none"
-              style={{
-                position: 'absolute',
-                left: 0,
-                top: 0,
-                right: 0,
-                bottom: 0,
-                width: '100%',
-                height: '100%'
-              }}
-              frameBorder="0"
-            />
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-96">
-            <div className="text-center">
-              <Monitor className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h2 className="text-xl font-semibold text-gray-900 mb-2">服务总览</h2>
-              <p className="text-gray-600">正在准备监控面板...</p>
-              <Button 
-                onClick={() => getServiceDashboardUrl()}
-                className="mt-4"
-              >
-                重新加载
-              </Button>
-            </div>
-          </div>
-        )
+        return <OverviewTab {...commonProps} />
       case 'instances':
-        return (
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">服务实例</h2>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-600">实例列表页面开发中...</p>
-              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 服务的所有实例信息</p>
-            </div>
-          </div>
-        )
+        return <InstancesTab {...commonProps} />
       case 'config':
-        return (
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">服务配置</h2>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-600">配置页面开发中...</p>
-              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 服务的配置参数</p>
-            </div>
-          </div>
-        )
+        return <ConfigTab {...commonProps} />
       case 'connection':
-        return (
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">连接信息</h2>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-600">连接信息页面开发中...</p>
-              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 服务的连接方式和代码示例</p>
-            </div>
-          </div>
-        )
+        return <ConnectionTab {...commonProps} />
       case 'intro':
-        return (
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">组件介绍</h2>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-600">组件介绍页面开发中...</p>
-              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 组件的详细介绍</p>
-            </div>
-          </div>
-        )
+        return <IntroTab {...commonProps} />
       case 'guide':
-        return (
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">用户指南</h2>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-600">用户指南页面开发中...</p>
-              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 的使用指南和最佳实践</p>
-            </div>
-          </div>
-        )
+        return <GuideTab {...commonProps} />
       case 'queue':
-        return (
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-4">资源配置</h2>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="text-gray-600">资源配置页面开发中...</p>
-              <p className="text-sm text-gray-500 mt-2">将显示 YARN 队列和资源配置</p>
-            </div>
-          </div>
-        )
+        return <QueueTab {...commonProps} />
       default:
         return null
     }
