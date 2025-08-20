@@ -29,7 +29,6 @@ import lombok.Getter;
  * @email 635887935@qq.com 
  * @date 2025-01-31
  */
-@Getter
 public enum ManagementStatus {
 
     /**
@@ -50,6 +49,7 @@ public enum ManagementStatus {
     @EnumValue
     private final int value;
 
+    @Getter
     private final String desc;
 
     ManagementStatus(int value, String desc) {
@@ -58,8 +58,8 @@ public enum ManagementStatus {
     }
 
     @JsonValue
-    public String getDesc() {
-        return desc;
+    public int getValue() {
+        return value;
     }
 
     /**
@@ -83,18 +83,7 @@ public enum ManagementStatus {
     public boolean isConfiguring() {
         return this == CONFIGURING;
     }
-
-    /**
-     * 根据数值获取枚举
-     */
-    public static ManagementStatus fromValue(int value) {
-        for (ManagementStatus status : values()) {
-            if (status.getValue() == value) {
-                return status;
-            }
-        }
-        throw new IllegalArgumentException("未知的管理状态值: " + value);
-    }
+    
 
     @Override
     public String toString() {
