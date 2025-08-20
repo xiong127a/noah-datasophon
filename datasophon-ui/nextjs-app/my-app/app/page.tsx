@@ -3,10 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { 
   Server, 
-  AlertTriangle,
-  CheckCircle,
   Monitor,
-  AlertCircle,
   Pause,
   Play,
   RotateCcw,
@@ -75,8 +72,11 @@ export default function ServiceLayout() {
   const [serviceOptionMenuPosition, setServiceOptionMenuPosition] = useState({ top: 0, left: 0 })
   
   // 集群总览状态
-  const [dashboardUrl, setDashboardUrl] = useState<string>('')
   const [dashboardLoading, setDashboardLoading] = useState(false)
+  
+  // 区分主页和大数据基础平台的URL
+  const [mainDashboardUrl, setMainDashboardUrl] = useState<string>('')
+  const [datasophonDashboardUrl, setDatasophonDashboardUrl] = useState<string>('')
 
   // 管理服务列表 - 按Vue2项目定义
   const managementServiceNames = ['PROMETHEUS', 'GRAFANA', 'ALERTMANAGER', 'DATASOPHON']
@@ -154,71 +154,107 @@ export default function ServiceLayout() {
     return !managementServiceNames.includes(serviceNameForFilter.toUpperCase())
   })
 
-  // 计算管理服务分组，仅使用后端真实数据
-  const managementServices = services.filter(service => {
-    const serviceNameForFilter = service.serviceName || service.name
-    return managementServiceNames.includes(serviceNameForFilter.toUpperCase())
-  })
+  // 计算管理服务分组，包含固定的"大数据基础平台"服务 + 后端真实数据
+  const managementServices = (() => {
+    // 固定的"大数据基础平台"服务 - 代表系统本身，不是模拟数据
+    const datasophonService: ServiceItem = {
+      id: 'datasophon',
+      name: '大数据基础平台',
+      serviceName: 'DATASOPHON',
+      icon: 'datasophon',
+      serviceId: 'datasophon',
+      path: '/overview',
+      serviceStateCode: ServiceState.RUNNING,
+      alertNum: 0,
+      needRestart: false,
+      rawData: {},
+      menuVisible: false
+    }
+    
+    // 从后端获取的管理服务
+    const backendManagementServices = services.filter(service => {
+      const serviceNameForFilter = service.serviceName || service.name
+      return managementServiceNames.includes(serviceNameForFilter.toUpperCase())
+    })
+    
+    return [datasophonService, ...backendManagementServices]
+  })()
 
-  // 获取服务状态图标和样式
+  // 获取服务状态点样式
   const getServiceStatusInfo = (stateCode: ServiceState) => {
     switch (stateCode) {
       case ServiceState.RUNNING:
         return { 
-          icon: CheckCircle, 
-          iconClassName: "text-green-500", 
-          label: '运行中',
-          badgeClassName: 'bg-green-100 text-green-700 border-green-200',
           dotClassName: 'bg-green-500 animate-pulse'
         }
       case ServiceState.EXISTS_ALARM:
         return { 
-          icon: AlertTriangle, 
-          iconClassName: "text-amber-500", 
-          label: '告警',
-          badgeClassName: 'bg-amber-100 text-amber-700 border-amber-200',
           dotClassName: 'bg-amber-500 animate-pulse'
         }
       case ServiceState.EXISTS_EXCEPTION:
         return { 
-          icon: AlertCircle, 
-          iconClassName: "text-red-500", 
-          label: '异常',
-          badgeClassName: 'bg-red-100 text-red-700 border-red-200',
           dotClassName: 'bg-red-500 animate-pulse'
         }
       default:
         return { 
-          icon: () => <div className="w-3 h-3 rounded-full bg-gray-400" />, 
-          iconClassName: "text-gray-400", 
-          label: '停止',
-          badgeClassName: 'bg-gray-100 text-gray-600 border-gray-200',
           dotClassName: 'bg-gray-400'
         }
     }
   }
 
-  // 获取集群总览URL
-  const getDashboardUrl = useCallback(async () => {
+  // 获取主页集群总览URL
+  const getMainDashboardUrl = useCallback(async () => {
     if (!hasCluster || !currentCluster) return
 
-    setDashboardLoading(true)
     try {
       const config = createClusterHeaders(currentCluster.id)
       const response = await clusterApiV1.overview.getDashboardUrl(currentCluster.id, config)
       
       if (response.data && response.data.code === 200) {
-        setDashboardUrl(response.data.data)
-        console.log('获取集群总览URL成功:', response.data.data)
+        setMainDashboardUrl(response.data.data)
+        console.log('获取主页集群总览URL成功:', response.data.data)
       } else {
-        console.error('获取集群总览URL失败:', response.data?.msg)
+        console.error('获取主页集群总览URL失败:', response.data?.msg)
       }
     } catch (error) {
-      console.error('获取集群总览URL失败:', error)
+      console.error('获取主页集群总览URL失败:', error)
+    }
+  }, [hasCluster, currentCluster])
+
+  // 获取大数据基础平台总览URL
+  const getDatasophonDashboardUrl = useCallback(async () => {
+    if (!hasCluster || !currentCluster) return
+
+    try {
+      const config = createClusterHeaders(currentCluster.id)
+      const response = await clusterApiV1.overview.getDatasophonDashboard(currentCluster.id, config)
+      
+      if (response.data && response.data.code === 200) {
+        setDatasophonDashboardUrl(response.data.data)
+        console.log('获取大数据基础平台总览URL成功:', response.data.data)
+      } else {
+        console.error('获取大数据基础平台总览URL失败:', response.data?.msg)
+      }
+    } catch (error) {
+      console.error('获取大数据基础平台总览URL失败:', error)
+    }
+  }, [hasCluster, currentCluster])
+
+  // 加载Dashboard数据
+  const loadDashboardData = useCallback(async () => {
+    if (!hasCluster || !currentCluster) return
+
+    setDashboardLoading(true)
+    try {
+      // 并行获取两个URL
+      await Promise.all([
+        getMainDashboardUrl(),
+        getDatasophonDashboardUrl()
+      ])
     } finally {
       setDashboardLoading(false)
     }
-  }, [hasCluster, currentCluster])
+  }, [hasCluster, currentCluster, getMainDashboardUrl, getDatasophonDashboardUrl])
 
   // 处理服务项点击
   const handleServiceItemClick = (service: ServiceItem) => {
@@ -271,25 +307,26 @@ export default function ServiceLayout() {
     if (hasCluster && currentCluster) {
       getClusterInfo()
       fetchServices()
-      getDashboardUrl()
+      loadDashboardData()
     } else {
       setServices([])
       setClusterData(null)
       setSelectedService(null)
-      setDashboardUrl('')
+      setMainDashboardUrl('')
+      setDatasophonDashboardUrl('')
     }
-  }, [hasCluster, currentCluster, getClusterInfo, fetchServices, getDashboardUrl])
+  }, [hasCluster, currentCluster, getClusterInfo, fetchServices, loadDashboardData])
 
   // 如果没有选择集群，显示空状态
   if (loading) {
-    return (
+  return (
       <div className="min-h-screen bg-gray-50">
         <FinalNavbar />
         <div className="flex items-center justify-center h-96">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">正在加载...</p>
-          </div>
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-600">正在加载...</p>
+      </div>
         </div>
       </div>
     )
@@ -370,12 +407,11 @@ export default function ServiceLayout() {
                   <div className="space-y-1">
                     {coreServices.length > 0 ? coreServices.map((service) => {
                       const statusInfo = getServiceStatusInfo(service.serviceStateCode)
-                      const StatusIcon = statusInfo.icon
                       
                       return (
                         <div
                           key={service.id}
-                          className={`group relative flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                          className={`group relative flex items-center p-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
                             selectedService?.id === service.id 
                               ? 'bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 shadow-sm' 
                               : 'hover:bg-gray-50 hover:shadow-sm border border-transparent'
@@ -390,23 +426,19 @@ export default function ServiceLayout() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium text-gray-900 truncate">{service.name}</span>
-                                {service.alertNum > 0 && (
-                                  <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-medium ml-2">
-                                    {service.alertNum}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center justify-between mt-1">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${statusInfo.badgeClassName}`}>
-                                  <StatusIcon className={`w-3 h-3 mr-1 ${statusInfo.iconClassName}`} />
-                                  {statusInfo.label}
-                                </span>
-                                <button
-                                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all action-trigger"
-                                  onClick={handleServiceActionClick}
-                                >
-                                  <MoreHorizontal className="w-3 h-3 text-gray-400" />
-                                </button>
+                                <div className="flex items-center space-x-2">
+                                  {service.alertNum > 0 && (
+                                    <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-medium">
+                                      {service.alertNum}
+                                    </span>
+                                  )}
+                                  <button
+                                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white hover:shadow-sm rounded-md transition-all action-trigger"
+                                    onClick={handleServiceActionClick}
+                                  >
+                                    <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -439,12 +471,11 @@ export default function ServiceLayout() {
                   <div className="space-y-1">
                     {managementServices.length > 0 ? managementServices.map((service) => {
                       const statusInfo = getServiceStatusInfo(service.serviceStateCode)
-                      const StatusIcon = statusInfo.icon
                       
                       return (
                         <div
                           key={service.id}
-                          className={`group relative flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                          className={`group relative flex items-center p-2.5 rounded-xl cursor-pointer transition-all duration-200 ${
                             selectedService?.id === service.id 
                               ? 'bg-gradient-to-r from-green-50 to-green-100 border border-green-200 shadow-sm' 
                               : 'hover:bg-gray-50 hover:shadow-sm border border-transparent'
@@ -459,23 +490,22 @@ export default function ServiceLayout() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between">
                                 <span className="text-sm font-medium text-gray-900 truncate">{service.name}</span>
-                                {service.alertNum > 0 && (
-                                  <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-medium ml-2">
-                                    {service.alertNum}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="flex items-center justify-between mt-1">
-                                <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${statusInfo.badgeClassName}`}>
-                                  <StatusIcon className={`w-3 h-3 mr-1 ${statusInfo.iconClassName}`} />
-                                  {statusInfo.label}
-                                </span>
-                                <button
-                                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all action-trigger"
-                                  onClick={handleServiceActionClick}
-                                >
-                                  <MoreHorizontal className="w-3 h-3 text-gray-400" />
-                                </button>
+                                <div className="flex items-center space-x-2">
+                                  {service.alertNum > 0 && (
+                                    <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-medium">
+                                      {service.alertNum}
+                                    </span>
+                                  )}
+                                  {/* 大数据基础平台不显示操作按钮，其他管理服务显示 */}
+                                  {service.serviceName !== 'DATASOPHON' && (
+                                    <button
+                                      className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white hover:shadow-sm rounded-md transition-all action-trigger"
+                                      onClick={handleServiceActionClick}
+                                    >
+                                      <MoreHorizontal className="w-4 h-4 text-gray-400" />
+                                    </button>
+                                  )}
+                                </div>
                               </div>
                             </div>
                           </div>
@@ -499,54 +529,66 @@ export default function ServiceLayout() {
 
         {/* 右侧内容区域 */}
         <div className="flex-1">
-          {selectedService ? (
-            // 服务详情页面
+          {selectedService && selectedService.serviceName !== 'DATASOPHON' ? (
+            // 其他服务详情页面
             <div className="p-6">
               <h1 className="text-2xl font-bold text-gray-900 mb-6">{selectedService.name} 服务详情</h1>
               <p className="text-gray-600">服务详情页面开发中...</p>
             </div>
           ) : (
-            // 集群总览页面 - 嵌套Grafana (默认显示)
+            // 总览页面 - 根据选中服务使用不同URL
             <div className="relative w-full h-full">
               {dashboardLoading ? (
                 <div className="flex items-center justify-center h-96">
                   <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">正在加载集群总览...</p>
+                    <p className="text-gray-600">
+                      正在加载{selectedService?.serviceName === 'DATASOPHON' ? '大数据基础平台' : '集群总览'}...
+                    </p>
                   </div>
                 </div>
-              ) : dashboardUrl ? (
-                <div className="absolute inset-0 w-full h-full">
-                  <iframe
-                    src={dashboardUrl}
-                    className="w-full h-full border-none"
-                    style={{
-                      position: 'absolute',
-                      left: 0,
-                      top: 0,
-                      right: 0,
-                      bottom: 0,
-                      width: '100%',
-                      height: '100%'
-                    }}
-                    frameBorder="0"
-                  />
-                </div>
-              ) : (
-                <div className="flex items-center justify-center h-96">
-                  <div className="text-center">
-                    <Monitor className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">集群总览</h2>
-                    <p className="text-gray-600">正在准备集群监控面板...</p>
-                    <Button 
-                      onClick={getDashboardUrl}
-                      className="mt-4"
-                    >
-                      重新加载
-                    </Button>
+              ) : (() => {
+                // 根据选中服务决定使用哪个URL
+                const currentUrl = selectedService?.serviceName === 'DATASOPHON' 
+                  ? datasophonDashboardUrl 
+                  : mainDashboardUrl
+                const title = selectedService?.serviceName === 'DATASOPHON' 
+                  ? '大数据基础平台' 
+                  : '集群总览'
+                
+                return currentUrl ? (
+                  <div className="absolute inset-0 w-full h-full">
+                    <iframe
+                      src={currentUrl}
+                      className="w-full h-full border-none"
+                      style={{
+                        position: 'absolute',
+                        left: 0,
+                        top: 0,
+                        right: 0,
+                        bottom: 0,
+                        width: '100%',
+                        height: '100%'
+                      }}
+                      frameBorder="0"
+                    />
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="flex items-center justify-center h-96">
+                    <div className="text-center">
+                      <Monitor className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h2 className="text-xl font-semibold text-gray-900 mb-2">{title}</h2>
+                      <p className="text-gray-600">正在准备监控面板...</p>
+                      <Button 
+                        onClick={loadDashboardData}
+                        className="mt-4"
+                      >
+                        重新加载
+                      </Button>
+                    </div>
+                  </div>
+                )
+              })()}
             </div>
           )}
         </div>

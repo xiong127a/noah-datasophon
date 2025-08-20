@@ -87,9 +87,12 @@ export const clusterApiV1 = {
 
   // 集群总览相关
   overview: {
-    // 获取集群总览URL
+    // 获取集群总览URL（主页默认）
     getDashboardUrl: (clusterId: string | number, config?: any) => 
-      apiV1.post(API_PATHS_V1.CLUSTER_OVERVIEW_URL, { clusterId }, config),
+      apiV1.post(API_PATHS_V1.CLUSTER_DASHBOARD_URL, { clusterId }, config),
+    // 获取大数据基础平台总览URL
+    getDatasophonDashboard: (clusterId: string | number, config?: any) => 
+      apiV1.post(API_PATHS_V1.DATASOPHON_DASHBOARD_URL, { clusterId }, config),
   },
 
   // 集群配置

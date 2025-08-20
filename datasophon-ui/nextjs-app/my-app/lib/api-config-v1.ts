@@ -30,7 +30,8 @@ export const API_PATHS_V1 = {
   CLUSTER_INFO: `${API_BASE}/cluster/info`,
   
   // 集群总览 - v1
-  CLUSTER_OVERVIEW_URL: `${API_BASE}/cluster/service/dashboard/getDatasophonDashboard`,
+  CLUSTER_DASHBOARD_URL: `${API_BASE}/cluster/service/dashboard/getDashboardUrl`,
+  DATASOPHON_DASHBOARD_URL: `${API_BASE}/cluster/service/dashboard/getDatasophonDashboard`,
   
   // Kubernetes相关 - v1
   CLUSTER_NAMESPACES: `${API_BASE}/cluster/namespaces`,
