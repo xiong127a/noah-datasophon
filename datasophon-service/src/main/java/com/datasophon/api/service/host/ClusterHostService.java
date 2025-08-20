@@ -89,4 +89,20 @@ public interface ClusterHostService extends IService<ClusterHostEntity> {
      * @param clusterHostEntity 主机信息
      */
     void saveHost(ClusterHostEntity clusterHostEntity);
+
+    /**
+     * 获取集群主机总数
+     *
+     * @param clusterId 集群ID
+     * @return 主机总数
+     */
+    int getHostCountByClusterId(Long clusterId);
+
+    /**
+     * 获取集群运行中的主机数量
+     *
+     * @param clusterId 集群ID
+     * @return 运行中主机数量
+     */
+    int getRunningHostCountByClusterId(Long clusterId);
 }

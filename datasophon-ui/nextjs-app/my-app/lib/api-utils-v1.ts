@@ -85,6 +85,13 @@ export const clusterApiV1 = {
       apiV1.get(`${API_PATHS_V1.CLUSTER_INFO}/${clusterId}`, {}, config),
   },
 
+  // 集群总览相关
+  overview: {
+    // 获取集群总览URL
+    getDashboardUrl: (clusterId: string | number, config?: any) => 
+      apiV1.post(API_PATHS_V1.CLUSTER_OVERVIEW_URL, { clusterId }, config),
+  },
+
   // 集群配置
   config: {
     // 获取Kubernetes命名空间列表

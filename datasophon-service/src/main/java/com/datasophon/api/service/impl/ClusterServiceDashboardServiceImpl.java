@@ -21,7 +21,6 @@ import com.datasophon.api.converter.ClusterServiceDashboardConverter;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceDashboardService;
-import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ClusterServiceDashboardDTO;
 import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.utils.PlaceholderUtils;
@@ -44,60 +43,58 @@ import java.util.Map;
  */
 @Service("clusterServiceDashboardService")
 public class ClusterServiceDashboardServiceImpl
-                extends ServiceImpl<ClusterServiceDashboardMapper, ClusterServiceDashboardEntity>
-                implements ClusterServiceDashboardService {
-        @Autowired
-        private ClusterServiceDashboardConverter converter;
+        extends ServiceImpl<ClusterServiceDashboardMapper, ClusterServiceDashboardEntity>
+        implements ClusterServiceDashboardService {
+    @Autowired
+    private ClusterServiceDashboardConverter converter;
 
-        @Autowired
-        private ClusterInfoService clusterInfoService;
+    @Autowired
+    private ClusterInfoService clusterInfoService;
 
-        @Override
-        public String getDashboardUrl(Long clusterId) {
-                ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(clusterId);
-                ClusterType depType = clusterInfoEntity.getDepType();
-                String serviceName = "TOTAL";
-                if (depType == ClusterType.KUBERNETES) {
-                        serviceName = "KUBERNETES";
-                }
-                Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterServiceDashboardEntity dashboard = getMapper().selectByServiceName(serviceName);
-
-            return PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
-                            Constants.REGEX_VARIABLE);
+    @Override
+    public String getDashboardUrl(Long clusterId) {
+        ClusterInfoEntity clusterInfoEntity = clusterInfoService.getById(clusterId);
+        ClusterType depType = clusterInfoEntity.getDepType();
+        String serviceName = "TOTAL";
+        if (depType == ClusterType.KUBERNETES) {
+            serviceName = "KUBERNETES";
         }
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        ClusterServiceDashboardEntity dashboard = getMapper().selectByServiceName(serviceName);
 
-        @Override
-        public String getDatasophonDashboard(Long clusterId) {
-                Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-                ClusterServiceDashboardEntity dashboard = getMapper().selectByServiceName("DATASOPHON");
+        // 使用简化的API，无需regex参数
+        return PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables);
+    }
 
-            return PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables,
-                            Constants.REGEX_VARIABLE);
-        }
+    @Override
+    public String getDatasophonDashboard(Long clusterId) {
+        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+        ClusterServiceDashboardEntity dashboard = getMapper().selectByServiceName("DATASOPHON");
+        return PlaceholderUtils.replacePlaceholders(dashboard.getDashboardUrl(), globalVariables);
+    }
 
-        // DTO相关的CRUD方法实现
-        @Override
-        public ClusterServiceDashboardDTO getByIdAsDto(Long id) {
-                ClusterServiceDashboardEntity entity = getById(id);
-                return entity != null ? converter.entityToDto(entity) : null;
-        }
+    // DTO相关的CRUD方法实现
+    @Override
+    public ClusterServiceDashboardDTO getByIdAsDto(Long id) {
+        ClusterServiceDashboardEntity entity = getById(id);
+        return entity != null ? converter.entityToDto(entity) : null;
+    }
 
-        @Override
-        public ClusterServiceDashboardDTO saveDashboard(ClusterServiceDashboardDTO dto) {
-                ClusterServiceDashboardEntity entity = converter.dtoToEntity(dto);
-                save(entity);
-                return converter.entityToDto(entity);
-        }
+    @Override
+    public ClusterServiceDashboardDTO saveDashboard(ClusterServiceDashboardDTO dto) {
+        ClusterServiceDashboardEntity entity = converter.dtoToEntity(dto);
+        save(entity);
+        return converter.entityToDto(entity);
+    }
 
-        @Override
-        public void updateDashboard(ClusterServiceDashboardDTO dto) {
-                ClusterServiceDashboardEntity entity = converter.dtoToEntity(dto);
-                updateById(entity);
-        }
+    @Override
+    public void updateDashboard(ClusterServiceDashboardDTO dto) {
+        ClusterServiceDashboardEntity entity = converter.dtoToEntity(dto);
+        updateById(entity);
+    }
 
-        @Override
-        public ClusterServiceDashboardEntity getByServiceName(String serviceName) {
-                return getMapper().selectByServiceName(serviceName);
-        }
+    @Override
+    public ClusterServiceDashboardEntity getByServiceName(String serviceName) {
+        return getMapper().selectByServiceName(serviceName);
+    }
 }

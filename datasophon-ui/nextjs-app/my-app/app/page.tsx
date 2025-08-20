@@ -1,14 +1,11 @@
 "use client"
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
 import { 
   Server, 
   AlertTriangle,
   CheckCircle,
-  ArrowRight,
   Monitor,
-  Workflow,
   AlertCircle,
   Pause,
   Play,
@@ -16,10 +13,9 @@ import {
   Trash2,
   MoreHorizontal,
   ChevronDown,
-  ChevronRight,
-  Plus
+  Plus,
+  Users
 } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useCluster } from '@/hooks/useCluster'
 import FinalNavbar from '@/components/layout/navbar-final'
@@ -29,10 +25,10 @@ import { SvgIcon } from '@/components/ui/svg-icon'
 
 // 服务状态枚举
 enum ServiceState {
-  STOPPED = 1,
+  WAIT_INSTALL = 1,
   RUNNING = 2,
-  WARNING = 3,
-  ERROR = 4
+  EXISTS_ALARM = 3,
+  EXISTS_EXCEPTION = 4
 }
 
 // 服务数据接口 - 按Vue2项目结构定义
@@ -43,14 +39,14 @@ interface ServiceItem {
   icon?: string
   serviceId: string
   path: string
-  serviceStateCode?: ServiceState
-  alertNum?: number
-  needRestart?: boolean
+  serviceStateCode: ServiceState
+  alertNum: number
+  needRestart: boolean
   rawData: Record<string, unknown>
-  menuVisible?: boolean
+  menuVisible: boolean
 }
 
-// 集群信息接口
+// 集群数据接口
 interface ClusterData {
   id: string
   clusterName: string
@@ -60,32 +56,32 @@ interface ClusterData {
 }
 
 export default function ServiceLayout() {
-  const router = useRouter()
   const { currentCluster, hasCluster, loading } = useCluster()
-  
-  // 状态管理 - 完全按Vue2项目结构
+
+  // 服务列表状态 - 按Vue2实现
   const [services, setServices] = useState<ServiceItem[]>([])
-  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null)
   const [serviceLoading, setServiceLoading] = useState(false)
   const [clusterData, setClusterData] = useState<ClusterData | null>(null)
-  
-  // 管理服务名称列表 - 按Vue2项目配置
-  const managementServiceNames = ['ALERTMANAGER', 'PROMETHEUS', 'GRAFANA', 'PUSHGATEWAY', 'DATASOPHON']
-  
-  // 分组折叠状态
-  const [coreGroupCollapsed, setCoreGroupCollapsed] = useState(false)
-  const [managementGroupCollapsed, setManagementGroupCollapsed] = useState(false)
+
+  // 选中的服务状态
+  const [selectedService, setSelectedService] = useState<ServiceItem | null>(null)
   
   // 服务操作菜单状态
-  const [activeService, setActiveService] = useState<ServiceItem | null>(null)
   const [showActionMenu, setShowActionMenu] = useState(false)
   const [actionMenuPosition, setActionMenuPosition] = useState({ top: 0, left: 0 })
   
-  // 总服务菜单状态
+  // 总服务选项菜单状态
   const [showServiceOptionMenu, setShowServiceOptionMenu] = useState(false)
   const [serviceOptionMenuPosition, setServiceOptionMenuPosition] = useState({ top: 0, left: 0 })
+  
+  // 集群总览状态
+  const [dashboardUrl, setDashboardUrl] = useState<string>('')
+  const [dashboardLoading, setDashboardLoading] = useState(false)
 
-  // 获取集群信息 - 按Vue2实现
+  // 管理服务列表 - 按Vue2项目定义
+  const managementServiceNames = ['PROMETHEUS', 'GRAFANA', 'ALERTMANAGER', 'DATASOPHON']
+
+  // 获取集群信息
   const getClusterInfo = useCallback(async () => {
     if (!hasCluster || !currentCluster) return
     
@@ -94,94 +90,63 @@ export default function ServiceLayout() {
       const response = await clusterApiV1.info.runningList()
       
       if (response.data.code === 200 && response.data.data && response.data.data.length > 0) {
-        const cluster = response.data.data.find((c: Record<string, unknown>) => c.id === currentCluster.id) || response.data.data[0]
-        setClusterData({
-          id: (cluster.id as string)?.toString() || currentCluster.id,
-          clusterName: (cluster.clusterName as string) || currentCluster.name,
-          clusterFrame: cluster.clusterFrame as string,
-          depType: cluster.depType as string,
-          clusterState: cluster.clusterState as string | number
-        })
-      } else {
-        // 使用当前集群信息作为fallback
-        setClusterData({
-          id: currentCluster.id,
-          clusterName: currentCluster.name,
-          clusterFrame: 'DDP-1.2.1',
-          depType: currentCluster.isK8s ? 'KUBERNETES' : 'PVM',
-          clusterState: 'Running'
-        })
+        const clusterList = response.data.data
+        const cluster = clusterList.find((c: Record<string, unknown>) => c.id === currentCluster.id)
+        
+        if (cluster) {
+          setClusterData({
+            id: cluster.id as string,
+            clusterName: cluster.clusterName as string,
+            clusterFrame: cluster.clusterFrame as string,
+            depType: cluster.depType as string,
+            clusterState: cluster.clusterState as string | number
+          })
+        }
       }
     } catch (error) {
       console.error('获取集群信息失败:', error)
-      // 使用当前集群信息作为fallback
-      setClusterData({
-        id: currentCluster.id,
-        clusterName: currentCluster.name,
-        clusterFrame: 'DDP-1.2.1',
-        depType: currentCluster.isK8s ? 'KUBERNETES' : 'PVM',
-        clusterState: 'Running'
-      })
     }
   }, [hasCluster, currentCluster])
 
-  // 获取服务列表 - 按Vue2项目实现
+  // 获取服务列表 - 按Vue2实现
   const fetchServices = useCallback(async () => {
     if (!hasCluster || !currentCluster) return
-    
+
+    setServiceLoading(true)
     try {
-      setServiceLoading(true)
-      const headers = createClusterHeaders(currentCluster.id)
-      const response = await clusterApiV1.service.list({ headers })
+      const config = createClusterHeaders(currentCluster.id)
+      const response = await clusterApiV1.service.list(config)
       
-      if (response.data.code === 200 && response.data.data && Array.isArray(response.data.data)) {
-        // 转换数据格式 - 按Vue2项目映射
-        const processedServices: ServiceItem[] = response.data.data.map((item: Record<string, unknown>, index: number) => {
-          const serviceName = (item.serviceName as string) || (item.name as string)
-          const displayName = (item.label as string) || serviceName
-          
-          return {
-            id: String(item.id || index + 1),
-            name: displayName,
-            serviceName: serviceName,
-            icon: serviceName ? serviceName.toLowerCase() : 'service-default',
-            serviceId: String(item.id),
-            path: `/service-manage/service-list/${item.id}`,
-            serviceStateCode: (item.serviceStateCode as ServiceState) || ServiceState.RUNNING,
-            alertNum: (item.alertNum as number) || 0,
-            needRestart: (item.needRestart as boolean) || false,
-            rawData: item,
-            menuVisible: false
-          }
-        })
+      if (response.data.code === 200 && response.data.data) {
+        const apiServices = response.data.data
+        
+        // 处理服务数据，转换为前端需要的格式
+        const processedServices: ServiceItem[] = apiServices.map((service: Record<string, unknown>, index: number) => ({
+          id: service.id?.toString() || (index + 1).toString(),
+          name: (service.label || service.serviceName) as string,
+          serviceName: service.serviceName as string,
+          icon: (typeof service.serviceName === 'string' ? service.serviceName : '').toLowerCase(),
+          serviceId: service.id?.toString() || (index + 1).toString(),
+          path: `/service-manage/service-list/${service.id}`,
+          serviceStateCode: (service.serviceStateCode as ServiceState) || ServiceState.WAIT_INSTALL,
+          alertNum: (service.alertNum as number) || 0,
+          needRestart: (service.needRestart as boolean) || false,
+          rawData: service,
+          menuVisible: false
+        }))
         
         setServices(processedServices)
       } else {
-        console.warn('API返回数据格式异常，使用默认服务列表')
-        loadDefaultServices()
+        console.warn('API返回数据格式异常，服务列表为空')
+        setServices([])
       }
     } catch (error) {
       console.error('获取服务列表失败:', error)
-      loadDefaultServices()
+      setServices([])
     } finally {
       setServiceLoading(false)
     }
   }, [hasCluster, currentCluster])
-
-  // 使用默认服务列表 - 按Vue2项目fallback实现
-  const loadDefaultServices = () => {
-    const defaultServices: ServiceItem[] = [
-      { id: '1', name: 'HDFS', serviceName: 'HDFS', icon: 'hdfs', serviceId: '1', path: '/service-manage/service-list/1', serviceStateCode: ServiceState.RUNNING, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-      { id: '2', name: 'YARN', serviceName: 'YARN', icon: 'yarn', serviceId: '2', path: '/service-manage/service-list/2', serviceStateCode: ServiceState.RUNNING, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-      { id: '3', name: 'HBase', serviceName: 'HBASE', icon: 'hbase', serviceId: '3', path: '/service-manage/service-list/3', serviceStateCode: ServiceState.RUNNING, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-      { id: '4', name: 'Hive', serviceName: 'HIVE', icon: 'hive', serviceId: '4', path: '/service-manage/service-list/4', serviceStateCode: ServiceState.RUNNING, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-      { id: '5', name: 'Spark', serviceName: 'SPARK', icon: 'spark3', serviceId: '5', path: '/service-manage/service-list/5', serviceStateCode: ServiceState.RUNNING, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-      { id: '6', name: 'ZooKeeper', serviceName: 'ZOOKEEPER', icon: 'zookeeper', serviceId: '6', path: '/service-manage/service-list/6', serviceStateCode: ServiceState.RUNNING, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-      { id: '7', name: 'Kafka', serviceName: 'KAFKA', icon: 'kafka', serviceId: '7', path: '/service-manage/service-list/7', serviceStateCode: ServiceState.RUNNING, alertNum: 0, needRestart: false, rawData: {}, menuVisible: false },
-      { id: '8', name: 'Flink', serviceName: 'FLINK', icon: 'flink', serviceId: '8', path: '/service-manage/service-list/8', serviceStateCode: ServiceState.WARNING, alertNum: 2, needRestart: false, rawData: {}, menuVisible: false },
-    ]
-    setServices(defaultServices)
-  }
 
   // 计算服务分组 - 按Vue2实现
   const coreServices = services.filter(service => {
@@ -189,646 +154,467 @@ export default function ServiceLayout() {
     return !managementServiceNames.includes(serviceNameForFilter.toUpperCase())
   })
 
-  const managementServices = (() => {
-    // 创建硬编码的大数据基础平台服务项
-    const platformService: ServiceItem = { 
-      id: '0', 
-      name: '大数据基础平台', 
-      serviceName: 'DATASOPHON', 
-      icon: 'logo', 
-      path: '/service-manage', 
-      serviceId: '', 
-      serviceStateCode: ServiceState.RUNNING, 
-      alertNum: 0, 
-      needRestart: false, 
-      rawData: {}, 
-      menuVisible: false
-    }
-    
-    // 过滤管理服务
-    const filteredServices = services.filter(service => {
-      const serviceNameForFilter = service.serviceName || service.name
-      return managementServiceNames.includes(serviceNameForFilter.toUpperCase())
-    })
-    
-    // 如果没有找到大数据基础平台，添加它
-    const hasPlatform = filteredServices.some(s => (s.serviceName || '').toUpperCase() === 'DATASOPHON')
-    if (!hasPlatform) {
-      filteredServices.unshift(platformService)
-    }
-    
-    return filteredServices
-  })()
+  // 计算管理服务分组，仅使用后端真实数据
+  const managementServices = services.filter(service => {
+    const serviceNameForFilter = service.serviceName || service.name
+    return managementServiceNames.includes(serviceNameForFilter.toUpperCase())
+  })
 
-  // 获取服务状态图标和样式 - 按Vue2实现
-  const getServiceStatusIcon = (state?: ServiceState) => {
-    switch (state) {
+  // 获取服务状态图标和样式
+  const getServiceStatusInfo = (stateCode: ServiceState) => {
+    switch (stateCode) {
       case ServiceState.RUNNING:
         return { 
           icon: CheckCircle, 
-          className: "text-green-500 fill-current", 
-          label: '正在运行' 
+          iconClassName: "text-green-500", 
+          label: '运行中',
+          badgeClassName: 'bg-green-100 text-green-700 border-green-200',
+          dotClassName: 'bg-green-500 animate-pulse'
         }
-      case ServiceState.WARNING:
+      case ServiceState.EXISTS_ALARM:
         return { 
           icon: AlertTriangle, 
-          className: "text-yellow-500 fill-current", 
-          label: '警告' 
+          iconClassName: "text-amber-500", 
+          label: '告警',
+          badgeClassName: 'bg-amber-100 text-amber-700 border-amber-200',
+          dotClassName: 'bg-amber-500 animate-pulse'
         }
-      case ServiceState.ERROR:
+      case ServiceState.EXISTS_EXCEPTION:
         return { 
           icon: AlertCircle, 
-          className: "text-red-500 fill-current", 
-          label: '错误' 
+          iconClassName: "text-red-500", 
+          label: '异常',
+          badgeClassName: 'bg-red-100 text-red-700 border-red-200',
+          dotClassName: 'bg-red-500 animate-pulse'
         }
       default:
         return { 
-          icon: () => <div className="w-4 h-4 rounded-full bg-gray-300" />, 
-          className: "text-gray-400", 
-          label: '已停止' 
+          icon: () => <div className="w-3 h-3 rounded-full bg-gray-400" />, 
+          iconClassName: "text-gray-400", 
+          label: '停止',
+          badgeClassName: 'bg-gray-100 text-gray-600 border-gray-200',
+          dotClassName: 'bg-gray-400'
         }
     }
   }
 
+  // 获取集群总览URL
+  const getDashboardUrl = useCallback(async () => {
+    if (!hasCluster || !currentCluster) return
 
+    setDashboardLoading(true)
+    try {
+      const config = createClusterHeaders(currentCluster.id)
+      const response = await clusterApiV1.overview.getDashboardUrl(currentCluster.id, config)
+      
+      if (response.data && response.data.code === 200) {
+        setDashboardUrl(response.data.data)
+        console.log('获取集群总览URL成功:', response.data.data)
+      } else {
+        console.error('获取集群总览URL失败:', response.data?.msg)
+      }
+    } catch (error) {
+      console.error('获取集群总览URL失败:', error)
+    } finally {
+      setDashboardLoading(false)
+    }
+  }, [hasCluster, currentCluster])
 
-  // 判断当前服务是否激活
-  const isActiveService = (service: ServiceItem) => {
-    return selectedService?.serviceId === service.serviceId
-  }
-
-  // 处理服务项点击 - 按Vue2实现
+  // 处理服务项点击
   const handleServiceItemClick = (service: ServiceItem) => {
     setSelectedService(service)
-    
-    // 导航到对应的服务页面
-    if (service.serviceId && service.serviceId !== '') {
-      router.push(service.path || `/service-manage/service-list/${service.serviceId}`)
-    } else {
-      router.push(service.path || '/service-manage')
-    }
   }
 
   // 处理服务操作菜单点击
-  const handleServiceMenuClick = (service: ServiceItem, event: React.MouseEvent) => {
+  const handleServiceActionClick = (event: React.MouseEvent) => {
     event.stopPropagation()
-    
-    const rect = (event.target as HTMLElement).closest('button')?.getBoundingClientRect()
-    if (rect) {
-      setActionMenuPosition({
-        top: rect.bottom + 5,
-        left: rect.left
-      })
-    }
-    
-    setActiveService(service)
+    // 使用鼠标位置而不是按钮位置
+    setActionMenuPosition({
+      top: event.clientY + window.scrollY + 5, // 鼠标下方5px
+      left: event.clientX + window.scrollX + 5  // 鼠标右侧5px
+    })
     setShowActionMenu(true)
   }
 
-  // 处理总服务菜单点击
+  // 处理总服务选项点击
   const handleServiceOptionClick = (event: React.MouseEvent) => {
     event.stopPropagation()
-    
-    const rect = (event.target as HTMLElement).closest('button')?.getBoundingClientRect()
-    if (rect) {
-      setServiceOptionMenuPosition({
-        top: rect.bottom + 5,
-        left: rect.right - 192 // 菜单宽度约192px，让菜单右对齐到按钮
-      })
-    }
-    
+    const rect = event.currentTarget.getBoundingClientRect()
+    // 使用按钮位置，菜单出现在按钮下方左对齐
+    setServiceOptionMenuPosition({
+      top: rect.bottom + window.scrollY + 2, // 按钮下方2px
+      left: rect.right + window.scrollX - 220  // 按钮右边界左移220px (菜单宽度)
+    })
     setShowServiceOptionMenu(true)
   }
 
-  // 处理服务操作
-  const handleServiceAction = async (action: string, service: ServiceItem) => {
-    try {
-      if (action === 'delete') {
-        if (!service.serviceId) return
-        
-        const response = await clusterApiV1.service.delete(service.serviceId)
-        if (response.data.code === 200) {
-          // 刷新服务列表
-          await fetchServices()
-          // 如果删除的是当前选中的服务，返回总览
-          if (selectedService?.serviceId === service.serviceId) {
-            setSelectedService(null)
-            router.push('/service-manage')
-          }
-        }
-      } else {
-        // 其他操作（启动/停止/重启）需要调用相应的API
-        console.log(`执行${action}操作:`, service.name)
-      }
-    } catch (error) {
-      console.error(`${action}操作失败:`, error)
-    }
-    setShowActionMenu(false)
-    setActiveService(null)
-  }
-
-  // 处理总服务操作
-  const handleServiceOptionAction = (action: string) => {
-    console.log(`执行总服务操作: ${action}`)
-    setShowServiceOptionMenu(false)
-  }
-
-  // 切换分组折叠状态
-  const toggleGroupCollapse = (groupType: 'core' | 'management') => {
-    if (groupType === 'core') {
-      setCoreGroupCollapsed(!coreGroupCollapsed)
-    } else {
-      setManagementGroupCollapsed(!managementGroupCollapsed)
-    }
-  }
-
-  // 点击外部关闭菜单
-  useEffect(() => {
-    const handleClickOutside = () => {
+  // 点击外部区域关闭菜单
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    const target = event.target as HTMLElement
+    if (!target.closest('.action-menu') && !target.closest('.action-trigger')) {
       setShowActionMenu(false)
+    }
+    if (!target.closest('.service-option-menu') && !target.closest('.service-option-trigger')) {
       setShowServiceOptionMenu(false)
     }
+  }, [])
 
-    if (showActionMenu || showServiceOptionMenu) {
-      document.addEventListener('click', handleClickOutside)
-      return () => document.removeEventListener('click', handleClickOutside)
-    }
-  }, [showActionMenu, showServiceOptionMenu])
-
-  // 生命周期钩子
   useEffect(() => {
-    // 检查登录状态
-    const token = localStorage.getItem('jwt_token')
-    if (!token) {
-      router.push('/login')
-      return
+    document.addEventListener('click', handleClickOutside)
+    return () => {
+      document.removeEventListener('click', handleClickOutside)
     }
-  }, [router])
+  }, [handleClickOutside])
 
+  // 初始化数据
   useEffect(() => {
     if (hasCluster && currentCluster) {
       getClusterInfo()
       fetchServices()
+      getDashboardUrl()
     } else {
       setServices([])
       setClusterData(null)
       setSelectedService(null)
+      setDashboardUrl('')
     }
-  }, [hasCluster, currentCluster, getClusterInfo, fetchServices])
+  }, [hasCluster, currentCluster, getClusterInfo, fetchServices, getDashboardUrl])
 
-  // 渲染集群信息区域 - 紧凑版本
-  const renderClusterInfo = () => (
-    <div className="px-4 py-3 border-b border-gray-200 bg-white">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0">
-          {clusterData ? (
-            <>
-              <div className="text-sm font-semibold text-gray-900 truncate">
-                {clusterData.clusterName}
-              </div>
-              <div className="flex items-center gap-2 mt-1">
-                {clusterData.clusterFrame && (
-                  <span className="text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
-                    {clusterData.clusterFrame}
-                  </span>
-                )}
-                {clusterData.depType && (
-                  <span className="text-xs text-green-600 bg-green-50 px-1.5 py-0.5 rounded">
-                    {clusterData.depType === 'KUBERNETES' ? 'Kubernetes' : 
-                     clusterData.depType === 'PVM' ? 'PVM' : clusterData.depType}
-                  </span>
-                )}
-              </div>
-            </>
-          ) : (
-            <div className="text-sm text-gray-500">加载中...</div>
-          )}
-        </div>
-        
-        {/* 总服务操作按钮 */}
-        <div className="relative">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleServiceOptionClick}
-            className="p-1.5 h-7 w-7"
-          >
-            <MoreHorizontal className="w-4 h-4" />
-          </Button>
-          
-          {/* 总服务操作菜单 */}
-          {showServiceOptionMenu && (
-            <div 
-              className="fixed z-50 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1"
-              style={{ 
-                top: serviceOptionMenuPosition.top, 
-                left: serviceOptionMenuPosition.left
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <button 
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                onClick={() => handleServiceOptionAction('addService')}
-              >
-                <Plus className="w-4 h-4 text-blue-500" />
-                添加服务
-              </button>
-              <button 
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                onClick={() => handleServiceOptionAction('startAll')}
-              >
-                <Play className="w-4 h-4 text-green-500" />
-                启动所有
-              </button>
-              <button 
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                onClick={() => handleServiceOptionAction('stopAll')}
-              >
-                <Pause className="w-4 h-4 text-red-500" />
-                停止所有
-              </button>
-              <button 
-                className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-                onClick={() => handleServiceOptionAction('restartAll')}
-              >
-                <RotateCcw className="w-4 h-4 text-orange-500" />
-                重启所有需要重启的服务
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  )
-
-  // 渲染服务分组 - 紧凑版本
-  const renderServiceGroup = (
-    title: string, 
-    icon: React.ReactNode, 
-    services: ServiceItem[], 
-    collapsed: boolean, 
-    onToggle: () => void
-  ) => (
-    <div className="mb-2">
-      <div 
-        className="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-gray-50 transition-colors"
-        onClick={onToggle}
-      >
-        <div className="flex items-center gap-2">
-          <div className="text-blue-600">
-            {icon}
-          </div>
-          <span className="text-sm font-medium text-gray-800">{title}</span>
-        </div>
-        <div className="text-gray-400">
-          {collapsed ? 
-            <ChevronRight className="w-4 h-4" /> : 
-            <ChevronDown className="w-4 h-4" />
-          }
-        </div>
-      </div>
-
-      {!collapsed && (
-        <div className="space-y-0.5 px-2">
-          {services.map((service) => (
-            <div
-              key={service.id}
-              className={`flex items-center px-2 py-1.5 rounded cursor-pointer transition-all group hover:bg-blue-50 ${
-                isActiveService(service) ? 'bg-blue-100 border-l-2 border-blue-500' : ''
-              }`}
-              onClick={() => handleServiceItemClick(service)}
-            >
-              {/* 状态指示器 */}
-              <div className="w-4 flex justify-center mr-2">
-                {(() => {
-                  const { icon: StatusIcon, className } = getServiceStatusIcon(service.serviceStateCode)
-                  return <StatusIcon className={`w-3 h-3 ${className}`} />
-                })()}
-              </div>
-
-              {/* 服务图标 */}
-              <div className="mr-2 flex-shrink-0">
-                <SvgIcon 
-                  name={service.serviceName || service.name || ''} 
-                  size={16} 
-                />
-              </div>
-              
-              {/* 服务名称 */}
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-700 truncate">
-                  {service.name}
-                </div>
-              </div>
-
-              {/* 右侧指示器和按钮 */}
-              <div className="flex items-center gap-1">
-                {/* 告警数量 */}
-                {service.alertNum && service.alertNum > 0 && (
-                  <div className="flex items-center gap-1 px-1.5 py-0.5 bg-yellow-100 text-yellow-700 rounded text-xs">
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>{service.alertNum}</span>
-                  </div>
-                )}
-
-                {/* 更多操作按钮 */}
-                {service.serviceName !== 'PLATFORM' && service.serviceName !== 'DATASOPHON' && (
-                  <div className="relative">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="p-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => handleServiceMenuClick(service, e)}
-                    >
-                      <MoreHorizontal className="w-3 h-3" />
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-
-  // 渲染左侧服务列表 - 固定宽度，紧凑版本
-  const renderServiceSidebar = () => (
-    <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-      {/* 集群信息区域 */}
-      {renderClusterInfo()}
-
-      {/* 服务列表区域 */}
-      <div className="flex-1 overflow-y-auto py-2">
-        {serviceLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600" />
-          </div>
-        ) : (
-          <>
-            {/* 核心服务组 */}
-            {renderServiceGroup(
-              'Core Service',
-              <Server className="w-4 h-4" />,
-              coreServices,
-              coreGroupCollapsed,
-              () => toggleGroupCollapse('core')
-            )}
-
-            {/* 管理服务组 */}
-            {renderServiceGroup(
-              'Management',
-              <Monitor className="w-4 h-4" />,
-              managementServices,
-              managementGroupCollapsed,
-              () => toggleGroupCollapse('management')
-            )}
-          </>
-        )}
-      </div>
-    </div>
-  )
-
-  // 渲染右侧内容区域
-  const renderMainContent = () => (
-    <div className="flex-1 bg-gray-50">
-      {selectedService ? (
-        // 选中服务的详情页面
-        <div className="p-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-2">
-                {selectedService.name} 服务详情
-              </h1>
-              <p className="text-gray-600">
-                管理和监控 {selectedService.name} 服务的运行状态
-              </p>
-            </div>
-            
-            {/* 服务状态卡片 */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">服务状态</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center">
-                    {(() => {
-                      const { icon: StatusIcon, className, label } = getServiceStatusIcon(selectedService.serviceStateCode)
-                      return (
-                        <>
-                          <StatusIcon className={`w-5 h-5 mr-2 ${className}`} />
-                          <span className="text-sm font-medium">{label}</span>
-                        </>
-                      )
-                    })()}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">服务类型</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center">
-                    <Workflow className="w-5 h-5 mr-2 text-blue-500" />
-                    <span className="text-sm font-medium">{selectedService.serviceName}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">告警数量</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center">
-                    <AlertTriangle className="w-5 h-5 mr-2 text-yellow-500" />
-                    <span className="text-sm font-medium">{selectedService.alertNum || 0}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* 服务操作按钮 */}
-            <div className="flex gap-4">
-              <Button 
-                className="flex items-center gap-2"
-                onClick={() => handleServiceAction('start', selectedService)}
-              >
-                <Play className="w-4 h-4" />
-                启动服务
-              </Button>
-              <Button 
-                variant="secondary"
-                className="flex items-center gap-2"
-                onClick={() => handleServiceAction('stop', selectedService)}
-              >
-                <Pause className="w-4 h-4" />
-                停止服务
-              </Button>
-              <Button 
-                variant="secondary"
-                className="flex items-center gap-2"
-                onClick={() => handleServiceAction('restart', selectedService)}
-              >
-                <RotateCcw className="w-4 h-4" />
-                重启服务
-              </Button>
-              {selectedService.serviceName !== 'DATASOPHON' && (
-                <Button 
-                  variant="destructive"
-                  className="flex items-center gap-2"
-                  onClick={() => handleServiceAction('delete', selectedService)}
-                >
-                  <Trash2 className="w-4 h-4" />
-                  删除服务
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      ) : (
-        // 默认总览页面
-        <div className="p-6">
-          <div className="max-w-4xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                服务管理总览
-              </h1>
-              <p className="text-lg text-gray-600">
-                管理和监控大数据集群中的各项服务
-              </p>
-            </div>
-
-            {/* 统计卡片 */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">总服务数</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-gray-900">{services.length}</div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">运行中</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-green-600">
-                    {services.filter(s => s.serviceStateCode === ServiceState.RUNNING).length}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">告警中</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-yellow-600">
-                    {services.filter(s => s.serviceStateCode === ServiceState.WARNING).length}
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-sm font-medium text-gray-600">异常</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold text-red-600">
-                    {services.filter(s => s.serviceStateCode === ServiceState.ERROR).length}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* 提示信息 */}
-            <Card>
-              <CardHeader>
-                <CardTitle>欢迎使用服务管理</CardTitle>
-                <CardDescription>
-                  选择左侧的服务来查看详细信息和执行管理操作
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center text-sm text-gray-500">
-                  <ArrowRight className="w-4 h-4 mr-2" />
-                  点击左侧服务列表中的任何服务来开始管理
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      )}
-    </div>
-  )
-
+  // 如果没有选择集群，显示空状态
   if (loading) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="text-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-        <p className="text-gray-600">正在加载...</p>
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <FinalNavbar />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">正在加载...</p>
+          </div>
+        </div>
       </div>
+    )
+  }
+
+  if (!hasCluster) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <FinalNavbar />
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Server className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">请选择集群</h2>
+            <p className="text-gray-600">请在右上角选择一个集群来开始管理您的大数据服务</p>
+          </div>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-gray-50">
       <FinalNavbar />
       
-      <div className="flex h-[calc(100vh-56px)]">
-        {/* 左侧服务列表 - 固定宽度 */}
-        {renderServiceSidebar()}
-        
+      {/* 主内容区域 */}
+      <div className="flex">
+        {/* 左侧服务列表 */}
+        <div className="w-72 bg-gradient-to-b from-gray-50 to-white shadow-lg border-r border-gray-200 min-h-screen">
+          {/* 集群信息头部 */}
+          <div className="p-5 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-2">
+                  <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+                  <h3 className="font-bold text-gray-900 text-base">{clusterData?.clusterName || currentCluster?.name}</h3>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-600 font-medium">{clusterData?.clusterFrame}</span>
+                  <span className="px-2.5 py-1 bg-gradient-to-r from-blue-500 to-indigo-600 text-white rounded-full text-xs font-medium shadow-sm">
+                    {clusterData?.depType === 'KUBERNETES' ? 'Kubernetes' : 'Linux'}
+                  </span>
+                </div>
+              </div>
+              <button
+                className="p-2 hover:bg-white/80 rounded-lg transition-colors shadow-sm service-option-trigger"
+                onClick={handleServiceOptionClick}
+              >
+                <MoreHorizontal className="w-5 h-5 text-gray-600" />
+              </button>
+            </div>
+          </div>
+
+          {/* 服务列表 */}
+          <div className="flex-1 overflow-y-auto">
+            {serviceLoading ? (
+              <div className="p-8 text-center">
+                <div className="relative">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-blue-600 mx-auto mb-4"></div>
+                  <div className="absolute inset-0 rounded-full h-8 w-8 border-2 border-transparent border-t-blue-400 animate-pulse mx-auto"></div>
+                </div>
+                <p className="text-sm text-gray-700 font-medium">正在加载服务列表...</p>
+                <p className="text-xs text-gray-500 mt-1">请稍候</p>
+              </div>
+            ) : (
+              <>
+                {/* Core Service 分组 - 始终显示 */}
+                <div className="px-4 py-3">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center">
+                      <ChevronDown className="w-4 h-4 text-blue-600 mr-2" />
+                      <span className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Core Service</span>
+                      <span className="ml-2 bg-blue-100 text-blue-600 text-xs rounded-full px-2 py-0.5">
+                        {coreServices.length}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    {coreServices.length > 0 ? coreServices.map((service) => {
+                      const statusInfo = getServiceStatusInfo(service.serviceStateCode)
+                      const StatusIcon = statusInfo.icon
+                      
+                      return (
+                        <div
+                          key={service.id}
+                          className={`group relative flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                            selectedService?.id === service.id 
+                              ? 'bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 shadow-sm' 
+                              : 'hover:bg-gray-50 hover:shadow-sm border border-transparent'
+                          }`}
+                          onClick={() => handleServiceItemClick(service)}
+                        >
+                          <div className="flex items-center space-x-3 flex-1">
+                            <div className="relative w-8 h-8 flex-shrink-0 bg-white rounded-lg shadow-sm border border-gray-100 flex items-center justify-center">
+                              <SvgIcon name={service.icon || service.serviceName.toLowerCase()} className="w-5 h-5" />
+                              <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${statusInfo.dotClassName}`}></div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-900 truncate">{service.name}</span>
+                                {service.alertNum > 0 && (
+                                  <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-medium ml-2">
+                                    {service.alertNum}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${statusInfo.badgeClassName}`}>
+                                  <StatusIcon className={`w-3 h-3 mr-1 ${statusInfo.iconClassName}`} />
+                                  {statusInfo.label}
+                                </span>
+                                <button
+                                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all action-trigger"
+                                  onClick={handleServiceActionClick}
+                                >
+                                  <MoreHorizontal className="w-3 h-3 text-gray-400" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    }) : (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                          <Server className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <p className="text-sm text-gray-500">暂无核心服务</p>
+                        <p className="text-xs text-gray-400 mt-1">请安装HDFS、YARN等服务</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Management 分组 - 始终显示 */}
+                <div className="px-4 py-3 border-t border-gray-100">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center">
+                      <ChevronDown className="w-4 h-4 text-green-600 mr-2" />
+                      <span className="text-sm font-semibold text-gray-800 uppercase tracking-wide">Management</span>
+                      <span className="ml-2 bg-green-100 text-green-600 text-xs rounded-full px-2 py-0.5">
+                        {managementServices.length}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    {managementServices.length > 0 ? managementServices.map((service) => {
+                      const statusInfo = getServiceStatusInfo(service.serviceStateCode)
+                      const StatusIcon = statusInfo.icon
+                      
+                      return (
+                        <div
+                          key={service.id}
+                          className={`group relative flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200 ${
+                            selectedService?.id === service.id 
+                              ? 'bg-gradient-to-r from-green-50 to-green-100 border border-green-200 shadow-sm' 
+                              : 'hover:bg-gray-50 hover:shadow-sm border border-transparent'
+                          }`}
+                          onClick={() => handleServiceItemClick(service)}
+                        >
+                          <div className="flex items-center space-x-3 flex-1">
+                            <div className="relative w-8 h-8 flex-shrink-0 bg-white rounded-lg shadow-sm border border-gray-100 flex items-center justify-center">
+                              <SvgIcon name={service.icon || service.serviceName.toLowerCase()} className="w-5 h-5" />
+                              <div className={`absolute -top-1 -right-1 w-3 h-3 rounded-full border-2 border-white ${statusInfo.dotClassName}`}></div>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium text-gray-900 truncate">{service.name}</span>
+                                {service.alertNum > 0 && (
+                                  <span className="bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[1.25rem] text-center font-medium ml-2">
+                                    {service.alertNum}
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center justify-between mt-1">
+                                <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-medium border ${statusInfo.badgeClassName}`}>
+                                  <StatusIcon className={`w-3 h-3 mr-1 ${statusInfo.iconClassName}`} />
+                                  {statusInfo.label}
+                                </span>
+                                <button
+                                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all action-trigger"
+                                  onClick={handleServiceActionClick}
+                                >
+                                  <MoreHorizontal className="w-3 h-3 text-gray-400" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    }) : (
+                      <div className="text-center py-8">
+                        <div className="w-12 h-12 bg-gray-100 rounded-lg mx-auto mb-3 flex items-center justify-center">
+                          <Monitor className="w-6 h-6 text-gray-400" />
+                        </div>
+                        <p className="text-sm text-gray-500">暂无管理服务</p>
+                        <p className="text-xs text-gray-400 mt-1">请安装Grafana、Prometheus等服务</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
         {/* 右侧内容区域 */}
-        {renderMainContent()}
+        <div className="flex-1">
+          {selectedService ? (
+            // 服务详情页面
+            <div className="p-6">
+              <h1 className="text-2xl font-bold text-gray-900 mb-6">{selectedService.name} 服务详情</h1>
+              <p className="text-gray-600">服务详情页面开发中...</p>
+            </div>
+          ) : (
+            // 集群总览页面 - 嵌套Grafana (默认显示)
+            <div className="relative w-full h-full">
+              {dashboardLoading ? (
+                <div className="flex items-center justify-center h-96">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">正在加载集群总览...</p>
+                  </div>
+                </div>
+              ) : dashboardUrl ? (
+                <div className="absolute inset-0 w-full h-full">
+                  <iframe
+                    src={dashboardUrl}
+                    className="w-full h-full border-none"
+                    style={{
+                      position: 'absolute',
+                      left: 0,
+                      top: 0,
+                      right: 0,
+                      bottom: 0,
+                      width: '100%',
+                      height: '100%'
+                    }}
+                    frameBorder="0"
+                  />
+                </div>
+              ) : (
+                <div className="flex items-center justify-center h-96">
+                  <div className="text-center">
+                    <Monitor className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">集群总览</h2>
+                    <p className="text-gray-600">正在准备集群监控面板...</p>
+                    <Button 
+                      onClick={getDashboardUrl}
+                      className="mt-4"
+                    >
+                      重新加载
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 服务操作菜单 */}
-      {showActionMenu && activeService && (
-        <div 
-          className="fixed z-50 bg-white rounded-lg shadow-lg border border-gray-200 py-1 min-w-32"
-          style={{ 
-            top: actionMenuPosition.top, 
-            left: actionMenuPosition.left 
+      {showActionMenu && (
+        <div
+          className="fixed bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 action-menu backdrop-blur-sm"
+          style={{
+            top: actionMenuPosition.top,
+            left: actionMenuPosition.left,
+            minWidth: '180px'
           }}
-          onClick={(e) => e.stopPropagation()}
         >
-          <button 
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-            onClick={() => handleServiceAction('start', activeService)}
-          >
-            <Play className="w-4 h-4 text-green-500" />
-            启动
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-green-50 hover:text-green-700 flex items-center transition-colors rounded-lg mx-2">
+            <Play className="w-4 h-4 mr-3 text-green-600" />
+            <span className="font-medium">启动</span>
           </button>
-          <button 
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-            onClick={() => handleServiceAction('stop', activeService)}
-          >
-            <Pause className="w-4 h-4 text-red-500" />
-            停止
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-yellow-50 hover:text-yellow-700 flex items-center transition-colors rounded-lg mx-2">
+            <Pause className="w-4 h-4 mr-3 text-yellow-600" />
+            <span className="font-medium">停止</span>
           </button>
-          <button 
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2"
-            onClick={() => handleServiceAction('restart', activeService)}
-          >
-            <RotateCcw className="w-4 h-4 text-orange-500" />
-            重启
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2">
+            <RotateCcw className="w-4 h-4 mr-3 text-blue-600" />
+            <span className="font-medium">重启</span>
           </button>
-          <div className="border-t border-gray-200 my-1" />
-          <button 
-            className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 flex items-center gap-2 text-red-600"
-            onClick={() => handleServiceAction('delete', activeService)}
-          >
-            <Trash2 className="w-4 h-4" />
-            删除
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-purple-50 hover:text-purple-700 flex items-center transition-colors rounded-lg mx-2">
+            <RotateCcw className="w-4 h-4 mr-3 text-purple-600" />
+            <span className="font-medium">滚动重启</span>
+          </button>
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-indigo-50 hover:text-indigo-700 flex items-center transition-colors rounded-lg mx-2">
+            <Users className="w-4 h-4 mr-3 text-indigo-600" />
+            <span className="font-medium">分配角色组</span>
+          </button>
+          <hr className="my-2 border-gray-100" />
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-red-50 hover:text-red-700 flex items-center text-red-600 transition-colors rounded-lg mx-2">
+            <Trash2 className="w-4 h-4 mr-3" />
+            <span className="font-medium">删除</span>
+          </button>
+        </div>
+      )}
+
+      {/* 总服务选项菜单 */}
+      {showServiceOptionMenu && (
+        <div
+          className="fixed bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 service-option-menu backdrop-blur-sm"
+          style={{
+            top: serviceOptionMenuPosition.top,
+            left: serviceOptionMenuPosition.left,
+            minWidth: '220px'
+          }}
+        >
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2">
+            <Plus className="w-4 h-4 mr-3 text-blue-600" />
+            <span className="font-medium">添加服务</span>
+          </button>
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-green-50 hover:text-green-700 flex items-center transition-colors rounded-lg mx-2">
+            <Play className="w-4 h-4 mr-3 text-green-600" />
+            <span className="font-medium">启动所有</span>
+          </button>
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-yellow-50 hover:text-yellow-700 flex items-center transition-colors rounded-lg mx-2">
+            <Pause className="w-4 h-4 mr-3 text-yellow-600" />
+            <span className="font-medium">停止所有</span>
+          </button>
+          <button className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2">
+            <RotateCcw className="w-4 h-4 mr-3 text-blue-600" />
+            <span className="font-medium">重启所有需要重启的服务</span>
           </button>
         </div>
       )}

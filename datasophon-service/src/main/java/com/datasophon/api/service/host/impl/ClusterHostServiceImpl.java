@@ -46,6 +46,7 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterHostMapper;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.datasophon.common.enums.HostState;
+import com.mybatisflex.core.query.QueryChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -416,5 +417,30 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     @Override
     public List<ClusterHostEntity> getHostsByIpList(Long clusterId, List<String> ipList) {
         return getMapper().selectByClusterIdAndIpList(clusterId, ipList);
+    }
+
+    @Override
+    public int getHostCountByClusterId(Long clusterId) {
+        try {
+            return (int) QueryChain.of(ClusterHostEntity.class)
+                .where(ClusterHostEntity::getClusterId).eq(clusterId)
+                .count();
+        } catch (Exception e) {
+            logger.error("获取集群{}主机总数失败", clusterId, e);
+            return 0;
+        }
+    }
+
+    @Override
+    public int getRunningHostCountByClusterId(Long clusterId) {
+        try {
+            return (int) QueryChain.of(ClusterHostEntity.class)
+                .where(ClusterHostEntity::getClusterId).eq(clusterId)
+                .and(ClusterHostEntity::getHostState).eq(HostState.RUNNING.getValue())
+                .count();
+        } catch (Exception e) {
+            logger.error("获取集群{}运行中主机数量失败", clusterId, e);
+            return 0;
+        }
     }
 }
