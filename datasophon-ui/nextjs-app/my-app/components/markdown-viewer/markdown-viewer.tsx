@@ -16,7 +16,7 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
 import { 
   AlertCircle, 
   BookOpen, 
@@ -109,8 +109,8 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
         error: null
       }))
 
-      // 延迟生成目录，确保DOM已渲染
-      setTimeout(generateTableOfContents, 500)
+                // 延迟生成目录，确保DOM已渲染
+      setTimeout(() => generateTableOfContents(), 500)
       
     } catch (error) {
       console.error('获取文档失败:', error)
@@ -120,7 +120,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
         error: error instanceof Error ? error.message : '获取文档失败'
       }))
     }
-  }, [effectiveClusterId, serviceId, docType])
+      }, [effectiveClusterId, serviceId, docType])
 
   // 生成目录
   const generateTableOfContents = useCallback(() => {
@@ -214,7 +214,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // 初始化数据获取
   useEffect(() => {
     fetchDocument()
-  }, [fetchDocument])
+  }, [effectiveClusterId, serviceId, docType])
 
   // 组件卸载时清理图片缓存
   useEffect(() => {
@@ -223,10 +223,47 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
     }
   }, [])
 
+
+
+  // 复制到剪贴板功能
+  const copyToClipboard = useCallback(async (text: string): Promise<boolean> => {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text)
+        return true
+      } else {
+        // 降级方案
+        const textArea = document.createElement('textarea')
+        textArea.value = text
+        textArea.style.position = 'fixed'
+        textArea.style.left = '-999999px'
+        textArea.style.top = '-999999px'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        const result = document.execCommand('copy')
+        document.body.removeChild(textArea)
+        return result
+      }
+    } catch {
+      return false
+    }
+  }, [])
+
   // 自定义代码块渲染
   const CodeBlock: React.FC<CodeBlockProps> = ({ inline, className, children }) => {
+    const [copied, setCopied] = useState(false)
     const match = /language-(\w+)/.exec(className || '')
     const language = match ? match[1] : ''
+    const code = String(children).replace(/\n$/, '')
+
+    const handleCopy = useCallback(async () => {
+      const success = await copyToClipboard(code)
+      if (success) {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }
+    }, [code])
 
     if (inline) {
       return (
@@ -237,31 +274,41 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
     }
 
     return (
-      <div className="code-block-wrapper">
-        {language && (
-          <div className="code-block-header">
-            <span className="code-block-language">{language}</span>
-            <button 
-              className="code-block-copy"
-              onClick={() => navigator.clipboard?.writeText(String(children))}
-              title="复制代码"
-            >
-              复制
-            </button>
-          </div>
-        )}
+      <div className="code-block-container">
+        <button 
+          className={`copy-code-btn ${copied ? 'copied' : ''}`}
+          onClick={handleCopy}
+          title={copied ? '已复制!' : '复制代码'}
+        >
+          {copied ? '✓ 已复制' : '复制'}
+        </button>
         <SyntaxHighlighter
-          style={oneLight}
+          style={vscDarkPlus}
           language={language || 'text'}
           PreTag="div"
           customStyle={{
             margin: 0,
-            borderRadius: language ? '0 0 8px 8px' : '8px',
-            fontSize: '14px',
-            lineHeight: '1.5'
+            borderRadius: 0,
+            fontSize: '15px',
+            lineHeight: '1.5',
+            background: 'transparent',
+            padding: 0,
+            fontWeight: '500'
+          }}
+          codeTagProps={{
+            style: {
+              fontFamily: "'Consolas', 'Monaco', 'Courier New', 'Roboto Mono', 'SF Mono', 'Cascadia Code', monospace",
+              fontSize: '15px',
+              lineHeight: '1.5',
+              letterSpacing: '0.02em',
+              fontWeight: '500',
+              WebkitFontSmoothing: 'antialiased',
+              MozOsxFontSmoothing: 'grayscale',
+              textRendering: 'optimizeLegibility'
+            }
           }}
         >
-          {String(children).replace(/\n$/, '')}
+          {code}
         </SyntaxHighlighter>
       </div>
     )
@@ -316,7 +363,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
           
           setImageState({ loading: false, error: false, url: imageUrl })
           
-        } catch (error) {
+        } catch {
           setImageState({ loading: false, error: true, url: '' })
         }
       }
@@ -439,7 +486,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // 渲染主要内容
   return (
     <>
-      <ReadingProgress targetRef={contentRef} />
+              <ReadingProgress targetRef={contentRef as React.RefObject<HTMLElement>} />
       
       <div className="markdown-viewer">
         {/* 工具栏 */}
@@ -524,15 +571,18 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkToc]}
               rehypePlugins={[
-                rehypeRaw,
                 rehypeSlug,
                 [rehypeAutolinkHeadings, { behavior: 'wrap' }]
               ]}
               components={{
-                code: CodeBlock,
+                // 禁用代码块，让所有代码内容作为普通文本显示
+                code: ({ children }) => <span className="inline-text">{children}</span>,
+                pre: ({ children }) => <div className="text-content">{children}</div>,
                 img: ImageComponent,
                 a: LinkComponent,
               }}
+              // 跳过HTML处理，避免 < > 符号被误识别为HTML标签
+              skipHtml={true}
             >
               {state.content}
             </ReactMarkdown>

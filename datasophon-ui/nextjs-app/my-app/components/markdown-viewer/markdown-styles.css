@@ -201,12 +201,29 @@
 .markdown-content h5,
 .markdown-content h6 {
   font-weight: 600;
-  line-height: 1.25;
-  margin-top: var(--apple-spacing-xl);
-  margin-bottom: var(--apple-spacing-md);
+  line-height: 1.3; /* 优化标题行高 */
+  margin-top: var(--apple-spacing-2xl); /* 增加标题上间距 */
+  margin-bottom: var(--apple-spacing-lg); /* 增加标题下间距 */
   color: var(--apple-gray-900);
   position: relative;
   scroll-margin-top: 80px;
+  letter-spacing: -0.01em; /* 优化字母间距 */
+}
+
+/* 第一个标题特殊处理 */
+.markdown-content > h1:first-child,
+.markdown-content > h2:first-child,
+.markdown-content > h3:first-child {
+  margin-top: 0;
+}
+
+/* 标题间的间距优化 */
+.markdown-content h1 + h2,
+.markdown-content h2 + h3,
+.markdown-content h3 + h4,
+.markdown-content h4 + h5,
+.markdown-content h5 + h6 {
+  margin-top: var(--apple-spacing-lg); /* 连续标题间距 */
 }
 
 .markdown-content h1 {
@@ -234,25 +251,83 @@
   font-size: 1.125rem;
 }
 
-/* 段落样式 */
+/* 段落样式 - 优化换行和间距 */
 .markdown-content p {
-  margin-bottom: var(--apple-spacing-md);
-  text-align: justify;
+  margin-bottom: var(--apple-spacing-lg); /* 增加段落间距 */
+  line-height: 1.75; /* 优化行高 */
+  color: var(--apple-gray-700);
+  text-align: left; /* 左对齐，避免两端对齐的间隙问题 */
+  word-break: break-word; /* 防止长单词破坏布局 */
+  hyphens: auto; /* 自动断词 */
 }
 
-/* 列表样式 */
+/* 段落内的换行优化 */
+.markdown-content p + p {
+  margin-top: var(--apple-spacing-lg); /* 连续段落间距 */
+}
+
+/* 列表后的段落间距 */
+.markdown-content ul + p,
+.markdown-content ol + p {
+  margin-top: var(--apple-spacing-lg);
+}
+
+/* 标题后的段落间距 */
+.markdown-content h1 + p,
+.markdown-content h2 + p,
+.markdown-content h3 + p,
+.markdown-content h4 + p,
+.markdown-content h5 + p,
+.markdown-content h6 + p {
+  margin-top: var(--apple-spacing-md);
+}
+
+/* 列表样式 - 优化间距和换行 */
 .markdown-content ul,
 .markdown-content ol {
-  margin-bottom: var(--apple-spacing-md);
+  margin: var(--apple-spacing-lg) 0; /* 增加上下间距 */
+  padding-left: var(--apple-spacing-xl); /* 增加缩进 */
+  line-height: 1.7; /* 优化行高 */
+}
+
+/* 嵌套列表样式 */
+.markdown-content ul ul,
+.markdown-content ol ol,
+.markdown-content ul ol,
+.markdown-content ol ul {
+  margin: var(--apple-spacing-sm) 0; /* 减少嵌套列表间距 */
   padding-left: var(--apple-spacing-lg);
 }
 
 .markdown-content li {
-  margin-bottom: var(--apple-spacing-xs);
+  margin-bottom: var(--apple-spacing-sm); /* 增加列表项间距 */
+  padding-left: var(--apple-spacing-xs); /* 添加左边距 */
+  line-height: 1.7; /* 与段落保持一致的行高 */
+}
+
+/* 列表项内的段落样式 */
+.markdown-content li p {
+  margin-bottom: var(--apple-spacing-sm); /* 减少列表项内段落间距 */
+  margin-top: 0;
+}
+
+.markdown-content li p:last-child {
+  margin-bottom: 0;
 }
 
 .markdown-content li::marker {
   color: var(--apple-blue);
+  font-weight: 600; /* 加粗标记 */
+}
+
+/* 紧凑列表（没有段落的列表）*/
+.markdown-content li:has(> p) {
+  margin-bottom: var(--apple-spacing-md); /* 包含段落的列表项更大间距 */
+}
+
+/* 列表项内的代码 */
+.markdown-content li code {
+  margin: 0 2px;
 }
 
 /* 引用样式 */
@@ -292,23 +367,46 @@
   background: var(--apple-gray-50);
 }
 
-/* 代码样式 */
+/* 内联代码样式 - 优化清晰度 */
 .markdown-content code {
-  font-family: var(--apple-font-mono);
-  font-size: 0.875em;
-  background: var(--apple-gray-100);
+  font-family: 'Consolas', 'Monaco', 'Courier New', 'Roboto Mono', 'SF Mono', 'Cascadia Code', monospace;
+  font-size: 0.9em; /* 稍微增大 */
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 197, 253, 0.08) 100%);
   padding: var(--apple-spacing-xs) var(--apple-spacing-sm);
-  border-radius: var(--apple-radius-sm);
-  color: var(--apple-red);
+  border-radius: 6px;
+  color: #E53E3E; /* 更高对比度的红色 */
+  border: 1px solid rgba(59, 130, 246, 0.2);
+  font-weight: 600; /* 增加字重 */
+  letter-spacing: 0.02em; /* 减少字间距 */
+  /* 字体渲染优化 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
+/* 基础pre样式 - 优化间距和换行 */
 .markdown-content pre {
-  margin: var(--apple-spacing-md) 0;
-  padding: var(--apple-spacing-lg);
-  background: var(--apple-gray-900);
+  margin: var(--apple-spacing-xl) 0; /* 增加代码块上下间距 */
+  padding: 0; /* 改为0，让enhanced样式接管 */
+  background: transparent; /* 让enhanced样式的渐变背景显示 */
   border-radius: var(--apple-radius-md);
   overflow-x: auto;
-  box-shadow: var(--apple-shadow);
+  box-shadow: none; /* 让enhanced样式的阴影效果显示 */
+  position: relative;
+  clear: both; /* 清除浮动 */
+}
+
+/* 代码块前后内容间距 */
+.markdown-content p + pre,
+.markdown-content ul + pre,
+.markdown-content ol + pre {
+  margin-top: var(--apple-spacing-xl);
+}
+
+.markdown-content pre + p,
+.markdown-content pre + ul,
+.markdown-content pre + ol {
+  margin-top: var(--apple-spacing-xl);
 }
 
 .markdown-content pre code {
@@ -488,4 +586,30 @@
   .markdown-viewer {
     box-shadow: none;
   }
+}
+
+/* 禁用代码块样式，使用普通文本样式 */
+.markdown-content .inline-text {
+  color: inherit !important;
+  background: none !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+
+.markdown-content .text-content {
+  color: inherit !important;
+  background: none !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  white-space: pre-wrap !important;
+  word-wrap: break-word !important;
+  border: none !important;
+  box-shadow: none !important;
 }

@@ -71,7 +71,7 @@
   color: rgba(59, 130, 246, 0.7);
 }
 
-/* 表格美化 */
+/* 表格美化 - 优化间距和换行 */
 .markdown-content table {
   border-collapse: separate;
   border-spacing: 0;
@@ -80,6 +80,10 @@
   overflow: hidden;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   background: white;
+  margin: var(--apple-spacing-xl) 0; /* 增加表格上下间距 */
+  width: 100%;
+  font-size: 0.95em; /* 稍微缩小表格字体 */
+  line-height: 1.6; /* 优化表格行高 */
 }
 
 .markdown-content thead {
@@ -91,15 +95,19 @@
   border-bottom: 2px solid rgba(59, 130, 246, 0.1);
   font-weight: 600;
   color: rgb(51, 65, 85);
-  padding: 12px 16px;
+  padding: 16px 20px; /* 增加单元格内边距 */
   text-align: left;
+  white-space: nowrap; /* 表头文字不换行 */
+  font-size: 0.9em;
 }
 
 .markdown-content td {
   border: none;
   border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-  padding: 12px 16px;
+  padding: 14px 20px; /* 增加单元格内边距 */
   vertical-align: top;
+  word-wrap: break-word; /* 长文本自动换行 */
+  max-width: 200px; /* 限制单元格最大宽度 */
 }
 
 .markdown-content tr:last-child td {
@@ -110,22 +118,202 @@
   background: rgba(59, 130, 246, 0.02);
 }
 
-/* 代码块增强 */
+/* 代码块增强 - 苹果风格代码编辑器 */
 .markdown-content pre {
   position: relative;
-  border-radius: 12px;
-  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(145deg, #1e1e2e 0%, #181826 100%);
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 2px 8px rgba(0, 0, 0, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
+.markdown-content pre:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.15),
+    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* macOS风格窗口标题栏 */
 .markdown-content pre::before {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent 0%, rgba(59, 130, 246, 0.3) 50%, transparent 100%);
-  border-radius: 12px 12px 0 0;
+  height: 40px;
+  background: linear-gradient(180deg, #2d2d3f 0%, #252538 100%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px 16px 0 0;
+  z-index: 1;
+}
+
+/* macOS红绿灯按钮 */
+.markdown-content pre::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 16px;
+  width: 12px;
+  height: 12px;
+  background: #ff5f57;
+  border-radius: 50%;
+  box-shadow: 
+    20px 0 0 #ffbd2e,
+    40px 0 0 #28ca42,
+    0 0 0 1px rgba(0, 0, 0, 0.1);
+  z-index: 2;
+}
+
+/* 代码内容区域 - 优化字体清晰度 */
+.markdown-content pre code {
+  display: block;
+  padding: 60px 20px 20px 20px !important;
+  position: relative;
+  z-index: 0;
+  background: transparent !important;
+  color: #f0f0f0 !important; /* 提高对比度 */
+  font-family: 'Consolas', 'Monaco', 'Courier New', 'Roboto Mono', 'SF Mono', 'Cascadia Code', monospace !important;
+  font-size: 15px !important; /* 增大字体 */
+  line-height: 1.5 !important; /* 优化行高 */
+  font-weight: 500; /* 稍微加粗提升清晰度 */
+  letter-spacing: 0.02em; /* 减少字间距 */
+  /* 字体渲染优化 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'liga' 0; /* 禁用连字 */
+  font-variant-ligatures: none; /* 确保禁用连字 */
+  /* 确保像素完美显示 */
+  text-size-adjust: 100%;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* 语法高亮颜色方案 - 优化对比度的VS Code Dark+风格 */
+.markdown-content pre .hljs-comment,
+.markdown-content pre .hljs-quote {
+  color: #7CB668 !important; /* 提高绿色对比度 */
+  font-style: italic;
+  font-weight: 500; /* 保持清晰度 */
+}
+
+.markdown-content pre .hljs-keyword,
+.markdown-content pre .hljs-selector-tag,
+.markdown-content pre .hljs-literal,
+.markdown-content pre .hljs-type {
+  color: #6CBFFF !important; /* 提高蓝色对比度 */
+  font-weight: 600;
+}
+
+.markdown-content pre .hljs-string,
+.markdown-content pre .hljs-subst {
+  color: #D69E2E !important; /* 提高橙色对比度 */
+  font-weight: 500;
+}
+
+.markdown-content pre .hljs-number,
+.markdown-content pre .hljs-regexp,
+.markdown-content pre .hljs-variable,
+.markdown-content pre .hljs-template-variable {
+  color: #C6E48B !important; /* 提高淡绿色对比度 */
+  font-weight: 500;
+}
+
+.markdown-content pre .hljs-class .hljs-title,
+.markdown-content pre .hljs-title,
+.markdown-content pre .hljs-section {
+  color: #56D4DD !important; /* 提高青色对比度 */
+  font-weight: 600;
+}
+
+.markdown-content pre .hljs-attribute,
+.markdown-content pre .hljs-name,
+.markdown-content pre .hljs-tag {
+  color: #A8CCFF !important; /* 提高浅蓝色对比度 */
+  font-weight: 500;
+}
+
+.markdown-content pre .hljs-property,
+.markdown-content pre .hljs-built_in,
+.markdown-content pre .hljs-builtin-name {
+  color: #F0E68C !important; /* 提高黄色对比度 */
+  font-weight: 500;
+}
+
+.markdown-content pre .hljs-meta,
+.markdown-content pre .hljs-deletion {
+  color: #FF7A7A !important; /* 提高红色对比度 */
+  font-weight: 500;
+}
+
+.markdown-content pre .hljs-addition {
+  color: #7CB668 !important; /* 提高绿色对比度 */
+  font-weight: 500;
+}
+
+.markdown-content pre .hljs-emphasis {
+  font-style: italic;
+}
+
+.markdown-content pre .hljs-strong {
+  font-weight: bold;
+}
+
+/* 行号支持 */
+.markdown-content pre .hljs-ln-numbers {
+  color: #5a5a5a !important;
+  border-right: 1px solid #333;
+  padding-right: 10px !important;
+  margin-right: 10px !important;
+  text-align: right;
+  user-select: none;
+}
+
+/* 代码块复制按钮 */
+.code-block-container {
+  position: relative;
+}
+
+.copy-code-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-weight: 500;
+}
+
+.copy-code-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+  border-color: rgba(59, 130, 246, 0.4);
+  color: white;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.copy-code-btn:active {
+  transform: translateY(0);
+}
+
+.copy-code-btn.copied {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: rgba(34, 197, 94, 0.4);
+  color: #22c55e;
 }
 
 /* 引用块增强 */
@@ -134,7 +322,20 @@
   border-left: 4px solid rgba(59, 130, 246, 0.4);
   background: linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, rgba(147, 197, 253, 0.05) 100%);
   border-radius: 0 8px 8px 0;
-  margin-left: 0;
+  margin: var(--apple-spacing-xl) 0; /* 增加引用块间距 */
+  padding: var(--apple-spacing-lg) var(--apple-spacing-xl); /* 增加内边距 */
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1); /* 添加阴影 */
+}
+
+.markdown-content blockquote p {
+  margin-bottom: var(--apple-spacing-md); /* 引用内段落间距 */
+  font-style: italic;
+  color: var(--apple-gray-600);
+  line-height: 1.7;
+}
+
+.markdown-content blockquote p:last-child {
+  margin-bottom: 0;
 }
 
 .markdown-content blockquote::before {
@@ -147,19 +348,78 @@
   font-family: serif;
 }
 
-/* 列表美化 */
+/* 列表美化增强 */
 .markdown-content ul li::marker {
   color: rgb(59, 130, 246);
+  font-size: 1.1em; /* 稍微放大标记 */
 }
 
 .markdown-content ol li::marker {
   color: rgb(59, 130, 246);
-  font-weight: 600;
+  font-weight: 700; /* 更加粗的数字标记 */
 }
 
 .markdown-content li {
-  margin-bottom: 8px;
-  padding-left: 4px;
+  margin-bottom: var(--apple-spacing-sm); /* 使用CSS变量保持一致 */
+  padding-left: var(--apple-spacing-xs);
+  position: relative;
+  transition: background-color 0.2s ease; /* 添加悬浮效果 */
+  border-radius: 4px;
+  padding: 4px 8px; /* 增加内边距 */
+}
+
+/* 列表项悬浮效果 */
+.markdown-content li:hover {
+  background-color: rgba(59, 130, 246, 0.02);
+}
+
+/* 多级列表样式优化 */
+.markdown-content ul ul li::marker,
+.markdown-content ol ol li::marker {
+  color: rgba(59, 130, 246, 0.7); /* 降低嵌套标记颜色 */
+  font-size: 0.9em; /* 缩小嵌套标记 */
+}
+
+/* 列表项内的强调和粗体 */
+.markdown-content li strong,
+.markdown-content li b {
+  color: var(--apple-gray-900);
+  font-weight: 700;
+}
+
+.markdown-content li em,
+.markdown-content li i {
+  color: var(--apple-blue);
+  font-style: italic;
+}
+
+/* 强调文本美化 */
+.markdown-content strong,
+.markdown-content b {
+  color: var(--apple-gray-900);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.markdown-content em,
+.markdown-content i {
+  color: var(--apple-blue);
+  font-style: italic;
+  font-weight: 500;
+}
+
+/* 分隔符美化 */
+.markdown-content hr {
+  height: 3px;
+  border: none;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(59, 130, 246, 0.1) 25%, 
+    rgba(59, 130, 246, 0.3) 50%, 
+    rgba(59, 130, 246, 0.1) 75%, 
+    transparent 100%);
+  margin: var(--apple-spacing-2xl) 0;
+  border-radius: 2px;
 }
 
 /* 链接悬浮效果增强 */
@@ -169,6 +429,9 @@
   padding: 2px 4px;
   border-radius: 4px;
   transition: all 0.3s ease;
+  text-decoration: none;
+  color: var(--apple-blue);
+  font-weight: 500;
 }
 
 .markdown-content a:hover {
@@ -190,6 +453,28 @@
 
 .markdown-content a:hover::after {
   transform: scaleX(1);
+}
+
+/* 文档整体版式优化 */
+.markdown-content {
+  font-feature-settings: 'kern' 1, 'liga' 1; /* 启用字距调整和连字 */
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  max-width: none;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* 改善中文排版 */
+.markdown-content {
+  font-variant-east-asian: proportional-width;
+  hanging-punctuation: first last;
+}
+
+/* 数字和英文字体优化 */
+.markdown-content {
+  font-variant-numeric: oldstyle-nums proportional-nums;
 }
 
 /* 滚动条美化 */
@@ -252,14 +537,45 @@
     display: none;
   }
   
+  /* 移动端内容间距优化 */
+  .markdown-content {
+    padding: var(--apple-spacing-lg);
+  }
+  
+  .markdown-content p {
+    margin-bottom: var(--apple-spacing-md);
+  }
+  
+  .markdown-content ul,
+  .markdown-content ol {
+    margin: var(--apple-spacing-md) 0;
+    padding-left: var(--apple-spacing-lg);
+  }
+  
+  /* 移动端表格优化 */
   .markdown-content table {
-    font-size: 14px;
+    font-size: 13px;
+    overflow-x: auto;
+    display: block;
+    white-space: nowrap;
   }
   
   .markdown-content th,
   .markdown-content td {
     padding: 8px 12px;
+    min-width: 80px;
   }
+  
+  /* 移动端代码块优化 */
+  .markdown-content pre {
+    margin: var(--apple-spacing-lg) -var(--apple-spacing-lg);
+    border-radius: 0;
+  }
+  
+  /* 移动端标题大小调整 */
+  .markdown-content h1 { font-size: 1.75rem; }
+  .markdown-content h2 { font-size: 1.5rem; }
+  .markdown-content h3 { font-size: 1.25rem; }
 
   /* 移动端侧边栏隐藏 */
   .markdown-sidebar {
@@ -275,5 +591,22 @@
   
   .markdown-content {
     margin-left: 0;
+  }
+}
+
+/* 大屏幕优化 */
+@media (min-width: 1440px) {
+  .markdown-content {
+    font-size: 16px; /* 大屏幕稍大字体 */
+    line-height: 1.8; /* 更舒适的行高 */
+    max-width: 1200px; /* 限制最大宽度提升可读性 */
+  }
+  
+  .markdown-content h1 { font-size: 2.5rem; }
+  .markdown-content h2 { font-size: 2rem; }
+  .markdown-content h3 { font-size: 1.6rem; }
+  
+  .markdown-content table {
+    font-size: 15px;
   }
 }
