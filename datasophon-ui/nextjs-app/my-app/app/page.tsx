@@ -11,7 +11,12 @@ import {
   MoreHorizontal,
   ChevronDown,
   Plus,
-  Users
+  Users,
+  Settings,
+  Info,
+  BookOpen,
+  Link,
+  BarChart3
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { useCluster } from '@/hooks/useCluster'
@@ -50,6 +55,220 @@ interface ClusterData {
   clusterFrame?: string
   depType?: string
   clusterState?: string | number
+}
+
+// 服务详情页签组件
+interface ServiceDetailTabsProps {
+  service: ServiceItem
+}
+
+function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
+  const [serviceDashboardUrl, setServiceDashboardUrl] = useState<string>('')
+  const { currentCluster } = useCluster()
+  
+  // 获取服务的Dashboard URL
+  const getServiceDashboardUrl = useCallback(async () => {
+    if (!currentCluster || !service) return
+    
+    try {
+      // 这里需要根据实际API获取服务的dashboardUrl
+      // 目前先用模拟逻辑
+      const mockUrl = service.serviceName === 'HDFS' 
+        ? 'http://example.com/hdfs-dashboard'
+        : service.serviceName === 'YARN'
+        ? 'http://example.com/yarn-dashboard' 
+        : ''
+      
+      setServiceDashboardUrl(mockUrl)
+    } catch (error) {
+      console.error('获取服务Dashboard URL失败:', error)
+    }
+  }, [currentCluster, service])
+  
+  // 根据服务类型决定可用的页签
+  const getAvailableTabs = () => {
+    const baseTabs = []
+    
+    // 只有当服务有dashboardUrl时才显示总览页签
+    const hasOverview = serviceDashboardUrl && serviceDashboardUrl.trim() !== ''
+    if (hasOverview) {
+      baseTabs.push({ key: 'overview', label: '总览', icon: BarChart3 })
+    }
+    
+    baseTabs.push(
+      { key: 'instances', label: '实例', icon: Server },
+      { key: 'config', label: '配置', icon: Settings },
+      { key: 'connection', label: '连接信息', icon: Link },
+      { key: 'intro', label: '组件介绍', icon: Info },
+      { key: 'guide', label: '用户指南', icon: BookOpen }
+    )
+    
+    // YARN服务额外有资源配置页签
+    if (service.serviceName === 'YARN') {
+      baseTabs.push({ key: 'queue', label: '资源配置', icon: Monitor })
+    }
+    
+    return baseTabs
+  }
+  
+  const tabs = getAvailableTabs()
+  
+  // 默认选中第一个可用页签
+  const [activeTab, setActiveTab] = useState(tabs[0]?.key || 'instances')
+  
+  // 当tabs变化时，更新activeTab
+  useEffect(() => {
+    if (tabs.length > 0 && !tabs.find(tab => tab.key === activeTab)) {
+      setActiveTab(tabs[0].key)
+    }
+  }, [tabs, activeTab])
+  
+  // 获取服务Dashboard URL
+  useEffect(() => {
+    getServiceDashboardUrl()
+  }, [getServiceDashboardUrl])
+  
+  // 渲染页签内容
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case 'overview':
+        return serviceDashboardUrl ? (
+          <div className="relative w-full h-full">
+            <iframe
+              src={serviceDashboardUrl}
+              className="w-full h-full border-none"
+              style={{
+                position: 'absolute',
+                left: 0,
+                top: 0,
+                right: 0,
+                bottom: 0,
+                width: '100%',
+                height: '100%'
+              }}
+              frameBorder="0"
+            />
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-96">
+            <div className="text-center">
+              <Monitor className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+              <h2 className="text-xl font-semibold text-gray-900 mb-2">服务总览</h2>
+              <p className="text-gray-600">正在准备监控面板...</p>
+              <Button 
+                onClick={() => getServiceDashboardUrl()}
+                className="mt-4"
+              >
+                重新加载
+              </Button>
+            </div>
+          </div>
+        )
+      case 'instances':
+        return (
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">服务实例</h2>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-600">实例列表页面开发中...</p>
+              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 服务的所有实例信息</p>
+            </div>
+          </div>
+        )
+      case 'config':
+        return (
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">服务配置</h2>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-600">配置页面开发中...</p>
+              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 服务的配置参数</p>
+            </div>
+          </div>
+        )
+      case 'connection':
+        return (
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">连接信息</h2>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-600">连接信息页面开发中...</p>
+              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 服务的连接方式和代码示例</p>
+            </div>
+          </div>
+        )
+      case 'intro':
+        return (
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">组件介绍</h2>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-600">组件介绍页面开发中...</p>
+              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 组件的详细介绍</p>
+            </div>
+          </div>
+        )
+      case 'guide':
+        return (
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">用户指南</h2>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-600">用户指南页面开发中...</p>
+              <p className="text-sm text-gray-500 mt-2">将显示 {service.name} 的使用指南和最佳实践</p>
+            </div>
+          </div>
+        )
+      case 'queue':
+        return (
+          <div className="p-6">
+            <h2 className="text-lg font-semibold mb-4">资源配置</h2>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <p className="text-gray-600">资源配置页面开发中...</p>
+              <p className="text-sm text-gray-500 mt-2">将显示 YARN 队列和资源配置</p>
+            </div>
+          </div>
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* 页签头部 */}
+      <div className="border-b border-gray-200 bg-white px-6">
+        <div className="flex items-center justify-between py-4">
+          <h1 className="text-xl font-semibold text-gray-900">{service.name} 服务管理</h1>
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm">
+              <Link className="w-4 h-4 mr-2" />
+              WebUI
+            </Button>
+          </div>
+        </div>
+        <div className="flex space-x-8">
+          {tabs.map(tab => {
+            const Icon = tab.icon
+            return (
+              <button
+                key={tab.key}
+                className={`flex items-center space-x-2 px-1 py-4 border-b-2 font-medium text-sm transition-colors ${
+                  activeTab === tab.key
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+                onClick={() => setActiveTab(tab.key)}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+      
+      {/* 页签内容区域 */}
+      <div className={`flex-1 ${activeTab === 'overview' ? 'overflow-hidden' : 'overflow-y-auto bg-gray-50'}`}>
+        {renderTabContent()}
+      </div>
+    </div>
+  )
 }
 
 export default function ServiceLayout() {
@@ -352,11 +571,11 @@ export default function ServiceLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <FinalNavbar />
       
       {/* 主内容区域 */}
-      <div className="flex">
+      <div className="flex flex-1">
         {/* 左侧服务列表 */}
         <div className="w-72 bg-white shadow-lg border-r border-gray-200/60 min-h-screen">
           {/* 集群信息头部 */}
@@ -617,11 +836,10 @@ export default function ServiceLayout() {
         {/* 右侧内容区域 */}
         <div className="flex-1">
           {selectedService && selectedService.serviceName !== 'DATASOPHON' ? (
-            // 其他服务详情页面
-            <div className="p-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-6">{selectedService.name} 服务详情</h1>
-              <p className="text-gray-600">服务详情页面开发中...</p>
-            </div>
+            // 服务详情页面 - 页签模式
+            <ServiceDetailTabs 
+              service={selectedService} 
+            />
           ) : (
             // 总览页面 - 根据选中服务使用不同URL
             <div className="relative w-full h-full">
