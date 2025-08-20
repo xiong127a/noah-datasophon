@@ -161,14 +161,14 @@ public class LoadServiceMeta implements ApplicationRunner {
         var frameCode = framePath.getName();
         var frameInfo = saveClusterFrame(frameCode);
         
-        logger.info("处理框架: {}", frameCode);
+        logger.debug("处理框架: {}", frameCode);
         
         var files = FileUtil.loopFiles(framePath);
         var serviceFiles = files.stream()
                 .filter(file -> file.getName().endsWith(Constants.JSON_EXTENSION))
                 .toList();
         
-        logger.info("框架 {} 包含 {} 个服务定义文件", frameCode, serviceFiles.size());
+        logger.debug("框架 {} 包含 {} 个服务定义文件", frameCode, serviceFiles.size());
         
         // 使用虚拟线程处理服务文件，确保框架内服务隔离
         // 添加重试机制处理数据库死锁问题
