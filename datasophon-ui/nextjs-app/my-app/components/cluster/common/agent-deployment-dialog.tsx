@@ -272,7 +272,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
 
   // 状态信息配置
   const statusInfo: StatusInfo = {
-    text: isK8s ? "K8s模式" : "已完成",
+    text: isK8s ? "Kubernetes模式" : "已完成",
     value: isK8s ? "无需分发" : stats.success,
     total: isK8s ? "" : `/ ${stats.total} 台主机`,
     pulse: !isK8s && isDistributing
@@ -306,7 +306,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
       clusterName={cluster?.clusterName || ''}
       clusterType={clusterType}
       stepTitle="主机Agent分发"
-      stepDescription={isK8s ? "主机Agent分发 - K8s模式无需手动分发Agent" : "主机Agent分发 - 向选定的主机分发和安装Agent程序"}
+      stepDescription={isK8s ? "主机Agent分发 - Kubernetes模式无需手动分发Agent" : "主机Agent分发 - 向选定的主机分发和安装Agent程序"}
       currentStep={3}
       dialogTitle={`主机Agent分发 - ${cluster?.clusterName}`}
       actionBar={

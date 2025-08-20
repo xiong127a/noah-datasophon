@@ -81,6 +81,8 @@ export const clusterApiV1 = {
   info: {
     runningList: () => apiV1.post(API_PATHS_V1.CLUSTER_RUNNING_LIST, {}),
     detail: (clusterId: string) => apiV1.get(`${API_PATHS_V1.CLUSTER_DETAIL}/${clusterId}`),
+    get: (clusterId: string, config?: any) => 
+      apiV1.get(`${API_PATHS_V1.CLUSTER_INFO}/${clusterId}`, {}, config),
   },
 
   // 集群配置
@@ -198,9 +200,13 @@ export const clusterApiV1 = {
       type: params.type
     }, config),
     
-    // 获取基础服务列表
+    // 获取集群服务实例列表
     // 注意：集群ID通过请求头传递
-    list: (config?: any) => apiV1.post(API_PATHS_V1.CLUSTER_SERVICE_LIST, {}, config),
+    list: (config?: any) => apiV1.get(API_PATHS_V1.CLUSTER_SERVICE_INSTANCE_LIST, {}, config),
+    
+    // 删除服务实例
+    delete: (serviceInstanceId: string) => 
+      apiV1.post(API_PATHS_V1.CLUSTER_SERVICE_INSTANCE_DELETE, { serviceInstanceId }),
   },
 
   // 统一主机管理相关 - 新架构

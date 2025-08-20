@@ -345,7 +345,7 @@ export default function K8sHostValidationDialog({
         )
         
         if (configRes.data?.code !== 200) {
-          throw new Error('保存K8S配置失败: ' + (configRes.data?.msg || '未知错误'))
+          throw new Error('保存Kubernetes配置失败: ' + (configRes.data?.msg || '未知错误'))
         }
 
         // 2. 保存发现的主机到数据库
@@ -356,7 +356,7 @@ export default function K8sHostValidationDialog({
         }
       }
       
-      toast.success('K8S配置和主机保存成功')
+      toast.success('Kubernetes配置和主机保存成功')
       return Promise.resolve()
       
     } catch (error) {

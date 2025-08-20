@@ -24,8 +24,10 @@ export const API_PATHS_V1 = {
   CLUSTER_UPDATE: `${API_BASE}/cluster/update`,
   CLUSTER_DELETE: `${API_BASE}/cluster/delete`,
   CLUSTER_AUTH: `${API_BASE}/cluster/user/saveClusterManager`,
-  CLUSTER_SERVICE_LIST: `${API_BASE}/cluster/service/list`,
+  CLUSTER_SERVICE_INSTANCE_LIST: `${API_BASE}/cluster/service/instance/list`,
+  CLUSTER_SERVICE_INSTANCE_DELETE: `${API_BASE}/cluster/service/instance/delete`,
   CLUSTER_RUNNING_LIST: `${API_BASE}/cluster/runningClusterList`,
+  CLUSTER_INFO: `${API_BASE}/cluster/info`,
   
   // Kubernetes相关 - v1
   CLUSTER_NAMESPACES: `${API_BASE}/cluster/namespaces`,
