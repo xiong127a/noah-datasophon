@@ -60,10 +60,10 @@ import java.io.File;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 import java.util.function.Function;
+
+import org.apache.maven.artifact.versioning.ComparableVersion;
 
 import static com.datasophon.api.master.ActorUtils.getActorRefName;
 
@@ -102,7 +102,7 @@ public class LoadServiceMeta implements ApplicationRunner {
         logger.info("""
                 ============================================================
                   开始加载服务元数据 (DataSophon Service Meta Loader)
-                  使用JDK21虚拟线程实现框架隔离处理
+                  改为顺序执行避免数据库死锁
                 ============================================================
                 """);
 
@@ -115,23 +115,36 @@ public class LoadServiceMeta implements ApplicationRunner {
         
         logger.info("发现 {} 个框架目录，{} 个集群", ddps.length, loadContext.clusterCount());
         
-        // 使用JDK21虚拟线程实现框架隔离处理
-        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var frameTasks = Arrays.stream(ddps)
-                .map(framePath -> 
-                    executor.submit(() -> processFrameDirectory(framePath, loadContext))
-                )
+        // 🔧 使用Maven ComparableVersion自动按版本号排序，避免并发死锁
+        var sortedFrames = Arrays.stream(ddps)
+                .sorted((f1, f2) -> {
+                    var version1 = extractVersion(f1.getName());
+                    var version2 = extractVersion(f2.getName());
+                    
+                    if (version1 != null && version2 != null) {
+                        // 两个都有版本号，按版本号排序
+                        return new ComparableVersion(version1).compareTo(new ComparableVersion(version2));
+                    } else if (version1 != null) {
+                        // 只有第一个有版本号，有版本号的优先
+                        return -1;
+                    } else if (version2 != null) {
+                        // 只有第二个有版本号，有版本号的优先
+                        return 1;
+                    } else {
+                        // 都没有版本号，按名称排序
+                        return f1.getName().compareTo(f2.getName());
+                    }
+                })
                 .toList();
-            
-            // 等待所有框架处理完成，确保完全隔离
-            frameTasks.forEach(task -> {
-                try {
-                    task.get();
-                } catch (InterruptedException | ExecutionException e) {
-                    logger.error("框架处理失败: {}", e.getMessage(), e);
-                    Thread.currentThread().interrupt();
-                }
-            });
+        
+        logger.info("框架处理顺序: {}", 
+                sortedFrames.stream().map(File::getName).collect(Collectors.joining(" → ")));
+        
+        // 按排序后的顺序处理所有框架
+        for (var framePath : sortedFrames) {
+            logger.info("开始处理框架: {}", framePath.getName());
+            processFrameDirectory(framePath, loadContext);
+            logger.info("框架 {} 处理完成", framePath.getName());
         }
         
         // 启动服务缓存同步Actor
@@ -155,7 +168,7 @@ public class LoadServiceMeta implements ApplicationRunner {
     }
 
     /**
-     * 处理单个框架目录 - 使用JDK 21新特性
+     * 处理单个框架目录 - 改为顺序执行避免死锁
      */
     private void processFrameDirectory(File framePath, LoadContext loadContext) {
         var frameCode = framePath.getName();
@@ -166,47 +179,47 @@ public class LoadServiceMeta implements ApplicationRunner {
         var files = FileUtil.loopFiles(framePath);
         var serviceFiles = files.stream()
                 .filter(file -> file.getName().endsWith(Constants.JSON_EXTENSION))
+                .sorted(Comparator.comparing(file -> file.getParentFile().getName())) // 按服务名排序
                 .toList();
         
         logger.debug("框架 {} 包含 {} 个服务定义文件", frameCode, serviceFiles.size());
         
-        // 使用虚拟线程处理服务文件，确保框架内服务隔离
-        // 添加重试机制处理数据库死锁问题
+        // 🔧 改为顺序处理服务文件，避免并发死锁
         var parseResults = new ArrayList<ParseResult>();
-        try (var serviceExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var serviceTasks = serviceFiles.stream()
-                .map(file -> 
-                    serviceExecutor.submit(() -> parseServiceFile(frameCode, frameInfo, file, loadContext))
-                )
-                .toList();
+        var successCount = 0;
+        
+        for (var serviceFile : serviceFiles) {
+            var serviceName = serviceFile.getParentFile().getName();
+            logger.debug("开始处理服务: {} (框架: {})", serviceName, frameCode);
             
-            // 收集所有服务处理结果
-            for (var task : serviceTasks) {
-                try {
-                    parseResults.add(task.get());
-                } catch (InterruptedException | ExecutionException e) {
-                    logger.error("服务文件处理失败: {}", e.getMessage(), e);
-                    parseResults.add(ParseResult.Failure.of("未知服务", "任务执行异常", e));
-                    Thread.currentThread().interrupt();
+            try {
+                var parseResult = parseServiceFile(frameCode, frameInfo, serviceFile, loadContext);
+                parseResults.add(parseResult);
+                
+                if (parseResult.isSuccess()) {
+                    successCount++;
+                    logger.debug("服务 {} 处理成功", serviceName);
+                } else {
+                    var failure = (ParseResult.Failure) parseResult;
+                    logger.error("服务 {} 处理失败: {}", serviceName, failure.fullErrorMessage());
                 }
+            } catch (Exception e) {
+                var failure = ParseResult.Failure.of(serviceName, "服务处理异常", e);
+                parseResults.add(failure);
+                logger.error("服务 {} 处理异常: {}", serviceName, e.getMessage(), e);
             }
         }
         
-        // 统计处理结果
-        var successCount = parseResults.stream()
-                .mapToLong(result -> result.isSuccess() ? 1 : 0)
-                .sum();
-        
         var failureCount = parseResults.size() - successCount;
         
-        // 记录失败的服务
-        parseResults.stream()
-                .filter(ParseResult::isFailure)
-                .map(result -> (ParseResult.Failure) result)
-                .forEach(failure -> logger.error("""
-                        服务 {} 解析失败:
-                        错误信息: {}
-                        """, failure.serviceName(), failure.fullErrorMessage()));
+        // 记录失败的服务汇总
+        if (failureCount > 0) {
+            var failedServices = parseResults.stream()
+                    .filter(ParseResult::isFailure)
+                    .map(result -> ((ParseResult.Failure) result).serviceName())
+                    .collect(Collectors.joining(", "));
+            logger.warn("框架 {} 失败服务: {}", frameCode, failedServices);
+        }
         
         logger.info("框架 {} 处理完成: 成功 {}, 失败 {}", frameCode, successCount, failureCount);
     }
@@ -451,6 +464,33 @@ public class LoadServiceMeta implements ApplicationRunner {
             // 根据 IP 地址获取子网
             return getSubnetFromIp(ipAddress);
         }
+        return null;
+    }
+    
+    /**
+     * 从框架名称中提取版本号
+     * 例如: "DDP-1.2.0" → "1.2.0", "HADOOP-3.3.4" → "3.3.4"
+     * 
+     * @param frameName 框架名称
+     * @return 版本号字符串，如果没有找到则返回null
+     */
+    private String extractVersion(String frameName) {
+        if (StringUtils.isBlank(frameName)) {
+            return null;
+        }
+        
+        // 使用正则表达式匹配版本号: 数字.数字.数字 (可能还有更多点分隔的数字)
+        // 支持格式: 1.2.0, 1.2.3, 3.3.4, 2.7.3-cdh6.3.2 等
+        var versionPattern = java.util.regex.Pattern.compile("(\\d+(?:\\.\\d+)*(?:-[\\w.]+)?)");
+        var matcher = versionPattern.matcher(frameName);
+        
+        if (matcher.find()) {
+            var version = matcher.group(1);
+            logger.debug("从框架 '{}' 中提取版本号: '{}'", frameName, version);
+            return version;
+        }
+        
+        logger.debug("框架 '{}' 中未找到版本号", frameName);
         return null;
     }
 

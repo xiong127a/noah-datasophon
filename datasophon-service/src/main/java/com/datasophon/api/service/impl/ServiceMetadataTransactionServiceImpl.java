@@ -43,7 +43,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.Executors;
 
 import static com.datasophon.common.Constants.GENERAL;
 
@@ -79,6 +78,7 @@ public class ServiceMetadataTransactionServiceImpl implements ServiceMetadataTra
     @Override
     @Transactional(rollbackFor = Exception.class)
     public FrameServiceEntity saveFrameServiceInTransaction(ServiceMetaConfig config) {
+        // 🔧 改为顺序执行已避免死锁问题，无需重试机制
         // 使用新的非异常方法查找服务
         var serviceDto = frameServiceService.findServiceByFrameIdAndServiceName(
                 config.frameInfo().getId(), config.serviceName()).orElse(null);
@@ -123,22 +123,13 @@ public class ServiceMetadataTransactionServiceImpl implements ServiceMetadataTra
     public void saveFrameServiceRoleInTransaction(ServiceMetaConfig config, FrameServiceEntity serviceEntity) {
         var serviceRoles = config.serviceRoles();
         
-        // 使用虚拟线程处理服务角色，确保角色级别的隔离
-        try (var roleExecutor = Executors.newVirtualThreadPerTaskExecutor()) {
-            var roleTasks = serviceRoles.stream()
-                .map(serviceRole -> 
-                    roleExecutor.submit(() -> processServiceRole(config, serviceEntity, serviceRole))
-                )
-                .toList();
-            
-            // 等待所有角色处理完成
-            roleTasks.forEach(task -> {
-                try {
-                    task.get();
-                } catch (Exception e) {
-                    throw new RuntimeException("服务角色处理失败", e);
-                }
-            });
+        // 🔧 改为顺序处理服务角色，避免并发死锁
+        for (var serviceRole : serviceRoles) {
+            try {
+                processServiceRole(config, serviceEntity, serviceRole);
+            } catch (Exception e) {
+                throw new RuntimeException("服务角色 " + serviceRole.getName() + " 处理失败", e);
+            }
         }
     }
 
