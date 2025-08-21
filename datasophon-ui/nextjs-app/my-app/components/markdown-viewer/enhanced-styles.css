@@ -589,6 +589,10 @@
     transform: translateX(280px);
   }
   
+  .markdown-toolbar {
+    margin-left: 0; /* 移动端工具栏不需要左边距 */
+  }
+  
   .markdown-content {
     margin-left: 0;
   }

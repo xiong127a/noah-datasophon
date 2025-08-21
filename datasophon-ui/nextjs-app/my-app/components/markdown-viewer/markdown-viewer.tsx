@@ -12,11 +12,10 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import remarkToc from 'remark-toc'
-import rehypeRaw from 'rehype-raw'
+
 import rehypeSlug from 'rehype-slug'
 import rehypeAutolinkHeadings from 'rehype-autolink-headings'
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism'
+
 import { 
   AlertCircle, 
   BookOpen, 
@@ -37,7 +36,6 @@ import {
   MarkdownViewerProps, 
   MarkdownViewerState, 
   TableOfContentsItem,
-  CodeBlockProps,
   ImageProps,
   LinkProps
 } from './types'
@@ -108,9 +106,6 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
         loading: false,
         error: null
       }))
-
-                // 延迟生成目录，确保DOM已渲染
-      setTimeout(() => generateTableOfContents(), 500)
       
     } catch (error) {
       console.error('获取文档失败:', error)
@@ -120,7 +115,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
         error: error instanceof Error ? error.message : '获取文档失败'
       }))
     }
-      }, [effectiveClusterId, serviceId, docType])
+  }, [effectiveClusterId, serviceId, docType])
 
   // 生成目录
   const generateTableOfContents = useCallback(() => {
@@ -166,6 +161,17 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
 
     setState(prev => ({ ...prev, toc: tocItems }))
   }, [])
+
+  // 在内容加载完成后生成目录
+  useEffect(() => {
+    if (state.hasContent && state.content && !state.loading) {
+      // 延迟生成目录，确保DOM已渲染
+      const timer = setTimeout(() => {
+        generateTableOfContents()
+      }, 500)
+      return () => clearTimeout(timer)
+    }
+  }, [state.hasContent, state.content, state.loading, generateTableOfContents])
 
   // 滚动到指定标题
   const scrollToHeading = useCallback((id: string) => {
@@ -214,7 +220,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // 初始化数据获取
   useEffect(() => {
     fetchDocument()
-  }, [effectiveClusterId, serviceId, docType])
+  }, [fetchDocument])
 
   // 组件卸载时清理图片缓存
   useEffect(() => {
@@ -225,94 +231,9 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
 
 
 
-  // 复制到剪贴板功能
-  const copyToClipboard = useCallback(async (text: string): Promise<boolean> => {
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text)
-        return true
-      } else {
-        // 降级方案
-        const textArea = document.createElement('textarea')
-        textArea.value = text
-        textArea.style.position = 'fixed'
-        textArea.style.left = '-999999px'
-        textArea.style.top = '-999999px'
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        const result = document.execCommand('copy')
-        document.body.removeChild(textArea)
-        return result
-      }
-    } catch {
-      return false
-    }
-  }, [])
 
-  // 自定义代码块渲染
-  const CodeBlock: React.FC<CodeBlockProps> = ({ inline, className, children }) => {
-    const [copied, setCopied] = useState(false)
-    const match = /language-(\w+)/.exec(className || '')
-    const language = match ? match[1] : ''
-    const code = String(children).replace(/\n$/, '')
 
-    const handleCopy = useCallback(async () => {
-      const success = await copyToClipboard(code)
-      if (success) {
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-      }
-    }, [code])
 
-    if (inline) {
-      return (
-        <code className="inline-code">
-          {children}
-        </code>
-      )
-    }
-
-    return (
-      <div className="code-block-container">
-        <button 
-          className={`copy-code-btn ${copied ? 'copied' : ''}`}
-          onClick={handleCopy}
-          title={copied ? '已复制!' : '复制代码'}
-        >
-          {copied ? '✓ 已复制' : '复制'}
-        </button>
-        <SyntaxHighlighter
-          style={vscDarkPlus}
-          language={language || 'text'}
-          PreTag="div"
-          customStyle={{
-            margin: 0,
-            borderRadius: 0,
-            fontSize: '15px',
-            lineHeight: '1.5',
-            background: 'transparent',
-            padding: 0,
-            fontWeight: '500'
-          }}
-          codeTagProps={{
-            style: {
-              fontFamily: "'Consolas', 'Monaco', 'Courier New', 'Roboto Mono', 'SF Mono', 'Cascadia Code', monospace",
-              fontSize: '15px',
-              lineHeight: '1.5',
-              letterSpacing: '0.02em',
-              fontWeight: '500',
-              WebkitFontSmoothing: 'antialiased',
-              MozOsxFontSmoothing: 'grayscale',
-              textRendering: 'optimizeLegibility'
-            }
-          }}
-        >
-          {code}
-        </SyntaxHighlighter>
-      </div>
-    )
-  }
 
   // 自定义图片渲染 - 使用缓存机制防止重复请求
   const ImageComponent: React.FC<ImageProps> = ({ src, alt, title }) => {
@@ -550,19 +471,19 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
           </div>
         </div>
 
+        {/* 侧边栏目录 - 移到外层确保fixed定位生效 */}
+        {showToc && (
+          <div className="markdown-sidebar">
+            <TableOfContents
+              items={state.toc}
+              activeId={state.activeHeading || undefined}
+              onItemClick={scrollToHeading}
+            />
+          </div>
+        )}
+
         {/* 主要内容区域 */}
         <div className="markdown-layout">
-          {/* 侧边栏目录 */}
-          {showToc && (
-            <div className="markdown-sidebar">
-              <TableOfContents
-                items={state.toc}
-                activeId={state.activeHeading || undefined}
-                onItemClick={scrollToHeading}
-              />
-            </div>
-          )}
-
           {/* 文档内容 */}
           <div 
             ref={contentRef}
