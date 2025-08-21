@@ -20,9 +20,6 @@ export type {
   TableOfContentsProps,
   ReadingProgressProps,
   MarkdownViewerState,
-  ReadingSettings,
-  Theme,
-  FontSize,
   LoadingState
 } from './types'
 

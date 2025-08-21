@@ -21,7 +21,6 @@ import {
   BookOpen, 
   Download, 
   Search, 
-  Settings, 
   Eye
 } from 'lucide-react'
 
@@ -68,12 +67,6 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   const [searchResults, setSearchResults] = useState<{ index: number; total: number }>({ index: 0, total: 0 })
   const [isSearching, setIsSearching] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [settings, setSettings] = useState({
-    fontSize: 'medium', // small, medium, large
-    theme: 'light', // light, dark
-    readingWidth: 'normal' // narrow, normal, wide
-  })
 
   // 检测移动端
   useEffect(() => {
@@ -493,17 +486,9 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
     }
   }, [state.hasContent, serviceName, docType])
 
-  // 点击外部关闭设置菜单
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (showSettings && !(event.target as Element).closest('.settings-menu')) {
-        setShowSettings(false)
-      }
-    }
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [showSettings])
+
+
 
   // 组件卸载时清理图片缓存
   useEffect(() => {
@@ -776,100 +761,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
                   <Eye className="w-4 h-4" />
                 </button>
                 
-                <div className="relative settings-menu">
-                  <button
-                    onClick={() => setShowSettings(!showSettings)}
-                    className={`p-2.5 rounded-xl transition-all duration-200 shadow-sm border ${
-                      showSettings
-                        ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white border-indigo-400 shadow-indigo-100'
-                        : 'text-gray-600 hover:bg-white hover:text-indigo-600 border-gray-200 hover:border-indigo-300 hover:shadow-md'
-                    }`}
-                    title="设置"
-                  >
-                    <Settings className="w-4 h-4" />
-                  </button>
-                  
-                  {/* 设置菜单 */}
-                  {showSettings && (
-                    <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-200 py-3 z-50">
-                      <div className="px-4 pb-2 border-b border-gray-100">
-                        <h3 className="text-sm font-semibold text-gray-800">阅读设置</h3>
-                      </div>
-                      
-                      {/* 字体大小 */}
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <label className="block text-xs font-medium text-gray-600 mb-2">字体大小</label>
-                        <div className="flex space-x-2">
-                          {[
-                            { value: 'small', label: '小' },
-                            { value: 'medium', label: '中' },
-                            { value: 'large', label: '大' }
-                          ].map((size) => (
-                            <button
-                              key={size.value}
-                              onClick={() => setSettings(prev => ({ ...prev, fontSize: size.value }))}
-                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                                settings.fontSize === size.value
-                                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                              }`}
-                            >
-                              {size.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* 主题模式 */}
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <label className="block text-xs font-medium text-gray-600 mb-2">主题模式</label>
-                        <div className="flex space-x-2">
-                          {[
-                            { value: 'light', label: '浅色', icon: '☀️' },
-                            { value: 'dark', label: '深色', icon: '🌙' }
-                          ].map((theme) => (
-                            <button
-                              key={theme.value}
-                              onClick={() => setSettings(prev => ({ ...prev, theme: theme.value }))}
-                              className={`flex items-center space-x-1 px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                                settings.theme === theme.value
-                                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                              }`}
-                            >
-                              <span>{theme.icon}</span>
-                              <span>{theme.label}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      
-                      {/* 阅读宽度 */}
-                      <div className="px-4 py-3">
-                        <label className="block text-xs font-medium text-gray-600 mb-2">阅读宽度</label>
-                        <div className="flex space-x-2">
-                          {[
-                            { value: 'narrow', label: '窄' },
-                            { value: 'normal', label: '普通' },
-                            { value: 'wide', label: '宽' }
-                          ].map((width) => (
-                            <button
-                              key={width.value}
-                              onClick={() => setSettings(prev => ({ ...prev, readingWidth: width.value }))}
-                              className={`px-3 py-1.5 text-xs rounded-lg transition-colors ${
-                                settings.readingWidth === width.value
-                                  ? 'bg-blue-100 text-blue-700 border border-blue-200'
-                                  : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                              }`}
-                            >
-                              {width.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+
                 
                 <button
                   onClick={handleDownloadPDF}
@@ -969,15 +861,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
           {/* 文档内容 */}
           <div 
             ref={contentRef}
-            className={`markdown-content ${!showToc ? 'full-width' : ''} ${
-              settings.fontSize === 'small' ? 'text-sm' : 
-              settings.fontSize === 'large' ? 'text-lg' : 'text-base'
-            } ${
-              settings.theme === 'dark' ? 'dark-theme' : ''
-            } ${
-              settings.readingWidth === 'narrow' ? 'max-w-2xl' :
-              settings.readingWidth === 'wide' ? 'max-w-none' : 'max-w-4xl'
-            }`}
+            className={`markdown-content ${!showToc ? 'full-width' : ''}`}
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkToc]}

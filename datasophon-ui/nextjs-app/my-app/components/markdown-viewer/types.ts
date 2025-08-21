@@ -65,17 +65,3 @@ export interface LinkProps {
 
 // 文档加载状态
 export type LoadingState = 'idle' | 'loading' | 'success' | 'error'
-
-// 主题类型
-export type Theme = 'light' | 'dark' | 'system'
-
-// 字体大小设置
-export type FontSize = 'small' | 'medium' | 'large' | 'extra-large'
-
-// 阅读设置
-export interface ReadingSettings {
-  theme: Theme
-  fontSize: FontSize
-  showToc: boolean
-  showProgress: boolean
-}
