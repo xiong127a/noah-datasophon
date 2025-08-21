@@ -73,6 +73,9 @@ interface ServiceFiltersProps {
     filtered: number
     hasActiveFilters: boolean
   }
+
+  // 是否隐藏服务类型过滤器（添加服务模式下使用）
+  hideServiceTypeFilter?: boolean
 }
 
 const ServiceFilters: React.FC<ServiceFiltersProps> = ({
@@ -88,7 +91,8 @@ const ServiceFilters: React.FC<ServiceFiltersProps> = ({
   onCategoryChange,
   availableCategories = [],
   onClearFilters,
-  filterStats
+  filterStats,
+  hideServiceTypeFilter = false
 }) => {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
@@ -114,30 +118,32 @@ const ServiceFilters: React.FC<ServiceFiltersProps> = ({
           )}
         </div>
 
-        {/* 模式切换按钮组 */}
-        <TooltipProvider>
-          <div className="flex bg-gray-100 rounded-lg p-0.5">
-            {SERVICE_TYPE_OPTIONS.map((option) => (
-              <Tooltip key={option.value}>
-                <TooltipTrigger asChild>
-                  <button
-                    onClick={() => onServiceTypeChange(option.value as ServiceType)}
-                    className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                      serviceTypeFilter === option.value
-                        ? 'bg-white text-blue-600 shadow-sm border border-blue-200'
-                        : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>{option.description}</p>
-                </TooltipContent>
-              </Tooltip>
-            ))}
-          </div>
-        </TooltipProvider>
+        {/* 模式切换按钮组 - 仅在非添加服务模式下显示 */}
+        {!hideServiceTypeFilter && (
+          <TooltipProvider>
+            <div className="flex bg-gray-100 rounded-lg p-0.5">
+              {SERVICE_TYPE_OPTIONS.map((option) => (
+                <Tooltip key={option.value}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => onServiceTypeChange(option.value as ServiceType)}
+                      className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
+                        serviceTypeFilter === option.value
+                          ? 'bg-white text-blue-600 shadow-sm border border-blue-200'
+                          : 'text-gray-600 hover:text-gray-800'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{option.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
+        )}
       </div>
 
       {/* 搜索状态提示 */}

@@ -64,6 +64,7 @@ export const API_PATHS_V1 = {
   // 框架相关 - v1
   FRAME_LIST: `${API_BASE}/frame/list`,
   FRAME_SERVICE_DELETE: `${API_BASE}/frame/service/delete`,
+  FRAME_SERVICE_LIST: `${API_BASE}/frame/service/list`, // 添加服务时使用的接口
   FRAME_SERVICE_LIST_WITH_REQUIRED: `${API_BASE}/frame/service/listWithRequired`,
   
   // 服务角色分配相关 - v1 (Step5)

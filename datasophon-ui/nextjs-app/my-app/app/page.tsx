@@ -34,6 +34,9 @@ import IntroTab from '@/components/service-tabs/intro-tab'
 import GuideTab from '@/components/service-tabs/guide-tab'
 import QueueTab from '@/components/service-tabs/queue-tab'
 
+// 导入对话框组件
+import ServiceSelectionDialog from '@/components/cluster/common/service-selection-dialog'
+
 // 导入工具函数
 import { hasOverviewTab, hasConnectionTab } from '@/components/service-tabs/utils/service-tab-utils'
 
@@ -211,6 +214,9 @@ export default function ServiceLayout() {
   // 总服务选项菜单状态
   const [showServiceOptionMenu, setShowServiceOptionMenu] = useState(false)
   const [serviceOptionMenuPosition, setServiceOptionMenuPosition] = useState({ top: 0, left: 0 })
+  
+  // 添加服务向导状态
+  const [showAddServiceWizard, setShowAddServiceWizard] = useState(false)
   
   // 集群总览状态
   const [dashboardLoading, setDashboardLoading] = useState(false)
@@ -480,6 +486,86 @@ export default function ServiceLayout() {
       document.removeEventListener('click', handleClickOutside)
     }
   }, [handleClickOutside])
+
+  // 处理总服务操作
+  const handleGlobalServiceAction = async (action: 'add' | 'start-all' | 'stop-all' | 'restart-needed') => {
+    setShowServiceOptionMenu(false)
+    
+    switch (action) {
+      case 'add':
+        // 添加服务功能 - 打开服务安装向导
+        console.log('打开添加服务向导')
+        setShowAddServiceWizard(true)
+        break
+        
+      case 'start-all':
+        // 启动所有服务
+        if (services.length === 0) {
+          alert('没有可启动的服务')
+          return
+        }
+        const confirmStart = confirm(`确认启动所有 ${services.length} 个服务吗？`)
+        if (!confirmStart) return
+        
+        try {
+          // 获取所有服务的ID
+          const serviceIds = services.map(s => s.serviceId).filter(Boolean)
+          console.log('启动所有服务:', serviceIds)
+          
+          // TODO: 调用批量启动API
+          alert('启动所有服务功能开发中，敬请期待！')
+        } catch (error) {
+          console.error('启动所有服务失败:', error)
+          alert('启动所有服务失败，请重试')
+        }
+        break
+        
+      case 'stop-all':
+        // 停止所有服务
+        if (services.length === 0) {
+          alert('没有可停止的服务')
+          return
+        }
+        const confirmStop = confirm(`确认停止所有 ${services.length} 个服务吗？`)
+        if (!confirmStop) return
+        
+        try {
+          // 获取所有服务的ID  
+          const serviceIds = services.map(s => s.serviceId).filter(Boolean)
+          console.log('停止所有服务:', serviceIds)
+          
+          // TODO: 调用批量停止API
+          alert('停止所有服务功能开发中，敬请期待！')
+        } catch (error) {
+          console.error('停止所有服务失败:', error)
+          alert('停止所有服务失败，请重试')
+        }
+        break
+        
+      case 'restart-needed':
+        // 重启所有需要重启的服务
+        const needRestartServices = services.filter(s => s.needRestart)
+        if (needRestartServices.length === 0) {
+          alert('当前没有需要重启的服务')
+          return
+        }
+        
+        const confirmRestart = confirm(`确认重启 ${needRestartServices.length} 个需要重启的服务吗？`)
+        if (!confirmRestart) return
+        
+        try {
+          const serviceIds = needRestartServices.map(s => s.serviceId).filter(Boolean)
+          console.log('重启需要重启的服务:', serviceIds, needRestartServices.map(s => s.name))
+          
+          // TODO: 调用批量重启API
+          alert('重启所有需要重启的服务功能开发中，敬请期待！')
+        } catch (error) {
+          console.error('重启服务失败:', error)
+          alert('重启服务失败，请重试')
+        }
+        break
+    }
+  }
 
   // 初始化数据
   useEffect(() => {
@@ -903,23 +989,57 @@ export default function ServiceLayout() {
             minWidth: '220px'
           }}
         >
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2">
+          <button 
+            className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2"
+            onClick={() => handleGlobalServiceAction('add')}
+          >
             <Plus className="w-4 h-4 mr-3 text-blue-600" />
             <span className="font-medium">添加服务</span>
           </button>
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-green-50 hover:text-green-700 flex items-center transition-colors rounded-lg mx-2">
+          <button 
+            className="w-full px-4 py-3 text-left text-sm hover:bg-green-50 hover:text-green-700 flex items-center transition-colors rounded-lg mx-2"
+            onClick={() => handleGlobalServiceAction('start-all')}
+          >
             <Play className="w-4 h-4 mr-3 text-green-600" />
             <span className="font-medium">启动所有</span>
           </button>
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-yellow-50 hover:text-yellow-700 flex items-center transition-colors rounded-lg mx-2">
+          <button 
+            className="w-full px-4 py-3 text-left text-sm hover:bg-yellow-50 hover:text-yellow-700 flex items-center transition-colors rounded-lg mx-2"
+            onClick={() => handleGlobalServiceAction('stop-all')}
+          >
             <Pause className="w-4 h-4 mr-3 text-yellow-600" />
             <span className="font-medium">停止所有</span>
           </button>
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2">
+          <button 
+            className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2"
+            onClick={() => handleGlobalServiceAction('restart-needed')}
+          >
             <RotateCcw className="w-4 h-4 mr-3 text-blue-600" />
             <span className="font-medium">重启所有需要重启的服务</span>
           </button>
         </div>
+      )}
+
+      {/* 添加服务向导对话框 */}
+      {showAddServiceWizard && currentCluster && (
+        <ServiceSelectionDialog
+          open={showAddServiceWizard}
+          onOpenChange={setShowAddServiceWizard}
+          cluster={{
+            id: currentCluster.id.toString(),
+            clusterName: currentCluster.clusterName,
+            depType: currentCluster.depType || 'PVM',
+            clusterCode: currentCluster.id.toString()
+          }}
+          clusterType={currentCluster.depType || 'PVM'}
+          isAddServiceMode={true}
+          onComplete={(step3Data) => {
+            console.log('服务选择完成:', step3Data)
+            setShowAddServiceWizard(false)
+            // 服务选择完成后刷新服务列表
+            fetchServices()
+          }}
+        />
       )}
     </div>
   )

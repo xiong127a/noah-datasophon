@@ -62,6 +62,8 @@ export interface ServiceSelectionDialogProps {
   onComplete: (step3Data: Step3Data) => void
   /** 返回上一步回调 */
   onPrevious?: () => void
+  /** 是否为添加服务模式（直接从选择服务开始） */
+  isAddServiceMode?: boolean
 }
 
 export interface ServiceListResponse {

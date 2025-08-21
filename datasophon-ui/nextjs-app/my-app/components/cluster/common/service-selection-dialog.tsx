@@ -51,17 +51,23 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
   cluster,
   clusterType,
   onComplete,
-  onPrevious
+  onPrevious,
+  isAddServiceMode = false
 }) => {
   // 视图模式状态
   const [viewMode, setViewMode] = useState<'table' | 'grid'>('grid')
 
-  // 计算步骤信息
+  // 计算步骤信息 - 支持添加服务模式
   const safeClusterType = clusterType || ''
   const isK8s = ClusterTypeUtil.isKubernetes(safeClusterType)
   const depType = isK8s ? ClusterType.KUBERNETES : ClusterType.PVM
-  const steps = getStepsByType(StepsType.NORMAL, depType)
-  const currentStepNumber = isK8s ? 3 : 4
+  
+  // 根据模式选择步骤类型
+  const stepsType = isAddServiceMode ? StepsType.ADD_SERVICE : StepsType.NORMAL
+  const steps = getStepsByType(stepsType, depType)
+  
+  // 添加服务模式下，当前步骤是第1步（选择服务）；正常模式下是第3/4步
+  const currentStepNumber = isAddServiceMode ? 1 : (isK8s ? 3 : 4)
 
   // 使用服务选择hook管理主要业务逻辑
   const {
@@ -81,7 +87,8 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
     hasRequiredServices
   } = useServiceSelection({
     clusterId: cluster?.id,
-    onComplete
+    onComplete,
+    isAddServiceMode
   })
 
   // 使用高级过滤器hook
@@ -180,10 +187,13 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
       onClose={() => onOpenChange(false)}
       clusterName={cluster?.clusterName || ''}
       clusterType={safeClusterType}
-      stepTitle="选择大数据服务"
-      stepDescription="选择大数据服务 - 根据您的需求选择要部署的大数据服务组件"
+      stepTitle={isAddServiceMode ? "添加服务" : "选择大数据服务"}
+      stepDescription={isAddServiceMode 
+        ? "添加服务 - 选择要添加到现有集群的大数据服务组件"
+        : "选择大数据服务 - 根据您的需求选择要部署的大数据服务组件"
+      }
       currentStep={currentStepNumber}
-      dialogTitle={`选择大数据服务 - ${cluster?.clusterName}`}
+      dialogTitle={`${isAddServiceMode ? "添加服务" : "选择大数据服务"} - ${cluster?.clusterName}`}
       actionBar={actionBar}
     >
       {/* 过滤器区域 */}
@@ -202,6 +212,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
           availableCategories={availableCategories}
           onClearFilters={clearFilters}
           filterStats={filterStats}
+          hideServiceTypeFilter={isAddServiceMode}
         />
       </div>
 

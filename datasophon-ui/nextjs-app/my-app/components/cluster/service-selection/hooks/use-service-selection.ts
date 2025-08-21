@@ -18,6 +18,7 @@ interface UseServiceSelectionOptions {
   clusterId?: string // 修复：20位long精度问题
   initialServiceType?: ServiceType
   onComplete?: (data: Step3Data) => void
+  isAddServiceMode?: boolean // 是否为添加服务模式
 }
 
 interface UseServiceSelectionReturn {
@@ -55,7 +56,8 @@ interface UseServiceSelectionReturn {
 export const useServiceSelection = ({
   clusterId,
   initialServiceType = ServiceType.MINIMAL,
-  onComplete
+  onComplete,
+  isAddServiceMode = false
 }: UseServiceSelectionOptions = {}): UseServiceSelectionReturn => {
   // 基础状态
   const [services, setServices] = useState<Service[]>([])
@@ -95,18 +97,17 @@ export const useServiceSelection = ({
     
     try {
       const headers = createClusterHeaders(clusterId)
-      const requestData = { type: serviceTypeFilter }
       
       let response
-      try {
-        // 尝试主要API
-        const params = new URLSearchParams(requestData).toString()
+      if (isAddServiceMode) {
+        // 添加服务模式：调用 /api/frame/service/list（GET请求，集群ID从请求头获取）
+        response = await apiV1.get(API_PATHS_V1.FRAME_SERVICE_LIST, { headers })
+      } else {
+        // 新建集群模式：调用 /api/frame/service/listWithRequired（GET请求，传type参数，集群ID从请求头获取）
+        const params = new URLSearchParams({ 
+          type: serviceTypeFilter
+        }).toString()
         const url = `${API_PATHS_V1.FRAME_SERVICE_LIST_WITH_REQUIRED}?${params}`
-        response = await apiV1.get(url, { headers })
-      } catch {
-        // 尝试备用API
-        const params = new URLSearchParams(requestData).toString()
-        const url = `${API_PATHS_V1.CLUSTER_SERVICE_LIST}?${params}`
         response = await apiV1.get(url, { headers })
       }
       
@@ -121,18 +122,24 @@ export const useServiceSelection = ({
         
         setServices(servicesData)
         
-        // 数据加载完成后，根据新的必需服务列表重新设置选中状态
-        const newRequiredServices = servicesData.filter((s: Service) => s.isRequired)
-        const newRequiredIds = newRequiredServices.map((s: Service) => s.id)
-        
-        // 自动选择所有必需服务，取消所有非必需服务
-        setSelectedServiceIds(newRequiredIds)
-        
-        // 显示切换完成的Toast消息
-        if (serviceTypeFilter === ServiceType.MINIMAL) {
-          toast.success(`✅ 最小化模式：已自动选择 ${newRequiredIds.length} 个必需服务`)
+        if (isAddServiceMode) {
+          // 添加服务模式：自动选中已安装的服务
+          const installedServices = servicesData.filter((s: Service) => s.installed)
+          const installedIds = installedServices.map((s: Service) => s.id)
+          setSelectedServiceIds(installedIds)
+          
+          toast.success(`已加载 ${servicesData.length} 个可选服务${installedIds.length > 0 ? `，${installedIds.length} 个已安装` : ''}`)
         } else {
-          toast.success(`✅ 自定义模式：已自动选择 ${newRequiredIds.length} 个必需服务，可继续选择其他服务`)
+          // 新建集群模式：自动选中必需服务
+          const newRequiredServices = servicesData.filter((s: Service) => s.isRequired)
+          const newRequiredIds = newRequiredServices.map((s: Service) => s.id)
+          setSelectedServiceIds(newRequiredIds)
+          
+          if (serviceTypeFilter === ServiceType.MINIMAL) {
+            toast.success(`✅ 最小化模式：已自动选择 ${newRequiredIds.length} 个必需服务`)
+          } else {
+            toast.success(`✅ 自定义模式：已自动选择 ${newRequiredIds.length} 个必需服务，可继续选择其他服务`)
+          }
         }
       } else if (response.data?.code === 200 && response.data?.data) {
         const rawServicesData = response.data.data
@@ -145,18 +152,24 @@ export const useServiceSelection = ({
         
         setServices(servicesData)
         
-        // 数据加载完成后，根据新的必需服务列表重新设置选中状态
-        const newRequiredServices = servicesData.filter((s: Service) => s.isRequired)
-        const newRequiredIds = newRequiredServices.map((s: Service) => s.id)
-        
-        // 自动选择所有必需服务，取消所有非必需服务
-        setSelectedServiceIds(newRequiredIds)
-        
-        // 显示切换完成的Toast消息
-        if (serviceTypeFilter === ServiceType.MINIMAL) {
-          toast.success(`✅ 最小化模式：已自动选择 ${newRequiredIds.length} 个必需服务`)
+        if (isAddServiceMode) {
+          // 添加服务模式：自动选中已安装的服务
+          const installedServices = servicesData.filter((s: Service) => s.installed)
+          const installedIds = installedServices.map((s: Service) => s.id)
+          setSelectedServiceIds(installedIds)
+          
+          toast.success(`已加载 ${servicesData.length} 个可选服务${installedIds.length > 0 ? `，${installedIds.length} 个已安装` : ''}`)
         } else {
-          toast.success(`✅ 自定义模式：已自动选择 ${newRequiredIds.length} 个必需服务，可继续选择其他服务`)
+          // 新建集群模式：自动选中必需服务
+          const newRequiredServices = servicesData.filter((s: Service) => s.isRequired)
+          const newRequiredIds = newRequiredServices.map((s: Service) => s.id)
+          setSelectedServiceIds(newRequiredIds)
+          
+          if (serviceTypeFilter === ServiceType.MINIMAL) {
+            toast.success(`✅ 最小化模式：已自动选择 ${newRequiredIds.length} 个必需服务`)
+          } else {
+            toast.success(`✅ 自定义模式：已自动选择 ${newRequiredIds.length} 个必需服务，可继续选择其他服务`)
+          }
         }
       } else {
         const errorMsg = response.data?.message || response.data?.msg || '获取服务列表失败'
@@ -175,7 +188,7 @@ export const useServiceSelection = ({
     } finally {
       setLoading(false)
     }
-  }, [clusterId, serviceTypeFilter])
+  }, [clusterId, serviceTypeFilter, isAddServiceMode])
 
   // 服务选择切换
   const toggleService = useCallback((serviceId: string) => { // 修复：20位long精度问题
