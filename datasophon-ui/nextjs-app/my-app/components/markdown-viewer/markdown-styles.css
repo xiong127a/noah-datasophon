@@ -121,12 +121,16 @@
   background: var(--apple-gray-400);
 }
 
-/* 工具栏样式 - 避开侧边栏 */
+/* 工具栏样式 - 避开侧边栏并固定在顶部 */
 .markdown-toolbar {
   margin-left: 280px; /* 为固定侧边栏让出空间 */
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 15; /* 确保在侧边栏之上 */
   background: white;
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 /* 内容区域 */
@@ -562,25 +566,39 @@
   transition: var(--apple-transition);
 }
 
-/* 响应式设计 */
+/* 响应式设计 - 保持桌面端固定定位 */
 @media (max-width: 768px) {
   .markdown-layout {
     flex-direction: column;
   }
   
+  /* 移动端侧边栏保持固定但隐藏在左侧 */
   .markdown-sidebar {
-    width: 100%;
-    max-height: 200px;
-    position: static;
+    width: 280px !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: -280px !important; /* 隐藏在左侧 */
+    height: 100vh !important;
+    transform: translateX(0) !important;
+    transition: left 0.3s ease !important;
+    z-index: 50 !important; /* 移动端时提高层级 */
+  }
+  
+  /* 移动端显示侧边栏时的样式 */
+  .markdown-sidebar.mobile-show {
+    left: 0 !important;
   }
   
   .markdown-toolbar {
-    margin-left: 0; /* 移动端不需要左边距 */
+    margin-left: 0 !important; /* 移动端不需要左边距 */
+    position: sticky !important;
+    top: 0 !important;
+    z-index: 20 !important; /* 移动端提高层级 */
   }
   
   .markdown-content {
     padding: var(--apple-spacing-lg);
-    margin-left: 0; /* 移动端不需要左边距 */
+    margin-left: 0 !important; /* 移动端不需要左边距 */
   }
   
   .markdown-content h1 {
@@ -631,4 +649,89 @@
   word-wrap: break-word !important;
   border: none !important;
   box-shadow: none !important;
+}
+
+/* 搜索高亮样式 */
+.search-highlight {
+  background: linear-gradient(120deg, #ffeaa7 0%, #fdcb6e 100%);
+  padding: 2px 4px;
+  border-radius: 3px;
+  font-weight: 500;
+  box-shadow: 0 1px 3px rgba(253, 203, 110, 0.3);
+  transition: all 0.2s ease;
+}
+
+.search-highlight.current-match {
+  background: linear-gradient(120deg, #74b9ff 0%, #0984e3 100%);
+  color: white;
+  box-shadow: 0 2px 8px rgba(116, 185, 255, 0.4);
+  transform: scale(1.05);
+}
+
+/* 深色主题样式 */
+.markdown-content.dark-theme {
+  background: linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%) !important;
+  color: #e0e0e0 !important;
+}
+
+.markdown-content.dark-theme h1,
+.markdown-content.dark-theme h2,
+.markdown-content.dark-theme h3,
+.markdown-content.dark-theme h4,
+.markdown-content.dark-theme h5,
+.markdown-content.dark-theme h6 {
+  color: #ffffff !important;
+}
+
+.markdown-content.dark-theme p,
+.markdown-content.dark-theme li {
+  color: #d0d0d0 !important;
+}
+
+.markdown-content.dark-theme a {
+  color: #74b9ff !important;
+}
+
+.markdown-content.dark-theme a:hover {
+  color: #0984e3 !important;
+}
+
+.markdown-content.dark-theme blockquote {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-left: 4px solid #74b9ff !important;
+  color: #c0c0c0 !important;
+}
+
+.markdown-content.dark-theme table {
+  background: rgba(255, 255, 255, 0.02) !important;
+}
+
+.markdown-content.dark-theme th {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.markdown-content.dark-theme td {
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #d0d0d0 !important;
+}
+
+.markdown-content.dark-theme hr {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  ) !important;
+}
+
+/* 深色主题搜索高亮 */
+.dark-theme .search-highlight {
+  background: linear-gradient(120deg, #e17055 0%, #d63031 100%) !important;
+  color: white !important;
+}
+
+.dark-theme .search-highlight.current-match {
+  background: linear-gradient(120deg, #74b9ff 0%, #0984e3 100%) !important;
+  color: white !important;
 }
