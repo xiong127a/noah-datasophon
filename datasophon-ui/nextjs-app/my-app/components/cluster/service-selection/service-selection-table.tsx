@@ -34,15 +34,17 @@ import type { Service } from '@/types/service-selection'
 interface ServiceSelectionTableProps {
   table: TanstackTable<Service>
   loading?: boolean
-  selectedServiceIds: number[]
-  onToggleService: (serviceId: number) => void
+  selectedServiceIds: string[]
+  onToggleService: (serviceId: string) => void
+  isServiceDisabled?: (service: Service) => boolean
 }
 
 const ServiceSelectionTable: React.FC<ServiceSelectionTableProps> = ({
   table,
   loading = false,
   selectedServiceIds,
-  onToggleService
+  onToggleService,
+  isServiceDisabled
 }) => {
   if (loading) {
     return (
@@ -105,14 +107,23 @@ const ServiceSelectionTable: React.FC<ServiceSelectionTableProps> = ({
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => {
                 const isSelected = selectedServiceIds.includes(row.original.id)
+                const isDisabled = isServiceDisabled?.(row.original) || false
                 
                 return (
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
-                    onClick={() => onToggleService(row.original.id)}
+                    onClick={() => {
+                      if (!isDisabled) {
+                        onToggleService(row.original.id)
+                      }
+                    }}
                     className={`
-                      cursor-pointer transition-colors hover:bg-gray-50 border-b border-gray-100
+                      transition-colors border-b border-gray-100
+                      ${isDisabled 
+                        ? 'cursor-not-allowed opacity-60 bg-gray-50' 
+                        : 'cursor-pointer hover:bg-gray-50'
+                      }
                       ${isSelected ? 'bg-blue-50/50' : ''}
                     `}
                   >
@@ -155,8 +166,9 @@ const ServiceSelectionTable: React.FC<ServiceSelectionTableProps> = ({
 // 卡片视图组件（移动端友好）
 interface ServiceCardViewProps {
   services: Service[]
-  selectedServiceIds: number[]
-  onToggleService: (serviceId: number) => void
+  selectedServiceIds: string[]
+  onToggleService: (serviceId: string) => void
+  isServiceDisabled?: (service: Service) => boolean
   loading?: boolean
 }
 
@@ -164,6 +176,7 @@ export const ServiceCardView: React.FC<ServiceCardViewProps> = ({
   services,
   selectedServiceIds,
   onToggleService,
+  isServiceDisabled,
   loading = false
 }) => {
   if (loading) {
@@ -181,18 +194,29 @@ export const ServiceCardView: React.FC<ServiceCardViewProps> = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
       {services.map((service) => {
         const isSelected = selectedServiceIds.includes(service.id)
+        const isDisabled = isServiceDisabled?.(service) || false
         
         return (
           <div
             key={service.id}
             className={`
-              relative p-3 rounded-3xl border-2 transition-all duration-200 cursor-pointer hover:scale-105
-              ${isSelected
+              relative p-3 rounded-3xl border-2 transition-all duration-200 
+              ${isDisabled 
+                ? 'cursor-not-allowed opacity-60 bg-gray-50 border-gray-300' 
+                : 'cursor-pointer hover:scale-105'
+              }
+              ${isSelected && !isDisabled
                 ? 'border-blue-500 bg-blue-50 shadow-lg shadow-blue-500/20'
-                : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                : !isDisabled 
+                  ? 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md'
+                  : ''
               }
             `}
-            onClick={() => onToggleService(service.id)}
+            onClick={() => {
+              if (!isDisabled) {
+                onToggleService(service.id)
+              }
+            }}
           >
             {/* 状态标识 */}
             <div className="absolute top-2 right-2 flex flex-col gap-1">

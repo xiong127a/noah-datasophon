@@ -19,8 +19,8 @@ import type { Service } from '@/types/service-selection'
 
 interface UseServiceTableOptions {
   services: Service[]
-  selectedServiceIds?: number[]  // 可选参数
-  onToggleService?: (serviceId: number) => void  // 可选参数
+  selectedServiceIds?: string[]  // 可选参数
+  onToggleService?: (serviceId: string) => void  // 可选参数
 }
 
 interface UseServiceTableReturn {

@@ -30,7 +30,6 @@ import com.datasophon.common.exception.BusinessException;
 
 import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
-import com.datasophon.common.enums.ServiceState;
 import com.datasophon.dao.mapper.FrameInfoMapper;
 import com.datasophon.dao.mapper.FrameServiceMapper;
 
@@ -136,14 +135,15 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
 
     /**
      * 设置服务的安装状态 - DTO级别操作
+     * 只要服务实例存在（包括待安装状态），就认为已安装，避免重复安装
      */
     private List<FrameServiceDTO> setInstalledStatus(Long clusterId, List<FrameServiceDTO> dtos) {
         return dtos.stream()
                 .map(dto -> {
                     ClusterServiceInstanceDTO serviceInstance = serviceInstanceService
                             .getServiceInstanceByClusterIdAndServiceName(clusterId, dto.serviceName());
-                    boolean installed = Objects.nonNull(serviceInstance)
-                            && !serviceInstance.serviceState().equals(ServiceState.WAIT_INSTALL.getValue());
+                    // 修改：只要存在服务实例记录就认为已安装（包括待安装状态）
+                    boolean installed = Objects.nonNull(serviceInstance);
                     return dto.withInstalled(installed);
                 })
                 .toList();

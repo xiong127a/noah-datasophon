@@ -81,6 +81,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
     stats,
     setServiceTypeFilter,
     toggleService,
+    isServiceDisabled,
     fetchServices,
     handleNext,
     canProceed,
@@ -243,6 +244,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
                 services={filteredServices}
                 selectedServiceIds={selectedServiceIds}
                 onToggleService={toggleService}
+                isServiceDisabled={isServiceDisabled}
                 loading={loading}
               />
             </TabsContent>
@@ -254,6 +256,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
                 loading={loading}
                 selectedServiceIds={selectedServiceIds}
                 onToggleService={toggleService}
+                isServiceDisabled={isServiceDisabled}
               />
             </TabsContent>
           </Tabs>

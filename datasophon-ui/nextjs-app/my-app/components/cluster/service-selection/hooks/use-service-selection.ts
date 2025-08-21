@@ -28,7 +28,7 @@ interface UseServiceSelectionReturn {
   error: string | null
   
   // 选择状态
-  selectedServiceIds: number[]
+  selectedServiceIds: string[]
   serviceTypeFilter: ServiceType
   
   // 计算属性
@@ -47,6 +47,7 @@ interface UseServiceSelectionReturn {
   clearSelection: () => void
   fetchServices: () => Promise<void>
   handleNext: () => void
+  isServiceDisabled: (service: Service) => boolean
   
   // 状态检查
   canProceed: boolean
@@ -63,7 +64,7 @@ export const useServiceSelection = ({
   const [services, setServices] = useState<Service[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [selectedServiceIds, setSelectedServiceIds] = useState<number[]>([])
+  const [selectedServiceIds, setSelectedServiceIds] = useState<string[]>([])
   const [serviceTypeFilter, setServiceTypeFilter] = useState<ServiceType>(initialServiceType)
 
   // 计算派生数据
@@ -196,11 +197,20 @@ export const useServiceSelection = ({
     const isCurrentlySelected = selectedServiceIds.includes(serviceId)
     
     // 切换服务选择状态
-    
-    // 如果是必需服务且要取消选择，则不允许
-    if (service?.isRequired && isCurrentlySelected) {
-      toast.warning('必需服务不能取消选择')
-      return
+    if (isCurrentlySelected) {
+      // 取消选择 - 检查限制条件
+      if (isAddServiceMode && service?.installed) {
+        toast.error('已安装的服务无法取消选择')
+        return
+      }
+      if (service?.isRequired && serviceTypeFilter === ServiceType.MINIMAL) {
+        toast.error('最小化模式下无法取消选择必需服务')
+        return
+      }
+      if (!isAddServiceMode && service?.isRequired) {
+        toast.error('必需服务无法取消选择')
+        return
+      }
     }
 
     setSelectedServiceIds(prev => {
@@ -212,7 +222,7 @@ export const useServiceSelection = ({
       
       return newSelection
     })
-  }, [services, selectedServiceIds])
+  }, [services, selectedServiceIds, serviceTypeFilter, isAddServiceMode])
 
   // 选择所有必需服务
   const selectAllRequired = useCallback(() => {
@@ -225,6 +235,17 @@ export const useServiceSelection = ({
     const requiredIds = requiredServices.map(service => service.id)
     setSelectedServiceIds(requiredIds) // 保留必需服务
   }, [requiredServices])
+
+  // 判断服务是否应该被禁用
+  const isServiceDisabled = useCallback((service: Service) => {
+    if (isAddServiceMode) {
+      // 添加服务模式：已安装的服务禁用
+      return service.installed
+    } else {
+      // 新建集群模式：必需服务禁用
+      return service.isRequired
+    }
+  }, [isAddServiceMode])
 
   // 下一步处理
   const handleNext = useCallback(() => {
@@ -319,6 +340,7 @@ export const useServiceSelection = ({
     clearSelection,
     fetchServices,
     handleNext,
+    isServiceDisabled,
     
     // 状态检查
     canProceed,
