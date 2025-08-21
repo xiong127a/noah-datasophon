@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { 
   Server, 
   Monitor,
@@ -56,6 +56,7 @@ interface ServiceItem {
   serviceStateCode: ServiceState
   alertNum: number
   needRestart: boolean
+  dashboardUrl?: string  // 新增：总览页面URL
   rawData: Record<string, unknown>
   menuVisible: boolean
 }
@@ -223,7 +224,9 @@ export default function ServiceLayout() {
   const [systemServicesExpanded, setSystemServicesExpanded] = useState(true) // 系统基础服务默认展开
 
   // 管理服务列表 - 按Vue2项目定义
-  const managementServiceNames = ['PROMETHEUS', 'GRAFANA', 'ALERTMANAGER', 'DATASOPHON']
+  const managementServiceNames = useMemo(() => 
+    ['PROMETHEUS', 'GRAFANA', 'ALERTMANAGER', 'DATASOPHON'], []
+  )
 
   // 获取集群信息
   const getClusterInfo = useCallback(async () => {
@@ -275,6 +278,7 @@ export default function ServiceLayout() {
           serviceStateCode: (service.serviceStateCode as ServiceState) || ServiceState.WAIT_INSTALL,
           alertNum: (service.alertNum as number) || 0,
           needRestart: (service.needRestart as boolean) || false,
+          dashboardUrl: service.dashboardUrl as string, // 新增：从API获取dashboardUrl
           rawData: service,
           menuVisible: false
         }))
@@ -299,7 +303,7 @@ export default function ServiceLayout() {
   })
 
   // 计算管理服务分组，包含固定的"大数据基础平台"服务 + 后端真实数据
-  const managementServices = (() => {
+  const managementServices = useMemo(() => {
     // 固定的"大数据基础平台"服务 - 代表系统本身，不是模拟数据
     const datasophonService: ServiceItem = {
       id: 'datasophon',
@@ -311,6 +315,7 @@ export default function ServiceLayout() {
       serviceStateCode: ServiceState.RUNNING,
       alertNum: 0,
       needRestart: false,
+      dashboardUrl: datasophonDashboardUrl, // 使用状态中的URL
       rawData: {},
       menuVisible: false
     }
@@ -322,7 +327,39 @@ export default function ServiceLayout() {
     })
     
     return [datasophonService, ...backendManagementServices]
-  })()
+  }, [services, datasophonDashboardUrl, managementServiceNames])
+
+  // 构建Vue2格式的menuData (关键：包含所有服务的dashboardUrl)
+  const buildMenuData = useCallback(() => {
+    if (services.length === 0) return
+    
+    // 使用coreServices + managementServices获得完整列表
+    const allServices = [...coreServices, ...managementServices]
+    
+    // 构建Vue2格式的menuData
+    const menuData = [{
+      path: 'service-manage',
+      children: allServices.map(service => ({
+        meta: {
+          params: {
+            serviceId: service.serviceId
+          },
+          obj: {
+            dashboardUrl: service.dashboardUrl
+          }
+        }
+      }))
+    }]
+    
+    // 存储到localStorage，供hasOverviewTab和总览组件使用
+    localStorage.setItem('menuData', JSON.stringify(menuData))
+    console.log('已更新完整menuData到localStorage:', menuData)
+  }, [services, coreServices, managementServices])
+
+  // 当服务数据更新时，重新构建menuData
+  useEffect(() => {
+    buildMenuData()
+  }, [buildMenuData])
 
   // 获取服务状态点样式
   const getServiceStatusInfo = (stateCode: ServiceState) => {
@@ -351,8 +388,7 @@ export default function ServiceLayout() {
     if (!hasCluster || !currentCluster) return
 
     try {
-      const config = createClusterHeaders(currentCluster.id)
-      const response = await clusterApiV1.overview.getDashboardUrl(currentCluster.id, config)
+      const response = await clusterApiV1.overview.getDashboardUrl(currentCluster.id)
       
       if (response.data && response.data.code === 200) {
         setMainDashboardUrl(response.data.data)
@@ -370,8 +406,7 @@ export default function ServiceLayout() {
     if (!hasCluster || !currentCluster) return
 
     try {
-      const config = createClusterHeaders(currentCluster.id)
-      const response = await clusterApiV1.overview.getDatasophonDashboard(currentCluster.id, config)
+      const response = await clusterApiV1.overview.getDatasophonDashboard(currentCluster.id)
       
       if (response.data && response.data.code === 200) {
         setDatasophonDashboardUrl(response.data.data)

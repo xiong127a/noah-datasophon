@@ -451,6 +451,21 @@ export const clusterApiV1 = {
       // 对于相对路径，返回一个标记，让组件知道需要异步加载
       return `__ASYNC_IMAGE__:${imagePath}`
     }
+  },
+
+  // 总览相关API - v1 (按照Vue2实际使用的接口)
+  overview: {
+    /** 获取集群Dashboard URL (对应Vue2的getDashboardUrl) */
+    getDashboardUrl: (clusterId: string) => {
+      const headers = createClusterHeaders(clusterId)
+      return apiV1.get(API_PATHS_V1.GET_DASHBOARD_URL, {}, { headers })
+    },
+
+    /** 获取Datasophon Dashboard URL (对应Vue2的getDatasophonDashboardUrl) */
+    getDatasophonDashboard: (clusterId: string) => {
+      const headers = createClusterHeaders(clusterId)
+      return apiV1.get(API_PATHS_V1.GET_DATASOPHON_DASHBOARD, {}, { headers })
+    }
   }
 }
 

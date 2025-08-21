@@ -158,6 +158,10 @@ export const API_PATHS_V1 = {
   SERVICE_DOC_HAS: `${API_BASE}/service/doc/hasServiceDoc`,
   SERVICE_DOC_SERVICE_NAME: `${API_BASE}/service/doc/serviceName`,
   SERVICE_DOC_IMAGE: `${API_BASE}/service/doc/image`,
+
+  // 总览相关 - v1 (按照Vue2实际使用的API)
+  GET_DASHBOARD_URL: `${API_BASE}/cluster/service/dashboard/getDashboardUrl`,
+  GET_DATASOPHON_DASHBOARD: `${API_BASE}/cluster/service/dashboard/getDatasophonDashboard`,
 };
 
 /**
