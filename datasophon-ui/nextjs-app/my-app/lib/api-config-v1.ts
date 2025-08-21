@@ -153,6 +153,9 @@ export const API_PATHS_V1 = {
   // 服务命令相关API（基于ClusterServiceCommandController）
   GENERATE_SERVICE_ROLE_COMMAND: `${API_BASE}/cluster/service/command/generate/role`,
   
+  // 节点退役相关API
+  DECOMMISSION_NODE: `${API_BASE}/cluster/service/role/instance/decommissionNode`,
+  
   // 服务安装监控相关 - v1 (Step8)
   GET_SERVICE_COMMAND_LIST: `${API_BASE}/cluster/service/command/list`,
   GET_SERVICE_HOST_LIST: `${API_BASE}/cluster/service/command/host/list`,

@@ -372,9 +372,17 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
           alert(response.data.msg || '删除失败')
         }
       } else if (operation === 'decommission') {
-        // 退役功能暂时不可用（后端没有对应接口）
-        alert('退役功能暂未实现，请联系管理员')
-        return
+        // 退役功能，仅支持HDFS和YARN服务
+        const response = await apiV1.post(API_PATHS_V1.DECOMMISSION_NODE, {
+          serviceRoleInstanceIds: selectedRowKeys.join(',')
+        })
+        if (response.data.code === 200) {
+          alert('退役操作成功')
+          setSelectedRowKeys([])
+          loadInstances()
+        } else {
+          alert(response.data.msg || '退役操作失败')
+        }
       } else {
               const response = await apiV1.post(API_PATHS_V1.GENERATE_SERVICE_ROLE_COMMAND, {
           commandType: operationMap[operation],
@@ -399,9 +407,17 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
   const handleViewLog = async (instanceId: string) => {
     try {
       setCurrentInstanceId(instanceId)
-      // 日志功能暂时使用SSE流式接口（需要单独实现）
-      alert('日志查看功能开发中，请稍后再试')
-      return
+      setLogDialogVisible(true)
+      
+      // TODO: 实现真实的日志获取逻辑
+      // 根据Vue项目的实现，这里应该调用API获取实时日志
+      console.log('查看日志功能被调用，instanceId:', instanceId)
+      
+      // 暂时显示开发中的提示
+      setTimeout(() => {
+        alert('日志功能正在开发中，将支持实时日志流显示')
+      }, 500)
+      
     } catch (error) {
       console.error('获取日志失败:', error)
       alert('获取日志失败，请重试')
@@ -423,6 +439,23 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
       console.error('自动伸缩操作失败:', error)
       alert('操作失败，请重试')
     }
+  }
+
+  // 添加新实例
+  const handleAddInstance = () => {
+    // 这里应该打开一个模态框或跳转到添加实例页面
+    // 根据Vue项目的实现，这个功能需要跳转到安装向导
+    alert('添加新实例功能开发中，敬请期待！')
+    console.log('添加新实例功能被调用，serviceId:', serviceId)
+    // TODO: 实现添加实例的模态框或页面跳转
+  }
+
+  // 添加角色组  
+  const handleAddRoleGroup = () => {
+    // 这里应该打开添加角色组的模态框
+    alert('添加角色组功能开发中，敬请期待！')
+    console.log('添加角色组功能被调用，serviceId:', serviceId)
+    // TODO: 实现添加角色组的模态框
   }
 
   // 获取状态徽章
@@ -607,11 +640,11 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
           </div>
               
               <div className="flex items-center gap-3">
-                <Button variant="outline" className="bg-white/80">
+                <Button variant="outline" className="bg-white/80" onClick={handleAddInstance}>
                   <Plus className="w-4 h-4 mr-2" />
                   添加新实例
                 </Button>
-                <Button variant="outline" className="bg-white/80">
+                <Button variant="outline" className="bg-white/80" onClick={handleAddRoleGroup}>
                   <Users className="w-4 h-4 mr-2" />
                   添加角色组
                 </Button>
