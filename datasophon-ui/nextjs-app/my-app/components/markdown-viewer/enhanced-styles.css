@@ -3,6 +3,12 @@
  * 添加更多动画和交互效果
  */
 
+/* 容器内滚动优化 */
+.markdown-viewer-container {
+  contain: layout style;
+  will-change: auto;
+}
+
 /* 工具栏按钮动画增强 */
 .markdown-toolbar button {
   position: relative;

@@ -30,6 +30,7 @@ import { imageCache } from '@/lib/image-cache'
 import { useCluster } from '@/hooks/useCluster'
 import TableOfContents from './table-of-contents'
 import ReadingProgress from './reading-progress'
+import BackToTop from './back-to-top'
 import { 
   MarkdownViewerProps, 
   MarkdownViewerState, 
@@ -46,7 +47,8 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   serviceId,
   serviceName,
   docType,
-  clusterId: propClusterId
+  clusterId: propClusterId,
+  isFullScreen = false  // 默认非全屏模式
 }) => {
   const { currentCluster } = useCluster()
   const effectiveClusterId = propClusterId || currentCluster?.id
@@ -61,6 +63,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   })
 
   const contentRef = useRef<HTMLDivElement>(null)
+  const contentWrapperRef = useRef<HTMLDivElement>(null)
   const [showToc, setShowToc] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [isMobile, setIsMobile] = useState(false)
@@ -190,17 +193,39 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   const scrollToHeading = useCallback((id: string) => {
     const element = document.getElementById(id)
     if (element) {
-      const yOffset = -80 // 偏移量，避免被固定头部遮挡
-      const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset
-      
-      window.scrollTo({
-        top: y,
-        behavior: 'smooth'
-      })
+      if (isFullScreen) {
+        // 全屏模式：在内容包装器中滚动
+        const contentWrapper = element.closest('.markdown-content-wrapper')
+        if (contentWrapper) {
+          const elementRect = element.getBoundingClientRect()
+          const wrapperRect = contentWrapper.getBoundingClientRect()
+          const yOffset = -20 // 适当的偏移量
+          const targetY = contentWrapper.scrollTop + (elementRect.top - wrapperRect.top) + yOffset
+          
+          contentWrapper.scrollTo({
+            top: targetY,
+            behavior: 'smooth'
+          })
+        }
+      } else {
+        // 普通模式：在父容器中滚动
+        const parentContainer = element.closest('.markdown-content-wrapper')
+        if (parentContainer) {
+          const elementRect = element.getBoundingClientRect()
+          const containerRect = parentContainer.getBoundingClientRect()
+          const yOffset = -20
+          const targetY = parentContainer.scrollTop + (elementRect.top - containerRect.top) + yOffset
+          
+          parentContainer.scrollTo({
+            top: targetY,
+            behavior: 'smooth'
+          })
+        }
+      }
       
       setState(prev => ({ ...prev, activeHeading: id }))
     }
-  }, [])
+  }, [isFullScreen])
 
   // 监听滚动，更新活跃标题
   useEffect(() => {
@@ -622,7 +647,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // 渲染加载状态
   if (state.loading) {
     return (
-      <div className="markdown-viewer">
+      <div className={isFullScreen ? "markdown-viewer-fullscreen" : "markdown-viewer-container"}>
         <div className="flex items-center justify-center min-h-[500px]">
           <div className="flex flex-col items-center space-y-6 text-center">
             <div className="relative">
@@ -649,7 +674,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
   // 渲染错误状态
   if (state.error) {
     return (
-      <div className="markdown-viewer">
+      <div className={isFullScreen ? "markdown-viewer-fullscreen" : "markdown-viewer-container"}>
         <div className="flex items-center justify-center min-h-[500px]">
           <div className="text-center max-w-lg mx-auto p-8">
             <div className="w-20 h-20 mx-auto mb-6 text-red-500">
@@ -690,7 +715,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
     const docTypeName = docType === 'component' ? '组件介绍' : '用户指南'
     
     return (
-      <div className="markdown-viewer">
+      <div className={isFullScreen ? "markdown-viewer-fullscreen" : "markdown-viewer-container"}>
         <div className="flex items-center justify-center min-h-[500px]">
           <div className="text-center max-w-lg mx-auto p-8">
             <div className="w-24 h-24 mx-auto mb-6 text-gray-400">
@@ -726,12 +751,9 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
 
   // 渲染主要内容
   return (
-    <>
-              <ReadingProgress targetRef={contentRef as React.RefObject<HTMLElement>} />
-      
-      <div className="markdown-viewer">
-        {/* 工具栏 */}
-        <div className="markdown-toolbar">
+    <div className={isFullScreen ? "markdown-viewer-fullscreen" : "markdown-viewer-container"}>
+      {/* 工具栏 - 全屏模式使用fixed，普通模式使用sticky */}
+      <div className={`markdown-toolbar ${!showToc ? 'full-width' : ''} ${isFullScreen ? 'fullscreen-mode' : ''}`}>
           <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-white via-blue-50/30 to-indigo-50/20 backdrop-blur-sm">
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-3">
@@ -834,9 +856,11 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
               )}
             </div>
           </div>
-        </div>
+      </div>
 
-        {/* 侧边栏目录 - 移到外层确保fixed定位生效 */}
+      {/* 主体布局 - 根据模式选择布局方式 */}
+      <div className={isFullScreen ? "markdown-main-layout-fullscreen" : "markdown-main-layout"}>
+        {/* 侧边栏目录 */}
         {showToc && (
           <>
             {/* 移动端遮罩层 */}
@@ -846,7 +870,7 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
                 onClick={() => setShowToc(false)}
               />
             )}
-            <div className={`markdown-sidebar ${isMobile && showToc ? 'mobile-show' : ''}`}>
+            <div className={`markdown-sidebar ${isMobile && showToc ? 'mobile-show' : ''} ${isFullScreen ? 'fullscreen-mode' : ''}`}>
               <TableOfContents
                 items={state.toc}
                 activeId={state.activeHeading || undefined}
@@ -856,12 +880,14 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
           </>
         )}
 
-        {/* 主要内容区域 */}
-        <div className="markdown-layout">
-          {/* 文档内容 */}
+        {/* 内容区域 */}
+        <div 
+          ref={contentWrapperRef}
+          className={`markdown-content-wrapper ${!showToc ? 'full-width' : ''}`}
+        >
           <div 
             ref={contentRef}
-            className={`markdown-content ${!showToc ? 'full-width' : ''}`}
+            className="markdown-content"
           >
             <ReactMarkdown
               remarkPlugins={[remarkGfm, remarkToc]}
@@ -884,7 +910,13 @@ const MarkdownViewer: React.FC<MarkdownViewerProps> = ({
           </div>
         </div>
       </div>
-    </>
+      
+      {/* 返回顶部按钮 */}
+      <BackToTop 
+        targetRef={contentWrapperRef as React.RefObject<HTMLElement>} 
+        showThreshold={300}
+      />
+    </div>
   )
 }
 

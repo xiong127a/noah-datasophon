@@ -12,6 +12,7 @@ export { default as MarkdownViewer } from './markdown-viewer'
 // 子组件
 export { default as TableOfContents } from './table-of-contents'
 export { default as ReadingProgress } from './reading-progress'
+export { default as BackToTop } from './back-to-top'
 
 // 类型定义
 export type {

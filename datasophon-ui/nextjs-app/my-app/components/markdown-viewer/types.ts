@@ -11,6 +11,7 @@ export interface MarkdownViewerProps {
   serviceName: string
   docType: 'component' | 'guide'
   clusterId?: string
+  isFullScreen?: boolean  // 是否全屏模式
 }
 
 export interface TableOfContentsItem {
