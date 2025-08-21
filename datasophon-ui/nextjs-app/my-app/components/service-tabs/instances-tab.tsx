@@ -166,12 +166,19 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
 
   // 获取角色组列表
   const loadRoleGroups = async () => {
+    if (!serviceId) {
+      console.error('serviceId is required for loadRoleGroups')
+      return
+    }
+    
     try {
-      const response = await apiV1.post(API_PATHS_V1.CLUSTER_SERVICE_ROLE_GROUP_LIST, {
-        serviceInstanceId: serviceId
-      })
+      const finalUrl = `${API_PATHS_V1.CLUSTER_SERVICE_ROLE_GROUP_LIST}?serviceInstanceId=${serviceId}`
+      console.log('loadRoleGroups called with serviceId:', serviceId, 'Final URL:', finalUrl)
+      const response = await apiV1.get(finalUrl)
       if (response.data.code === 200) {
-        setRoleGroups(response.data.data || [])
+        const roleGroupsData = response.data.data || []
+        console.log('角色组数据:', roleGroupsData)
+        setRoleGroups(roleGroupsData)
       }
     } catch (error) {
       console.error('获取角色组列表失败:', error)
@@ -180,12 +187,19 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
 
   // 获取服务角色类型
   const loadServiceRoles = async () => {
+    if (!serviceId) {
+      console.error('serviceId is required for loadServiceRoles')
+      return
+    }
+    
     try {
-      const response = await apiV1.post(API_PATHS_V1.CLUSTER_SERVICE_ROLE_TYPE_LIST, {
-        serviceInstanceId: serviceId
-      })
+      const finalUrl = `${API_PATHS_V1.CLUSTER_SERVICE_ROLE_TYPE_LIST}?serviceInstanceId=${serviceId}`
+      console.log('loadServiceRoles called with serviceId:', serviceId, 'Final URL:', finalUrl)
+      const response = await apiV1.get(finalUrl)
       if (response.data.code === 200) {
-        setServiceRoles(response.data.data || [])
+        const serviceRolesData = response.data.data || []
+        console.log('服务角色类型数据:', serviceRolesData)
+        setServiceRoles(serviceRolesData)
       }
     } catch (error) {
       console.error('获取服务角色类型失败:', error)
@@ -214,29 +228,62 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
 
   // 获取实例列表
   const loadInstances = async (silent = false) => {
+    if (!serviceId) {
+      console.error('serviceId is required for loadInstances')
+      return
+    }
+    
     if (!silent) setLoading(true)
     
     try {
-      const response = await apiV1.get(API_PATHS_V1.CLUSTER_SERVICE_ROLE_INSTANCE_LIST, {
+      console.log('loadInstances called with serviceId:', serviceId)
+      // 构建查询参数
+      const queryParams = new URLSearchParams({
         serviceInstanceId: serviceId,
-        hostname: filters.hostname || undefined,
-        serviceRoleState: filters.serviceRoleState === 'all' ? undefined : filters.serviceRoleState || undefined,
-        roleGroupId: filters.roleGroupId === 'all' ? undefined : filters.roleGroupId || undefined,
-        serviceRoleName: filters.serviceRoleName === 'all' ? undefined : filters.serviceRoleName || undefined,
-        page: pagination.current,
-        pageSize: pagination.pageSize
+        page: pagination.current.toString(),
+        pageSize: pagination.pageSize.toString()
       })
       
+      // 添加可选参数
+      if (filters.hostname) {
+        queryParams.append('hostname', filters.hostname)
+      }
+      if (filters.serviceRoleState && filters.serviceRoleState !== 'all') {
+        queryParams.append('serviceRoleState', filters.serviceRoleState)
+      }
+      if (filters.roleGroupId && filters.roleGroupId !== 'all') {
+        queryParams.append('roleGroupId', filters.roleGroupId)
+      }
+      if (filters.serviceRoleName && filters.serviceRoleName !== 'all') {
+        queryParams.append('serviceRoleName', filters.serviceRoleName)
+      }
+      
+      const finalUrl = `${API_PATHS_V1.CLUSTER_SERVICE_ROLE_INSTANCE_LIST}?${queryParams.toString()}`
+      console.log('Final API URL:', finalUrl)
+      const response = await apiV1.get(finalUrl)
+      
       if (response.data.code === 200) {
-        setInstances(response.data.data || [])
+        const pageData = response.data.data || {}
+        const instances = pageData.records || []
+        console.log('实例分页数据:', pageData)
+        console.log('实例记录:', instances)
+        setInstances(instances)
         setPagination(prev => ({
           ...prev,
-          total: response.data.total || 0
+          total: parseInt(pageData.total) || 0,
+          current: parseInt(pageData.current) || 1,
+          pageSize: parseInt(pageData.size) || 10
         }))
-        setTotalCount(response.data.total || 0)
+        setTotalCount(parseInt(pageData.total) || 0)
+      } else {
+        console.error('API返回错误码:', response.data.code, response.data.msg)
+        setInstances([])
+        setTotalCount(0)
       }
     } catch (error) {
       console.error('获取实例列表失败:', error)
+      setInstances([])
+      setTotalCount(0)
     } finally {
       if (!silent) setLoading(false)
     }
@@ -280,7 +327,7 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
 
   // 全选/取消全选
   const handleSelectAll = (checked: boolean) => {
-    if (checked) {
+    if (checked && Array.isArray(instances)) {
       setSelectedRowKeys(instances.map(item => item.id))
     } else {
       setSelectedRowKeys([])
@@ -522,15 +569,15 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem onClick={() => handleBatchOperation('start')}>
-                      <Play className="w-4 h-4 mr-2" />
+              <Play className="w-4 h-4 mr-2" />
                       启动
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleBatchOperation('stop')}>
-                      <Pause className="w-4 h-4 mr-2" />
+              <Pause className="w-4 h-4 mr-2" />
                       停止
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleBatchOperation('restart')}>
-                      <RotateCcw className="w-4 h-4 mr-2" />
+              <RotateCcw className="w-4 h-4 mr-2" />
                       重启
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
@@ -555,9 +602,9 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
                   >
                     <Zap className="w-4 h-4 mr-2" />
                     {autoScaleEnabled ? '关闭自动伸缩' : '开启自动伸缩'}
-                  </Button>
+            </Button>
                 )}
-              </div>
+          </div>
               
               <div className="flex items-center gap-3">
                 <Button variant="outline" className="bg-white/80">
@@ -570,9 +617,9 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
                 </Button>
                 <Button onClick={() => loadInstances()} size="sm" variant="ghost">
                   <RefreshCw className="w-4 h-4" />
-                </Button>
-              </div>
-            </div>
+          </Button>
+        </div>
+      </div>
           </CardContent>
         </Card>
 
@@ -615,7 +662,7 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
                         </div>
                       </TableCell>
                     </TableRow>
-                  ) : instances.length === 0 ? (
+                  ) : !Array.isArray(instances) || instances.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2">
@@ -703,8 +750,8 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
                   >
                     下一页
                   </Button>
-                </div>
-              </div>
+        </div>
+        </div>
             )}
           </CardContent>
         </Card>
