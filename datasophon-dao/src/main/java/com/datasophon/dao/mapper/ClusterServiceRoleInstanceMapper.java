@@ -72,7 +72,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * @param roleGroupId 角色组ID
          * @return 实例数量
          */
-        default long countByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
+        default long countByRoleGroupId(@Param("roleGroupId") Long roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getRoleGroupId).eq(roleGroupId);
                 return this.selectCountByQuery(query);
@@ -370,7 +370,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
         /**
          * 根据服务ID和状态删除服务角色实例
          */
-        default int deleteByServiceIdAndState(@Param("serviceId") Integer serviceId,
+        default int deleteByServiceIdAndState(@Param("serviceId") Long serviceId,
                         @Param("state") ServiceRoleState state) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceId)
@@ -417,11 +417,11 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * @return 服务角色实例列表
          */
         default List<ClusterServiceRoleInstanceEntity> selectByConditionsWithPage(
-                        @Param("serviceInstanceId") Integer serviceInstanceId,
+                        @Param("serviceInstanceId") Long serviceInstanceId,
                         @Param("hostname") String hostname,
                         @Param("serviceRoleState") Integer serviceRoleState,
                         @Param("serviceRoleName") String serviceRoleName,
-                        @Param("roleGroupId") Integer roleGroupId,
+                        @Param("roleGroupId") Long roleGroupId,
                         @Param("offset") int offset,
                         @Param("pageSize") int pageSize) {
                 QueryWrapper query = QueryWrapper.create()
@@ -457,11 +457,11 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * @return 服务角色实例数量
          */
         default long countByConditions(
-                        @Param("serviceInstanceId") Integer serviceInstanceId,
+                        @Param("serviceInstanceId") Long serviceInstanceId,
                         @Param("hostname") String hostname,
                         @Param("serviceRoleState") Integer serviceRoleState,
                         @Param("serviceRoleName") String serviceRoleName,
-                        @Param("roleGroupId") Integer roleGroupId) {
+                        @Param("roleGroupId") Long roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstanceId);
 

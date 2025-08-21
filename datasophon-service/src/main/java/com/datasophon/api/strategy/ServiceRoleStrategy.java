@@ -218,7 +218,7 @@ public interface ServiceRoleStrategy {
         return SpringTool.listServiceConfigByServiceInstance(serviceInstanceId);
     }
 
-    default List<String> getRoleHosts(Long clusterId, Integer serviceInstanceId, String roleName) {
+    default List<String> getRoleHosts(Long clusterId, Long serviceInstanceId, String roleName) {
         return CollUtil.empty(List.class);
     }
 

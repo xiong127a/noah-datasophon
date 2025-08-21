@@ -48,14 +48,14 @@ public interface ClusterServiceRoleGroupConfigService extends IService<ClusterSe
      * @param version     版本号
      * @return 配置DTO
      */
-    ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupIdAndVersion(Integer roleGroupId, Integer version);
+    ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupIdAndVersion(Long roleGroupId, Integer version);
 
     /**
      * 删除指定角色组的所有配置
      *
      * @param roleGroupId 角色组ID
      */
-    void removeAllByRoleGroupId(Integer roleGroupId);
+    void removeAllByRoleGroupId(Long roleGroupId);
 
     /**
      * 根据角色组ID列表获取配置列表

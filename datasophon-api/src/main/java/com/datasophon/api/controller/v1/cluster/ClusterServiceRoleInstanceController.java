@@ -56,11 +56,11 @@ public class ClusterServiceRoleInstanceController {
      */
     @GetMapping("/list")
     public Result<PageResult<ClusterServiceRoleInstanceVO>> getServiceRoleInstanceList(
-            @RequestParam Integer serviceInstanceId,
+            @RequestParam Long serviceInstanceId,
             @RequestParam(required = false) String hostname,
             @RequestParam(required = false) Integer serviceRoleState,
             @RequestParam(required = false) String serviceRoleName,
-            @RequestParam(required = false) Integer roleGroupId,
+            @RequestParam(required = false) Long roleGroupId,
             @RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         try {
@@ -254,7 +254,7 @@ public class ClusterServiceRoleInstanceController {
      * 移除角色实例
      */
     @DeleteMapping("/remove/{serviceInstanceId}")
-    public Result<Void> removeRoleInstance(@PathVariable Integer serviceInstanceId) {
+    public Result<Void> removeRoleInstance(@PathVariable Long serviceInstanceId) {
         try {
             clusterServiceRoleInstanceService.reomveRoleInstance(serviceInstanceId);
             return Result.success();

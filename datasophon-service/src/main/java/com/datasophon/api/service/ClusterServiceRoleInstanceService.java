@@ -59,9 +59,9 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 分页列表查询
      */
-    PageResult<ClusterServiceRoleInstanceDTO> listAll(Integer serviceInstanceId, String hostname,
+    PageResult<ClusterServiceRoleInstanceDTO> listAll(Long serviceInstanceId, String hostname,
             Integer serviceRoleState, String serviceRoleName,
-            Integer roleGroupId, Integer page, Integer pageSize);
+            Long roleGroupId, Integer page, Integer pageSize);
 
     /**
      * 获取日志
@@ -133,7 +133,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
     /**
      * 移除角色实例
      */
-    void reomveRoleInstance(Integer serviceInstanceId);
+    void reomveRoleInstance(Long serviceInstanceId);
 
     /**
      * 获取KAdmin角色实例
@@ -164,7 +164,7 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
      * 根据集群ID、服务实例ID和角色名称获取服务角色实例列表
      */
     List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Long clusterId,
-            Integer serviceInstanceId, String roleName);
+            Long serviceInstanceId, String roleName);
 
     /**
      * 更新服务角色实例状态

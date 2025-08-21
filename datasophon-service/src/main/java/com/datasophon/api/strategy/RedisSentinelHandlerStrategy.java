@@ -96,7 +96,7 @@ public class RedisSentinelHandlerStrategy extends ServiceHandlerAbstract impleme
 
     @Override
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-            Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+            Long clusterId, Long serviceInstanceId, Map<String, String> configMap) {
         try {
             // 获取服务节点列表
             List<String> sentinelNodes = getRoleHosts(clusterId, serviceInstanceId, "RedisSentinel");

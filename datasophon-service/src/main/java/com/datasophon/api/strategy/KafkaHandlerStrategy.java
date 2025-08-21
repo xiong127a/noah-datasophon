@@ -172,7 +172,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
          */
         @Override
         protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                        Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                        Long clusterId, Long serviceInstanceId, Map<String, String> configMap) {
                 try {
                         log.info("开始获取Kafka服务连接信息，集群ID: {}, 服务实例ID: {}", clusterId, serviceInstanceId);
 

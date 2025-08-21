@@ -273,7 +273,7 @@ public class ClusterServiceInstanceServiceImpl
     }
 
     @Override
-    public List<FrameServiceRoleEntity> getServiceRoleType(Integer serviceInstanceId) {
+    public List<FrameServiceRoleEntity> getServiceRoleType(Long serviceInstanceId) {
         ClusterServiceInstanceEntity serviceInstanceEntity = getById(serviceInstanceId);
         if (serviceInstanceEntity == null) {
             throw new RuntimeException("Service instance not found with id: " + serviceInstanceId);

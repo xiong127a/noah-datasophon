@@ -55,6 +55,7 @@ import com.datasophon.kubernetes.actor.KubernetesLogActor;
 import com.datasophon.kubernetes.util.CommonUtil;
 // QueryChain已迁移到DAO层，不再在Service层使用
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorRef;
 import org.apache.pekko.actor.ActorSelection;
@@ -171,9 +172,9 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public PageResult<ClusterServiceRoleInstanceDTO> listAll(Integer serviceInstanceId, String hostname,
+    public PageResult<ClusterServiceRoleInstanceDTO> listAll(Long serviceInstanceId, String hostname,
             Integer serviceRoleState, String serviceRoleName,
-            Integer roleGroupId, Integer page, Integer pageSize) {
+            Long roleGroupId, Integer page, Integer pageSize) {
         int offset = (page - 1) * pageSize;
 
         // DAO层：使用Mapper统计数量
@@ -442,9 +443,22 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public void reomveRoleInstance(Integer serviceInstanceId) {
+    public void reomveRoleInstance(Long serviceInstanceId) {
         // SQL逻辑已迁移到DAO层
         getMapper().deleteByServiceIdAndState(serviceInstanceId, ServiceRoleState.STOP);
+    }
+
+    @Override
+    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Long clusterId,
+            Long serviceInstanceId, String roleName) {
+        // 实现根据集群ID、服务实例ID和角色名称获取服务角色实例列表
+        QueryWrapper query = QueryWrapper.create()
+                .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)
+                .and(ClusterServiceRoleInstanceEntity::getServiceId).eq(serviceInstanceId)
+                .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq(roleName);
+        
+        List<ClusterServiceRoleInstanceEntity> entities = getMapper().selectListByQuery(query);
+        return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
     }
 
     @Override
@@ -481,13 +495,7 @@ public class ClusterServiceRoleInstanceServiceImpl
         return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
     }
 
-    @Override
-    public List<ClusterServiceRoleInstanceDTO> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(
-            Long clusterId, Integer serviceInstanceId, String roleName) {
-        List<ClusterServiceRoleInstanceEntity> entities = getMapper()
-                .selectByClusterIdAndServiceIdAndRoleName(clusterId, serviceInstanceId, roleName);
-        return clusterServiceRoleInstanceConverter.entityListToDtoList(entities);
-    }
+
 
     @Override
     public void updateServiceRoleInstanceState(Long serviceRoleInstanceId, ServiceRoleState serviceRoleState) {

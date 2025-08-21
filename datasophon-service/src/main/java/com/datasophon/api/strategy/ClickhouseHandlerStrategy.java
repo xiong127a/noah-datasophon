@@ -56,7 +56,7 @@ public class ClickhouseHandlerStrategy extends ServiceHandlerAbstract implements
 
     @Override
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-            Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+            Long clusterId, Long serviceInstanceId, Map<String, String> configMap) {
         try {
             // 获取ClickHouse节点列表
             List<String> clickhouseNodes = getRoleHosts(clusterId, serviceInstanceId, "ClickHouse");

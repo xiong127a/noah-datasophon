@@ -76,7 +76,7 @@ public interface ClusterServiceInstanceRoleGroupService extends IService<Cluster
      * @param roleGroupName 新的角色组名称
      * @return 是否重命名成功
      */
-    boolean rename(Integer roleGroupId, String roleGroupName);
+    boolean rename(Long roleGroupId, String roleGroupName);
 
     /**
      * 删除角色组
@@ -84,7 +84,7 @@ public interface ClusterServiceInstanceRoleGroupService extends IService<Cluster
      * @param roleGroupId 角色组ID
      * @return 是否删除成功
      */
-    boolean deleteRoleGroup(Integer roleGroupId);
+    boolean deleteRoleGroup(Long roleGroupId);
 
     /**
      * 根据服务实例ID获取角色组列表

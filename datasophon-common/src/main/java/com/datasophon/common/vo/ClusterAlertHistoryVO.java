@@ -41,7 +41,7 @@ public record ClusterAlertHistoryVO(
         Integer isEnabled,
         String isEnabledText,
         Integer serviceRoleInstanceId,
-        Integer serviceInstanceId,
+        Long serviceInstanceId,
         LocalDateTime createTime,
         String createTimeFormatted,
         LocalDateTime updateTime,

@@ -24,8 +24,17 @@ export const API_PATHS_V1 = {
   CLUSTER_UPDATE: `${API_BASE}/cluster/update`,
   CLUSTER_DELETE: `${API_BASE}/cluster/delete`,
   CLUSTER_AUTH: `${API_BASE}/cluster/user/saveClusterManager`,
-  CLUSTER_SERVICE_INSTANCE_LIST: `${API_BASE}/cluster/service/instance/list`,
+  // 服务实例相关API（基于ClusterServiceInstanceController）
+  CLUSTER_SERVICE_INSTANCE_LIST: `${API_BASE}/cluster/service/instance/list`, // 服务列表API
   CLUSTER_SERVICE_INSTANCE_DELETE: `${API_BASE}/cluster/service/instance/delete`,
+  CLUSTER_SERVICE_ROLE_TYPE_LIST: `${API_BASE}/cluster/service/instance/getServiceRoleType`,
+  
+  // 服务角色实例相关API（基于ClusterServiceRoleInstanceController）
+  CLUSTER_SERVICE_ROLE_INSTANCE_LIST: `${API_BASE}/cluster/service/role/instance/list`, // 实例列表（分页）
+  CLUSTER_SERVICE_ROLE_INSTANCE_DELETE: `${API_BASE}/cluster/service/role/instance/batch`, // 批量删除实例
+  
+  // 角色组相关API（基于实际后端实现）
+  CLUSTER_SERVICE_ROLE_GROUP_LIST: `${API_BASE}/cluster/service/instance/role/group/list`,
   CLUSTER_RUNNING_LIST: `${API_BASE}/cluster/runningClusterList`,
   CLUSTER_INFO: `${API_BASE}/cluster/info`,
   
@@ -92,6 +101,11 @@ export const API_PATHS_V1 = {
   // 告警相关 - v1
   ALERT_GROUP_LIST: `${API_BASE}/alert/group/list`,
 
+  // 自动伸缩相关 - v1（基于AutoScaleController）
+  AUTO_SCALE_STATUS: `${API_BASE}/autoScale/getAutoScaleTasks`,
+  AUTO_SCALE_CREATE: `${API_BASE}/autoScale/createAutoScaleTask`,
+  AUTO_SCALE_UPDATE: `${API_BASE}/autoScale/updateAutoScaleTask`,
+
   // 主机环境校验相关 - v1 (Step2)
   GET_INSTALL_STEP: `${API_BASE}/host/install/getInstallStep`,
   ANALYSIS_HOST_LIST: `${API_BASE}/host/install/analysisHostList`,
@@ -136,7 +150,8 @@ export const API_PATHS_V1 = {
   SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`,
   SAVE_SERVICE_ROLE_HOST_MAPPING_V2: `${API_BASE}/service/install/saveServiceRoleHostMapping`,
   LIST_SERVICE_TAB: `${API_BASE}/service/install/listServiceTab`,
-  GENERATE_SERVICE_INSTALL_COMMAND: `${API_BASE}/cluster/service/command/generate`,
+  // 服务命令相关API（基于ClusterServiceCommandController）
+  GENERATE_SERVICE_ROLE_COMMAND: `${API_BASE}/cluster/service/command/generate/role`,
   
   // 服务安装监控相关 - v1 (Step8)
   GET_SERVICE_COMMAND_LIST: `${API_BASE}/cluster/service/command/list`,
@@ -166,24 +181,37 @@ export const API_PATHS_V1 = {
 
 /**
  * 🔧 修复Long类型精度丢失的JSON解析器
- * 将超过JavaScript安全整数范围的数字保持为字符串
+ * 将超过JavaScript安全整数范围的数字保持为字符串，特别处理ID字段
  */
 function parseJsonWithLongSupport(jsonString: string): unknown {
   try {
-    // 使用正则表达式找到可能导致精度丢失的长整数
     // JavaScript安全整数范围：-(2^53-1) 到 2^53-1
     const safeMaxInt = Number.MAX_SAFE_INTEGER; // 9007199254740991
     
-    // 匹配超长数字的正则表达式（15位以上的整数）
-    const longIntRegex = /"?(-?\d{15,})"?/g;
+    // 1. 处理ID字段 - 强制转为字符串（常见的ID字段名）
+    const idFieldRegex = /"(id|ID|Id|serviceId|clusterId|hostId|roleId|instanceId|serviceInstanceId|serviceRoleInstanceId|roleGroupId)":\s*(\d+)/g;
+    let processedJson = jsonString.replace(idFieldRegex, (match, fieldName, number) => {
+      return `"${fieldName}":"${number}"`;
+    });
     
-    // 将超长整数用引号包裹，确保解析为字符串
-    const processedJson = jsonString.replace(longIntRegex, (match, number) => {
+    // 2. 处理超长数字（15位以上的整数）
+    const longIntRegex = /:\s*(-?\d{15,})(?=\s*[,\]\}])/g;
+    processedJson = processedJson.replace(longIntRegex, (match, number) => {
       const num = Math.abs(parseInt(number));
       if (num > safeMaxInt) {
-        return `"${number}"`; // 强制转为字符串
+        return `:"${number}"`;
       }
-      return match; // 保持原样
+      return match;
+    });
+    
+    // 3. 处理数组中的长整数
+    const arrayLongIntRegex = /\[\s*(-?\d{15,})/g;
+    processedJson = processedJson.replace(arrayLongIntRegex, (match, number) => {
+      const num = Math.abs(parseInt(number));
+      if (num > safeMaxInt) {
+        return `["${number}"`;
+      }
+      return match;
     });
     
     return JSON.parse(processedJson);

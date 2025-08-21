@@ -138,7 +138,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
     }
 
     @Override
-    public ConnectionInfo getConnectionInfo(Long clusterId, Integer serviceInstanceId, String serviceHome,
+    public ConnectionInfo getConnectionInfo(Long clusterId, Long serviceInstanceId, String serviceHome,
                     Map<String, String> configMap) {
         // 直接调用父类的getConnectionInfo方法
         return super.getConnectionInfo(clusterId, serviceInstanceId, serviceHome, configMap);
@@ -149,7 +149,7 @@ public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements S
      */
     @Override
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                    Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                    Long clusterId, Long serviceInstanceId, Map<String, String> configMap) {
                 try {
                         // 1. 获取全局变量
                         Map<String, String> globalVariables = GlobalVariables.get(clusterId);

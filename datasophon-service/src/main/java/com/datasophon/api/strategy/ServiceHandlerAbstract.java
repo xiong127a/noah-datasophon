@@ -128,7 +128,7 @@ public abstract class ServiceHandlerAbstract {
         return commandLines;
     }
 
-    public List<String> getRoleHosts(Long clusterId, Integer serviceInstanceId, String roleName) {
+    public List<String> getRoleHosts(Long clusterId, Long serviceInstanceId, String roleName) {
         ClusterServiceRoleInstanceService clusterServiceRoleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);
         List<ClusterServiceRoleInstanceDTO> roleInstances = clusterServiceRoleInstanceService
@@ -535,7 +535,7 @@ public abstract class ServiceHandlerAbstract {
         return getTemplateContent("shell", serviceName, connectionInfo);
     }
 
-    public ConnectionInfo getConnectionInfo(Long clusterId, Integer serviceInstanceId, String serviceHome,
+    public ConnectionInfo getConnectionInfo(Long clusterId, Long serviceInstanceId, String serviceHome,
             Map<String, String> configMap) {
         // 提取服务名称（从子类类名）
         String serviceName = getServiceName(serviceInstanceId);
@@ -623,7 +623,7 @@ public abstract class ServiceHandlerAbstract {
         }
     }
 
-    private String getServiceName(Integer serviceInstanceId) {
+    private String getServiceName(Long serviceInstanceId) {
         ClusterServiceInstanceService clusterServiceInstanceService = SpringUtil
                 .getBean(ClusterServiceInstanceService.class);
         ClusterServiceInstanceEntity clusterServiceInstanceEntity = clusterServiceInstanceService
@@ -770,7 +770,7 @@ public abstract class ServiceHandlerAbstract {
      * @return ConnectionInfo.ConnectionInfoBuilder 包含服务特定信息的构建器
      */
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-            Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+            Long clusterId, Long serviceInstanceId, Map<String, String> configMap) {
         // 默认实现返回空构建器
         return ConnectionInfo.builder();
     }

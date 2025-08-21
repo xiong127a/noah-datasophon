@@ -30,7 +30,7 @@ import java.io.Serializable;
 public record ClusterServiceInstanceRoleGroupDTO(
         Long id,
         String roleGroupName,
-        Integer serviceInstanceId,
+        Long serviceInstanceId,
         String serviceName,
         Long clusterId,
         String roleGroupType,

@@ -48,7 +48,7 @@ public interface ClusterServiceInstanceConfigService extends IService<ClusterSer
      * @return 服务实例配置结果DTO
      */
     ServiceInstanceConfigResultDTO getServiceInstanceConfig(
-            Long serviceInstanceId, Integer version, Integer roleGroupId,
+            Long serviceInstanceId, Integer version, Long roleGroupId,
             Integer page, Integer pageSize);
 
     /**

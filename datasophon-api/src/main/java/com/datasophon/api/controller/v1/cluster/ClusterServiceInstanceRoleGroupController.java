@@ -91,7 +91,7 @@ public class ClusterServiceInstanceRoleGroupController {
      * 修改
      */
     @RequestMapping("/rename")
-    public Result<Boolean> update(@RequestParam("roleGroupId") Integer roleGroupId,
+    public Result<Boolean> update(@RequestParam("roleGroupId") Long roleGroupId,
             @RequestParam("roleGroupName") String roleGroupName) {
 
         return Result.success(clusterServiceInstanceRoleGroupService.rename(roleGroupId, roleGroupName));
@@ -102,7 +102,7 @@ public class ClusterServiceInstanceRoleGroupController {
      * 删除
      */
     @RequestMapping("/delete")
-    public Result<Boolean> delete(@RequestParam("roleGroupId") Integer roleGroupId) {
+    public Result<Boolean> delete(@RequestParam("roleGroupId") Long roleGroupId) {
         // clusterServiceInstanceRoleGroupService.removeByIds(Arrays.asList(ids));
 
         return Result.success(clusterServiceInstanceRoleGroupService.deleteRoleGroup(roleGroupId));

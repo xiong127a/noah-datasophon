@@ -45,7 +45,7 @@ public class AlertHistory {
     /**
      * 集群服务实例id
      */
-    private Integer serviceInstanceId;
+    private Long serviceInstanceId;
     /**
      * 创建时间
      */

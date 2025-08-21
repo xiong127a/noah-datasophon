@@ -51,13 +51,13 @@ public class ClusterServiceRoleGroupConfigServiceImpl
     }
 
     @Override
-    public ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupIdAndVersion(Integer roleGroupId, Integer version) {
+    public ClusterServiceRoleGroupConfigDTO getConfigByRoleGroupIdAndVersion(Long roleGroupId, Integer version) {
         ClusterServiceRoleGroupConfigEntity entity = getMapper().selectByRoleGroupIdAndVersion(roleGroupId, version);
         return clusterServiceRoleGroupConfigConverter.entityToDto(entity);
     }
 
     @Override
-    public void removeAllByRoleGroupId(Integer roleGroupId) {
+    public void removeAllByRoleGroupId(Long roleGroupId) {
         getMapper().deleteByRoleGroupId(roleGroupId);
     }
 

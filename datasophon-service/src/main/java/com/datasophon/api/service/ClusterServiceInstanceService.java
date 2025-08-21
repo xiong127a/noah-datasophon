@@ -77,7 +77,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
      * @param serviceInstanceId 服务实例ID
      * @return 角色类型列表
      */
-    List<FrameServiceRoleEntity> getServiceRoleType(Integer serviceInstanceId);
+    List<FrameServiceRoleEntity> getServiceRoleType(Long serviceInstanceId);
 
     /**
      * 配置版本比较

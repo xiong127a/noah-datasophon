@@ -34,7 +34,7 @@ public class DorisHandlerStrategy extends ServiceHandlerAbstract implements Serv
 
         @Override
         protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-                        Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                        Long clusterId, Long serviceInstanceId, Map<String, String> configMap) {
                 try {
                         // 获取DorisFE节点信息 (master)
                         List<String> feNodes = getRoleHosts(clusterId, serviceInstanceId, "DorisFE");

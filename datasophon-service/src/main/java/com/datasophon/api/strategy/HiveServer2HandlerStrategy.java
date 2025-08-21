@@ -125,7 +125,7 @@ public class HiveServer2HandlerStrategy extends ServiceHandlerAbstract implement
      */
     @Override
     protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
-            Long clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+            Long clusterId, Long serviceInstanceId, Map<String, String> configMap) {
         try {
             // 获取HiveServer2节点列表
             List<String> hiveServer2Hosts = getRoleHosts(clusterId, serviceInstanceId, "HiveServer2");

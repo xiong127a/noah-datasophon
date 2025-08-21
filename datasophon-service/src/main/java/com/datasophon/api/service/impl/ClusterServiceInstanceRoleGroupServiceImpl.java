@@ -162,7 +162,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
     }
 
     @Override
-    public boolean rename(Integer roleGroupId, String roleGroupName) {
+    public boolean rename(Long roleGroupId, String roleGroupName) {
         ClusterServiceInstanceRoleGroupEntity roleGroup = this.getById(roleGroupId);
         if (roleGroup == null) {
             return false;
@@ -176,7 +176,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
     }
 
     @Override
-    public boolean deleteRoleGroup(Integer roleGroupId) {
+    public boolean deleteRoleGroup(Long roleGroupId) {
         if (hasRoleInstanceUse(roleGroupId)) {
             return false; // 当前角色组正在使用中
         }
@@ -190,7 +190,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
         return removed;
     }
 
-    private boolean isDefaultRoleGroup(Integer roleGroupId) {
+    private boolean isDefaultRoleGroup(Long roleGroupId) {
         ClusterServiceInstanceRoleGroupEntity roleGroup = this.getById(roleGroupId);
         String roleGroupType = roleGroup.getRoleGroupType();
         return DEFAULT.equals(roleGroupType);
@@ -208,7 +208,7 @@ public class ClusterServiceInstanceRoleGroupServiceImpl extends ServiceImpl<Clus
         roleGroupEntityService.updateToNeedRestart(roleGroupId);
     }
 
-    private boolean hasRoleInstanceUse(Integer roleGroupId) {
+    private boolean hasRoleInstanceUse(Long roleGroupId) {
         // 查询是否有角色实例正在使用这个角色组
         return clusterServiceRoleInstanceMapper.countByRoleGroupId(roleGroupId) > 0;
     }

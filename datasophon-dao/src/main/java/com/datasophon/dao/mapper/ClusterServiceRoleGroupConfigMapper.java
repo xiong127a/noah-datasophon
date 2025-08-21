@@ -59,7 +59,7 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @return 配置实体
          */
         default ClusterServiceRoleGroupConfigEntity selectByRoleGroupIdAndVersion(
-                        @Param("roleGroupId") Integer roleGroupId,
+                        @Param("roleGroupId") Long roleGroupId,
                         @Param("version") Integer version) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId)
@@ -73,7 +73,7 @@ public interface ClusterServiceRoleGroupConfigMapper extends BaseMapper<ClusterS
          * @param roleGroupId 角色组ID
          * @return 删除的记录数
          */
-        default int deleteByRoleGroupId(@Param("roleGroupId") Integer roleGroupId) {
+        default int deleteByRoleGroupId(@Param("roleGroupId") Long roleGroupId) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleGroupConfigEntity::getRoleGroupId).eq(roleGroupId);
                 return this.deleteByQuery(query);

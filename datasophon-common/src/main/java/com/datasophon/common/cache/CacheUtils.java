@@ -163,6 +163,11 @@ public class CacheUtils {
         return (Integer) data;
     }
 
+    public static Long getLong(String key) {
+        Object data = cache.get(key);
+        return (Long) data;
+    }
+
     public static Boolean getBoolean(String key) {
         Object data = cache.get(key);
         return (Boolean) data;

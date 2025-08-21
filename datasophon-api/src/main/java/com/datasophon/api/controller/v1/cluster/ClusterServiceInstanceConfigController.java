@@ -84,7 +84,7 @@ public class ClusterServiceInstanceConfigController {
     public Result<Object> info(
             @RequestParam("serviceInstanceId") Long serviceInstanceId,
             @RequestParam("version") Integer version, 
-            @RequestParam("roleGroupId") Integer roleGroupId, 
+            @RequestParam("roleGroupId") Long roleGroupId, 
             @RequestParam("page") Integer page,
             @RequestParam("pageSize") Integer pageSize) {
         

@@ -159,7 +159,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         }
 
         // 🔧 修复：安全处理Long/Integer类型转换
-        Integer roleGroupId = CacheUtils.getInteger("UseRoleGroup_" + clusterServiceInstance.getId());
+        Long roleGroupId = CacheUtils.getLong("UseRoleGroup_" + clusterServiceInstance.getId());
         ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupService.getById(roleGroupId);
 
         // save role instance

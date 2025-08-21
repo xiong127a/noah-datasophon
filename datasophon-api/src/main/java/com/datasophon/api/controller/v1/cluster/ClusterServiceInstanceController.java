@@ -66,7 +66,7 @@ public class ClusterServiceInstanceController {
      */
     @RequestMapping("/getServiceRoleType")
     public Result<List<FrameServiceRoleEntity>> getServiceRoleType(
-            @RequestParam("serviceInstanceId") Integer serviceInstanceId) {
+            @RequestParam("serviceInstanceId") Long serviceInstanceId) {
         List<FrameServiceRoleEntity> serviceRoleTypes = clusterServiceInstanceService
                 .getServiceRoleType(serviceInstanceId);
         return Result.success(serviceRoleTypes);

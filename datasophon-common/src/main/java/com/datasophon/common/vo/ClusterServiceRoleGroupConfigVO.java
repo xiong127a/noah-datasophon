@@ -31,7 +31,7 @@ import java.util.Date;
  */
 public record ClusterServiceRoleGroupConfigVO(
         Long id,
-        Integer roleGroupId,
+        Long roleGroupId,
         String configJson,
         String configJsonMd5,
         Integer configVersion,

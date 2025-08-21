@@ -24,7 +24,7 @@ import lombok.Data;
 @Data
 public class GenerateStarRocksHAMessage implements Serializable {
 
-    private Integer serviceInstanceId;
+    private Long serviceInstanceId;
 
     private Long clusterId;
 }
