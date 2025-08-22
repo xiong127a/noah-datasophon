@@ -19,6 +19,12 @@ import {
   BarChart3
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useCluster } from '@/hooks/useCluster'
 import FinalNavbar from '@/components/layout/navbar-final'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
@@ -207,13 +213,7 @@ export default function ServiceLayout() {
   // 选中的服务状态
   const [selectedService, setSelectedService] = useState<ServiceItem | null>(null)
   
-  // 服务操作菜单状态
-  const [showActionMenu, setShowActionMenu] = useState(false)
-  const [actionMenuPosition, setActionMenuPosition] = useState({ top: 0, left: 0 })
-  
-  // 总服务选项菜单状态
-  const [showServiceOptionMenu, setShowServiceOptionMenu] = useState(false)
-  const [serviceOptionMenuPosition, setServiceOptionMenuPosition] = useState({ top: 0, left: 0 })
+  // 注意：移除了自定义下拉菜单状态，现在使用Radix UI DropdownMenu自动管理状态
   
   // 添加服务向导状态
   const [showAddServiceWizard, setShowAddServiceWizard] = useState(false)
@@ -446,50 +446,11 @@ export default function ServiceLayout() {
     setSelectedService(service)
   }
 
-  // 处理服务操作菜单点击
-  const handleServiceActionClick = (event: React.MouseEvent) => {
-    event.stopPropagation()
-    // 使用鼠标位置而不是按钮位置
-    setActionMenuPosition({
-      top: event.clientY + window.scrollY + 5, // 鼠标下方5px
-      left: event.clientX + window.scrollX + 5  // 鼠标右侧5px
-    })
-    setShowActionMenu(true)
-  }
-
-  // 处理总服务选项点击
-  const handleServiceOptionClick = (event: React.MouseEvent) => {
-    event.stopPropagation()
-    const rect = event.currentTarget.getBoundingClientRect()
-    // 使用按钮位置，菜单出现在按钮下方右对齐
-    setServiceOptionMenuPosition({
-      top: rect.bottom + window.scrollY + 2, // 按钮下方2px
-      left: rect.left + window.scrollX  // 从按钮左边界开始
-    })
-    setShowServiceOptionMenu(true)
-  }
-
-  // 点击外部区域关闭菜单
-  const handleClickOutside = useCallback((event: MouseEvent) => {
-    const target = event.target as HTMLElement
-    if (!target.closest('.action-menu') && !target.closest('.action-trigger')) {
-      setShowActionMenu(false)
-    }
-    if (!target.closest('.service-option-menu') && !target.closest('.service-option-trigger')) {
-      setShowServiceOptionMenu(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    document.addEventListener('click', handleClickOutside)
-    return () => {
-      document.removeEventListener('click', handleClickOutside)
-    }
-  }, [handleClickOutside])
+  // 注意：移除了自定义事件处理器，现在使用Radix UI DropdownMenu自动处理点击外部关闭
 
   // 处理总服务操作
   const handleGlobalServiceAction = async (action: 'add' | 'start-all' | 'stop-all' | 'restart-needed') => {
-    setShowServiceOptionMenu(false)
+    // 注意：移除了手动关闭菜单的逻辑，Radix UI会自动处理
     
     switch (action) {
       case 'add':
@@ -651,13 +612,49 @@ export default function ServiceLayout() {
                   </div>
                 </div>
               </div>
-              <button
-                className="relative p-2 hover:bg-white/70 backdrop-blur-sm rounded-xl transition-all duration-200 shadow-sm hover:shadow-md service-option-trigger group border border-white/30 hover:border-white/60"
-                onClick={handleServiceOptionClick}
-              >
-                <MoreHorizontal className="w-4 h-4 text-gray-600 group-hover:text-gray-800 transition-colors" />
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/10 transition-all duration-200"></div>
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="relative p-2 hover:bg-white/70 backdrop-blur-sm rounded-xl transition-all duration-200 shadow-sm hover:shadow-md group border border-white/30 hover:border-white/60">
+                    <MoreHorizontal className="w-4 h-4 text-gray-600 group-hover:text-gray-800 transition-colors" />
+                    <div className="absolute inset-0 rounded-xl bg-gradient-to-r from-blue-500/0 to-indigo-500/0 group-hover:from-blue-500/5 group-hover:to-indigo-500/10 transition-all duration-200"></div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent 
+                  side="right" 
+                  align="start" 
+                  sideOffset={4} 
+                  className="w-56 bg-white/98 backdrop-blur-xl shadow-2xl border border-slate-200/40 rounded-2xl p-2 animate-in fade-in-0 zoom-in-95 duration-200"
+                >
+                  <DropdownMenuItem 
+                    className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-blue-50/80 transition-all duration-150 text-sm"
+                    onClick={() => handleGlobalServiceAction('add')}
+                  >
+                    <Plus className="w-4 h-4 mr-3 text-blue-600" />
+                    <span className="font-medium">添加服务</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-green-50/80 transition-all duration-150 text-sm"
+                    onClick={() => handleGlobalServiceAction('start-all')}
+                  >
+                    <Play className="w-4 h-4 mr-3 text-green-600" />
+                    <span className="font-medium">启动所有</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-yellow-50/80 transition-all duration-150 text-sm"
+                    onClick={() => handleGlobalServiceAction('stop-all')}
+                  >
+                    <Pause className="w-4 h-4 mr-3 text-yellow-600" />
+                    <span className="font-medium">停止所有</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem 
+                    className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-blue-50/80 transition-all duration-150 text-sm"
+                    onClick={() => handleGlobalServiceAction('restart-needed')}
+                  >
+                    <RotateCcw className="w-4 h-4 mr-3 text-blue-600" />
+                    <span className="font-medium">重启所有需要重启的服务</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </div>
 
@@ -748,12 +745,44 @@ export default function ServiceLayout() {
                                     <div className="absolute inset-0 bg-red-400 rounded-full animate-ping opacity-20"></div>
                                   </div>
                                 )}
-                                <button
-                                  className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-blue-50 hover:shadow-md rounded-xl transition-all duration-200 action-trigger border border-transparent hover:border-blue-200"
-                                  onClick={handleServiceActionClick}
-                                >
-                                  <MoreHorizontal className="w-4 h-4 text-gray-500" />
-                                </button>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <button className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-blue-50 hover:shadow-md rounded-xl transition-all duration-200 border border-transparent hover:border-blue-200">
+                                      <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                                    </button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent 
+                                    side="right" 
+                                    align="start" 
+                                    sideOffset={4} 
+                                    className="w-48 bg-white/98 backdrop-blur-xl shadow-2xl border border-slate-200/40 rounded-2xl p-2 animate-in fade-in-0 zoom-in-95 duration-200"
+                                  >
+                                    <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-green-50/80 transition-all duration-150 text-sm">
+                                      <Play className="w-4 h-4 mr-3 text-green-600" />
+                                      <span className="font-medium">启动</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-yellow-50/80 transition-all duration-150 text-sm">
+                                      <Pause className="w-4 h-4 mr-3 text-yellow-600" />
+                                      <span className="font-medium">停止</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-blue-50/80 transition-all duration-150 text-sm">
+                                      <RotateCcw className="w-4 h-4 mr-3 text-blue-600" />
+                                      <span className="font-medium">重启</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-purple-50/80 transition-all duration-150 text-sm">
+                                      <RotateCcw className="w-4 h-4 mr-3 text-purple-600" />
+                                      <span className="font-medium">滚动重启</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-indigo-50/80 transition-all duration-150 text-sm">
+                                      <Users className="w-4 h-4 mr-3 text-indigo-600" />
+                                      <span className="font-medium">分配角色组</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-red-50/80 transition-all duration-150 text-sm text-red-600">
+                                      <Trash2 className="w-4 h-4 mr-3" />
+                                      <span className="font-medium">删除</span>
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
                               </div>
                             </div>
                           </div>
@@ -847,12 +876,44 @@ export default function ServiceLayout() {
                                 )}
                                 {/* 大数据基础平台不显示操作按钮，其他管理服务显示 */}
                                 {service.serviceName !== 'DATASOPHON' && (
-                                  <button
-                                    className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-emerald-50 hover:shadow-md rounded-xl transition-all duration-200 action-trigger border border-transparent hover:border-emerald-200"
-                                    onClick={handleServiceActionClick}
-                                  >
-                                    <MoreHorizontal className="w-4 h-4 text-gray-500" />
-                                  </button>
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <button className="opacity-0 group-hover:opacity-100 p-1.5 hover:bg-emerald-50 hover:shadow-md rounded-xl transition-all duration-200 border border-transparent hover:border-emerald-200">
+                                        <MoreHorizontal className="w-4 h-4 text-gray-500" />
+                                      </button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent 
+                                      side="right" 
+                                      align="start" 
+                                      sideOffset={4} 
+                                      className="w-48 bg-white/98 backdrop-blur-xl shadow-2xl border border-slate-200/40 rounded-2xl p-2 animate-in fade-in-0 zoom-in-95 duration-200"
+                                    >
+                                      <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-green-50/80 transition-all duration-150 text-sm">
+                                        <Play className="w-4 h-4 mr-3 text-green-600" />
+                                        <span className="font-medium">启动</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-yellow-50/80 transition-all duration-150 text-sm">
+                                        <Pause className="w-4 h-4 mr-3 text-yellow-600" />
+                                        <span className="font-medium">停止</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-blue-50/80 transition-all duration-150 text-sm">
+                                        <RotateCcw className="w-4 h-4 mr-3 text-blue-600" />
+                                        <span className="font-medium">重启</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-purple-50/80 transition-all duration-150 text-sm">
+                                        <RotateCcw className="w-4 h-4 mr-3 text-purple-600" />
+                                        <span className="font-medium">滚动重启</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-indigo-50/80 transition-all duration-150 text-sm">
+                                        <Users className="w-4 h-4 mr-3 text-indigo-600" />
+                                        <span className="font-medium">分配角色组</span>
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-red-50/80 transition-all duration-150 text-sm text-red-600">
+                                        <Trash2 className="w-4 h-4 mr-3" />
+                                        <span className="font-medium">删除</span>
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
                                 )}
                               </div>
                             </div>
@@ -941,84 +1002,7 @@ export default function ServiceLayout() {
         </div>
       </div>
 
-      {/* 服务操作菜单 */}
-      {showActionMenu && (
-        <div
-          className="fixed bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 action-menu backdrop-blur-sm"
-          style={{
-            top: actionMenuPosition.top,
-            left: actionMenuPosition.left,
-            minWidth: '180px'
-          }}
-        >
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-green-50 hover:text-green-700 flex items-center transition-colors rounded-lg mx-2">
-            <Play className="w-4 h-4 mr-3 text-green-600" />
-            <span className="font-medium">启动</span>
-          </button>
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-yellow-50 hover:text-yellow-700 flex items-center transition-colors rounded-lg mx-2">
-            <Pause className="w-4 h-4 mr-3 text-yellow-600" />
-            <span className="font-medium">停止</span>
-          </button>
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2">
-            <RotateCcw className="w-4 h-4 mr-3 text-blue-600" />
-            <span className="font-medium">重启</span>
-          </button>
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-purple-50 hover:text-purple-700 flex items-center transition-colors rounded-lg mx-2">
-            <RotateCcw className="w-4 h-4 mr-3 text-purple-600" />
-            <span className="font-medium">滚动重启</span>
-          </button>
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-indigo-50 hover:text-indigo-700 flex items-center transition-colors rounded-lg mx-2">
-            <Users className="w-4 h-4 mr-3 text-indigo-600" />
-            <span className="font-medium">分配角色组</span>
-          </button>
-          <hr className="my-2 border-gray-100" />
-          <button className="w-full px-4 py-3 text-left text-sm hover:bg-red-50 hover:text-red-700 flex items-center text-red-600 transition-colors rounded-lg mx-2">
-            <Trash2 className="w-4 h-4 mr-3" />
-            <span className="font-medium">删除</span>
-          </button>
-        </div>
-      )}
-
-      {/* 总服务选项菜单 */}
-      {showServiceOptionMenu && (
-        <div
-          className="fixed bg-white rounded-xl shadow-2xl border border-gray-200 py-2 z-50 service-option-menu backdrop-blur-sm"
-          style={{
-            top: serviceOptionMenuPosition.top,
-            left: serviceOptionMenuPosition.left,
-            minWidth: '220px'
-          }}
-        >
-          <button 
-            className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2"
-            onClick={() => handleGlobalServiceAction('add')}
-          >
-            <Plus className="w-4 h-4 mr-3 text-blue-600" />
-            <span className="font-medium">添加服务</span>
-          </button>
-          <button 
-            className="w-full px-4 py-3 text-left text-sm hover:bg-green-50 hover:text-green-700 flex items-center transition-colors rounded-lg mx-2"
-            onClick={() => handleGlobalServiceAction('start-all')}
-          >
-            <Play className="w-4 h-4 mr-3 text-green-600" />
-            <span className="font-medium">启动所有</span>
-          </button>
-          <button 
-            className="w-full px-4 py-3 text-left text-sm hover:bg-yellow-50 hover:text-yellow-700 flex items-center transition-colors rounded-lg mx-2"
-            onClick={() => handleGlobalServiceAction('stop-all')}
-          >
-            <Pause className="w-4 h-4 mr-3 text-yellow-600" />
-            <span className="font-medium">停止所有</span>
-          </button>
-          <button 
-            className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50 hover:text-blue-700 flex items-center transition-colors rounded-lg mx-2"
-            onClick={() => handleGlobalServiceAction('restart-needed')}
-          >
-            <RotateCcw className="w-4 h-4 mr-3 text-blue-600" />
-            <span className="font-medium">重启所有需要重启的服务</span>
-          </button>
-        </div>
-      )}
+      {/* 注意：移除了自定义下拉菜单容器，现在使用Radix UI DropdownMenu自动渲染 */}
 
       {/* 添加服务向导对话框 */}
       {showAddServiceWizard && currentCluster && (
