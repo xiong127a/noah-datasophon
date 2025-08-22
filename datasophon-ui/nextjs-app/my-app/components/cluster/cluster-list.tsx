@@ -115,6 +115,7 @@ import ServiceInstallDialog from "./common/service-install-dialog"
 import { Step7Data } from '@/types/service-config'
 import { apiClient, API_PATHS } from "@/lib/api"
 import { useRouter } from "next/navigation"
+import { useCluster } from "@/hooks/useCluster"
 import Image from "next/image"
 
 // 集群类型定义
@@ -527,6 +528,7 @@ export default function ClusterListEnhanced() {
   const [workerRoleAssignData, setWorkerRoleAssignData] = useState<Step6Data | null>(null);
   const [serviceConfigData, setServiceConfigData] = useState<Step7Data | null>(null);
   const router = useRouter();
+  const { setCluster } = useCluster();
 
   // 获取集群列表
   const fetchClusters = async () => {
@@ -561,16 +563,17 @@ export default function ClusterListEnhanced() {
   }, []);
 
   // 事件处理函数
-  const handleEnterCluster = async (cluster: ClusterItem) => {
+  const handleEnterCluster = (cluster: ClusterItem) => {
     try {
-      const response = await apiClient.post(API_PATHS.CLUSTER_SERVICE_LIST, { clusterId: cluster.id });
-      if (response.data && response.data.code === 200) {
-        localStorage.setItem('current_cluster_id', cluster.id.toString());
-        localStorage.setItem('current_cluster_name', cluster.clusterName);
-        router.push(`/clusters/${cluster.id}`);
-      } else {
-        alert(response.data?.msg || "进入集群失败");
-      }
+      // 设置集群状态，与集群选择器逻辑保持一致
+      setCluster({
+        id: cluster.id.toString(),
+        name: cluster.clusterName,
+        clusterName: cluster.clusterName,
+      });
+      
+      // 跳转到主页
+      router.push('/');
     } catch (err: unknown) {
       console.error("进入集群失败:", err);
       alert("进入集群失败，请稍后重试");
