@@ -570,6 +570,8 @@ export default function ClusterListEnhanced() {
         id: cluster.id.toString(),
         name: cluster.clusterName,
         clusterName: cluster.clusterName,
+        depType: cluster.depType || 'PVM',
+        isK8s: cluster.depType ? ClusterTypeUtil.isKubernetes(cluster.depType) : false,
       });
       
       // 跳转到主页

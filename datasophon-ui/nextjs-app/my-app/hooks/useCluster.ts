@@ -28,11 +28,18 @@ export const useCluster = () => {
       return null
     }
 
+    // 尝试获取完整的集群信息
+    const depType = localStorage.getItem('clusterDepType')
+    const isK8sStr = localStorage.getItem('clusterIsK8s')
+    const clusterStateStr = localStorage.getItem('clusterState')
+
     return {
       id: clusterId,
       name: clusterName,
       clusterName: clusterName,
-      // 这里可以从localStorage获取更多集群详细信息
+      depType: depType || undefined,
+      isK8s: isK8sStr === 'true',
+      clusterState: clusterStateStr ? parseInt(clusterStateStr) : undefined,
     }
   }
 
@@ -41,19 +48,44 @@ export const useCluster = () => {
     if (typeof window === 'undefined') return
 
     if (cluster) {
+      // 保存基本信息（保持向后兼容）
       localStorage.setItem('clusterId', cluster.id.toString())
       localStorage.setItem('clusterName', cluster.clusterName)
       localStorage.setItem('current_cluster_id', cluster.id.toString())
       localStorage.setItem('current_cluster_name', cluster.clusterName)
       localStorage.setItem('isCluster', 'isCluster')
+      
+      // 保存扩展信息，用于图标显示等
+      if (cluster.depType) {
+        localStorage.setItem('clusterDepType', cluster.depType)
+      } else {
+        localStorage.removeItem('clusterDepType')
+      }
+      
+      if (cluster.isK8s !== undefined) {
+        localStorage.setItem('clusterIsK8s', cluster.isK8s.toString())
+      } else {
+        localStorage.removeItem('clusterIsK8s')
+      }
+      
+      if (cluster.clusterState !== undefined) {
+        localStorage.setItem('clusterState', cluster.clusterState.toString())
+      } else {
+        localStorage.removeItem('clusterState')
+      }
+      
       setCurrentCluster(cluster)
       setHasCluster(true)
     } else {
+      // 清除所有集群相关信息
       localStorage.removeItem('clusterId')
       localStorage.removeItem('clusterName')
       localStorage.removeItem('current_cluster_id')
       localStorage.removeItem('current_cluster_name')
       localStorage.removeItem('isCluster')
+      localStorage.removeItem('clusterDepType')
+      localStorage.removeItem('clusterIsK8s')
+      localStorage.removeItem('clusterState')
       setCurrentCluster(null)
       setHasCluster(false)
     }
