@@ -312,18 +312,18 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
         </CardHeader>
 
         <CardContent className="p-0">
-          {/* 数据表格 */}
-          <div className="overflow-x-auto">
+          {/* 数据表格 - 响应式设计，避免横向滚动 */}
+          <div className="">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12"></TableHead>
                   <TableHead>名称</TableHead>
                   <TableHead>状态</TableHead>
-                  <TableHead>就绪</TableHead>
-                  <TableHead>重启次数</TableHead>
-                  <TableHead>节点</TableHead>
-                  <TableHead>年龄</TableHead>
+                  <TableHead className="hidden sm:table-cell">就绪</TableHead>
+                  <TableHead className="hidden md:table-cell">重启次数</TableHead>
+                  <TableHead className="hidden lg:table-cell">节点</TableHead>
+                  <TableHead className="hidden md:table-cell">年龄</TableHead>
                   <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -375,24 +375,24 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
                           {pod.status?.phase || 'Unknown'}
                         </Badge>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden sm:table-cell">
                         <span className="font-mono text-sm">
                           {getContainerSummary(pod)}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <span className={`font-mono text-sm ${
                           getRestartCount(pod) > 0 ? 'text-orange-600' : 'text-gray-600'
                         }`}>
                           {getRestartCount(pod)}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden lg:table-cell">
                         <span className="text-sm text-gray-600">
                           {pod.spec.nodeName || '-'}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="hidden md:table-cell">
                         <span className="text-sm text-gray-500">
                           {getPodAge(pod.metadata.creationTimestamp)}
                         </span>

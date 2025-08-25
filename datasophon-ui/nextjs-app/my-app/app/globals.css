@@ -150,30 +150,155 @@
     @apply absolute right-3 top-1/2 transform -translate-y-1/2 w-2 h-2 bg-green-400 rounded-full animate-pulse shadow-lg shadow-green-400/50;
   }
 
-  /* 自定义滚动条样式 */
-  .scrollbar-thin {
+  /* 🎨 现代化美观滚动条样式 */
+  
+  /* Firefox滚动条 */
+  * {
     scrollbar-width: thin;
+    scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
   }
 
-  .scrollbar-thumb-slate-300 {
-    scrollbar-color: rgb(203 213 225) transparent;
+  /* Webkit滚动条 - 全局默认 */
+  *::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
   }
 
-  .scrollbar-track-slate-100 {
-    scrollbar-color: rgb(203 213 225) rgb(241 245 249);
+  *::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 10px;
   }
 
-  /* Webkit 滚动条样式 */
-  .scrollbar-thin::-webkit-scrollbar {
+  *::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, rgba(156, 163, 175, 0.4), rgba(156, 163, 175, 0.6));
+    border-radius: 10px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+    transition: all 0.3s ease;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, rgba(99, 102, 241, 0.6), rgba(79, 70, 229, 0.8));
+    transform: scale(1.1);
+  }
+
+  *::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* 🚀 Kubernetes Dashboard专用滚动条 */
+  .k8s-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(59, 130, 246, 0.3) rgba(241, 245, 249, 0.5);
+  }
+
+  .k8s-scroll::-webkit-scrollbar {
     width: 6px;
+    height: 6px;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-track {
-    @apply bg-slate-100 rounded-full;
+  .k8s-scroll::-webkit-scrollbar-track {
+    background: rgba(241, 245, 249, 0.3);
+    border-radius: 6px;
+    margin: 2px;
   }
 
-  .scrollbar-thin::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 rounded-full hover:bg-slate-400 transition-colors;
+  .k8s-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, 
+      rgba(59, 130, 246, 0.4), 
+      rgba(37, 99, 235, 0.6)
+    );
+    border-radius: 6px;
+    border: 1px solid rgba(59, 130, 246, 0.1);
+    transition: all 0.2s ease;
+  }
+
+  .k8s-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, 
+      rgba(59, 130, 246, 0.7), 
+      rgba(37, 99, 235, 0.9)
+    );
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+  }
+
+  /* 🎯 表格滚动条 - 更加精细 */
+  .table-scroll::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  .table-scroll::-webkit-scrollbar-track {
+    background: rgba(248, 250, 252, 0.8);
+    border-radius: 3px;
+  }
+
+  .table-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(45deg, 
+      rgba(148, 163, 184, 0.5), 
+      rgba(100, 116, 139, 0.7)
+    );
+    border-radius: 3px;
+    transition: all 0.2s ease;
+  }
+
+  .table-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(45deg, 
+      rgba(100, 116, 139, 0.8), 
+      rgba(71, 85, 105, 0.9)
+    );
+  }
+
+  /* 🌟 命名空间选择器滚动条 */
+  .namespace-scroll::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  .namespace-scroll::-webkit-scrollbar-track {
+    background: rgba(243, 244, 246, 0.5);
+    border-radius: 4px;
+    margin: 4px 0;
+  }
+
+  .namespace-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, 
+      rgba(59, 130, 246, 0.4), 
+      rgba(59, 130, 246, 0.6)
+    );
+    border-radius: 4px;
+    transition: all 0.3s ease;
+  }
+
+  .namespace-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, 
+      rgba(59, 130, 246, 0.7), 
+      rgba(37, 99, 235, 0.8)
+    );
+    transform: scaleX(1.2);
+  }
+
+  /* ⚡ 隐藏滚动条但保持功能 */
+  .scroll-hidden {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .scroll-hidden::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* 🔥 动画滚动条 */
+  @keyframes scroll-glow {
+    0%, 100% {
+      box-shadow: inset 0 0 0 rgba(59, 130, 246, 0);
+    }
+    50% {
+      box-shadow: inset 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+  }
+
+  .scroll-glow::-webkit-scrollbar-thumb:hover {
+    animation: scroll-glow 2s ease-in-out infinite;
   }
 
   /* 科技感动画效果 */

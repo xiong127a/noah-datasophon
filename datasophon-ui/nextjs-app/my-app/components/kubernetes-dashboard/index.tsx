@@ -203,13 +203,13 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
   const viewInfo = getCurrentViewInfo();
 
   return (
-    <div className={`flex h-screen bg-gray-50 ${className || ''}`}>
-      {/* 侧边栏 */}
+    <div className={`flex min-h-screen bg-gray-50 ${className || ''}`}>
+      {/* 侧边栏 - 固定位置，无需滚动 */}
       <motion.div
         initial={false}
         animate={{ width: sidebarCollapsed ? 72 : 280 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="bg-white border-r border-gray-200 shadow-sm flex-shrink-0"
+        className="bg-white border-r border-gray-200 shadow-sm flex-shrink-0 sticky top-0 h-screen"
       >
         {/* 侧边栏头部 */}
         <div className="p-4 border-b border-gray-200">
@@ -254,8 +254,8 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
           />
         </div>
 
-        {/* 菜单项 */}
-        <div className="flex-1 overflow-y-auto py-4">
+        {/* 菜单项 - 移除滚动，固定高度布局 */}
+        <div className="flex-1 py-4 overflow-hidden">
           {/* 总览 */}
           <div className="px-4 mb-6">
             <motion.div
@@ -432,8 +432,8 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
           </div>
         </div>
 
-        {/* 主要内容区域 */}
-        <div className="flex-1 overflow-auto bg-gray-50 p-6">
+        {/* 主要内容区域 - 移除独立滚动，跟随页面整体滚动 */}
+        <div className="flex-1 bg-gray-50 p-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}

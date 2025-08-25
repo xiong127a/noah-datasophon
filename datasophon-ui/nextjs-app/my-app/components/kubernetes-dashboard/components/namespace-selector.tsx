@@ -65,8 +65,8 @@ const NamespaceDropdownContent = memo<{
       />
     </div>
 
-    {/* 命名空间列表 */}
-    <ScrollArea className="h-96 overflow-auto">
+                   {/* 命名空间列表 */}
+               <ScrollArea scrollType="namespace" className="h-96">
       <div className="space-y-1 pr-2">
         {loading ? (
           <div className="flex items-center justify-center py-8">
