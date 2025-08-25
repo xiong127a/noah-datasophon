@@ -109,7 +109,7 @@ public class KubernetesDashboardController {
      * 获取Pods列表
      */
     @GetMapping("/pods")
-    public Result<List<KubernetesResourceVO>> getPodsInfo(@RequestParam(name = "clusterId") Long clusterId,
+    public Result<List<KubernetesResourceVO>> getPodsInfo(@ClusterId Long clusterId,
             @RequestParam(name = "serviceId", required = false) Integer serviceId,
             @RequestParam(name = "namespace", required = false) String namespace,
             @RequestParam(name = "pageNum", required = false, defaultValue = "1") Integer pageNum,
@@ -476,7 +476,7 @@ public class KubernetesDashboardController {
      * 获取资源相关事件
      */
     @RequestMapping(value = "/resource/events", method = RequestMethod.GET)
-    public Result<List<Map<String, Object>>> getResourceEvents(@RequestParam Long clusterId,
+    public Result<List<Map<String, Object>>> getResourceEvents(@ClusterId Long clusterId,
             @RequestParam String namespace,
             @RequestParam String kind,
             @RequestParam String name) {
@@ -496,7 +496,7 @@ public class KubernetesDashboardController {
      */
     @RequestMapping("/resource-stats")
     public Result<K8sResourceStatsDTO> getResourceStats(
-            @RequestParam(name = "clusterId", required = false) Long clusterId,
+            @ClusterId Long clusterId,
             @RequestParam(value = "serviceId", required = false) Integer serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
         try {
