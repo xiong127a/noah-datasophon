@@ -11,26 +11,18 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Filter,
   Download,
   RefreshCw,
   MoreHorizontal,
   Eye,
   Edit,
   Trash2,
-  Play,
-  Pause,
   Package,
   Users,
   CheckCircle,
   AlertCircle,
-  Clock,
   Box,
-  ChevronDown,
-  ChevronRight,
-  Activity,
-  TrendingUp,
-  TrendingDown
+  TrendingUp
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -42,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
+
 import {
   Table,
   TableBody,
@@ -65,7 +57,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 import { Progress } from "@/components/ui/progress";
 
 import { Deployment } from "../types";
@@ -89,8 +81,8 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
+  // const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
+  // const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pageNum, setPageNum] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -113,39 +105,44 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
       );
       console.log('✅ 获取Deployments成功，数据结构:', response);
       console.log('✅ 获取Deployments成功，数量:', response.data?.length);
+      console.log('✅ 实际数据数组:', response.data);
+      
+      // 检查数据结构并提取实际的数组
+      const dataArray = Array.isArray(response.data) ? response.data : ((response.data as any)?.data || []);
+      console.log('✅ 使用的数据数组:', dataArray, '长度:', dataArray.length);
 
       // 转换API响应为组件需要的Deployment格式
-      const convertedDeployments: Deployment[] = response.data.map((resource: any) => ({
+      const convertedDeployments: Deployment[] = dataArray.map((resource: any) => ({
         apiVersion: "apps/v1",
         kind: "Deployment",
         metadata: {
-          name: resource.name,
-          namespace: resource.namespace,
-          creationTimestamp: resource.creationTimestamp || new Date().toISOString(),
+          name: resource.name as string,
+          namespace: resource.namespace as string,
+          creationTimestamp: (resource.creationTimestamp as string) || new Date().toISOString(),
           labels: resource.labels || {}
         },
         spec: {
-          replicas: parseInt(resource.replicas?.split('/')[2]) || 1,
-          selector: { matchLabels: { app: resource.name } },
+          replicas: parseInt((resource.replicas as string)?.split('/')[2]) || 1,
+          selector: { matchLabels: { app: resource.name as string } },
           template: {
-            metadata: { labels: { app: resource.name } },
+            metadata: { labels: { app: resource.name as string } },
             spec: {
               containers: [{
-                name: resource.name,
+                name: resource.name as string,
                 image: "unknown:latest"
               }]
             }
           }
         },
         status: {
-          replicas: parseInt(resource.replicas?.split('/')[2]) || 1,
-          readyReplicas: parseInt(resource.replicas?.split('/')[0]) || 0,
-          updatedReplicas: parseInt(resource.replicas?.split('/')[1]) || 0,
-          availableReplicas: parseInt(resource.available) || 0,
-          unavailableReplicas: (parseInt(resource.replicas?.split('/')[2]) || 1) - (parseInt(resource.available) || 0),
+          replicas: parseInt((resource.replicas as string)?.split('/')[2]) || 1,
+          readyReplicas: parseInt((resource.replicas as string)?.split('/')[0]) || 0,
+          updatedReplicas: parseInt((resource.replicas as string)?.split('/')[1]) || 0,
+          availableReplicas: parseInt(resource.available as string) || 0,
+          unavailableReplicas: (parseInt((resource.replicas as string)?.split('/')[2]) || 1) - (parseInt(resource.available as string) || 0),
           conditions: [{
             type: "Available",
-            status: (parseInt(resource.available) || 0) > 0 ? "True" : "False",
+            status: (parseInt(resource.available as string) || 0) > 0 ? "True" : "False",
             reason: "MinimumReplicasAvailable",
             message: `Deployment has ${resource.available || 0} available replica(s).`
           }]
@@ -153,7 +150,11 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
       }));
 
       setDeployments(convertedDeployments);
-      setTotal(response.total || convertedDeployments.length);
+      
+      // 使用正确的总数：优先使用API返回的total，其次使用数据长度
+      const totalCount = response.total || (response.data as any)?.total || convertedDeployments.length;
+      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: response.total, dataTotal: (response.data as any)?.total, arrayLength: convertedDeployments.length });
+      setTotal(typeof totalCount === 'string' ? parseInt(totalCount) : totalCount);
     } catch (error) {
       console.error('获取Deployments失败:', error);
       setError(error instanceof Error ? error.message : '获取Deployments失败');
@@ -254,8 +255,9 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
     console.log(`执行操作: ${action} on Deployment: ${deployment.metadata.name}`);
     switch (action) {
       case 'view':
-        setSelectedDeployment(deployment);
-        setShowDetails(true);
+        // setSelectedDeployment(deployment);
+        // setShowDetails(true);
+        console.log('查看Deployment详情:', deployment.metadata.name);
         break;
       case 'scale':
         // 实现扩缩容逻辑
@@ -275,7 +277,7 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchDeployments();
-  }, [clusterId, namespace, pageNum]);
+  }, [fetchDeployments]);
 
   if (loading && deployments.length === 0) {
     return (

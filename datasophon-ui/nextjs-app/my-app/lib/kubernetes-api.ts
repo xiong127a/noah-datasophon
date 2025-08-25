@@ -191,11 +191,20 @@ export class KubernetesAPI {
         params,
         headers: { 'X-Cluster-Id': clusterId }
       });
+      
+      console.log('🔍 Services API响应结构:', {
+        code: response.data?.code,
+        hasPageVO: !!response.data?.data,
+        dataLength: response.data?.data?.data?.length
+      });
+      
+      // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
+      const pageVO = response.data?.data || {};
       return {
-        data: response.data?.data || [],
-        total: response.data?.total,
-        pageNum,
-        pageSize
+        data: pageVO.data || [],
+        total: pageVO.total || 0,
+        pageNum: pageVO.pageNum || pageNum,
+        pageSize: pageVO.pageSize || pageSize
       };
     } catch (error) {
       console.error('获取Services失败:', error);
@@ -225,11 +234,22 @@ export class KubernetesAPI {
         params,
         headers: { 'X-Cluster-Id': clusterId }
       });
+      
+      console.log('🔍 Deployments API响应结构:', {
+        code: response.data?.code,
+        hasPageVO: !!response.data?.data,
+        rawResponse: response.data,
+        pageVOData: response.data?.data?.data,
+        dataLength: response.data?.data?.data?.length
+      });
+      
+      // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
+      const pageVO = response.data?.data || {};
       return {
-        data: response.data?.data || [],
-        total: response.data?.total,
-        pageNum,
-        pageSize
+        data: pageVO.data || [],
+        total: pageVO.total || 0,
+        pageNum: pageVO.pageNum || pageNum,
+        pageSize: pageVO.pageSize || pageSize
       };
     } catch (error) {
       console.error('获取Deployments失败:', error);
