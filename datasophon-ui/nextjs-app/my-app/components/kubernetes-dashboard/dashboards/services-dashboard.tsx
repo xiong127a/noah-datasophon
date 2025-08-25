@@ -80,7 +80,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [pageNum, setPageNum] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
 

@@ -79,7 +79,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
   const [selectedPod, setSelectedPod] = useState<Pod | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [pageNum, setPageNum] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
   // 筛选和搜索Pods

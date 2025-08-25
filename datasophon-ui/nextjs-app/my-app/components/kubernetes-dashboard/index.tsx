@@ -451,26 +451,26 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
                   {[
                     { 
                       title: 'Pods', 
-                      count: resourceStats ? String(resourceStats.podCount || 0) : (isLoading ? '...' : '0'), 
+                      count: resourceStats ? String(resourceStats.podCount || 0) : '...', 
                       status: resourceStats && resourceStats.podCount > 0 && resourceStats.runningPodCount === resourceStats.podCount ? 'healthy' : 
                               resourceStats && resourceStats.podCount > 0 ? 'warning' : 'healthy', 
                       icon: Box 
                     },
                     { 
                       title: 'Services', 
-                      count: resourceStats ? String(resourceStats.serviceCount || 0) : (isLoading ? '...' : '0'), 
+                      count: resourceStats ? String(resourceStats.serviceCount || 0) : '...', 
                       status: 'healthy', 
                       icon: Network 
                     },
                     { 
                       title: 'Deployments', 
-                      count: resourceStats ? String(resourceStats.deploymentCount || 0) : (isLoading ? '...' : '0'), 
+                      count: resourceStats ? String(resourceStats.deploymentCount || 0) : '...', 
                       status: 'healthy', 
                       icon: Layers 
                     },
                     { 
                       title: 'ConfigMaps', 
-                      count: resourceStats ? String(resourceStats.configMapCount || 0) : (isLoading ? '...' : '0'), 
+                      count: resourceStats ? String(resourceStats.configMapCount || 0) : '...', 
                       status: 'healthy', 
                       icon: Server 
                     },
@@ -527,7 +527,8 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
               
               {currentView === 'deployments' && (
                 <DeploymentsDashboard 
-                  clusterId={clusterId} 
+                  clusterId={clusterId}
+                  serviceId={serviceId}
                   namespace={selectedNamespace} 
                 />
               )}

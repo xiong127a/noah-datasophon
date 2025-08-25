@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -70,15 +70,18 @@ import { Progress } from "@/components/ui/progress";
 
 import { Deployment } from "../types";
 import { KubernetesAPI } from '@/lib/kubernetes-api';
+import KubernetesPagination from "../components/kubernetes-pagination";
 
 interface DeploymentsDashboardProps {
   clusterId: string;
+  serviceId?: string;
   namespace: string;
   className?: string;
 }
 
 const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
   clusterId,
+  serviceId,
   namespace,
   className
 }) => {
@@ -90,23 +93,26 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pageNum, setPageNum] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
   // 获取Deployments数据
-  const fetchDeployments = async () => {
+  const fetchDeployments = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
     setError(null);
     try {
+      console.log('📡 调用 KubernetesAPI.getDeployments API...');
       const response = await KubernetesAPI.getDeployments(
         clusterId,
         namespace || undefined,
-        undefined, // serviceId
+        serviceId || undefined,
         pageNum,
         pageSize
       );
+      console.log('✅ 获取Deployments成功，数据结构:', response);
+      console.log('✅ 获取Deployments成功，数量:', response.data?.length);
 
       // 转换API响应为组件需要的Deployment格式
       const convertedDeployments: Deployment[] = response.data.map((resource: any) => ({
@@ -155,7 +161,7 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, serviceId, namespace, pageNum, pageSize]);
 
   // 筛选和搜索Deployments
   const filteredDeployments = useMemo(() => {
@@ -176,6 +182,26 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
       return matchesSearch && matchesStatus;
     });
   }, [deployments, searchTerm, statusFilter]);
+
+  // 刷新数据
+  const handleRefresh = async () => {
+    await fetchDeployments();
+  };
+
+  // 分页处理函数
+  const handlePageChange = (page: number) => {
+    setPageNum(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageNum(1); // 重置到第一页
+  };
+
+  // 组件挂载和依赖更新时获取数据
+  useEffect(() => {
+    fetchDeployments();
+  }, [fetchDeployments]);
 
   // 统计信息
   const stats = useMemo(() => {
@@ -221,11 +247,6 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
     } else {
       return { status: "未就绪", color: "text-red-600", icon: AlertCircle, bgColor: "bg-red-100" };
     }
-  };
-
-  // 刷新数据
-  const handleRefresh = async () => {
-    await fetchDeployments();
   };
 
   // Deployment操作
@@ -494,6 +515,21 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
             </div>
           )}
         </CardContent>
+
+        {/* 分页控件 */}
+        {total > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            <KubernetesPagination
+              currentPage={pageNum}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              loading={loading}
+              className="!bg-transparent !border-0 !shadow-none !p-0"
+            />
+          </div>
+        )}
       </Card>
     </div>
   );
