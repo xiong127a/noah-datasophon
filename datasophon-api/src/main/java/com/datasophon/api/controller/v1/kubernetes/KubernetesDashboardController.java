@@ -26,6 +26,7 @@ import com.datasophon.common.model.PageResult;
 import com.datasophon.common.dto.KubernetesResourceDTO;
 import com.datasophon.common.dto.K8sResourceStatsDTO;
 import com.datasophon.common.vo.K8sNamespaceVO;
+import com.datasophon.common.vo.K8sResourceStatsVO;
 import com.datasophon.common.vo.KubernetesResourceVO;
 import com.datasophon.common.vo.PageVO;
 import com.datasophon.api.dto.Result;
@@ -507,7 +508,7 @@ public class KubernetesDashboardController {
      * 只统计各类资源的数量，不返回资源列表以提高性能
      */
     @RequestMapping("/resource-stats")
-    public Result<K8sResourceStatsDTO> getResourceStats(
+    public Result<K8sResourceStatsVO> getResourceStats(
             @ClusterId Long clusterId,
             @RequestParam(value = "serviceId", required = false) Long serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
@@ -521,13 +522,17 @@ public class KubernetesDashboardController {
                 return Result.error("缺少clusterId参数");
             }
 
-            // 调用优化后的Service方法，一次性获取所有资源统计数据
-            K8sResourceStatsDTO stats = kubernetesDashboardService.getResourceStats(clusterId, serviceId, namespace);
+            // 调用Service方法，获取统计数据
+            K8sResourceStatsDTO statsDTO = kubernetesDashboardService.getResourceStats(clusterId, serviceId, namespace);
+            
+            // DTO转换为VO
+            K8sResourceStatsVO statsVO = k8sResourceConverter.statsToVo(statsDTO);
 
             // 日志记录返回结果
-            log.info("resource-stats接口返回统计数据: {}", stats != null ? "非空" : "空");
+            log.info("resource-stats接口返回统计数据: pods={}, services={}, deployments={}", 
+                statsVO.getPodCount(), statsVO.getServiceCount(), statsVO.getDeploymentCount());
 
-            return Result.success(stats);
+            return Result.success(statsVO);
         } catch (Exception e) {
             log.error("获取Kubernetes资源统计失败", e);
             return Result.error("获取Kubernetes资源统计失败: " + e.getMessage());

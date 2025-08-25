@@ -24,22 +24,71 @@ export interface K8sNamespace {
 }
 
 export interface K8sResourceStats {
-  namespaces: number;
-  pods: number;
-  services: number;
-  deployments: number;
-  configMaps: number;
-  secrets: number;
-  daemonSets: number;
-  statefulSets: number;
-  replicaSets: number;
-  jobs: number;
-  cronJobs: number;
-  persistentVolumes: number;
-  persistentVolumeClaims: number;
-  storageClasses: number;
-  ingresses: number;
-  ingressClasses: number;
+  // Pods统计
+  podCount?: number;
+  runningPodCount?: number;
+  pendingPodCount?: number;
+  failedPodCount?: number;
+  succeededPodCount?: number;
+  
+  // Services统计  
+  serviceCount?: number;
+  clusterIpServiceCount?: number;
+  nodePortServiceCount?: number;
+  loadBalancerServiceCount?: number;
+  
+  // Deployments统计
+  deploymentCount?: number;
+  availableDeploymentCount?: number;
+  unavailableDeploymentCount?: number;
+  
+  // ConfigMaps统计
+  configMapCount?: number;
+  
+  // Secrets统计
+  secretCount?: number;
+  
+  // StatefulSets统计
+  statefulSetCount?: number;
+  readyStatefulSetCount?: number;
+  
+  // DaemonSets统计
+  daemonSetCount?: number;
+  readyDaemonSetCount?: number;
+  
+  // Jobs统计
+  jobCount?: number;
+  completedJobCount?: number;
+  activeJobCount?: number;
+  failedJobCount?: number;
+  
+  // CronJobs统计
+  cronJobCount?: number;
+  activeCronJobCount?: number;
+  suspendedCronJobCount?: number;
+  
+  // PersistentVolumes统计
+  persistentVolumeCount?: number;
+  boundPvCount?: number;
+  availablePvCount?: number;
+  
+  // PersistentVolumeClaims统计
+  persistentVolumeClaimCount?: number;
+  boundPvcCount?: number;
+  pendingPvcCount?: number;
+  
+  // StorageClasses统计
+  storageClassCount?: number;
+  
+  // Ingresses统计
+  ingressCount?: number;
+  
+  // IngressClasses统计
+  ingressClassCount?: number;
+  
+  // ReplicaSets统计
+  replicaSetCount?: number;
+  readyReplicaSetCount?: number;
 }
 
 export interface K8sResource {
@@ -55,6 +104,9 @@ export interface K8sResource {
   ready?: string;
   restarts?: number;
   node?: string;
+  nodeName?: string;
+  hostName?: string;
+  host?: string;
   // Service 特定字段
   type?: string;
   clusterIp?: string;

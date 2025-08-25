@@ -11,7 +11,6 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Download,
   RefreshCw,
   MoreHorizontal,
   Trash2,
@@ -100,16 +99,43 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
     });
   }, [pods, searchTerm, statusFilter]);
 
-  // 统计信息
-  const stats = useMemo(() => {
-    return {
-      total: pods.length,
-      running: pods.filter(p => p.status?.phase === "Running").length,
-      pending: pods.filter(p => p.status?.phase === "Pending").length,
-      failed: pods.filter(p => p.status?.phase === "Failed").length,
-      succeeded: pods.filter(p => p.status?.phase === "Succeeded").length
-    };
-  }, [pods]);
+  // 统计信息（由后端计算，前端只负责显示）
+  const [globalStats, setGlobalStats] = useState({
+    total: 0,
+    running: 0,
+    pending: 0,
+    failed: 0,
+    succeeded: 0
+  });
+
+  // 获取全局资源统计（由后端统一计算）
+  const fetchGlobalStats = useCallback(async () => {
+    if (!clusterId) return;
+    
+    try {
+      const { KubernetesAPI } = await import('@/lib/kubernetes-api');
+      const statsResponse = await KubernetesAPI.getResourceStats(clusterId, serviceId, namespace);
+      console.log('📊 获取全局Pod统计（后端计算）:', statsResponse);
+      
+      setGlobalStats({
+        total: statsResponse.podCount || 0,
+        running: statsResponse.runningPodCount || 0,
+        pending: statsResponse.pendingPodCount || 0,
+        failed: statsResponse.failedPodCount || 0,
+        succeeded: statsResponse.succeededPodCount || 0
+      });
+    } catch (error) {
+      console.error('获取全局统计失败:', error);
+      // 重置为0，不再使用前端计算的降级方案
+      setGlobalStats({
+        total: 0,
+        running: 0,
+        pending: 0,
+        failed: 0,
+        succeeded: 0
+      });
+    }
+  }, [clusterId, serviceId, namespace]);
 
   // 获取Pod年龄
   const getPodAge = (creationTimestamp: string) => {
@@ -158,6 +184,18 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
       );
       console.log('✅ 获取Pods成功，数量:', response.data.length);
       console.log('📄 分页信息:', { pageNum, pageSize, total: response.total });
+      
+      // 调试主机字段映射
+      if (response.data?.[0]) {
+        const firstPod = response.data[0];
+        console.log('🔍 第一个Pod的节点信息:', {
+          nodeName: firstPod.nodeName,
+          node: firstPod.node,
+          hostName: firstPod.hostName,
+          host: firstPod.host,
+          availableFields: Object.keys(firstPod)
+        });
+      }
 
       // 更新总数
       setTotal(response.total || response.data.length);
@@ -178,7 +216,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
             image: 'unknown',
             ports: []
           }],
-          nodeName: resource.node || 'unknown'
+          nodeName: resource.nodeName || resource.node || resource.hostName || resource.host || 'unknown'
         },
         status: {
           phase: resource.status || 'Unknown',
@@ -226,7 +264,8 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchPods();
-  }, [fetchPods]);
+    fetchGlobalStats();
+  }, [fetchPods, fetchGlobalStats]);
 
   // Pod操作
   const handlePodAction = (action: string, pod: Pod) => {
@@ -239,10 +278,10 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
       {/* 统计卡片 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
-          { title: "总计", count: stats.total, color: "blue", icon: Box },
-          { title: "运行中", count: stats.running, color: "green", icon: CheckCircle },
-          { title: "等待中", count: stats.pending, color: "yellow", icon: Clock },
-          { title: "失败", count: stats.failed, color: "red", icon: AlertCircle }
+          { title: "总计", count: globalStats.total, color: "blue", icon: Box },
+          { title: "运行中", count: globalStats.running, color: "green", icon: CheckCircle },
+          { title: "等待中", count: globalStats.pending, color: "yellow", icon: Clock },
+          { title: "失败", count: globalStats.failed, color: "red", icon: AlertCircle }
         ].map((stat, index) => (
           <motion.div
             key={stat.title}
@@ -306,10 +345,6 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
               {/* 操作按钮 */}
               <Button variant="outline" size="icon" onClick={handleRefresh} disabled={loading}>
                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              </Button>
-
-              <Button variant="outline" size="icon">
-                <Download className="w-4 h-4" />
               </Button>
             </div>
           </div>

@@ -588,36 +588,209 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     public K8sResourceStatsDTO getResourceStats(Long clusterId, Long serviceId, String namespace) {
         try {
             KubernetesClient client = getKubernetesClient(clusterId);
+            
+            log.info("开始统计Kubernetes资源，clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
+            
+            // 构建统计结果
+            K8sResourceStatsDTO.K8sResourceStatsDTOBuilder builder = K8sResourceStatsDTO.builder();
+            
+            // 统计Pods
+            List<Pod> pods = namespace != null ? 
+                client.pods().inNamespace(namespace).list().getItems() :
+                client.pods().inAnyNamespace().list().getItems();
+            
+            builder.podCount(pods.size());
+            
+            long runningPods = pods.stream().filter(pod -> 
+                "Running".equals(pod.getStatus().getPhase())).count();
+            long pendingPods = pods.stream().filter(pod -> 
+                "Pending".equals(pod.getStatus().getPhase())).count();
+            long failedPods = pods.stream().filter(pod -> 
+                "Failed".equals(pod.getStatus().getPhase())).count();
+            long succeededPods = pods.stream().filter(pod -> 
+                "Succeeded".equals(pod.getStatus().getPhase())).count();
+                
+            builder.runningPodCount((int) runningPods)
+                   .pendingPodCount((int) pendingPods)
+                   .failedPodCount((int) failedPods)
+                   .succeededPodCount((int) succeededPods);
 
-            // 统计各种资源数量
-            int podsCount = client.pods().inNamespace(namespace).list().getItems().size();
-            int deploymentsCount = client.apps().deployments().inNamespace(namespace).list().getItems().size();
-            int servicesCount = client.services().inNamespace(namespace).list().getItems().size();
-            int configMapsCount = client.configMaps().inNamespace(namespace).list().getItems().size();
-            int secretsCount = client.secrets().inNamespace(namespace).list().getItems().size();
+            // 统计Services
+            List<io.fabric8.kubernetes.api.model.Service> services = namespace != null ?
+                client.services().inNamespace(namespace).list().getItems() :
+                client.services().inAnyNamespace().list().getItems();
+            
+            builder.serviceCount(services.size());
+            
+            long clusterIpServices = services.stream().filter(svc -> 
+                "ClusterIP".equals(svc.getSpec().getType())).count();
+            long nodePortServices = services.stream().filter(svc -> 
+                "NodePort".equals(svc.getSpec().getType())).count();
+            long loadBalancerServices = services.stream().filter(svc -> 
+                "LoadBalancer".equals(svc.getSpec().getType())).count();
+                
+            builder.clusterIpServiceCount((int) clusterIpServices)
+                   .nodePortServiceCount((int) nodePortServices)
+                   .loadBalancerServiceCount((int) loadBalancerServices);
 
-            return new K8sResourceStatsDTO(
-                    1, // namespaceCount (默认1个命名空间)
-                    deploymentsCount, // deploymentCount
-                    podsCount, // podCount
-                    servicesCount, // serviceCount
-                    configMapsCount, // configMapCount
-                    secretsCount, // secretCount
-                    0, // persistentVolumeCount
-                    0, // persistentVolumeClaimCount
-                    0, // storageClassCount
-                    0, // ingressCount
-                    0, // ingressClassCount
-                    0, // daemonSetCount
-                    0, // statefulSetCount
-                    0, // replicaSetCount
-                    0, // replicationControllerCount
-                    0, // jobCount
-                    0, // cronJobCount
-                    podsCount, // runningPodCount (简化处理，假设所有Pod都在运行)
-                    0, // pendingPodCount
-                    0 // failedPodCount
-            );
+            // 统计Deployments
+            List<Deployment> deployments = namespace != null ?
+                client.apps().deployments().inNamespace(namespace).list().getItems() :
+                client.apps().deployments().inAnyNamespace().list().getItems();
+            
+            builder.deploymentCount(deployments.size());
+            
+            long availableDeployments = deployments.stream().filter(dep -> {
+                Integer replicas = dep.getSpec().getReplicas();
+                Integer availableReplicas = dep.getStatus() != null ? dep.getStatus().getAvailableReplicas() : 0;
+                return replicas != null && availableReplicas != null && replicas.equals(availableReplicas);
+            }).count();
+            
+            builder.availableDeploymentCount((int) availableDeployments)
+                   .unavailableDeploymentCount((int) (deployments.size() - availableDeployments));
+
+            // 统计ConfigMaps
+            int configMapsCount = namespace != null ?
+                client.configMaps().inNamespace(namespace).list().getItems().size() :
+                client.configMaps().inAnyNamespace().list().getItems().size();
+            builder.configMapCount(configMapsCount);
+
+            // 统计Secrets
+            int secretsCount = namespace != null ?
+                client.secrets().inNamespace(namespace).list().getItems().size() :
+                client.secrets().inAnyNamespace().list().getItems().size();
+            builder.secretCount(secretsCount);
+
+            // 统计StatefulSets
+            List<StatefulSet> statefulSets = namespace != null ?
+                client.apps().statefulSets().inNamespace(namespace).list().getItems() :
+                client.apps().statefulSets().inAnyNamespace().list().getItems();
+            
+            builder.statefulSetCount(statefulSets.size());
+            
+            long readyStatefulSets = statefulSets.stream().filter(sts -> {
+                Integer replicas = sts.getSpec().getReplicas();
+                Integer readyReplicas = sts.getStatus() != null ? sts.getStatus().getReadyReplicas() : 0;
+                return replicas != null && readyReplicas != null && replicas.equals(readyReplicas);
+            }).count();
+            
+            builder.readyStatefulSetCount((int) readyStatefulSets);
+
+            // 统计DaemonSets
+            List<DaemonSet> daemonSets = namespace != null ?
+                client.apps().daemonSets().inNamespace(namespace).list().getItems() :
+                client.apps().daemonSets().inAnyNamespace().list().getItems();
+            
+            builder.daemonSetCount(daemonSets.size());
+            
+            long readyDaemonSets = daemonSets.stream().filter(ds -> {
+                Integer desired = ds.getStatus() != null ? ds.getStatus().getDesiredNumberScheduled() : 0;
+                Integer ready = ds.getStatus() != null ? ds.getStatus().getNumberReady() : 0;
+                return desired != null && ready != null && desired.equals(ready);
+            }).count();
+            
+            builder.readyDaemonSetCount((int) readyDaemonSets);
+
+            // 统计Jobs
+            List<Job> jobs = namespace != null ?
+                client.batch().v1().jobs().inNamespace(namespace).list().getItems() :
+                client.batch().v1().jobs().inAnyNamespace().list().getItems();
+            
+            builder.jobCount(jobs.size());
+            
+            long completedJobs = jobs.stream().filter(job -> {
+                return job.getStatus() != null && job.getStatus().getCompletionTime() != null;
+            }).count();
+            long activeJobs = jobs.stream().filter(job -> {
+                return job.getStatus() != null && job.getStatus().getActive() != null && job.getStatus().getActive() > 0;
+            }).count();
+            long failedJobs = jobs.stream().filter(job -> {
+                return job.getStatus() != null && job.getStatus().getFailed() != null && job.getStatus().getFailed() > 0;
+            }).count();
+            
+            builder.completedJobCount((int) completedJobs)
+                   .activeJobCount((int) activeJobs)
+                   .failedJobCount((int) failedJobs);
+
+            // 统计CronJobs
+            List<CronJob> cronJobs = namespace != null ?
+                client.batch().v1().cronjobs().inNamespace(namespace).list().getItems() :
+                client.batch().v1().cronjobs().inAnyNamespace().list().getItems();
+            
+            builder.cronJobCount(cronJobs.size());
+            
+            long activeCronJobs = cronJobs.stream().filter(cj -> {
+                return cj.getStatus() != null && cj.getStatus().getActive() != null && !cj.getStatus().getActive().isEmpty();
+            }).count();
+            long suspendedCronJobs = cronJobs.stream().filter(cj -> {
+                return cj.getSpec() != null && Boolean.TRUE.equals(cj.getSpec().getSuspend());
+            }).count();
+            
+            builder.activeCronJobCount((int) activeCronJobs)
+                   .suspendedCronJobCount((int) suspendedCronJobs);
+
+            // 统计PersistentVolumes (集群级别资源，不受namespace限制)
+            List<PersistentVolume> persistentVolumes = client.persistentVolumes().list().getItems();
+            
+            builder.persistentVolumeCount(persistentVolumes.size());
+            
+            long boundPVs = persistentVolumes.stream().filter(pv -> 
+                "Bound".equals(pv.getStatus().getPhase())).count();
+            long availablePVs = persistentVolumes.stream().filter(pv -> 
+                "Available".equals(pv.getStatus().getPhase())).count();
+                
+            builder.boundPvCount((int) boundPVs)
+                   .availablePvCount((int) availablePVs);
+
+            // 统计PersistentVolumeClaims
+            List<PersistentVolumeClaim> persistentVolumeClaims = namespace != null ?
+                client.persistentVolumeClaims().inNamespace(namespace).list().getItems() :
+                client.persistentVolumeClaims().inAnyNamespace().list().getItems();
+            
+            builder.persistentVolumeClaimCount(persistentVolumeClaims.size());
+            
+            long boundPVCs = persistentVolumeClaims.stream().filter(pvc -> 
+                "Bound".equals(pvc.getStatus().getPhase())).count();
+            long pendingPVCs = persistentVolumeClaims.stream().filter(pvc -> 
+                "Pending".equals(pvc.getStatus().getPhase())).count();
+                
+            builder.boundPvcCount((int) boundPVCs)
+                   .pendingPvcCount((int) pendingPVCs);
+
+            // 统计StorageClasses (集群级别资源)
+            int storageClassesCount = client.storage().v1().storageClasses().list().getItems().size();
+            builder.storageClassCount(storageClassesCount);
+
+            // 统计Ingresses
+            int ingressesCount = namespace != null ?
+                client.network().v1().ingresses().inNamespace(namespace).list().getItems().size() :
+                client.network().v1().ingresses().inAnyNamespace().list().getItems().size();
+            builder.ingressCount(ingressesCount);
+
+            // 统计IngressClasses (集群级别资源)
+            int ingressClassesCount = client.network().v1().ingressClasses().list().getItems().size();
+            builder.ingressClassCount(ingressClassesCount);
+
+            // 统计ReplicaSets
+            List<ReplicaSet> replicaSets = namespace != null ?
+                client.apps().replicaSets().inNamespace(namespace).list().getItems() :
+                client.apps().replicaSets().inAnyNamespace().list().getItems();
+            
+            builder.replicaSetCount(replicaSets.size());
+            
+            long readyReplicaSets = replicaSets.stream().filter(rs -> {
+                Integer replicas = rs.getSpec().getReplicas();
+                Integer readyReplicas = rs.getStatus() != null ? rs.getStatus().getReadyReplicas() : 0;
+                return replicas != null && readyReplicas != null && replicas.equals(readyReplicas);
+            }).count();
+            
+            builder.readyReplicaSetCount((int) readyReplicaSets);
+
+            K8sResourceStatsDTO result = builder.build();
+            log.info("完成Kubernetes资源统计: pods={}, services={}, deployments={}", 
+                result.getPodCount(), result.getServiceCount(), result.getDeploymentCount());
+            
+            return result;
         } catch (Exception e) {
             log.error("获取资源统计出错", e);
             throw new RuntimeException("获取资源统计出错: " + e.getMessage());

@@ -11,7 +11,6 @@ import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Download,
   RefreshCw,
   MoreHorizontal,
   Eye,
@@ -389,10 +388,7 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
                 <SelectItem value="unhealthy">异常</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              导出
-            </Button>
+
           </div>
 
           {/* Deployments表格 */}

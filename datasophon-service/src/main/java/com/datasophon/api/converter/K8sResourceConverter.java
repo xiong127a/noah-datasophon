@@ -43,11 +43,6 @@ public interface K8sResourceConverter {
     /**
      * K8sResourceStatsDTO转换为K8sResourceStatsVO
      */
-    @Mapping(target = "totalPodCount", expression = "java(dto.getTotalPodCount())")
-    @Mapping(target = "podHealthRate", expression = "java(dto.getPodHealthRate())")
-    @Mapping(target = "hasFailedPods", expression = "java(dto.hasFailedPods())")
-    @Mapping(target = "healthStatus", expression = "java(getHealthStatus(dto.getPodHealthRate(), dto.hasFailedPods()))")
-    @Mapping(target = "healthStatusColor", expression = "java(getHealthStatusColor(dto.getPodHealthRate(), dto.hasFailedPods()))")
     K8sResourceStatsVO statsToVo(K8sResourceStatsDTO dto);
 
     /**
