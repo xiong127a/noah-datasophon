@@ -16,7 +16,8 @@ import {
   Info,
   BookOpen,
   Link,
-  BarChart3
+  BarChart3,
+  Grid3X3
 } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import {
@@ -39,12 +40,14 @@ import ConnectionTab from '@/components/service-tabs/connection-tab'
 import IntroTab from '@/components/service-tabs/intro-tab'
 import GuideTab from '@/components/service-tabs/guide-tab'
 import QueueTab from '@/components/service-tabs/queue-tab'
+import KubernetesDashboard from '@/components/kubernetes-dashboard'
 
 // 导入对话框组件
 import ServiceSelectionDialog from '@/components/cluster/common/service-selection-dialog'
 
 // 导入工具函数
 import { hasOverviewTab, hasConnectionTab } from '@/components/service-tabs/utils/service-tab-utils'
+import { ClusterTypeUtil } from '@/types/cluster-type'
 
 // 服务状态枚举
 enum ServiceState {
@@ -85,6 +88,8 @@ interface ServiceDetailTabsProps {
 }
 
 function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
+  const { currentCluster } = useCluster()
+
   // 根据服务类型决定可用的页签
   const getAvailableTabs = useCallback(() => {
     const baseTabs = []
@@ -100,6 +105,25 @@ function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
       { key: 'instances', label: '实例', icon: Server },
       { key: 'config', label: '配置', icon: Settings }
     )
+    
+    // Kubernetes仪表盘页签（只有K8s集群才显示）
+    const isK8sCluster = currentCluster?.isK8s || (currentCluster?.depType && ClusterTypeUtil.isKubernetes(currentCluster.depType))
+    if (isK8sCluster) {
+      console.log('添加Kubernetes仪表盘标签页', { 
+        clusterName: currentCluster?.clusterName, 
+        isK8s: currentCluster?.isK8s, 
+        depType: currentCluster?.depType,
+        isK8sCluster 
+      })
+      baseTabs.push({ key: 'k8s-dashboard', label: 'Kubernetes仪表盘', icon: Grid3X3 })
+    } else {
+      console.log('不显示Kubernetes仪表盘', { 
+        currentCluster, 
+        isK8s: currentCluster?.isK8s, 
+        depType: currentCluster?.depType,
+        isK8sCluster 
+      })
+    }
     
     // 连接信息页签（只有部分服务支持）
     if (hasConnectionTab(service.serviceName)) {
@@ -117,8 +141,9 @@ function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
       baseTabs.push({ key: 'queue', label: '资源配置', icon: Monitor })
     }
     
+    console.log('生成的标签页列表:', baseTabs.map(tab => tab.label))
     return baseTabs
-  }, [service.serviceId, service.serviceName])
+  }, [service.serviceId, service.serviceName, currentCluster?.isK8s, currentCluster?.depType])
   
   const tabs = getAvailableTabs()
   
@@ -147,6 +172,16 @@ function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
         return <InstancesTab {...commonProps} />
       case 'config':
         return <ConfigTab {...commonProps} />
+      case 'k8s-dashboard':
+        console.log('🔧 准备渲染KubernetesDashboard:', { 
+          clusterId: currentCluster?.id, 
+          clusterName: currentCluster?.clusterName,
+          currentCluster 
+        });
+        return <KubernetesDashboard 
+          clusterId={currentCluster?.id || ''} 
+          clusterName={currentCluster?.clusterName || ''} 
+        />
       case 'connection':
         return <ConnectionTab {...commonProps} />
       case 'intro':

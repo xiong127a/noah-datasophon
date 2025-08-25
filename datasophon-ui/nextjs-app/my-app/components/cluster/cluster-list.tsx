@@ -1,5 +1,6 @@
 "use client"
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   Server,
   Cloud,
@@ -20,6 +21,7 @@ import {
   Star,
   Activity,
   TrendingUp,
+  Grid3X3,
 } from "lucide-react"
 import { ClusterTypeUtil } from '@/types'
 import { Step3Data } from '@/types/service-selection'
@@ -114,7 +116,6 @@ import ServiceConfigDialog from "./common/service-config-dialog"
 import ServiceInstallDialog from "./common/service-install-dialog"
 import { Step7Data } from '@/types/service-config'
 import { apiClient, API_PATHS } from "@/lib/api"
-import { useRouter } from "next/navigation"
 import { useCluster } from "@/hooks/useCluster"
 import Image from "next/image"
 
@@ -146,6 +147,7 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
   onDelete: (cluster: ClusterItem) => void;
 }) => {
   const [authDialogOpen, setAuthDialogOpen] = useState(false)
+  const router = useRouter()
   
   // 根据集群类型获取图标路径
   const getIconPath = () => {
@@ -348,27 +350,63 @@ const ClusterCard = ({ cluster, onEnter, onEdit, onSetup, onAuth, onDelete }: {
             </Button>
 
             {/* 次要操作按钮 */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                variant="secondary"
-                onClick={() => onSetup(cluster)}
-                className={`${BUTTON_STYLES.previous} h-11 hover:shadow-lg hover:scale-105 backdrop-blur-sm`}
-              >
-                <Settings className="mr-2 h-4 w-4" />
-                配置集群
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setAuthDialogOpen(true);
-                  onAuth(cluster);
-                }}
-                className={`${BUTTON_STYLES.previous} h-11 hover:shadow-lg hover:scale-105 backdrop-blur-sm`}
-              >
-                <Shield className="mr-2 h-4 w-4" />
-                用户授权
-              </Button>
-            </div>
+            {ClusterTypeUtil.isKubernetes(cluster.depType || '') ? (
+              // Kubernetes 集群显示 3 个按钮
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={() => onSetup(cluster)}
+                  className={`${BUTTON_STYLES.previous} h-11 hover:shadow-lg hover:scale-105 backdrop-blur-sm`}
+                >
+                  <Settings className="mr-1 h-4 w-4" />
+                  配置
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setAuthDialogOpen(true);
+                    onAuth(cluster);
+                  }}
+                  className={`${BUTTON_STYLES.previous} h-11 hover:shadow-lg hover:scale-105 backdrop-blur-sm`}
+                >
+                  <Shield className="mr-1 h-4 w-4" />
+                  授权
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    router.push(`/kubernetes-dashboard?clusterId=${cluster.id}&clusterName=${encodeURIComponent(cluster.clusterName)}`);
+                  }}
+                  className={`${BUTTON_STYLES.previous} h-11 hover:shadow-lg hover:scale-105 backdrop-blur-sm bg-blue-50/80 hover:bg-blue-100 text-blue-700 border-blue-200`}
+                >
+                  <Grid3X3 className="mr-1 h-4 w-4" />
+                  K8s
+                </Button>
+              </div>
+            ) : (
+              // 非 Kubernetes 集群显示 2 个按钮
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="secondary"
+                  onClick={() => onSetup(cluster)}
+                  className={`${BUTTON_STYLES.previous} h-11 hover:shadow-lg hover:scale-105 backdrop-blur-sm`}
+                >
+                  <Settings className="mr-2 h-4 w-4" />
+                  配置集群
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setAuthDialogOpen(true);
+                    onAuth(cluster);
+                  }}
+                  className={`${BUTTON_STYLES.previous} h-11 hover:shadow-lg hover:scale-105 backdrop-blur-sm`}
+                >
+                  <Shield className="mr-2 h-4 w-4" />
+                  用户授权
+                </Button>
+              </div>
+            )}
 
             {/* 更多操作 */}
             <DropdownMenu>
