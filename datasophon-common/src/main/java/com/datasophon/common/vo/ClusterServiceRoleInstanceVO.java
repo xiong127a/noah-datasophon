@@ -40,7 +40,7 @@ public record ClusterServiceRoleInstanceVO(
         String updateTimeFormatted,
         LocalDateTime createTime,
         String createTimeFormatted,
-        Integer serviceId,
+        Long serviceId,
         Integer roleType,
         String roleTypeText,
         Long clusterId,

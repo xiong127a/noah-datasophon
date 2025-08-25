@@ -53,6 +53,7 @@ import DeploymentsDashboard from './dashboards/deployments-dashboard';
 
 export interface KubernetesDashboardProps {
   clusterId: string;
+  serviceId: string;
   clusterName: string;
   className?: string;
 }
@@ -125,6 +126,7 @@ const menuCategories: MenuCategory[] = [
 
 const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
   clusterId,
+  serviceId,
   clusterName,
   className
 }) => {
@@ -509,14 +511,16 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
               {/* 具体的Dashboard组件 */}
               {currentView === 'pods' && (
                 <PodsDashboard 
-                  clusterId={clusterId} 
+                  clusterId={clusterId}
+                  serviceId={serviceId}
                   namespace={selectedNamespace} 
                 />
               )}
               
               {currentView === 'services' && (
                 <ServicesDashboard 
-                  clusterId={clusterId} 
+                  clusterId={clusterId}
+                  serviceId={serviceId}
                   namespace={selectedNamespace} 
                 />
               )}

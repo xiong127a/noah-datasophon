@@ -7,31 +7,21 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Filter,
   Download,
   RefreshCw,
   MoreHorizontal,
-  Play,
-  Pause,
   Trash2,
   Eye,
   Terminal,
-  Activity,
-  Cpu,
-  MemoryStick,
-  HardDrive,
   Clock,
   Box,
   AlertCircle,
   CheckCircle,
-  Info,
-  ChevronDown,
-  ChevronRight,
-  ExternalLink
+  ChevronRight
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -60,24 +50,25 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { ScrollArea } from "@/components/ui/scroll-area";
+
 
 import StatusIndicator from "../components/status-indicator";
-import { Pod, PodStatus } from "../types";
-import { getPodStatusConfig, getStatusDotColor } from "@/lib/kubernetes-status-utils";
+import { Pod } from "../types";
+import { getPodStatusConfig } from "@/lib/kubernetes-status-utils";
 import KubernetesPagination from "../components/kubernetes-pagination";
 
 interface PodsDashboardProps {
   clusterId: string;
+  serviceId?: string;
   namespace: string;
   className?: string;
 }
 
-import { KubernetesAPI } from '@/lib/kubernetes-api';
+
 
 const PodsDashboard: React.FC<PodsDashboardProps> = ({
   clusterId,
+  serviceId,
   namespace,
   className
 }) => {
@@ -87,7 +78,6 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedPod, setSelectedPod] = useState<Pod | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [pageNum, setPageNum] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
@@ -150,12 +140,11 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
   };
 
   // 获取Pods数据
-  const fetchPods = async () => {
+  const fetchPods = useCallback(async () => {
     if (!clusterId) return;
     
     console.log('🔄 开始获取Pods列表:', { clusterId, namespace, pageNum, pageSize });
     setLoading(true);
-    setError(null);
     try {
       // 动态导入API工具类
       const { KubernetesAPI } = await import('@/lib/kubernetes-api');
@@ -163,7 +152,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
       const response = await KubernetesAPI.getPods(
         clusterId,
         namespace || undefined,
-        undefined, // serviceId
+        serviceId || undefined,
         pageNum,
         pageSize
       );
@@ -213,12 +202,11 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
       setTotal(response.total || convertedPods.length);
     } catch (error) {
       console.error('获取Pods失败:', error);
-      setError(error instanceof Error ? error.message : '获取Pods失败');
       setPods([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, serviceId, namespace, pageNum, pageSize]);
 
   // 刷新数据
   const handleRefresh = async () => {
@@ -238,7 +226,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchPods();
-  }, [clusterId, namespace, pageNum, pageSize]);
+  }, [fetchPods]);
 
   // Pod操作
   const handlePodAction = (action: string, pod: Pod) => {

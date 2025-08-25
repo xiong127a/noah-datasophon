@@ -280,7 +280,7 @@ public interface ClusterServiceRoleInstanceMapper extends BaseMapper<ClusterServ
          * 根据集群ID、服务ID和角色名称查询
          */
         default List<ClusterServiceRoleInstanceEntity> selectByClusterIdAndServiceIdAndRoleName(
-                        @Param("clusterId") Long clusterId, @Param("serviceId") Integer serviceId,
+                        @Param("clusterId") Long clusterId, @Param("serviceId") Long serviceId,
                         @Param("roleName") String roleName) {
                 QueryWrapper query = QueryWrapper.create()
                                 .where(ClusterServiceRoleInstanceEntity::getClusterId).eq(clusterId)

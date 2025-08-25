@@ -173,7 +173,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getDeployments(Long clusterId, Integer serviceId, String namespace,
+    public PageResult<KubernetesResourceDTO> getDeployments(Long clusterId, Long serviceId, String namespace,
             Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -202,7 +202,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getPods(Long clusterId, Integer serviceId, String namespace,
+    public PageResult<KubernetesResourceDTO> getPods(Long clusterId, Long serviceId, String namespace,
             Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -407,7 +407,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getDaemonSets(Long clusterId, Integer serviceId, String namespace,
+    public PageResult<KubernetesResourceDTO> getDaemonSets(Long clusterId, Long serviceId, String namespace,
             Integer pageNum, Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -585,7 +585,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public K8sResourceStatsDTO getResourceStats(Long clusterId, Integer serviceId, String namespace) {
+    public K8sResourceStatsDTO getResourceStats(Long clusterId, Long serviceId, String namespace) {
         try {
             KubernetesClient client = getKubernetesClient(clusterId);
 

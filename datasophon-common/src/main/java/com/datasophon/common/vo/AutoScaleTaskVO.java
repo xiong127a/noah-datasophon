@@ -15,7 +15,7 @@ public record AutoScaleTaskVO(
         String taskName,
         Long clusterId,
         String clusterName,
-        Integer serviceId,
+        Long serviceId,
         String serviceName,
         String scaleType,
         String scaleTypeDesc,

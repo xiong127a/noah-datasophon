@@ -81,7 +81,7 @@ public class KubernetesDashboardController {
     @RequestMapping("/deployments")
     public Result<PageVO<KubernetesResourceVO>> getDeployments(
             @ClusterId Long clusterId,
-            @RequestParam(value = "serviceId", required = false) Integer serviceId,
+            @RequestParam(value = "serviceId", required = false) Long serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -112,7 +112,7 @@ public class KubernetesDashboardController {
      */
     @GetMapping("/pods")
     public Result<PageVO<KubernetesResourceVO>> getPodsInfo(@ClusterId Long clusterId,
-            @RequestParam(name = "serviceId", required = false) Integer serviceId,
+            @RequestParam(name = "serviceId", required = false) Long serviceId,
             @RequestParam(name = "namespace", required = false) String namespace,
             @RequestParam(name = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -319,7 +319,7 @@ public class KubernetesDashboardController {
     @RequestMapping("/daemonsets")
     public Result<PageVO<KubernetesResourceVO>> getDaemonSets(
             @ClusterId Long clusterId,
-            @RequestParam(value = "serviceId", required = false) Integer serviceId,
+            @RequestParam(value = "serviceId", required = false) Long serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -408,7 +408,7 @@ public class KubernetesDashboardController {
     @RequestMapping("/jobs")
     public Result<PageVO<KubernetesResourceVO>> getJobs(
             @ClusterId Long clusterId,
-            @RequestParam(value = "serviceId", required = false) Integer serviceId,
+            @RequestParam(value = "serviceId", required = false) Long serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
@@ -509,7 +509,7 @@ public class KubernetesDashboardController {
     @RequestMapping("/resource-stats")
     public Result<K8sResourceStatsDTO> getResourceStats(
             @ClusterId Long clusterId,
-            @RequestParam(value = "serviceId", required = false) Integer serviceId,
+            @RequestParam(value = "serviceId", required = false) Long serviceId,
             @RequestParam(value = "namespace", required = false) String namespace) {
         try {
             // 添加调试日志

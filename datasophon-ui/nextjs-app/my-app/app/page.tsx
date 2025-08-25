@@ -180,6 +180,7 @@ function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
         });
         return <KubernetesDashboard 
           clusterId={currentCluster?.id || ''} 
+          serviceId={service.serviceId || ''} 
           clusterName={currentCluster?.clusterName || ''} 
         />
       case 'connection':

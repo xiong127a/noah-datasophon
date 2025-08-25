@@ -64,12 +64,14 @@ import KubernetesPagination from "../components/kubernetes-pagination";
 
 interface ServicesDashboardProps {
   clusterId: string;
+  serviceId?: string;
   namespace: string;
   className?: string;
 }
 
 const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
   clusterId,
+  serviceId,
   namespace,
   className
 }) => {
@@ -80,7 +82,6 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
   const [pageNum, setPageNum] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
-
   const [error, setError] = useState<string | null>(null);
 
   // 获取Services数据
@@ -95,35 +96,36 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
       const response = await KubernetesAPI.getServices(
         clusterId,
         namespace || undefined,
+        serviceId || undefined,
         pageNum,
         pageSize
       );
       console.log('✅ 获取Services成功，数量:', response.data.length);
 
       // 转换API响应为组件需要的Service格式
-      const convertedServices: Service[] = response.data.map((resource: Record<string, unknown>) => ({
+      const convertedServices: Service[] = response.data.map((resource: any) => ({
         apiVersion: "v1",
         kind: "Service",
         metadata: {
-          name: resource.name,
-          namespace: resource.namespace,
+          name: String(resource.name || ''),
+          namespace: String(resource.namespace || ''),
           creationTimestamp: resource.creationTimestamp || new Date().toISOString(),
           labels: resource.labels || {}
         },
         spec: {
-          type: resource.type || 'ClusterIP',
-          selector: resource.spec?.selector || {},
-          ports: resource.ports ? resource.ports.split(',').map((port: string, idx: number) => ({
+          type: (resource.type || 'ClusterIP') as "ClusterIP" | "NodePort" | "LoadBalancer" | "ExternalName",
+          selector: (resource.spec?.selector) || {},
+          ports: resource.ports ? String(resource.ports).split(',').map((port: string, idx: number) => ({
             name: `port-${idx}`,
             port: parseInt(port.split('/')[0]) || 80,
             targetPort: parseInt(port.split('/')[0]) || 80,
             protocol: port.split('/')[1] || 'TCP'
           })) : [],
-          clusterIP: resource.clusterIp || 'None'
+          clusterIP: String(resource.clusterIp || 'None')
         },
         status: resource.externalIp ? {
           loadBalancer: {
-            ingress: [{ ip: resource.externalIp }]
+            ingress: [{ ip: String(resource.externalIp) }]
           }
         } : undefined
       }));
@@ -137,7 +139,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [clusterId, namespace, pageNum, pageSize]);
+  }, [clusterId, serviceId, namespace, pageNum, pageSize]);
 
   // 筛选和搜索Services
   const filteredServices = useMemo(() => {
@@ -208,8 +210,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
     console.log(`执行操作: ${action} on Service: ${service.metadata.name}`);
     switch (action) {
       case 'view':
-        setSelectedService(service);
-        setShowDetails(true);
+        console.log('查看Service详情:', service.metadata.name);
         break;
       case 'edit':
         // 实现编辑逻辑
@@ -223,7 +224,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchServices();
-  }, [clusterId, namespace, pageNum, pageSize]);
+  }, [fetchServices]);
 
   if (loading && services.length === 0) {
     return (

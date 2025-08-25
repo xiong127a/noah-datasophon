@@ -34,7 +34,7 @@ public class AutoScaleTaskEntity extends BaseEntity {
     
     private Long clusterId;
     
-    private Integer serviceId;
+    private Long serviceId;
     
     private String serviceName;
     

@@ -53,7 +53,7 @@ public interface KubernetesDashboardService {
          * @param namespace 命名空间（可选）
          * @return K8S资源统计DTO
          */
-        K8sResourceStatsDTO getResourceStats(Long clusterId, Integer serviceId, String namespace);
+        K8sResourceStatsDTO getResourceStats(Long clusterId, Long serviceId, String namespace);
 
         /**
          * 获取Deployments列表
@@ -65,7 +65,7 @@ public interface KubernetesDashboardService {
          * @param pageSize  每页大小
          * @return Kubernetes资源分页结果
          */
-        PageResult<KubernetesResourceDTO> getDeployments(Long clusterId, Integer serviceId, String namespace,
+        PageResult<KubernetesResourceDTO> getDeployments(Long clusterId, Long serviceId, String namespace,
                         Integer pageNum,
                         Integer pageSize);
 
@@ -79,7 +79,7 @@ public interface KubernetesDashboardService {
          * @param pageSize  每页大小
          * @return Kubernetes资源分页结果
          */
-        PageResult<KubernetesResourceDTO> getPods(Long clusterId, Integer serviceId, String namespace,
+        PageResult<KubernetesResourceDTO> getPods(Long clusterId, Long serviceId, String namespace,
                         Integer pageNum,
                         Integer pageSize);
 
@@ -132,7 +132,7 @@ public interface KubernetesDashboardService {
         /**
          * 获取DaemonSets列表（返回通用对象，暂时保持兼容）
          */
-        PageResult<KubernetesResourceDTO> getDaemonSets(Long clusterId, Integer serviceId, String namespace,
+        PageResult<KubernetesResourceDTO> getDaemonSets(Long clusterId, Long serviceId, String namespace,
                         Integer pageNum,
                         Integer pageSize);
 
