@@ -32,10 +32,12 @@ public interface K8sResourceConverter {
     @Mapping(target = "name", source = "name")
     @Mapping(target = "phase", source = "phase")
     @Mapping(target = "creationTime", source = "creationTime")
+    @Mapping(target = "resourceVersion", source = "resourceVersion")
     @Mapping(target = "displayName", expression = "java(dto.getDisplayName())")
     @Mapping(target = "phaseText", source = "phase", qualifiedByName = "getPhaseText")
     @Mapping(target = "isActive", expression = "java(dto.isActive())")
     @Mapping(target = "statusColor", source = "phase", qualifiedByName = "getStatusColor")
+    @Mapping(target = "basicStats", source = "basicStats", qualifiedByName = "convertBasicStats")
     K8sNamespaceVO namespaceToVo(K8sNamespaceDTO dto);
 
     /**
@@ -117,5 +119,19 @@ public interface K8sResourceConverter {
         } else {
             return "orange";
         }
+    }
+
+    /**
+     * 转换基础资源统计
+     */
+    @Named("convertBasicStats")
+    default K8sNamespaceVO.BasicResourceStats convertBasicStats(K8sNamespaceDTO.BasicResourceStats dtoStats) {
+        if (dtoStats == null) {
+            return null;
+        }
+        return new K8sNamespaceVO.BasicResourceStats(
+            dtoStats.podCount(),
+            dtoStats.serviceCount()
+        );
     }
 }

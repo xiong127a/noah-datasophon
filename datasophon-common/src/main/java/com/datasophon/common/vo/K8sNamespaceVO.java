@@ -22,14 +22,26 @@ public record K8sNamespaceVO(
         String displayName, // 显示名称
         String phaseText, // 状态显示文本
         Boolean isActive, // 是否活跃
-        String statusColor // 状态颜色
+        String statusColor, // 状态颜色
+        BasicResourceStats basicStats // 基础资源统计
 ) implements Serializable {
+
+    /**
+     * 基础资源统计
+     */
+    public record BasicResourceStats(
+            Integer podCount,
+            Integer serviceCount) implements Serializable {
+        
+        @Serial
+        private static final long serialVersionUID = 1L;
+    }
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 从DTO创建VO
+     * 从DTO创建VO（不含统计）
      */
     public static K8sNamespaceVO from(String name, String phase, String creationTime, Integer resourceVersion) {
         String displayName = name != null ? name : "未知命名空间";
@@ -38,7 +50,22 @@ public record K8sNamespaceVO(
         String statusColor = getStatusColor(phase);
 
         return new K8sNamespaceVO(name, phase, creationTime, resourceVersion,
-                displayName, phaseText, isActive, statusColor);
+                displayName, phaseText, isActive, statusColor, null);
+    }
+
+    /**
+     * 从DTO创建VO（含统计）
+     */
+    public static K8sNamespaceVO withStats(String name, String phase, String creationTime, 
+                                          Integer resourceVersion, Integer podCount, Integer serviceCount) {
+        String displayName = name != null ? name : "未知命名空间";
+        String phaseText = getPhaseText(phase);
+        Boolean isActive = "Active".equals(phase);
+        String statusColor = getStatusColor(phase);
+        BasicResourceStats stats = new BasicResourceStats(podCount, serviceCount);
+
+        return new K8sNamespaceVO(name, phase, creationTime, resourceVersion,
+                displayName, phaseText, isActive, statusColor, stats);
     }
 
     /**

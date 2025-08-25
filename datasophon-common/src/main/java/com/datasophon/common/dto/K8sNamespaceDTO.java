@@ -18,16 +18,37 @@ public record K8sNamespaceDTO(
         String name,
         String phase,
         String creationTime,
-        Integer resourceVersion) implements Serializable {
+        Integer resourceVersion,
+        BasicResourceStats basicStats) implements Serializable {
+
+    /**
+     * 基础资源统计
+     */
+    public record BasicResourceStats(
+            Integer podCount,
+            Integer serviceCount) implements Serializable {
+        
+        @Serial
+        private static final long serialVersionUID = 1L;
+    }
 
     @Serial
     private static final long serialVersionUID = 1L;
 
     /**
-     * 创建基础K8sNamespaceDTO
+     * 创建基础K8sNamespaceDTO（不含统计）
      */
     public static K8sNamespaceDTO of(String name, String phase, String creationTime, Integer resourceVersion) {
-        return new K8sNamespaceDTO(name, phase, creationTime, resourceVersion);
+        return new K8sNamespaceDTO(name, phase, creationTime, resourceVersion, null);
+    }
+
+    /**
+     * 创建包含统计的K8sNamespaceDTO
+     */
+    public static K8sNamespaceDTO withStats(String name, String phase, String creationTime, 
+                                           Integer resourceVersion, Integer podCount, Integer serviceCount) {
+        BasicResourceStats stats = new BasicResourceStats(podCount, serviceCount);
+        return new K8sNamespaceDTO(name, phase, creationTime, resourceVersion, stats);
     }
 
     /**

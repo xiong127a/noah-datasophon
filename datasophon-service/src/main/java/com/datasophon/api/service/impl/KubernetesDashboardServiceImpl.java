@@ -150,7 +150,9 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 获取所有命名空间
             NamespaceList namespaceList = client.namespaces().list();
 
-            // 转换为DTO列表
+            log.info("获取{}个命名空间列表", namespaceList.getItems().size());
+
+            // 🚀 极简版本：只返回命名空间基础信息，无统计数据
             return namespaceList.getItems().stream()
                     .map(ns -> {
                         String name = ns.getMetadata().getName();
@@ -159,6 +161,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                         Integer resourceVersion = ns.getMetadata().getResourceVersion() != null
                                 ? Integer.parseInt(ns.getMetadata().getResourceVersion())
                                 : null;
+
+                        // 只返回基础信息，无统计数据，性能最佳
                         return K8sNamespaceDTO.of(name, phase, creationTime, resourceVersion);
                     })
                     .toList();
