@@ -113,7 +113,7 @@ export class KubernetesAPI {
     namespace?: string
   ): Promise<K8sResourceStats> {
     try {
-      const params: Record<string, unknown> = { clusterId };
+      const params: Record<string, unknown> = {};
       if (serviceId) params.serviceId = serviceId;
       if (namespace) params.namespace = namespace;
       
@@ -142,7 +142,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -155,11 +154,14 @@ export class KubernetesAPI {
         headers: { 'X-Cluster-Id': clusterId }
       });
       console.log('🌐 HTTP响应:', response.status, response.data);
+      
+      // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
+      const pageVO = response.data?.data || {};
       return {
-        data: response.data?.data || [],
-        total: response.data?.total,
-        pageNum,
-        pageSize
+        data: pageVO.data || [],
+        total: pageVO.total || 0,
+        pageNum: pageVO.pageNum || pageNum,
+        pageSize: pageVO.pageSize || pageSize
       };
     } catch (error) {
       console.error('❌ 获取Pods失败:', error);
@@ -178,7 +180,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -212,7 +213,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -246,7 +246,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -279,7 +278,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -313,7 +311,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -347,7 +344,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -380,7 +376,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -414,7 +409,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -448,7 +442,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -480,7 +473,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -512,7 +504,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -544,7 +535,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -576,7 +566,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };
@@ -608,7 +597,6 @@ export class KubernetesAPI {
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
-        clusterId,
         pageNum, 
         pageSize 
       };

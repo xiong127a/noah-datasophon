@@ -65,6 +65,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import StatusIndicator from "../components/status-indicator";
 import { Pod, PodStatus } from "../types";
+import { getPodStatusConfig, getStatusDotColor } from "@/lib/kubernetes-status-utils";
+import KubernetesPagination from "../components/kubernetes-pagination";
 
 interface PodsDashboardProps {
   clusterId: string;
@@ -87,7 +89,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pageNum, setPageNum] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
 
   // 筛选和搜索Pods
@@ -166,6 +168,10 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
         pageSize
       );
       console.log('✅ 获取Pods成功，数量:', response.data.length);
+      console.log('📄 分页信息:', { pageNum, pageSize, total: response.total });
+
+      // 更新总数
+      setTotal(response.total || response.data.length);
 
       // 转换API响应为组件需要的Pod格式
       const convertedPods: Pod[] = response.data.map((resource: any) => ({
@@ -219,10 +225,20 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
     await fetchPods();
   };
 
+  // 分页处理函数
+  const handlePageChange = (page: number) => {
+    setPageNum(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageNum(1); // 重置到第一页
+  };
+
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchPods();
-  }, [clusterId, namespace, pageNum]);
+  }, [clusterId, namespace, pageNum, pageSize]);
 
   // Pod操作
   const handlePodAction = (action: string, pod: Pod) => {
@@ -364,13 +380,8 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
                       </TableCell>
                       <TableCell>
                         <Badge 
-                          variant={
-                            pod.status?.phase === 'Running' ? 'default' :
-                            pod.status?.phase === 'Pending' ? 'secondary' :
-                            pod.status?.phase === 'Failed' ? 'destructive' :
-                            'outline'
-                          }
-                          className="font-mono"
+                          variant={getPodStatusConfig(pod.status?.phase || 'Unknown').variant}
+                          className={`font-mono ${getPodStatusConfig(pod.status?.phase || 'Unknown').className}`}
                         >
                           {pod.status?.phase || 'Unknown'}
                         </Badge>
@@ -480,6 +491,21 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
             </div>
           )}
         </CardContent>
+        
+        {/* 分页控件 */}
+        {total > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            <KubernetesPagination
+              currentPage={pageNum}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              loading={loading}
+              className="!bg-transparent !border-0 !shadow-none !p-0"
+            />
+          </div>
+        )}
       </Card>
 
       {/* Pod详情侧边栏 - 这里可以进一步实现详细的Pod信息展示 */}

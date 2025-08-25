@@ -7,27 +7,20 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Filter,
   Download,
   RefreshCw,
   MoreHorizontal,
   Eye,
   Edit,
   Trash2,
-  Play,
-  Pause,
   Network,
   Globe,
-  CheckCircle,
   AlertCircle,
-  Clock,
   Box,
-  ChevronDown,
-  ChevronRight,
   Activity
 } from "lucide-react";
 
@@ -63,10 +56,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { Service } from "../types";
 import { KubernetesAPI } from '@/lib/kubernetes-api';
+import { getServiceStatusConfig } from "@/lib/kubernetes-status-utils";
+import KubernetesPagination from "../components/kubernetes-pagination";
 
 interface ServicesDashboardProps {
   clusterId: string;
@@ -83,15 +77,14 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [selectedService, setSelectedService] = useState<Service | null>(null);
-  const [showDetails, setShowDetails] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [pageNum, setPageNum] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(20);
   const [total, setTotal] = useState(0);
 
+  const [error, setError] = useState<string | null>(null);
+
   // 获取Services数据
-  const fetchServices = async () => {
+  const fetchServices = useCallback(async () => {
     if (!clusterId) return;
     
     console.log('🔄 开始获取Services列表:', { clusterId, namespace, pageNum, pageSize });
@@ -102,14 +95,13 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
       const response = await KubernetesAPI.getServices(
         clusterId,
         namespace || undefined,
-        undefined, // serviceId
         pageNum,
         pageSize
       );
       console.log('✅ 获取Services成功，数量:', response.data.length);
 
       // 转换API响应为组件需要的Service格式
-      const convertedServices: Service[] = response.data.map((resource: any) => ({
+      const convertedServices: Service[] = response.data.map((resource: Record<string, unknown>) => ({
         apiVersion: "v1",
         kind: "Service",
         metadata: {
@@ -145,7 +137,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, pageNum, pageSize]);
 
   // 筛选和搜索Services
   const filteredServices = useMemo(() => {
@@ -194,20 +186,21 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
     return service.spec.ports.map(p => `${p.port}/${p.protocol}`).join(", ");
   };
 
-  // 获取Service类型颜色
-  const getServiceTypeColor = (type?: string) => {
-    switch (type) {
-      case "ClusterIP": return "bg-blue-100 text-blue-700";
-      case "NodePort": return "bg-green-100 text-green-700";
-      case "LoadBalancer": return "bg-purple-100 text-purple-700";
-      case "ExternalName": return "bg-orange-100 text-orange-700";
-      default: return "bg-gray-100 text-gray-700";
-    }
-  };
+  // 获取Service类型颜色 - 已优化使用统一配色系统
 
   // 刷新数据
   const handleRefresh = async () => {
     await fetchServices();
+  };
+
+  // 分页处理函数
+  const handlePageChange = (page: number) => {
+    setPageNum(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageNum(1); // 重置到第一页
   };
 
   // Service操作
@@ -230,7 +223,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchServices();
-  }, [clusterId, namespace, pageNum]);
+  }, [clusterId, namespace, pageNum, pageSize]);
 
   if (loading && services.length === 0) {
     return (
@@ -385,7 +378,10 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={`text-xs ${getServiceTypeColor(service.spec?.type)}`}>
+                        <Badge 
+                          variant={getServiceStatusConfig(service.spec?.type || 'ClusterIP').variant}
+                          className={`text-xs ${getServiceStatusConfig(service.spec?.type || 'ClusterIP').className}`}
+                        >
                           {service.spec?.type || 'ClusterIP'}
                         </Badge>
                       </TableCell>
@@ -450,6 +446,21 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
             </div>
           )}
         </CardContent>
+        
+        {/* 分页控件 */}
+        {total > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            <KubernetesPagination
+              currentPage={pageNum}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              loading={loading}
+              className="!bg-transparent !border-0 !shadow-none !p-0"
+            />
+          </div>
+        )}
       </Card>
     </div>
   );
