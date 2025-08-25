@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller.v1.cluster;
+package com.datasophon.api.controller.v1.kubernetes;
 
 import com.datasophon.api.annotation.ClusterId;
 import com.datasophon.api.converter.K8sResourceConverter;
