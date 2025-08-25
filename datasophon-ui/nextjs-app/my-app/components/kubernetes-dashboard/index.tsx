@@ -20,10 +20,6 @@ import {
   HardDrive,
   Clock,
   Grid3X3,
-  RefreshCw,
-  Search,
-  Filter,
-  MoreHorizontal,
   ChevronLeft,
   ChevronRight,
   Zap,
@@ -32,7 +28,6 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
 import NamespaceSelector from "./components/namespace-selector";
@@ -135,9 +130,6 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
   const [currentView, setCurrentView] = useState<DashboardView>('overview');
   const [selectedNamespace, setSelectedNamespace] = useState<string>('default');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
   const [resourceStats, setResourceStats] = useState<K8sResourceStats | null>(null);
 
   // 添加调试日志
@@ -168,19 +160,7 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
     }
   }, [clusterId]); // 集群总览不依赖命名空间，显示全局统计
 
-  // 刷新数据
-  const handleRefresh = async () => {
-    setIsLoading(true);
-    try {
-      console.log('🔄 刷新Kubernetes Dashboard数据');
-      await fetchResourceStats();
-      setLastRefresh(new Date());
-    } catch (error) {
-      console.error('❌ 刷新失败:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
 
   // 组件挂载时获取数据
   useEffect(() => {
@@ -317,21 +297,7 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
               </div>
             ))}
             
-            {/* 底部信息 - 作为内容的一部分，不分离 */}
-            <div className="border-t border-gray-100 pt-4 mt-6">
-              <div className="text-center">
-                {!sidebarCollapsed ? (
-                  <div className="text-xs text-gray-400">
-                    <div className="mb-1">Kubernetes 资源管理</div>
-                    <div className="text-xs text-gray-300">
-                      共 {menuCategories.reduce((total, cat) => total + cat.items.length, 0)} 个组件
-                    </div>
-                  </div>
-                ) : (
-                  <div className="w-8 h-1 bg-gray-200 rounded-full mx-auto"></div>
-                )}
-              </div>
-            </div>
+
           </div>
           
           {/* 底部填充区域 - 确保高度延伸到与右侧内容区平齐 */}
@@ -341,109 +307,55 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
 
       {/* 主内容区域 - 支持页面整体滚动 */}
       <div className="flex-1 flex flex-col">
-        {/* 顶部工具栏 */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div>
-                <h1 className="text-xl font-semibold text-gray-900 flex items-center">
-                  {viewInfo.title}
-                  <StatusIndicator 
-                    status="healthy" 
-                    className="ml-3"
-                  />
-                </h1>
-                <p className="text-sm text-gray-500 mt-1">{viewInfo.description}</p>
+        {/* 美化的顶部区域 */}
+        <div className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-200 px-8 py-6">
+          <div className="max-w-7xl mx-auto">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl flex items-center justify-center shadow-md">
+                    <StatusIndicator 
+                      status="healthy" 
+                      className="w-5 h-5 text-white"
+                    />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+                      {viewInfo.title}
+                    </h1>
+                    <p className="text-sm text-gray-600 mt-0.5">{viewInfo.description}</p>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center space-x-3">
-              {/* 集群总览模式下只显示少量操作 */}
-              {currentView === 'overview' ? (
-                <>
-                  {/* 命名空间选择器 */}
+              {/* 集群总览模式显示美化的命名空间选择器 */}
+              {currentView === 'overview' && (
+                <div className="flex items-center space-x-3">
+                  <span className="text-sm font-medium text-gray-500">命名空间</span>
                   <NamespaceSelector
                     clusterId={clusterId}
                     value={selectedNamespace}
                     onChange={setSelectedNamespace}
+                    className="min-w-[200px]"
                   />
-                  
-                  {/* 刷新按钮 */}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleRefresh}
-                    disabled={isLoading}
-                    title="刷新集群数据"
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-                </>
-              ) : (
-                <>
-                  {/* 其他页面显示完整的搜索和筛选功能 */}
-                  {/* 搜索框 */}
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                      placeholder="搜索资源..."
-                      className="pl-10 w-64"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-
-                  {/* 过滤器 */}
-                  <Button variant="outline" size="icon">
-                    <Filter className="w-4 h-4" />
-                  </Button>
-
-                  {/* 刷新按钮 */}
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleRefresh}
-                    disabled={isLoading}
-                  >
-                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  </Button>
-
-                  {/* 更多操作 */}
-                  <Button variant="outline" size="icon">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </>
+                </div>
               )}
-            </div>
-          </div>
-
-          {/* 面包屑和状态信息 */}
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
-            <div className="flex items-center text-sm text-gray-500 space-x-2">
-              <span>命名空间:</span>
-              <Badge variant="outline" className="font-mono">
-                {selectedNamespace}
-              </Badge>
-              <span className="mx-2">•</span>
-              <span>最后更新:</span>
-              <span className="font-mono">
-                {lastRefresh.toLocaleTimeString()}
-              </span>
             </div>
           </div>
         </div>
 
-        {/* 主要内容区域 - 跟随页面整体滚动 */}
-        <div className="flex-1 bg-gray-50 p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentView}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.2 }}
-              className="min-h-full"
-            >
+        {/* 美化的主要内容区域 */}
+        <div className="flex-1 bg-gradient-to-br from-gray-50 via-white to-gray-50">
+          <div className="max-w-7xl mx-auto p-6">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentView}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="min-h-full"
+              >
               {currentView === 'overview' && (
                 <div className="space-y-8">
                   {/* 集群概览标题 */}
@@ -770,6 +682,7 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
               )}
             </motion.div>
           </AnimatePresence>
+          </div>
         </div>
       </div>
     </div>
