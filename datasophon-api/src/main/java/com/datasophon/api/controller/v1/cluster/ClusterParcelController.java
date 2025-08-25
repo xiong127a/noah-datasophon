@@ -66,7 +66,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @ApiVersion(path = "cluster/parcel")
-public class ParcelController implements DisposableBean {
+public class ClusterParcelController implements DisposableBean {
 
     /**
      * 获取当前线程信息（虚拟线程支持）
