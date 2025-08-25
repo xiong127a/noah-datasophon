@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller.v1.service;
+package com.datasophon.api.controller.v1.frame;
 
 import cn.hutool.core.io.FileUtil;
 import com.datasophon.api.converter.FrameServiceConverter;

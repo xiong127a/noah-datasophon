@@ -15,7 +15,7 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.controller.v1.service;
+package com.datasophon.api.controller.v1.frame;
 
 import com.datasophon.api.converter.FrameInfoConverter;
 import com.datasophon.api.service.FrameInfoService;
