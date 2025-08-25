@@ -153,6 +153,37 @@ logging:
 datasophon:
   migration:
     enable: ${datasophon.migration.enable:true}
+  
+  # Temporal工作流引擎配置 (按需加载优化)
+  temporal:
+    enabled: false                              # 默认禁用，仅在需要使用工作流功能时启用
+    server:
+      host: localhost
+      port: 7233
+    namespace: default
+    task-queue: host-check-task-queue
+    worker:
+      max-concurrent-workflow-task-pollers: 5
+      max-concurrent-activity-task-pollers: 10
+  
+  # 插件管理器配置 (延迟加载优化)  
+  plugins:
+    directory: plugins
+    loading:
+      enabled: true                           # 插件功能总开关
+      lazy: true                              # 启用延迟加载 - 显著减少启动时间
+      hot-reload: true                        # 支持热重载
+    ssh-connection-pool:
+      default-config:
+        max-total: 10
+        max-idle: 5  
+        min-idle: 2
+        max-wait-millis: 30000
+        test-on-borrow: true
+        test-on-return: true
+        test-while-idle: true
+        time-between-eviction-runs-millis: 30000
+        min-evictable-idle-time-millis: 300000
 
 jwt:
   # JWT密钥 - 使用base64编码的秘钥

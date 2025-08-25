@@ -3,6 +3,7 @@ package com.datasophon.api.configuration;
 import com.datasophon.plugins.manager.PluginManager;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -17,6 +18,11 @@ import jakarta.annotation.PostConstruct;
 @Slf4j
 @Configuration
 @EnableConfigurationProperties(PluginProperties.class)
+@ConditionalOnProperty(
+    name = "datasophon.plugins.loading.enabled", 
+    havingValue = "true", 
+    matchIfMissing = true
+)
 public class PluginConfiguration {
     
     @Autowired
@@ -40,8 +46,10 @@ public class PluginConfiguration {
             log.warn("插件功能已禁用，所有插件相关操作将不可用");
         } else if (lazyLoading) {
             log.info("延迟加载模式已启用，插件将在首次使用时自动加载");
+            // 延迟加载模式：不在启动时初始化插件，等待手动调用
         } else {
             log.info("立即加载模式，插件将在应用启动时自动加载");
+            // 立即加载模式：仍然在启动时初始化（保持原有行为）
         }
     }
 }
