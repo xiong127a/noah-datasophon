@@ -213,7 +213,7 @@ const KubernetesPagination: React.FC<KubernetesPaginationProps> = ({
 
               {/* 页码按钮 */}
               <div className="flex items-center space-x-0.5">
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                   {generatePageNumbers().map((page, index) => (
                     <motion.div
                       key={`${page}-${index}`}

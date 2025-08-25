@@ -100,6 +100,8 @@ export interface K8sResource {
   annotations?: Record<string, string>;
   spec?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
+  // 扩展属性（包含特定资源的额外信息）
+  additionalProperties?: Record<string, any>;
   // Pod 特定字段
   ready?: string;
   restarts?: number;

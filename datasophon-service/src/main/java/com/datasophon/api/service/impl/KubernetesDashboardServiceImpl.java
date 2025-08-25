@@ -588,7 +588,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     public K8sResourceStatsDTO getResourceStats(Long clusterId, Long serviceId, String namespace) {
         try {
             KubernetesClient client = getKubernetesClient(clusterId);
-            
+
             log.info("开始统计Kubernetes资源，clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
             
             // 构建统计结果
@@ -641,9 +641,18 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             builder.deploymentCount(deployments.size());
             
             long availableDeployments = deployments.stream().filter(dep -> {
-                Integer replicas = dep.getSpec().getReplicas();
-                Integer availableReplicas = dep.getStatus() != null ? dep.getStatus().getAvailableReplicas() : 0;
-                return replicas != null && availableReplicas != null && replicas.equals(availableReplicas);
+                try {
+                    Integer replicas = dep.getSpec() != null ? dep.getSpec().getReplicas() : null;
+                    Integer availableReplicas = dep.getStatus() != null ? dep.getStatus().getAvailableReplicas() : null;
+                    // 如果任一值为null，视为不可用
+                    if (replicas == null || availableReplicas == null) {
+                        return false;
+                    }
+                    return replicas.equals(availableReplicas);
+                } catch (Exception e) {
+                    log.warn("处理Deployment {}状态时出错: {}", dep.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
             }).count();
             
             builder.availableDeploymentCount((int) availableDeployments)
@@ -669,9 +678,17 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             builder.statefulSetCount(statefulSets.size());
             
             long readyStatefulSets = statefulSets.stream().filter(sts -> {
-                Integer replicas = sts.getSpec().getReplicas();
-                Integer readyReplicas = sts.getStatus() != null ? sts.getStatus().getReadyReplicas() : 0;
-                return replicas != null && readyReplicas != null && replicas.equals(readyReplicas);
+                try {
+                    Integer replicas = sts.getSpec() != null ? sts.getSpec().getReplicas() : null;
+                    Integer readyReplicas = sts.getStatus() != null ? sts.getStatus().getReadyReplicas() : null;
+                    if (replicas == null || readyReplicas == null) {
+                        return false;
+                    }
+                    return replicas.equals(readyReplicas);
+                } catch (Exception e) {
+                    log.warn("处理StatefulSet {}状态时出错: {}", sts.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
             }).count();
             
             builder.readyStatefulSetCount((int) readyStatefulSets);
@@ -684,9 +701,17 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             builder.daemonSetCount(daemonSets.size());
             
             long readyDaemonSets = daemonSets.stream().filter(ds -> {
-                Integer desired = ds.getStatus() != null ? ds.getStatus().getDesiredNumberScheduled() : 0;
-                Integer ready = ds.getStatus() != null ? ds.getStatus().getNumberReady() : 0;
-                return desired != null && ready != null && desired.equals(ready);
+                try {
+                    Integer desired = ds.getStatus() != null ? ds.getStatus().getDesiredNumberScheduled() : null;
+                    Integer ready = ds.getStatus() != null ? ds.getStatus().getNumberReady() : null;
+                    if (desired == null || ready == null) {
+                        return false;
+                    }
+                    return desired.equals(ready);
+                } catch (Exception e) {
+                    log.warn("处理DaemonSet {}状态时出错: {}", ds.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
             }).count();
             
             builder.readyDaemonSetCount((int) readyDaemonSets);
@@ -779,9 +804,17 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             builder.replicaSetCount(replicaSets.size());
             
             long readyReplicaSets = replicaSets.stream().filter(rs -> {
-                Integer replicas = rs.getSpec().getReplicas();
-                Integer readyReplicas = rs.getStatus() != null ? rs.getStatus().getReadyReplicas() : 0;
-                return replicas != null && readyReplicas != null && replicas.equals(readyReplicas);
+                try {
+                    Integer replicas = rs.getSpec() != null ? rs.getSpec().getReplicas() : null;
+                    Integer readyReplicas = rs.getStatus() != null ? rs.getStatus().getReadyReplicas() : null;
+                    if (replicas == null || readyReplicas == null) {
+                        return false;
+                    }
+                    return replicas.equals(readyReplicas);
+                } catch (Exception e) {
+                    log.warn("处理ReplicaSet {}状态时出错: {}", rs.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
             }).count();
             
             builder.readyReplicaSetCount((int) readyReplicaSets);

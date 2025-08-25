@@ -53,6 +53,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 import StatusIndicator from "../components/status-indicator";
 import { Pod } from "../types";
+import type { K8sResource } from "@/lib/kubernetes-api";
 import { getPodStatusConfig } from "@/lib/kubernetes-status-utils";
 import KubernetesPagination from "../components/kubernetes-pagination";
 
@@ -188,12 +189,23 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
       // 调试主机字段映射
       if (response.data?.[0]) {
         const firstPod = response.data[0];
-        console.log('🔍 第一个Pod的节点信息:', {
+        console.log('🔍 第一个Pod的完整数据结构:', firstPod);
+        console.log('🔍 第一个Pod的所有字段:', Object.keys(firstPod));
+        console.log('🔍 第一个Pod的节点相关字段:', {
+          // 顶层字段
           nodeName: firstPod.nodeName,
           node: firstPod.node,
           hostName: firstPod.hostName,
           host: firstPod.host,
-          availableFields: Object.keys(firstPod)
+          // additionalProperties中的字段
+          additionalProperties: firstPod.additionalProperties,
+          additionalNodeName: firstPod.additionalProperties?.nodeName,
+          additionalNode: firstPod.additionalProperties?.node,
+          additionalHostName: firstPod.additionalProperties?.hostName,
+          additionalHost: firstPod.additionalProperties?.host,
+          // 其他可能的字段
+          spec: firstPod.spec,
+          status: firstPod.status
         });
       }
 
@@ -201,7 +213,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
       setTotal(response.total || response.data.length);
 
       // 转换API响应为组件需要的Pod格式
-      const convertedPods: Pod[] = response.data.map((resource: any) => ({
+      const convertedPods: Pod[] = response.data.map((resource: K8sResource) => ({
         apiVersion: "v1",
         kind: "Pod",
         metadata: {
@@ -216,10 +228,18 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
             image: 'unknown',
             ports: []
           }],
-          nodeName: resource.nodeName || resource.node || resource.hostName || resource.host || 'unknown'
+          nodeName: resource.additionalProperties?.nodeName || 
+                    resource.additionalProperties?.node || 
+                    resource.additionalProperties?.hostName || 
+                    resource.additionalProperties?.host ||
+                    resource.nodeName || 
+                    resource.node || 
+                    resource.hostName || 
+                    resource.host || 
+                    'unknown'
         },
         status: {
-          phase: resource.status || 'Unknown',
+          phase: (resource.status as 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown') || 'Unknown',
           conditions: [{
             type: "Ready",
             status: resource.ready?.includes('1/1') ? "True" : "False",
@@ -383,7 +403,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
                     >
                       <TableCell>
                         <StatusIndicator 
-                          status={pod.status?.phase as any || 'Unknown'} 
+                          status={pod.status?.phase || 'Unknown'} 
                           size="sm" 
                         />
                       </TableCell>
@@ -567,7 +587,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">状态:</span>
                     <StatusIndicator 
-                      status={selectedPod.status?.phase as any || 'Unknown'} 
+                      status={selectedPod.status?.phase || 'Unknown'} 
                       size="sm" 
                       showText 
                     />

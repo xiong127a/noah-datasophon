@@ -78,11 +78,33 @@ public interface KubernetesResourceConverter {
     @Named("mapPodProperties")
     default Map<String, Object> mapPodProperties(Pod pod) {
         Map<String, Object> props = new HashMap<>();
+        
+        // Pod状态信息
         if (pod.getStatus() != null) {
             props.put("podIP", pod.getStatus().getPodIP());
             props.put("hostIP", pod.getStatus().getHostIP());
             props.put("phase", pod.getStatus().getPhase());
         }
+        
+        // 节点信息 - 多种字段名支持
+        if (pod.getSpec() != null) {
+            String nodeName = pod.getSpec().getNodeName();
+            if (nodeName != null) {
+                props.put("nodeName", nodeName);
+                props.put("node", nodeName);  // 提供多个别名
+                props.put("hostName", nodeName);
+                props.put("host", nodeName);
+            }
+        }
+        
+        // 如果spec中没有，尝试从status中获取
+        if (pod.getStatus() != null && pod.getStatus().getHostIP() != null) {
+            // 如果nodeName为空，但有hostIP，尝试用hostIP作为节点标识
+            if (!props.containsKey("nodeName")) {
+                props.put("hostIP", pod.getStatus().getHostIP());
+            }
+        }
+        
         return props;
     }
 
