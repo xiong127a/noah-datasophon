@@ -1,4 +1,4 @@
-package com.datasophon.api.controller;
+package com.datasophon.api.controller.v1.sse;
 
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.converter.ClusterInfoConverter;
