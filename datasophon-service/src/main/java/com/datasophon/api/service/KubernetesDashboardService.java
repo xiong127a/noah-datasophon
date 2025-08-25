@@ -75,13 +75,15 @@ public interface KubernetesDashboardService {
          * @param clusterId 集群ID
          * @param serviceId 服务ID
          * @param namespace 命名空间
+         * @param searchTerm 搜索关键词（支持Pod名称、节点名称、标签搜索）
+         * @param statusFilter 状态筛选（Running、Pending、Failed、Succeeded等）
          * @param pageNum   当前页码
          * @param pageSize  每页大小
          * @return Kubernetes资源分页结果
          */
         PageResult<KubernetesResourceDTO> getPods(Long clusterId, Long serviceId, String namespace,
-                        Integer pageNum,
-                        Integer pageSize);
+                        String searchTerm, String statusFilter,
+                        Integer pageNum, Integer pageSize);
 
         /**
          * 获取Services列表（返回通用对象，暂时保持兼容）

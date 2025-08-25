@@ -115,13 +115,16 @@ public class KubernetesDashboardController {
     public Result<PageVO<KubernetesResourceVO>> getPodsInfo(@ClusterId Long clusterId,
             @RequestParam(name = "serviceId", required = false) Long serviceId,
             @RequestParam(name = "namespace", required = false) String namespace,
+            @RequestParam(name = "searchTerm", required = false) String searchTerm,
+            @RequestParam(name = "statusFilter", required = false) String statusFilter,
             @RequestParam(name = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         try {
-            log.info("获取Pods列表请求：clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
-                    clusterId, serviceId, namespace, pageNum, pageSize);
+            log.info("获取Pods列表请求：clusterId={}, serviceId={}, namespace={}, searchTerm={}, statusFilter={}, pageNum={}, pageSize={}",
+                    clusterId, serviceId, namespace, searchTerm, statusFilter, pageNum, pageSize);
+            
             PageResult<KubernetesResourceDTO> podDTOs = kubernetesDashboardService.getPods(clusterId, serviceId,
-                    namespace, pageNum, pageSize);
+                    namespace, searchTerm, statusFilter, pageNum, pageSize);
 
             // DTO转换为VO
             List<KubernetesResourceVO> podVOs = kubernetesResourceVOConverter.dtoListToVoList(podDTOs.getRecords());

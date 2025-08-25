@@ -195,26 +195,33 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         }
     }
 
-    private KubernetesClient getKubernetesClient(Long clusterId) {
-        String kubeConfig = getKubeConfig(clusterId);
-        Config config = Config.fromKubeconfig(kubeConfig);
-        return new KubernetesClientBuilder().withConfig(config).build();
-    }
-
     @Override
     public PageResult<KubernetesResourceDTO> getPods(Long clusterId, Long serviceId, String namespace,
-            Integer pageNum, Integer pageSize) {
+            String searchTerm, String statusFilter, Integer pageNum, Integer pageSize) {
         try {
+            log.info("获取Pods列表请求：clusterId={}, serviceId={}, namespace={}, searchTerm={}, statusFilter={}, pageNum={}, pageSize={}",
+                    clusterId, serviceId, namespace, searchTerm, statusFilter, pageNum, pageSize);
+
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 使用通用分页方法获取Pod列表
-            PaginatedResult<Pod> paginationResult = paginateResources(
-                    client,
-                    Pod.class,
-                    namespace,
-                    pageNum,
-                    pageSize);
+            // 获取所有Pod（不分页，用于搜索和筛选）
+            List<Pod> allPods;
+            if (namespace != null && !namespace.isEmpty()) {
+                allPods = client.pods().inNamespace(namespace).list().getItems();
+            } else {
+                allPods = client.pods().inAnyNamespace().list().getItems();
+            }
+
+            log.info("从Kubernetes集群获取到{}个Pod", allPods.size());
+
+            // 应用搜索和筛选
+            List<Pod> filteredPods = applyPodsSearchAndFilter(allPods, searchTerm, statusFilter);
+            
+            log.info("搜索和筛选后剩余{}个Pod", filteredPods.size());
+
+            // 应用分页
+            PaginatedResult<Pod> paginationResult = applyPagination(filteredPods, pageNum, pageSize);
 
             // 使用通用createPageResult方法
             return createPageResult(paginationResult.items(), paginationResult, pageNum, pageSize);
@@ -222,6 +229,117 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             log.error("获取Pods列表出错", e);
             throw new RuntimeException("获取Pods列表出错: " + e.getMessage());
         }
+    }
+
+    /**
+     * 应用Pod搜索和筛选条件
+     */
+    private List<Pod> applyPodsSearchAndFilter(List<Pod> pods, String searchTerm, String statusFilter) {
+        return pods.stream()
+                .filter(pod -> {
+                    // 状态筛选
+                    if (statusFilter != null && !statusFilter.isEmpty() && !statusFilter.equals("all")) {
+                        String podPhase = pod.getStatus() != null ? pod.getStatus().getPhase() : "Unknown";
+                        // 支持前端传递的小写状态值，映射到Kubernetes的实际状态值
+                        String normalizedFilter = normalizeStatusFilter(statusFilter);
+                        if (!normalizedFilter.equalsIgnoreCase(podPhase)) {
+                            return false;
+                        }
+                    }
+
+                    // 搜索关键词筛选
+                    if (searchTerm != null && !searchTerm.isEmpty()) {
+                        String searchLower = searchTerm.toLowerCase();
+                        
+                        // 搜索Pod名称
+                        String podName = pod.getMetadata().getName();
+                        if (podName != null && podName.toLowerCase().contains(searchLower)) {
+                            return true;
+                        }
+
+                        // 搜索节点名称
+                        String nodeName = pod.getSpec() != null ? pod.getSpec().getNodeName() : null;
+                        if (nodeName != null && nodeName.toLowerCase().contains(searchLower)) {
+                            return true;
+                        }
+
+                        // 搜索命名空间
+                        String namespace = pod.getMetadata().getNamespace();
+                        if (namespace != null && namespace.toLowerCase().contains(searchLower)) {
+                            return true;
+                        }
+
+                        // 搜索标签
+                        if (pod.getMetadata().getLabels() != null) {
+                            boolean labelMatch = pod.getMetadata().getLabels().entrySet().stream()
+                                    .anyMatch(entry -> 
+                                        (entry.getKey() != null && entry.getKey().toLowerCase().contains(searchLower)) ||
+                                        (entry.getValue() != null && entry.getValue().toLowerCase().contains(searchLower))
+                                    );
+                            if (labelMatch) {
+                                return true;
+                            }
+                        }
+
+                        // 搜索IP地址
+                        if (pod.getStatus() != null) {
+                            String podIP = pod.getStatus().getPodIP();
+                            String hostIP = pod.getStatus().getHostIP();
+                            if ((podIP != null && podIP.contains(searchTerm)) ||
+                                (hostIP != null && hostIP.contains(searchTerm))) {
+                                return true;
+                            }
+                        }
+
+                        // 如果没有匹配任何搜索条件，过滤掉
+                        return false;
+                    }
+
+                    return true;
+                })
+                .toList();
+    }
+
+    /**
+     * 标准化状态筛选值，将前端传递的小写状态映射到Kubernetes的实际状态值
+     */
+    private String normalizeStatusFilter(String statusFilter) {
+        if (statusFilter == null || statusFilter.isEmpty()) {
+            return statusFilter;
+        }
+        
+        return switch (statusFilter.toLowerCase()) {
+            case "running" -> "Running";
+            case "pending" -> "Pending";
+            case "failed" -> "Failed";
+            case "succeeded" -> "Succeeded";
+            case "unknown" -> "Unknown";
+            default -> statusFilter; // 返回原值，以防有其他状态
+        };
+    }
+
+    /**
+     * 对已过滤的资源列表应用分页
+     */
+    private <T> PaginatedResult<T> applyPagination(List<T> items, Integer pageNum, Integer pageSize) {
+        if (pageNum == null || pageSize == null) {
+            return new PaginatedResult<>(items, items.size(), 1);
+        }
+
+        int total = items.size();
+        int totalPages = (int) Math.ceil((double) total / pageSize);
+        int startIndex = (pageNum - 1) * pageSize;
+        int endIndex = Math.min(startIndex + pageSize, total);
+
+        List<T> pagedItems = startIndex >= total ? Collections.emptyList() : items.subList(startIndex, endIndex);
+
+        return new PaginatedResult<>(pagedItems, total, totalPages);
+    }
+
+    private KubernetesClient getKubernetesClient(Long clusterId) {
+        String kubeConfig = getKubeConfig(clusterId);
+        Config config = Config.fromKubeconfig(kubeConfig);
+        return new KubernetesClientBuilder().withConfig(config).build();
     }
 
     @Override

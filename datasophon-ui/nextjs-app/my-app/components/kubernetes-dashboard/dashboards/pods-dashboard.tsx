@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -181,7 +181,9 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
         namespace || undefined,
         serviceId || undefined,
         pageNum,
-        pageSize
+        pageSize,
+        searchTerm || undefined,
+        statusFilter || undefined
       );
       console.log('✅ 获取Pods成功，数量:', response.data.length);
       console.log('📄 分页信息:', { pageNum, pageSize, total: response.total });
@@ -264,7 +266,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [clusterId, serviceId, namespace, pageNum, pageSize]);
+  }, [clusterId, serviceId, namespace, pageNum, pageSize, searchTerm, statusFilter]);
 
   // 刷新数据
   const handleRefresh = async () => {
@@ -281,11 +283,45 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
     setPageNum(1); // 重置到第一页
   };
 
+  // 防抖定时器引用
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 搜索和筛选处理函数
+  const handleSearchChange = (value: string) => {
+    // 立即更新输入框显示
+    setSearchTerm(value);
+    
+    // 清除之前的定时器
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // 设置防抖定时器（500ms）
+    searchTimeoutRef.current = setTimeout(() => {
+      setPageNum(1); // 重置到第一页
+      // 触发数据重新获取（通过useEffect的依赖项变化）
+    }, 500);
+  };
+
+  const handleStatusFilterChange = (value: string) => {
+    setStatusFilter(value);
+    setPageNum(1); // 重置到第一页
+  };
+
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchPods();
     fetchGlobalStats();
   }, [fetchPods, fetchGlobalStats]);
+
+  // 组件卸载时清理定时器
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Pod操作
   const handlePodAction = (action: string, pod: Pod) => {
@@ -344,12 +380,12 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
                   placeholder="搜索 Pods..."
                   className="pl-10 w-64"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => handleSearchChange(e.target.value)}
                 />
               </div>
 
               {/* 状态筛选 */}
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <Select value={statusFilter} onValueChange={handleStatusFilterChange}>
                 <SelectTrigger className="w-40">
                   <SelectValue />
                 </SelectTrigger>

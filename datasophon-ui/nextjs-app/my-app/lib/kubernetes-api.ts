@@ -192,7 +192,9 @@ export class KubernetesAPI {
     namespace?: string,
     serviceId?: string,
     pageNum: number = 1,
-    pageSize: number = 10
+    pageSize: number = 10,
+    searchTerm?: string,
+    statusFilter?: string
   ): Promise<K8sResourceListResponse> {
     try {
       const params: Record<string, unknown> = { 
@@ -201,6 +203,8 @@ export class KubernetesAPI {
       };
       if (namespace) params.namespace = namespace;
       if (serviceId) params.serviceId = serviceId;
+      if (searchTerm) params.searchTerm = searchTerm;
+      if (statusFilter && statusFilter !== 'all') params.statusFilter = statusFilter;
 
       console.log('🌐 发送HTTP请求:', `GET ${API_PATHS_V1.K8S_PODS}`, { params, headers: { 'X-Cluster-Id': clusterId } });
       const response = await apiV1.get(API_PATHS_V1.K8S_PODS, {
