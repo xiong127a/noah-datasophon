@@ -139,4 +139,18 @@ public interface FrameServiceMapper extends BaseMapper<FrameServiceEntity> {
                 .where(FrameServiceEntity::getFrameId).in(frameIds);
         return this.selectListByQuery(query);
     }
+
+    /**
+     * 批量查询指定框架和服务名的服务列表
+     * 用于批量优化数据库操作，减少SQL执行次数
+     */
+    default List<FrameServiceEntity> selectByFrameIdAndServiceNames(Long frameId, List<String> serviceNames) {
+        if (frameId == null || serviceNames == null || serviceNames.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        QueryWrapper query = QueryWrapper.create()
+                .where(FrameServiceEntity::getFrameId).eq(frameId)
+                .and(FrameServiceEntity::getServiceName).in(serviceNames);
+        return this.selectListByQuery(query);
+    }
 }

@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.dao.model.ServiceRoleQueryCondition;
 import com.datasophon.common.dto.FrameServiceRoleDTO;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import com.mybatisflex.core.service.IService;
@@ -136,4 +137,13 @@ public interface FrameServiceRoleService extends IService<FrameServiceRoleEntity
      * @return 是否删除成功
      */
     boolean removeByServiceId(Long serviceId);
+
+    /**
+     * 批量查询服务角色
+     * 用于批量优化数据库操作，减少SQL执行次数
+     * 
+     * @param conditions 查询条件列表
+     * @return 服务角色DTO列表
+     */
+    List<FrameServiceRoleDTO> findServiceRolesByConditions(List<ServiceRoleQueryCondition> conditions);
 }

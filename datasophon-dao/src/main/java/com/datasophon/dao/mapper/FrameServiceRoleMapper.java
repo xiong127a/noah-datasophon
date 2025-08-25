@@ -17,6 +17,7 @@
 
 package com.datasophon.dao.mapper;
 
+import com.datasophon.dao.model.ServiceRoleQueryCondition;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
 
 import org.apache.ibatis.annotations.Mapper;
@@ -122,6 +123,35 @@ public interface FrameServiceRoleMapper extends BaseMapper<FrameServiceRoleEntit
                 QueryWrapper query = QueryWrapper.create()
                                 .where(FrameServiceRoleEntity::getServiceId).eq(serviceId);
                 return this.deleteByQuery(query) > 0;
+        }
+
+        /**
+         * 批量查询服务角色
+         * 用于批量优化数据库操作，减少SQL执行次数
+         * 
+         * @param conditions 查询条件列表
+         * @return 服务角色实体列表
+         */
+        default List<FrameServiceRoleEntity> selectByConditions(@Param("conditions") List<ServiceRoleQueryCondition> conditions) {
+                if (conditions == null || conditions.isEmpty()) {
+                        return java.util.Collections.emptyList();
+                }
+                
+                // 构建OR查询条件
+                QueryWrapper query = QueryWrapper.create();
+                for (int i = 0; i < conditions.size(); i++) {
+                        ServiceRoleQueryCondition condition = conditions.get(i);
+                        
+                        if (i == 0) {
+                                query.where(FrameServiceRoleEntity::getServiceId).eq(condition.serviceId())
+                                     .and(FrameServiceRoleEntity::getServiceRoleName).eq(condition.roleName());
+                        } else {
+                                query.or(FrameServiceRoleEntity::getServiceId).eq(condition.serviceId())
+                                     .and(FrameServiceRoleEntity::getServiceRoleName).eq(condition.roleName());
+                        }
+                }
+                
+                return this.selectListByQuery(query);
         }
 
 }

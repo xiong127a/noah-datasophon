@@ -19,6 +19,7 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.converter.FrameServiceRoleConverter;
+import com.datasophon.dao.model.ServiceRoleQueryCondition;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.utils.CacheOperateUtils;
@@ -330,5 +331,16 @@ public class FrameServiceRoleServiceImpl extends ServiceImpl<FrameServiceRoleMap
         }
 
         return getMapper().removeByServiceId(serviceId);
+    }
+
+    @Override
+    public List<FrameServiceRoleDTO> findServiceRolesByConditions(List<ServiceRoleQueryCondition> conditions) {
+        if (conditions == null || conditions.isEmpty()) {
+            log.warn("批量查询服务角色参数验证失败: 查询条件列表不能为空");
+            return List.of();
+        }
+
+        List<FrameServiceRoleEntity> entities = getMapper().selectByConditions(conditions);
+        return frameServiceRoleConverter.entityListToDtoList(entities);
     }
 }

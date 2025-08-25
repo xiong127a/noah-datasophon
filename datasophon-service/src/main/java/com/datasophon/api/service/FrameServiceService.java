@@ -110,4 +110,14 @@ public interface FrameServiceService extends IService<FrameServiceEntity> {
      * @return 如果被使用返回true，否则返回false
      */
     boolean isServiceInUse(Long serviceId);
+
+    /**
+     * 批量查询指定框架和服务名的服务列表
+     * 用于批量优化数据库操作，减少SQL执行次数
+     * 
+     * @param frameId 框架ID
+     * @param serviceNames 服务名称列表
+     * @return 服务信息列表
+     */
+    List<FrameServiceDTO> findServicesByFrameIdAndNames(Long frameId, List<String> serviceNames);
 }

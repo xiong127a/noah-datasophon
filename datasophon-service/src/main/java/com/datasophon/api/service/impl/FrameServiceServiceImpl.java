@@ -319,4 +319,20 @@ public class FrameServiceServiceImpl extends ServiceImpl<FrameServiceMapper, Fra
         return serviceInstanceService.existsByFrameServiceId(serviceId);
     }
 
+    @Override
+    public List<FrameServiceDTO> findServicesByFrameIdAndNames(Long frameId, List<String> serviceNames) {
+        if (frameId == null) {
+            log.warn("批量查询服务参数验证失败: 框架ID不能为空");
+            return List.of();
+        }
+        
+        if (serviceNames == null || serviceNames.isEmpty()) {
+            log.warn("批量查询服务参数验证失败: 服务名称列表不能为空");
+            return List.of();
+        }
+
+        List<FrameServiceEntity> entities = getMapper().selectByFrameIdAndServiceNames(frameId, serviceNames);
+        return frameServiceConverter.entityListToDtoList(entities);
+    }
+
 }
