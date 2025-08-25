@@ -33,16 +33,8 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 
-import SidebarMenu from "./components/sidebar-menu";
 import NamespaceSelector from "./components/namespace-selector";
 import StatusIndicator from "./components/status-indicator";
 
@@ -50,6 +42,9 @@ import StatusIndicator from "./components/status-indicator";
 import PodsDashboard from './dashboards/pods-dashboard';
 import ServicesDashboard from './dashboards/services-dashboard';
 import DeploymentsDashboard from './dashboards/deployments-dashboard';
+
+// 导入类型定义
+import type { K8sResourceStats } from '@/lib/kubernetes-api';
 
 export interface KubernetesDashboardProps {
   clusterId: string;
@@ -89,6 +84,13 @@ interface MenuCategory {
 }
 
 const menuCategories: MenuCategory[] = [
+  {
+    title: "仪表盘",
+    icon: Monitor,
+    items: [
+      { key: 'overview', label: '集群总览', icon: Monitor, description: '集群整体状态和资源分布' },
+    ]
+  },
   {
     title: "工作负载",
     icon: Activity,
@@ -136,7 +138,7 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lastRefresh, setLastRefresh] = useState(new Date());
-  const [resourceStats, setResourceStats] = useState<any>(null);
+  const [resourceStats, setResourceStats] = useState<K8sResourceStats | null>(null);
 
   // 添加调试日志
   console.log('KubernetesDashboard 组件加载:', { clusterId, clusterName, selectedNamespace, currentView });
@@ -145,12 +147,13 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
   const fetchResourceStats = useCallback(async () => {
     if (!clusterId) return;
     
-    console.log('📊 开始获取资源统计数据:', { clusterId, namespace: selectedNamespace });
+    console.log('📊 开始获取集群全局资源统计数据:', { clusterId });
     
     try {
       // 动态导入API工具类
       const { KubernetesAPI } = await import('@/lib/kubernetes-api');
-      const stats = await KubernetesAPI.getResourceStats(clusterId, undefined, selectedNamespace);
+      // 集群总览应该显示所有命名空间的资源统计，而不是特定命名空间
+      const stats = await KubernetesAPI.getResourceStats(clusterId, undefined, 'all');
       console.log('✅ 获取资源统计成功:', stats);
       setResourceStats(stats);
     } catch (error) {
@@ -163,7 +166,7 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
         runningPodCount: 0
       });
     }
-  }, [clusterId, selectedNamespace]);
+  }, [clusterId]); // 集群总览不依赖命名空间，显示全局统计
 
   // 刷新数据
   const handleRefresh = async () => {
@@ -211,7 +214,7 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
         initial={false}
         animate={{ width: sidebarCollapsed ? 72 : 280 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="bg-white border-r border-gray-200 shadow-sm flex-shrink-0 sticky top-0 h-screen"
+        className="bg-white border-r border-gray-200 shadow-sm flex-shrink-0 sticky top-0 h-screen flex flex-col"
       >
         {/* 侧边栏头部 */}
         <div className="p-4 border-b border-gray-200">
@@ -256,54 +259,19 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
           />
         </div>
 
-        {/* 菜单项 - 移除滚动，固定高度布局 */}
-        <div className="flex-1 py-4 overflow-hidden">
-          {/* 总览 */}
-          <div className="px-4 mb-6">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className={`flex items-center p-3 rounded-xl cursor-pointer transition-all duration-200 ${
-                currentView === 'overview'
-                  ? 'bg-gradient-to-r from-blue-50 to-blue-100 border-2 border-blue-200'
-                  : 'hover:bg-gray-50 border-2 border-transparent'
-              }`}
-              onClick={() => setCurrentView('overview')}
-            >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                currentView === 'overview'
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-600'
-              }`}>
-                <Monitor className="w-5 h-5" />
-              </div>
-              
-              <AnimatePresence>
-                {!sidebarCollapsed && (
-                  <motion.div
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -10 }}
-                    className="ml-3 flex-1"
-                  >
-                    <div className="text-sm font-medium text-gray-900">集群总览</div>
-                    <div className="text-xs text-gray-500">资源概览和状态</div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </div>
-
+        {/* 菜单项 - 平铺布局，滚动容器 */}
+        <div className="flex-1 overflow-y-auto sidebar-scroll">
+          <div className="py-3 space-y-1">
           {/* 菜单分类 */}
-          {menuCategories.map((category, categoryIndex) => (
-            <div key={category.title} className="px-4 mb-6">
+          {menuCategories.map((category) => (
+            <div key={category.title} className="px-4 mb-2">
               <AnimatePresence>
                 {!sidebarCollapsed && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex items-center mb-3"
+                    className="flex items-center mb-2"
                   >
                     <category.icon className="w-4 h-4 text-gray-400 mr-2" />
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -314,19 +282,19 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
               </AnimatePresence>
 
               <div className="space-y-1">
-                {category.items.map((item, itemIndex) => (
+                {category.items.map((item) => (
                   <motion.div
                     key={item.key}
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    className={`flex items-center p-2.5 rounded-lg cursor-pointer transition-all duration-200 ${
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className={`flex items-center p-2 rounded-lg cursor-pointer transition-all duration-200 min-h-[44px] ${
                       currentView === item.key
                         ? 'bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200'
                         : 'hover:bg-gray-50 border border-transparent'
                     }`}
                     onClick={() => setCurrentView(item.key)}
                   >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                       currentView === item.key
                         ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
                         : 'bg-gray-100 text-gray-600'
@@ -340,19 +308,19 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           exit={{ opacity: 0, x: -10 }}
-                          className="ml-3 flex-1 min-w-0"
+                          className="ml-3 flex-1 min-w-0 flex flex-col justify-center"
                         >
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between mb-1">
                             <span className="text-sm font-medium text-gray-900 truncate">
                               {item.label}
                             </span>
                             {item.badge && (
-                              <Badge variant="secondary" className="text-xs">
+                              <Badge variant="secondary" className="text-xs ml-2 flex-shrink-0">
                                 {item.badge}
                               </Badge>
                             )}
                           </div>
-                          <div className="text-xs text-gray-500 truncate">
+                          <div className="text-xs text-gray-500 truncate leading-tight">
                             {item.description}
                           </div>
                         </motion.div>
@@ -363,6 +331,7 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
               </div>
             </div>
           ))}
+          </div>
         </div>
       </motion.div>
 
@@ -385,36 +354,62 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
             </div>
 
             <div className="flex items-center space-x-3">
-              {/* 搜索框 */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                <Input
-                  placeholder="搜索资源..."
-                  className="pl-10 w-64"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+              {/* 集群总览模式下只显示少量操作 */}
+              {currentView === 'overview' ? (
+                <>
+                  {/* 命名空间选择器 */}
+                  <NamespaceSelector
+                    clusterId={clusterId}
+                    value={selectedNamespace}
+                    onChange={setSelectedNamespace}
+                  />
+                  
+                  {/* 刷新按钮 */}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={isLoading}
+                    title="刷新集群数据"
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  {/* 其他页面显示完整的搜索和筛选功能 */}
+                  {/* 搜索框 */}
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                    <Input
+                      placeholder="搜索资源..."
+                      className="pl-10 w-64"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
 
-              {/* 过滤器 */}
-              <Button variant="outline" size="icon">
-                <Filter className="w-4 h-4" />
-              </Button>
+                  {/* 过滤器 */}
+                  <Button variant="outline" size="icon">
+                    <Filter className="w-4 h-4" />
+                  </Button>
 
-              {/* 刷新按钮 */}
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={handleRefresh}
-                disabled={isLoading}
-              >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-              </Button>
+                  {/* 刷新按钮 */}
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={handleRefresh}
+                    disabled={isLoading}
+                  >
+                    <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  </Button>
 
-              {/* 更多操作 */}
-              <Button variant="outline" size="icon">
-                <MoreHorizontal className="w-4 h-4" />
-              </Button>
+                  {/* 更多操作 */}
+                  <Button variant="outline" size="icon">
+                    <MoreHorizontal className="w-4 h-4" />
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 
@@ -435,7 +430,7 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
         </div>
 
         {/* 主要内容区域 - 移除独立滚动，跟随页面整体滚动 */}
-        <div className="flex-1 bg-gray-50 p-6">
+        <div className="flex-1 bg-gray-50 p-6 overflow-auto">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
@@ -443,68 +438,287 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.2 }}
-              className="h-full"
+              className="min-h-full"
             >
               {currentView === 'overview' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                  {/* 资源概览卡片 - 使用真实API数据 */}
-                  {[
-                    { 
-                      title: 'Pods', 
-                      count: resourceStats ? String(resourceStats.podCount || 0) : '...', 
-                      status: resourceStats && resourceStats.podCount > 0 && resourceStats.runningPodCount === resourceStats.podCount ? 'healthy' : 
-                              resourceStats && resourceStats.podCount > 0 ? 'warning' : 'healthy', 
-                      icon: Box 
-                    },
-                    { 
-                      title: 'Services', 
-                      count: resourceStats ? String(resourceStats.serviceCount || 0) : '...', 
-                      status: 'healthy', 
-                      icon: Network 
-                    },
-                    { 
-                      title: 'Deployments', 
-                      count: resourceStats ? String(resourceStats.deploymentCount || 0) : '...', 
-                      status: 'healthy', 
-                      icon: Layers 
-                    },
-                    { 
-                      title: 'ConfigMaps', 
-                      count: resourceStats ? String(resourceStats.configMapCount || 0) : '...', 
-                      status: 'healthy', 
-                      icon: Server 
-                    },
-                  ].map((item, index) => (
-                    <motion.div
-                      key={item.title}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1 }}
-                      className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-md transition-shadow duration-200"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-gray-600">{item.title}</p>
-                          <p className="text-2xl font-bold text-gray-900 mt-1">{item.count}</p>
-                        </div>
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                          item.status === 'healthy' 
-                            ? 'bg-green-100 text-green-600'
-                            : item.status === 'warning'
-                            ? 'bg-yellow-100 text-yellow-600'
-                            : 'bg-red-100 text-red-600'
-                        }`}>
-                          <item.icon className="w-6 h-6" />
-                        </div>
+                <div className="space-y-8">
+                  {/* 集群概览标题 */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-3xl font-bold text-gray-900">集群概览</h1>
+                      <p className="text-gray-600 mt-2">查看 {clusterName} 集群的整体状态和资源分布</p>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Badge variant="outline" className="px-3 py-1 text-sm">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                        集群运行中
+                      </Badge>
+                    </div>
+                  </div>
+
+                  {/* 核心资源统计 */}
+                  <div>
+                    <h2 className="text-xl font-semibold text-gray-900 mb-2">核心资源</h2>
+                    <p className="text-sm text-gray-500 mb-4">点击卡片可以快速导航到对应的资源管理页面</p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                      {[
+                        { 
+                          title: 'Pods', 
+                          count: resourceStats ? String(resourceStats.podCount || 0) : '...', 
+                          subCount: resourceStats ? `运行中: ${resourceStats.runningPodCount || 0}` : '',
+                          status: resourceStats && resourceStats.podCount && resourceStats.podCount > 0 && resourceStats.runningPodCount === resourceStats.podCount ? 'healthy' : 
+                                  resourceStats && resourceStats.podCount && resourceStats.podCount > 0 ? 'warning' : 'healthy', 
+                          icon: Box,
+                          color: 'blue'
+                        },
+                        { 
+                          title: 'Services', 
+                          count: resourceStats ? String(resourceStats.serviceCount || 0) : '...', 
+                          subCount: resourceStats ? `ClusterIP: ${resourceStats.clusterIpServiceCount || 0}` : '',
+                          status: 'healthy', 
+                          icon: Network,
+                          color: 'green'
+                        },
+                        { 
+                          title: 'Deployments', 
+                          count: resourceStats ? String(resourceStats.deploymentCount || 0) : '...', 
+                          subCount: resourceStats ? `可用: ${resourceStats.availableDeploymentCount || 0}` : '',
+                          status: 'healthy', 
+                          icon: Layers,
+                          color: 'purple'
+                        },
+                        { 
+                          title: 'StatefulSets', 
+                          count: resourceStats ? String(resourceStats.statefulSetCount || 0) : '...', 
+                          subCount: resourceStats ? `就绪: ${resourceStats.readyStatefulSetCount || 0}` : '',
+                          status: 'healthy', 
+                          icon: Database,
+                          color: 'orange'
+                        },
+                      ].map((item, index) => (
+                        <motion.div
+                          key={item.title}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="bg-white p-6 rounded-xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-200 hover:scale-105 cursor-pointer"
+                          onClick={() => {
+                            const viewMap: Record<string, DashboardView> = {
+                              'Pods': 'pods',
+                              'Services': 'services', 
+                              'Deployments': 'deployments',
+                              'StatefulSets': 'statefulsets'
+                            };
+                            const targetView = viewMap[item.title];
+                            if (targetView) {
+                              setCurrentView(targetView);
+                            }
+                          }}
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                              item.color === 'blue' ? 'bg-blue-100 text-blue-600' :
+                              item.color === 'green' ? 'bg-green-100 text-green-600' :
+                              item.color === 'purple' ? 'bg-purple-100 text-purple-600' :
+                              'bg-orange-100 text-orange-600'
+                            }`}>
+                              <item.icon className="w-6 h-6" />
+                            </div>
+                            <StatusIndicator status={item.status as 'healthy' | 'warning' | 'error'} size="sm" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-600 mb-1">{item.title}</p>
+                            <p className="text-3xl font-bold text-gray-900">{item.count}</p>
+                            {item.subCount && (
+                              <p className="text-sm text-gray-500 mt-2">{item.subCount}</p>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 详细资源统计 */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    {/* 工作负载状态 */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <Activity className="w-5 h-5 mr-2 text-blue-600" />
+                        工作负载状态
+                      </h3>
+                      <div className="space-y-4">
+                        {resourceStats && [
+                          { label: 'Pods', total: resourceStats.podCount || 0, running: resourceStats.runningPodCount || 0, failed: resourceStats.failedPodCount || 0 },
+                          { label: 'Deployments', total: resourceStats.deploymentCount || 0, running: resourceStats.availableDeploymentCount || 0, failed: (resourceStats.deploymentCount || 0) - (resourceStats.availableDeploymentCount || 0) },
+                          { label: 'StatefulSets', total: resourceStats.statefulSetCount || 0, running: resourceStats.readyStatefulSetCount || 0, failed: (resourceStats.statefulSetCount || 0) - (resourceStats.readyStatefulSetCount || 0) },
+                          { label: 'DaemonSets', total: resourceStats.daemonSetCount || 0, running: resourceStats.readyDaemonSetCount || 0, failed: (resourceStats.daemonSetCount || 0) - (resourceStats.readyDaemonSetCount || 0) },
+                        ].map((item) => (
+                          <div key={item.label} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <span className="font-medium text-gray-700">{item.label}</span>
+                            <div className="flex items-center space-x-4">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                                <span className="text-sm text-gray-600">{item.running}</span>
+                              </div>
+                              {item.failed > 0 && (
+                                <div className="flex items-center space-x-2">
+                                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                                  <span className="text-sm text-gray-600">{item.failed}</span>
+                                </div>
+                              )}
+                              <span className="text-sm font-medium text-gray-900">总计: {item.total}</span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                      <div className="mt-4 flex items-center">
-                        <StatusIndicator status={item.status as any} size="sm" />
-                        <span className="text-xs text-gray-500 ml-2">
-                          {item.status === 'healthy' ? '运行正常' : '需要注意'}
-                        </span>
+                    </div>
+
+                    {/* 存储与配置 */}
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                        <HardDrive className="w-5 h-5 mr-2 text-green-600" />
+                        存储与配置
+                      </h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        {resourceStats && [
+                          { label: 'ConfigMaps', count: resourceStats.configMapCount || 0, icon: Settings },
+                          { label: 'Secrets', count: resourceStats.secretCount || 0, icon: Shield },
+                          { label: 'PersistentVolumes', count: resourceStats.persistentVolumeCount || 0, icon: HardDrive },
+                          { label: 'StorageClasses', count: resourceStats.storageClassCount || 0, icon: Monitor },
+                        ].map((item) => (
+                          <div key={item.label} className="text-center p-4 bg-gray-50 rounded-lg">
+                            <item.icon className="w-8 h-8 mx-auto mb-2 text-gray-600" />
+                            <p className="text-2xl font-bold text-gray-900">{item.count}</p>
+                            <p className="text-sm text-gray-600">{item.label}</p>
+                          </div>
+                        ))}
                       </div>
-                    </motion.div>
-                  ))}
+                    </div>
+                  </div>
+
+                  {/* 网络服务概览 */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Network className="w-5 h-5 mr-2 text-purple-600" />
+                      网络服务
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {resourceStats && [
+                        { 
+                          label: 'Services', 
+                          total: resourceStats.serviceCount || 0,
+                          details: [
+                            { type: 'ClusterIP', count: resourceStats.clusterIpServiceCount || 0 },
+                            { type: 'NodePort', count: resourceStats.nodePortServiceCount || 0 },
+                            { type: 'LoadBalancer', count: resourceStats.loadBalancerServiceCount || 0 },
+                          ]
+                        },
+                        { 
+                          label: 'Ingresses', 
+                          total: resourceStats.ingressCount || 0,
+                          details: [
+                            { type: 'Classes', count: resourceStats.ingressClassCount || 0 },
+                          ]
+                        },
+                        { 
+                          label: 'Jobs', 
+                          total: resourceStats.jobCount || 0,
+                          details: [
+                            { type: 'Active', count: resourceStats.activeJobCount || 0 },
+                            { type: 'Completed', count: resourceStats.completedJobCount || 0 },
+                            { type: 'CronJobs', count: resourceStats.cronJobCount || 0 },
+                          ]
+                        },
+                      ].map((category) => (
+                        <div key={category.label} className="p-4 bg-gray-50 rounded-lg">
+                          <div className="text-center mb-3">
+                            <p className="text-2xl font-bold text-gray-900">{category.total}</p>
+                            <p className="text-sm font-medium text-gray-600">{category.label}</p>
+                          </div>
+                          <div className="space-y-2">
+                            {category.details.map((detail, idx) => (
+                              <div key={idx} className="flex justify-between text-sm">
+                                <span className="text-gray-600">{detail.type}</span>
+                                <span className="font-medium text-gray-900">{detail.count}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* 集群健康状态 */}
+                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                      <Monitor className="w-5 h-5 mr-2 text-green-600" />
+                      集群健康状态
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                      {[
+                        { 
+                          label: 'Pod健康率', 
+                          value: resourceStats && resourceStats.podCount && resourceStats.podCount > 0 
+                            ? `${Math.round((resourceStats.runningPodCount || 0) / resourceStats.podCount * 100)}%` 
+                            : '100%',
+                          percentage: resourceStats && resourceStats.podCount && resourceStats.podCount > 0 
+                            ? (resourceStats.runningPodCount || 0) / resourceStats.podCount * 100 
+                            : 100,
+                          status: resourceStats && resourceStats.podCount && resourceStats.podCount > 0 && (resourceStats.runningPodCount || 0) / resourceStats.podCount >= 0.8 ? 'healthy' : 'warning'
+                        },
+                        { 
+                          label: 'Deployment可用率', 
+                          value: resourceStats && resourceStats.deploymentCount && resourceStats.deploymentCount > 0 
+                            ? `${Math.round((resourceStats.availableDeploymentCount || 0) / resourceStats.deploymentCount * 100)}%` 
+                            : '100%',
+                          percentage: resourceStats && resourceStats.deploymentCount && resourceStats.deploymentCount > 0 
+                            ? (resourceStats.availableDeploymentCount || 0) / resourceStats.deploymentCount * 100 
+                            : 100,
+                          status: 'healthy'
+                        },
+                        { 
+                          label: '存储使用', 
+                          value: resourceStats ? `${resourceStats.persistentVolumeClaimCount || 0}/${resourceStats.persistentVolumeCount || 0}` : '0/0',
+                          percentage: resourceStats && resourceStats.persistentVolumeCount && resourceStats.persistentVolumeCount > 0 
+                            ? (resourceStats.persistentVolumeClaimCount || 0) / resourceStats.persistentVolumeCount * 100 
+                            : 0,
+                          status: 'healthy'
+                        },
+                        { 
+                          label: '网络服务', 
+                          value: resourceStats ? String(resourceStats.serviceCount || 0) : '0',
+                          percentage: 100, // 网络服务显示为100%
+                          status: 'healthy'
+                        },
+                      ].map((metric) => (
+                        <div key={metric.label} className="p-4 bg-gray-50 rounded-lg">
+                          <div className="text-center mb-3">
+                            <p className="text-2xl font-bold text-gray-900 mb-1">{metric.value}</p>
+                            <p className="text-sm text-gray-600">{metric.label}</p>
+                          </div>
+                          
+                          {/* 进度条 */}
+                          <div className="relative mb-2">
+                            <div className="w-full bg-gray-200 rounded-full h-2">
+                              <motion.div 
+                                className={`h-2 rounded-full ${
+                                  metric.status === 'healthy' ? 'bg-green-500' :
+                                  metric.status === 'warning' ? 'bg-yellow-500' : 'bg-red-500'
+                                }`}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${Math.min(metric.percentage, 100)}%` }}
+                                transition={{ duration: 1, delay: 0.2 }}
+                              />
+                            </div>
+                          </div>
+                          
+                          <div className="flex justify-center">
+                            <StatusIndicator status={metric.status as 'healthy' | 'warning' | 'error'} size="sm" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
               )}
 

@@ -17,6 +17,11 @@
 
 package com.datasophon.api.service.impl;
 
+import static com.datasophon.common.constants.K8sResourceConstants.PodPhase;
+import static com.datasophon.common.constants.K8sResourceConstants.ServiceType;
+import static com.datasophon.common.constants.K8sResourceConstants.PersistentVolumePhase;
+import static com.datasophon.common.constants.K8sResourceConstants.PersistentVolumeClaimPhase;
+
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.KubernetesDashboardService;
 import com.datasophon.common.dto.K8sNamespaceDTO;
@@ -309,11 +314,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         }
         
         return switch (statusFilter.toLowerCase()) {
-            case "running" -> "Running";
-            case "pending" -> "Pending";
-            case "failed" -> "Failed";
-            case "succeeded" -> "Succeeded";
-            case "unknown" -> "Unknown";
+            case "running" -> PodPhase.RUNNING;
+            case "pending" -> PodPhase.PENDING;
+            case "failed" -> PodPhase.FAILED;
+            case "succeeded" -> PodPhase.SUCCEEDED;
+            case "unknown" -> PodPhase.UNKNOWN;
             default -> statusFilter; // 返回原值，以防有其他状态
         };
     }
@@ -712,21 +717,62 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 构建统计结果
             K8sResourceStatsDTO.K8sResourceStatsDTOBuilder builder = K8sResourceStatsDTO.builder();
             
-            // 统计Pods
-            List<Pod> pods = namespace != null ? 
-                client.pods().inNamespace(namespace).list().getItems() :
-                client.pods().inAnyNamespace().list().getItems();
+            // 为了准确反映集群状态，优先查询所有命名空间的资源
+            // 只有在明确指定namespace且不为空时才限制到特定命名空间
+            boolean queryAllNamespaces = namespace == null || namespace.isEmpty() || "all".equals(namespace);
             
+            if (queryAllNamespaces) {
+                log.info("查询所有命名空间的资源统计");
+            } else {
+                log.info("查询命名空间 '{}' 的资源统计", namespace);
+            }
+            
+            // 统计Pods
+            List<Pod> pods = queryAllNamespaces ? 
+                client.pods().inAnyNamespace().list().getItems() :
+                client.pods().inNamespace(namespace).list().getItems();
+            
+            log.info("查询到 {} 个Pod", pods.size());
             builder.podCount(pods.size());
             
-            long runningPods = pods.stream().filter(pod -> 
-                "Running".equals(pod.getStatus().getPhase())).count();
-            long pendingPods = pods.stream().filter(pod -> 
-                "Pending".equals(pod.getStatus().getPhase())).count();
-            long failedPods = pods.stream().filter(pod -> 
-                "Failed".equals(pod.getStatus().getPhase())).count();
-            long succeededPods = pods.stream().filter(pod -> 
-                "Succeeded".equals(pod.getStatus().getPhase())).count();
+            long runningPods = pods.stream().filter(pod -> {
+                try {
+                    return pod.getStatus() != null && PodPhase.RUNNING.equals(pod.getStatus().getPhase());
+                } catch (Exception e) {
+                    log.warn("处理Pod {}状态时出错: {}", pod.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
+            }).count();
+            
+            long pendingPods = pods.stream().filter(pod -> {
+                try {
+                    return pod.getStatus() != null && PodPhase.PENDING.equals(pod.getStatus().getPhase());
+                } catch (Exception e) {
+                    log.warn("处理Pod {}状态时出错: {}", pod.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
+            }).count();
+            
+            long failedPods = pods.stream().filter(pod -> {
+                try {
+                    return pod.getStatus() != null && PodPhase.FAILED.equals(pod.getStatus().getPhase());
+                } catch (Exception e) {
+                    log.warn("处理Pod {}状态时出错: {}", pod.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
+            }).count();
+            
+            long succeededPods = pods.stream().filter(pod -> {
+                try {
+                    return pod.getStatus() != null && PodPhase.SUCCEEDED.equals(pod.getStatus().getPhase());
+                } catch (Exception e) {
+                    log.warn("处理Pod {}状态时出错: {}", pod.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
+            }).count();
+                
+            log.info("Pod统计: 总数={}, 运行中={}, 等待中={}, 失败={}, 成功={}", 
+                pods.size(), runningPods, pendingPods, failedPods, succeededPods);
                 
             builder.runningPodCount((int) runningPods)
                    .pendingPodCount((int) pendingPods)
@@ -734,28 +780,54 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                    .succeededPodCount((int) succeededPods);
 
             // 统计Services
-            List<io.fabric8.kubernetes.api.model.Service> services = namespace != null ?
-                client.services().inNamespace(namespace).list().getItems() :
-                client.services().inAnyNamespace().list().getItems();
+            List<io.fabric8.kubernetes.api.model.Service> services = queryAllNamespaces ?
+                client.services().inAnyNamespace().list().getItems() :
+                client.services().inNamespace(namespace).list().getItems();
             
+            log.info("查询到 {} 个Service", services.size());
             builder.serviceCount(services.size());
             
-            long clusterIpServices = services.stream().filter(svc -> 
-                "ClusterIP".equals(svc.getSpec().getType())).count();
-            long nodePortServices = services.stream().filter(svc -> 
-                "NodePort".equals(svc.getSpec().getType())).count();
-            long loadBalancerServices = services.stream().filter(svc -> 
-                "LoadBalancer".equals(svc.getSpec().getType())).count();
+            long clusterIpServices = services.stream().filter(svc -> {
+                try {
+                    String type = svc.getSpec() != null ? svc.getSpec().getType() : null;
+                    return ServiceType.CLUSTER_IP.equals(type) || type == null; // 默认type是ClusterIP
+                } catch (Exception e) {
+                    log.warn("处理Service {}类型时出错: {}", svc.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
+            }).count();
+            
+            long nodePortServices = services.stream().filter(svc -> {
+                try {
+                    return svc.getSpec() != null && ServiceType.NODE_PORT.equals(svc.getSpec().getType());
+                } catch (Exception e) {
+                    log.warn("处理Service {}类型时出错: {}", svc.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
+            }).count();
+            
+            long loadBalancerServices = services.stream().filter(svc -> {
+                try {
+                    return svc.getSpec() != null && ServiceType.LOAD_BALANCER.equals(svc.getSpec().getType());
+                } catch (Exception e) {
+                    log.warn("处理Service {}类型时出错: {}", svc.getMetadata().getName(), e.getMessage());
+                    return false;
+                }
+            }).count();
+                
+            log.info("Service统计: 总数={}, ClusterIP={}, NodePort={}, LoadBalancer={}", 
+                services.size(), clusterIpServices, nodePortServices, loadBalancerServices);
                 
             builder.clusterIpServiceCount((int) clusterIpServices)
                    .nodePortServiceCount((int) nodePortServices)
                    .loadBalancerServiceCount((int) loadBalancerServices);
 
             // 统计Deployments
-            List<Deployment> deployments = namespace != null ?
-                client.apps().deployments().inNamespace(namespace).list().getItems() :
-                client.apps().deployments().inAnyNamespace().list().getItems();
+            List<Deployment> deployments = queryAllNamespaces ?
+                client.apps().deployments().inAnyNamespace().list().getItems() :
+                client.apps().deployments().inNamespace(namespace).list().getItems();
             
+            log.info("查询到 {} 个Deployment", deployments.size());
             builder.deploymentCount(deployments.size());
             
             long availableDeployments = deployments.stream().filter(dep -> {
@@ -777,22 +849,25 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                    .unavailableDeploymentCount((int) (deployments.size() - availableDeployments));
 
             // 统计ConfigMaps
-            int configMapsCount = namespace != null ?
-                client.configMaps().inNamespace(namespace).list().getItems().size() :
-                client.configMaps().inAnyNamespace().list().getItems().size();
+            int configMapsCount = queryAllNamespaces ?
+                client.configMaps().inAnyNamespace().list().getItems().size() :
+                client.configMaps().inNamespace(namespace).list().getItems().size();
+            log.info("查询到 {} 个ConfigMap", configMapsCount);
             builder.configMapCount(configMapsCount);
 
             // 统计Secrets
-            int secretsCount = namespace != null ?
-                client.secrets().inNamespace(namespace).list().getItems().size() :
-                client.secrets().inAnyNamespace().list().getItems().size();
+            int secretsCount = queryAllNamespaces ?
+                client.secrets().inAnyNamespace().list().getItems().size() :
+                client.secrets().inNamespace(namespace).list().getItems().size();
+            log.info("查询到 {} 个Secret", secretsCount);
             builder.secretCount(secretsCount);
 
             // 统计StatefulSets
-            List<StatefulSet> statefulSets = namespace != null ?
-                client.apps().statefulSets().inNamespace(namespace).list().getItems() :
-                client.apps().statefulSets().inAnyNamespace().list().getItems();
+            List<StatefulSet> statefulSets = queryAllNamespaces ?
+                client.apps().statefulSets().inAnyNamespace().list().getItems() :
+                client.apps().statefulSets().inNamespace(namespace).list().getItems();
             
+            log.info("查询到 {} 个StatefulSet", statefulSets.size());
             builder.statefulSetCount(statefulSets.size());
             
             long readyStatefulSets = statefulSets.stream().filter(sts -> {
@@ -812,10 +887,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             builder.readyStatefulSetCount((int) readyStatefulSets);
 
             // 统计DaemonSets
-            List<DaemonSet> daemonSets = namespace != null ?
-                client.apps().daemonSets().inNamespace(namespace).list().getItems() :
-                client.apps().daemonSets().inAnyNamespace().list().getItems();
+            List<DaemonSet> daemonSets = queryAllNamespaces ?
+                client.apps().daemonSets().inAnyNamespace().list().getItems() :
+                client.apps().daemonSets().inNamespace(namespace).list().getItems();
             
+            log.info("查询到 {} 个DaemonSet", daemonSets.size());
             builder.daemonSetCount(daemonSets.size());
             
             long readyDaemonSets = daemonSets.stream().filter(ds -> {
@@ -835,10 +911,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             builder.readyDaemonSetCount((int) readyDaemonSets);
 
             // 统计Jobs
-            List<Job> jobs = namespace != null ?
-                client.batch().v1().jobs().inNamespace(namespace).list().getItems() :
-                client.batch().v1().jobs().inAnyNamespace().list().getItems();
+            List<Job> jobs = queryAllNamespaces ?
+                client.batch().v1().jobs().inAnyNamespace().list().getItems() :
+                client.batch().v1().jobs().inNamespace(namespace).list().getItems();
             
+            log.info("查询到 {} 个Job", jobs.size());
             builder.jobCount(jobs.size());
             
             long completedJobs = jobs.stream().filter(job -> {
@@ -856,10 +933,11 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                    .failedJobCount((int) failedJobs);
 
             // 统计CronJobs
-            List<CronJob> cronJobs = namespace != null ?
-                client.batch().v1().cronjobs().inNamespace(namespace).list().getItems() :
-                client.batch().v1().cronjobs().inAnyNamespace().list().getItems();
+            List<CronJob> cronJobs = queryAllNamespaces ?
+                client.batch().v1().cronjobs().inAnyNamespace().list().getItems() :
+                client.batch().v1().cronjobs().inNamespace(namespace).list().getItems();
             
+            log.info("查询到 {} 个CronJob", cronJobs.size());
             builder.cronJobCount(cronJobs.size());
             
             long activeCronJobs = cronJobs.stream().filter(cj -> {
@@ -878,9 +956,9 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             builder.persistentVolumeCount(persistentVolumes.size());
             
             long boundPVs = persistentVolumes.stream().filter(pv -> 
-                "Bound".equals(pv.getStatus().getPhase())).count();
+                PersistentVolumePhase.BOUND.equals(pv.getStatus().getPhase())).count();
             long availablePVs = persistentVolumes.stream().filter(pv -> 
-                "Available".equals(pv.getStatus().getPhase())).count();
+                PersistentVolumePhase.AVAILABLE.equals(pv.getStatus().getPhase())).count();
                 
             builder.boundPvCount((int) boundPVs)
                    .availablePvCount((int) availablePVs);
@@ -893,9 +971,9 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             builder.persistentVolumeClaimCount(persistentVolumeClaims.size());
             
             long boundPVCs = persistentVolumeClaims.stream().filter(pvc -> 
-                "Bound".equals(pvc.getStatus().getPhase())).count();
+                PersistentVolumeClaimPhase.BOUND.equals(pvc.getStatus().getPhase())).count();
             long pendingPVCs = persistentVolumeClaims.stream().filter(pvc -> 
-                "Pending".equals(pvc.getStatus().getPhase())).count();
+                PersistentVolumeClaimPhase.PENDING.equals(pvc.getStatus().getPhase())).count();
                 
             builder.boundPvcCount((int) boundPVCs)
                    .pendingPvcCount((int) pendingPVCs);
