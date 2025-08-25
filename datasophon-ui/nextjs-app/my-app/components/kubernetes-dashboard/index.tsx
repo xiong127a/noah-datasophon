@@ -208,13 +208,14 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
   const viewInfo = getCurrentViewInfo();
 
   return (
-    <div className={`flex min-h-screen bg-gray-50 ${className || ''}`}>
-      {/* 侧边栏 - 固定位置，无需滚动 */}
+    <div className={`flex bg-gray-50 ${className || ''}`} style={{ minHeight: '100vh' }}>
+      {/* 侧边栏 - 自适应高度，与右侧内容区对齐 */}
       <motion.div
         initial={false}
         animate={{ width: sidebarCollapsed ? 72 : 280 }}
         transition={{ duration: 0.3, ease: "easeInOut" }}
-        className="bg-white border-r border-gray-200 shadow-sm flex-shrink-0 sticky top-0 h-screen flex flex-col"
+        className="bg-white border-r border-gray-200 shadow-sm flex-shrink-0 flex flex-col"
+        style={{ minHeight: '100vh' }}
       >
         {/* 侧边栏头部 */}
         <div className="p-4 border-b border-gray-200">
@@ -259,58 +260,43 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
           />
         </div>
 
-        {/* 菜单项 - 平铺布局，滚动容器 */}
-        <div className="flex-1 overflow-y-auto sidebar-scroll">
-          <div className="py-3 space-y-1">
-          {/* 菜单分类 */}
-          {menuCategories.map((category) => (
-            <div key={category.title} className="px-4 mb-2">
-              <AnimatePresence>
+        {/* 菜单项 - 完全连续的布局，填满剩余高度 */}
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="flex-1 px-4 py-4">
+            {menuCategories.map((category) => (
+              <div key={category.title} className="mb-6">
                 {!sidebarCollapsed && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex items-center mb-2"
-                  >
+                  <div className="flex items-center mb-3">
                     <category.icon className="w-4 h-4 text-gray-400 mr-2" />
                     <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       {category.title}
                     </span>
-                  </motion.div>
+                  </div>
                 )}
-              </AnimatePresence>
 
-              <div className="space-y-1">
-                {category.items.map((item) => (
-                  <motion.div
-                    key={item.key}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    className={`flex items-center p-2 rounded-lg cursor-pointer transition-all duration-200 min-h-[44px] ${
-                      currentView === item.key
-                        ? 'bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200'
-                        : 'hover:bg-gray-50 border border-transparent'
-                    }`}
-                    onClick={() => setCurrentView(item.key)}
-                  >
-                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                      currentView === item.key
-                        ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white'
-                        : 'bg-gray-100 text-gray-600'
-                    }`}>
-                      <item.icon className="w-4 h-4" />
-                    </div>
-                    
-                    <AnimatePresence>
+                <div className="space-y-2">
+                  {category.items.map((item) => (
+                    <div
+                      key={item.key}
+                      className={`flex items-center px-3 py-2 rounded-lg cursor-pointer transition-colors ${
+                        currentView === item.key
+                          ? 'bg-blue-50 border border-blue-200'
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => setCurrentView(item.key)}
+                      title={sidebarCollapsed ? `${item.label} - ${item.description}` : undefined}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        currentView === item.key
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-gray-100 text-gray-600'
+                      }`}>
+                        <item.icon className="w-4 h-4" />
+                      </div>
+                      
                       {!sidebarCollapsed && (
-                        <motion.div
-                          initial={{ opacity: 0, x: -10 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          exit={{ opacity: 0, x: -10 }}
-                          className="ml-3 flex-1 min-w-0 flex flex-col justify-center"
-                        >
-                          <div className="flex items-center justify-between mb-1">
+                        <div className="ml-3 flex-1 min-w-0">
+                          <div className="flex items-center justify-between">
                             <span className="text-sm font-medium text-gray-900 truncate">
                               {item.label}
                             </span>
@@ -320,23 +306,41 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
                               </Badge>
                             )}
                           </div>
-                          <div className="text-xs text-gray-500 truncate leading-tight">
+                          <div className="text-xs text-gray-500 truncate">
                             {item.description}
                           </div>
-                        </motion.div>
+                        </div>
                       )}
-                    </AnimatePresence>
-                  </motion.div>
-                ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            
+            {/* 底部信息 - 作为内容的一部分，不分离 */}
+            <div className="border-t border-gray-100 pt-4 mt-6">
+              <div className="text-center">
+                {!sidebarCollapsed ? (
+                  <div className="text-xs text-gray-400">
+                    <div className="mb-1">Kubernetes 资源管理</div>
+                    <div className="text-xs text-gray-300">
+                      共 {menuCategories.reduce((total, cat) => total + cat.items.length, 0)} 个组件
+                    </div>
+                  </div>
+                ) : (
+                  <div className="w-8 h-1 bg-gray-200 rounded-full mx-auto"></div>
+                )}
               </div>
             </div>
-          ))}
           </div>
+          
+          {/* 底部填充区域 - 确保高度延伸到与右侧内容区平齐 */}
+          <div className="flex-1 min-h-[200px] bg-white"></div>
         </div>
       </motion.div>
 
-      {/* 主内容区域 */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {/* 主内容区域 - 支持页面整体滚动 */}
+      <div className="flex-1 flex flex-col">
         {/* 顶部工具栏 */}
         <div className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -429,8 +433,8 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
           </div>
         </div>
 
-        {/* 主要内容区域 - 移除独立滚动，跟随页面整体滚动 */}
-        <div className="flex-1 bg-gray-50 p-6 overflow-auto">
+        {/* 主要内容区域 - 跟随页面整体滚动 */}
+        <div className="flex-1 bg-gray-50 p-6">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentView}
