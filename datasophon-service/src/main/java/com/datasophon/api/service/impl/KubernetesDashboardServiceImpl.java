@@ -576,7 +576,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getReplicaSets(Long clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getReplicaSets(Long clusterId, Long serviceId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -622,7 +622,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getJobs(Long clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getJobs(Long clusterId, Long serviceId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端
@@ -645,7 +645,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     @Override
-    public PageResult<KubernetesResourceDTO> getCronJobs(Long clusterId, String namespace, Integer pageNum,
+    public PageResult<KubernetesResourceDTO> getCronJobs(Long clusterId, Long serviceId, String namespace, Integer pageNum,
             Integer pageSize) {
         try {
             // 使用kubeconfig创建Kubernetes客户端

@@ -370,12 +370,13 @@ public class KubernetesDashboardController {
     @RequestMapping("/replicasets")
     public Result<PageVO<KubernetesResourceVO>> getReplicaSets(
             @ClusterId Long clusterId,
+            @RequestParam(value = "serviceId", required = false) Long serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         try {
             PageResult<KubernetesResourceDTO> replicaSetDTOs = kubernetesDashboardService.getReplicaSets(clusterId,
-                    namespace, pageNum, pageSize);
+                    serviceId, namespace, pageNum, pageSize);
             List<KubernetesResourceVO> replicaSetVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(replicaSetDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(replicaSetDTOs, replicaSetVOs);
@@ -418,7 +419,7 @@ public class KubernetesDashboardController {
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         try {
-            PageResult<KubernetesResourceDTO> jobDTOs = kubernetesDashboardService.getJobs(clusterId, namespace,
+            PageResult<KubernetesResourceDTO> jobDTOs = kubernetesDashboardService.getJobs(clusterId, serviceId, namespace,
                     pageNum, pageSize);
             List<KubernetesResourceVO> jobVOs = kubernetesResourceVOConverter.dtoListToVoList(jobDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(jobDTOs, jobVOs);
@@ -435,11 +436,12 @@ public class KubernetesDashboardController {
     @RequestMapping("/cronjobs")
     public Result<PageVO<KubernetesResourceVO>> getCronJobs(
             @ClusterId Long clusterId,
+            @RequestParam(value = "serviceId", required = false) Long serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         try {
-            PageResult<KubernetesResourceDTO> cronJobDTOs = kubernetesDashboardService.getCronJobs(clusterId, namespace,
+            PageResult<KubernetesResourceDTO> cronJobDTOs = kubernetesDashboardService.getCronJobs(clusterId, serviceId, namespace,
                     pageNum, pageSize);
             List<KubernetesResourceVO> cronJobVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(cronJobDTOs.getRecords());

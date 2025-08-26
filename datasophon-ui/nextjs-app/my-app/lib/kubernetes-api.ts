@@ -101,7 +101,7 @@ export interface K8sResource {
   spec?: Record<string, unknown>;
   metadata?: Record<string, unknown>;
   // 扩展属性（包含特定资源的额外信息）
-  additionalProperties?: Record<string, any>;
+  additionalProperties?: Record<string, unknown>;
   // Pod 特定字段
   ready?: string;
   restarts?: number;
@@ -453,6 +453,7 @@ export class KubernetesAPI {
   static async getReplicaSets(
     clusterId: string,
     namespace?: string,
+    serviceId?: string,
     pageNum: number = 1,
     pageSize: number = 10
   ): Promise<K8sResourceListResponse> {
@@ -462,6 +463,7 @@ export class KubernetesAPI {
         pageSize 
       };
       if (namespace) params.namespace = namespace;
+      if (serviceId) params.serviceId = serviceId;
 
       const response = await apiV1.get(API_PATHS_V1.K8S_REPLICASETS, {
         params,
@@ -519,6 +521,7 @@ export class KubernetesAPI {
   static async getCronJobs(
     clusterId: string,
     namespace?: string,
+    serviceId?: string,
     pageNum: number = 1,
     pageSize: number = 10
   ): Promise<K8sResourceListResponse> {
@@ -528,6 +531,7 @@ export class KubernetesAPI {
         pageSize 
       };
       if (namespace) params.namespace = namespace;
+      if (serviceId) params.serviceId = serviceId;
 
       const response = await apiV1.get(API_PATHS_V1.K8S_CRONJOBS, {
         params,

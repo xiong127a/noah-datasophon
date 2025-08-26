@@ -147,7 +147,7 @@ public interface KubernetesDashboardService {
         /**
          * 获取ReplicaSets列表（返回通用对象，暂时保持兼容）
          */
-        PageResult<KubernetesResourceDTO> getReplicaSets(Long clusterId, String namespace, Integer pageNum,
+        PageResult<KubernetesResourceDTO> getReplicaSets(Long clusterId, Long serviceId, String namespace, Integer pageNum,
                         Integer pageSize);
 
         /**
@@ -160,13 +160,13 @@ public interface KubernetesDashboardService {
         /**
          * 获取Jobs列表（返回通用对象，暂时保持兼容）
          */
-        PageResult<KubernetesResourceDTO> getJobs(Long clusterId, String namespace, Integer pageNum,
+        PageResult<KubernetesResourceDTO> getJobs(Long clusterId, Long serviceId, String namespace, Integer pageNum,
                         Integer pageSize);
 
         /**
          * 获取CronJobs列表（返回通用对象，暂时保持兼容）
          */
-        PageResult<KubernetesResourceDTO> getCronJobs(Long clusterId, String namespace, Integer pageNum,
+        PageResult<KubernetesResourceDTO> getCronJobs(Long clusterId, Long serviceId, String namespace, Integer pageNum,
                         Integer pageSize);
 
         /**
