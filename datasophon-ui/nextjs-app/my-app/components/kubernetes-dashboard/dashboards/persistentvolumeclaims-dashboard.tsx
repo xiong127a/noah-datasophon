@@ -95,6 +95,47 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
   const [pageNum] = useState(1);
   const [pageSize] = useState(20);
 
+  // 解析容量（转换为字节）
+  const parseCapacity = (capacityStr: string): number => {
+    const units: Record<string, number> = {
+      'Ki': 1024,
+      'Mi': 1024 ** 2,
+      'Gi': 1024 ** 3,
+      'Ti': 1024 ** 4,
+      'Pi': 1024 ** 5,
+      'K': 1000,
+      'M': 1000 ** 2,
+      'G': 1000 ** 3,
+      'T': 1000 ** 4,
+      'P': 1000 ** 5,
+      'B': 1,
+      'KB': 1024,
+      'MB': 1024 ** 2,
+      'GB': 1024 ** 3,
+      'TB': 1024 ** 4,
+      'PB': 1024 ** 5
+    };
+
+    const match = capacityStr.match(/^(\d+(?:\.\d+)?)\s*([A-Za-z]+)?$/);
+    if (!match) return 0;
+
+    const value = parseFloat(match[1]);
+    const unit = match[2] || 'B';
+    
+    return value * (units[unit] || 1);
+  };
+
+  // 格式化容量显示
+  const formatCapacity = (bytes: number): string => {
+    if (bytes === 0) return '0B';
+    
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))}${sizes[i]}`;
+  };
+
   // 筛选和搜索PVCs
   const filteredPVCs = useMemo(() => {
     return pvcs.filter(pvc => {
@@ -136,42 +177,6 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
         : 0
     };
   }, [pvcs]);
-
-  // 解析容量（转换为字节）
-  const parseCapacity = (capacityStr: string): number => {
-    const units: Record<string, number> = {
-      'Ki': 1024,
-      'Mi': 1024 ** 2,
-      'Gi': 1024 ** 3,
-      'Ti': 1024 ** 4,
-      'Pi': 1024 ** 5,
-      'K': 1000,
-      'M': 1000 ** 2,
-      'G': 1000 ** 3,
-      'T': 1000 ** 4,
-      'P': 1000 ** 5
-    };
-
-    const match = capacityStr.match(/^(\d+(?:\.\d+)?)\s*([KMGTPE]i?)?$/);
-    if (!match) return 0;
-
-    const value = parseFloat(match[1]);
-    const unit = match[2] || '';
-    const multiplier = units[unit] || 1;
-
-    return value * multiplier;
-  };
-
-  // 格式化容量显示
-  const formatCapacity = (bytes: number): string => {
-    if (bytes === 0) return '0B';
-    
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))}${sizes[i]}`;
-  };
 
   // 获取PersistentVolumeClaims数据
   const fetchPVCs = useCallback(async () => {
