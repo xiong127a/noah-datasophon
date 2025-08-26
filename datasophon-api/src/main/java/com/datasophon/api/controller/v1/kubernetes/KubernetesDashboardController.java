@@ -347,12 +347,13 @@ public class KubernetesDashboardController {
     @RequestMapping("/statefulsets")
     public Result<PageVO<KubernetesResourceVO>> getStatefulSets(
             @ClusterId Long clusterId,
+            @RequestParam(value = "serviceId", required = false) Long serviceId,
             @RequestParam(value = "namespace", required = false) String namespace,
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         try {
             PageResult<KubernetesResourceDTO> statefulSetDTOs = kubernetesDashboardService.getStatefulSets(clusterId,
-                    namespace, pageNum, pageSize);
+                    serviceId, namespace, pageNum, pageSize);
             List<KubernetesResourceVO> statefulSetVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(statefulSetDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(statefulSetDTOs, statefulSetVOs);

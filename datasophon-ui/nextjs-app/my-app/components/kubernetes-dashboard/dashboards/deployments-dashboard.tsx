@@ -12,16 +12,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   RefreshCw,
-  MoreHorizontal,
   Eye,
-  Edit,
-  Trash2,
   Package,
   Users,
   CheckCircle,
   AlertCircle,
-  Box,
-  TrendingUp
+  Box
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -43,16 +39,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -68,6 +56,23 @@ interface DeploymentsDashboardProps {
   serviceId?: string;
   namespace: string;
   className?: string;
+}
+
+// API响应数据的临时接口
+interface DeploymentApiResource {
+  name: string;
+  namespace: string;
+  creationTimestamp?: string;
+  labels?: Record<string, string>;
+  replicas?: string;
+  available?: string;
+  [key: string]: unknown;
+}
+
+interface ApiResponse {
+  data: DeploymentApiResource[] | { data: DeploymentApiResource[]; total?: string | number };
+  total?: string | number;
+  [key: string]: unknown;
 }
 
 const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
@@ -107,11 +112,14 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
       console.log('✅ 实际数据数组:', response.data);
       
       // 检查数据结构并提取实际的数组
-      const dataArray = Array.isArray(response.data) ? response.data : ((response.data as any)?.data || []);
+      const apiResponse = response as unknown as ApiResponse;
+      const dataArray = Array.isArray(apiResponse.data) 
+        ? apiResponse.data 
+        : (apiResponse.data as { data: DeploymentApiResource[]; total?: string | number })?.data || [];
       console.log('✅ 使用的数据数组:', dataArray, '长度:', dataArray.length);
 
       // 转换API响应为组件需要的Deployment格式
-      const convertedDeployments: Deployment[] = dataArray.map((resource: any) => ({
+      const convertedDeployments: Deployment[] = dataArray.map((resource: DeploymentApiResource) => ({
         apiVersion: "apps/v1",
         kind: "Deployment",
         metadata: {
@@ -151,8 +159,9 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
       setDeployments(convertedDeployments);
       
       // 使用正确的总数：优先使用API返回的total，其次使用数据长度
-      const totalCount = response.total || (response.data as any)?.total || convertedDeployments.length;
-      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: response.total, dataTotal: (response.data as any)?.total, arrayLength: convertedDeployments.length });
+      const nestedData = !Array.isArray(apiResponse.data) ? apiResponse.data as { data: DeploymentApiResource[]; total?: string | number } : null;
+      const totalCount = apiResponse.total || nestedData?.total || convertedDeployments.length;
+      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: apiResponse.total, dataTotal: nestedData?.total, arrayLength: convertedDeployments.length });
       setTotal(typeof totalCount === 'string' ? parseInt(totalCount) : totalCount);
     } catch (error) {
       console.error('获取Deployments失败:', error);
@@ -345,51 +354,40 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">Deployments</CardTitle>
-              <CardDescription>管理Kubernetes部署</CardDescription>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={loading}
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                刷新
-              </Button>
-              <Button size="sm">
-                <Package className="w-4 h-4 mr-2" />
-                新建Deployment
+            <CardTitle className="text-lg font-semibold">Deployments 列表</CardTitle>
+            <div className="flex items-center space-x-3">
+              {/* 搜索框 */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="搜索 Deployments..."
+                  className="pl-10 w-64"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              {/* 状态筛选 */}
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-32">
+                  <SelectValue placeholder="状态筛选" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">全部</SelectItem>
+                  <SelectItem value="healthy">健康</SelectItem>
+                  <SelectItem value="unhealthy">异常</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* 刷新按钮 */}
+              <Button variant="outline" size="icon" onClick={handleRefresh} disabled={loading}>
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
               </Button>
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* 搜索和过滤 */}
-          <div className="flex items-center space-x-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <Input
-                placeholder="搜索Deployments..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="选择状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">所有状态</SelectItem>
-                <SelectItem value="healthy">健康</SelectItem>
-                <SelectItem value="unhealthy">异常</SelectItem>
-              </SelectContent>
-            </Select>
 
-          </div>
+        <CardContent className="p-0">
 
           {/* Deployments表格 */}
           <div className="border rounded-lg">
@@ -455,39 +453,15 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
                           </span>
                         </TableCell>
                         <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleDeploymentAction('view', deployment)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                查看详情
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeploymentAction('scale', deployment)}>
-                                <TrendingUp className="w-4 h-4 mr-2" />
-                                扩缩容
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeploymentAction('restart', deployment)}>
-                                <RefreshCw className="w-4 h-4 mr-2" />
-                                重启
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleDeploymentAction('edit', deployment)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                编辑
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => handleDeploymentAction('delete', deployment)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                删除
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            onClick={() => handleDeploymentAction('view', deployment)}
+                            className="hover:bg-blue-50"
+                          >
+                            <Eye className="w-4 h-4 mr-1" />
+                            查看
+                          </Button>
                         </TableCell>
                       </motion.tr>
                     );
@@ -498,18 +472,15 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
           </div>
 
           {filteredDeployments.length === 0 && !loading && (
-            <div className="text-center py-8">
-              <Package className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <div className="text-center py-12">
+              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">暂无Deployments</h3>
-              <p className="text-gray-500 mb-4">
-                {searchTerm ? '没有找到匹配的Deployments' : '当前命名空间中没有Deployments'}
+              <p className="text-gray-500">
+                {searchTerm || statusFilter !== "all" 
+                  ? '没有找到匹配的Deployments' 
+                  : '当前命名空间中没有Deployments资源'
+                }
               </p>
-              {!searchTerm && (
-                <Button>
-                  <Package className="w-4 h-4 mr-2" />
-                  创建第一个Deployment
-                </Button>
-              )}
             </div>
           )}
         </CardContent>

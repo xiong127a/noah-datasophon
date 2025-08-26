@@ -419,6 +419,7 @@ export class KubernetesAPI {
   static async getStatefulSets(
     clusterId: string,
     namespace?: string,
+    serviceId?: string,
     pageNum: number = 1,
     pageSize: number = 10
   ): Promise<K8sResourceListResponse> {
@@ -428,6 +429,7 @@ export class KubernetesAPI {
         pageSize 
       };
       if (namespace) params.namespace = namespace;
+      if (serviceId) params.serviceId = serviceId;
 
       const response = await apiV1.get(API_PATHS_V1.K8S_STATEFULSETS, {
         params,

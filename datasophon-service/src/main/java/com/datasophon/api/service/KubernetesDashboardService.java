@@ -141,7 +141,7 @@ public interface KubernetesDashboardService {
         /**
          * 获取StatefulSets列表（返回通用对象，暂时保持兼容）
          */
-        PageResult<KubernetesResourceDTO> getStatefulSets(Long clusterId, String namespace, Integer pageNum,
+        PageResult<KubernetesResourceDTO> getStatefulSets(Long clusterId, Long serviceId, String namespace, Integer pageNum,
                         Integer pageSize);
 
         /**

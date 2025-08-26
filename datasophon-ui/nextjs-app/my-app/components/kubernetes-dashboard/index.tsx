@@ -37,6 +37,7 @@ import StatusIndicator from "./components/status-indicator";
 import PodsDashboard from './dashboards/pods-dashboard';
 import ServicesDashboard from './dashboards/services-dashboard';
 import DeploymentsDashboard from './dashboards/deployments-dashboard';
+import StatefulSetsDashboard from './dashboards/statefulsets-dashboard';
 
 // 导入类型定义
 import type { K8sResourceStats } from '@/lib/kubernetes-api';
@@ -663,8 +664,16 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
                 />
               )}
 
+              {currentView === 'statefulsets' && (
+                <StatefulSetsDashboard 
+                  clusterId={clusterId}
+                  serviceId={serviceId}
+                  namespace={selectedNamespace} 
+                />
+              )}
+
               {/* 其他视图的占位符 */}
-              {!['overview', 'pods', 'services', 'deployments'].includes(currentView) && (
+              {!['overview', 'pods', 'services', 'deployments', 'statefulsets'].includes(currentView) && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Settings className="w-8 h-8 text-gray-400" />
