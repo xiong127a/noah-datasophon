@@ -243,6 +243,24 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             String continueToken = null;
             int currentSkipped = 0;
             
+            // 🔧 修复：特殊处理第一页的情况
+            if (skipItems == 0) {
+                // 第一页：直接获取前pageSize个数据
+                io.fabric8.kubernetes.api.model.ListOptions options = 
+                    new io.fabric8.kubernetes.api.model.ListOptionsBuilder()
+                        .withLimit((long) pageSize)
+                        .build();
+
+                io.fabric8.kubernetes.api.model.KubernetesResourceList<T> result;
+                if (namespace != null && !namespace.isEmpty()) {
+                    result = client.resources(resourceClass).inNamespace(namespace).list(options);
+                } else {
+                    result = client.resources(resourceClass).list(options);
+                }
+                
+                return result.getItems();
+            }
+            
             // 通过Continue Token逐步获取到目标页
             while (currentSkipped < skipItems) {
                 int remainingToSkip = skipItems - currentSkipped;

@@ -100,7 +100,7 @@ public class KubernetesDashboardController {
 
             // 封装为分页结果
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(deploymentDTOs, deploymentVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, deploymentDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取Deployments列表失败: {}", e.getMessage(), e);
             return Result.error("获取Deployments列表失败: " + e.getMessage());
@@ -131,7 +131,7 @@ public class KubernetesDashboardController {
 
             // 封装为分页结果
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(podDTOs, podVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, podDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取Pods列表失败", e);
             return Result.error("获取Pods列表失败: " + e.getMessage());
@@ -153,7 +153,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> serviceVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(serviceDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(serviceDTOs, serviceVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, serviceDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取Services列表失败: {}", e.getMessage(), e);
             return Result.error("获取Services列表失败: " + e.getMessage());
@@ -175,7 +175,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> configMapVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(configMapDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(configMapDTOs, configMapVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, configMapDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取ConfigMaps列表失败: {}", e.getMessage(), e);
             return Result.error("获取ConfigMaps列表失败: " + e.getMessage());
@@ -197,7 +197,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> secretVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(secretDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(secretDTOs, secretVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, secretDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取Secrets列表失败: {}", e.getMessage(), e);
             return Result.error("获取Secrets列表失败: " + e.getMessage());
@@ -218,7 +218,7 @@ public class KubernetesDashboardController {
                     pageNum, pageSize);
             List<KubernetesResourceVO> pvVOs = kubernetesResourceVOConverter.dtoListToVoList(pvDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(pvDTOs, pvVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, pvDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取PersistentVolumes列表失败: {}", e.getMessage(), e);
             return Result.error("获取PersistentVolumes列表失败: " + e.getMessage());
@@ -241,7 +241,7 @@ public class KubernetesDashboardController {
                     namespace, pageNum, pageSize);
             List<KubernetesResourceVO> pvcVOs = kubernetesResourceVOConverter.dtoListToVoList(pvcDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(pvcDTOs, pvcVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, pvcDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取PersistentVolumeClaims列表失败: {}", e.getMessage(), e);
             return Result.error("获取PersistentVolumeClaims列表失败: " + e.getMessage());
@@ -267,7 +267,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> storageVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(storageDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(storageDTOs, storageVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, storageDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取StorageClasses列表失败: {}", e.getMessage(), e);
             return Result.error("获取StorageClasses列表失败: " + e.getMessage());
@@ -289,7 +289,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> ingressVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(ingressDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(ingressDTOs, ingressVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, ingressDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取Ingresses列表失败: {}", e.getMessage(), e);
             return Result.error("获取Ingresses列表失败: " + e.getMessage());
@@ -310,7 +310,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> ingressClassVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(ingressClassDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(ingressClassDTOs, ingressClassVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, ingressClassDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取IngressClasses列表失败: {}", e.getMessage(), e);
             return Result.error("获取IngressClasses列表失败: " + e.getMessage());
@@ -332,7 +332,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> endpointVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(endpointDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(endpointDTOs, endpointVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, endpointDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取Endpoints列表失败: {}", e.getMessage(), e);
             return Result.error("获取Endpoints列表失败: " + e.getMessage());
@@ -355,7 +355,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> daemonSetVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(daemonSetDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(daemonSetDTOs, daemonSetVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, daemonSetDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取DaemonSets列表失败: {}", e.getMessage(), e);
             return Result.error("获取DaemonSets列表失败: " + e.getMessage());
@@ -379,7 +379,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> statefulSetVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(statefulSetDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(statefulSetDTOs, statefulSetVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, statefulSetDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取StatefulSets列表失败: {}", e.getMessage(), e);
             return Result.error("获取StatefulSets列表失败: " + e.getMessage());
@@ -402,7 +402,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> replicaSetVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(replicaSetDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(replicaSetDTOs, replicaSetVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, replicaSetDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取ReplicaSets列表失败: {}", e.getMessage(), e);
             return Result.error("获取ReplicaSets列表失败: " + e.getMessage());
@@ -423,7 +423,7 @@ public class KubernetesDashboardController {
                     namespace, pageNum, pageSize);
             List<KubernetesResourceVO> rcVOs = kubernetesResourceVOConverter.dtoListToVoList(rcDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(rcDTOs, rcVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, rcDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取ReplicationControllers列表失败: {}", e.getMessage(), e);
             return Result.error("获取ReplicationControllers列表失败: " + e.getMessage());
@@ -445,7 +445,7 @@ public class KubernetesDashboardController {
                     pageNum, pageSize);
             List<KubernetesResourceVO> jobVOs = kubernetesResourceVOConverter.dtoListToVoList(jobDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(jobDTOs, jobVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, jobDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取Jobs列表失败: {}", e.getMessage(), e);
             return Result.error("获取Jobs列表失败: " + e.getMessage());
@@ -468,7 +468,7 @@ public class KubernetesDashboardController {
             List<KubernetesResourceVO> cronJobVOs = kubernetesResourceVOConverter
                     .dtoListToVoList(cronJobDTOs.getRecords());
             PageVO<KubernetesResourceVO> pageVO = PageVO.from(cronJobDTOs, cronJobVOs);
-            return Result.success(pageVO);
+            return Result.success(pageVO, cronJobDTOs.getTotal());
         } catch (Exception e) {
             log.error("获取CronJobs列表失败: {}", e.getMessage(), e);
             return Result.error("获取CronJobs列表失败: " + e.getMessage());
