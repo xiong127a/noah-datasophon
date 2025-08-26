@@ -76,9 +76,9 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
 
   const [showDetails, setShowDetails] = useState(false);
-  // const [selectedConfigMap, setSelectedConfigMap] = useState<ConfigMap | null>(null);
-  // const [pageNum, setPageNum] = useState(1);
-  // const [total, setTotal] = useState(0);
+  const [selectedConfigMap, setSelectedConfigMap] = useState<ConfigMap | null>(null);
+  const [pageNum, setPageNum] = useState(1);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   const [pageSize] = useState(20);
@@ -118,15 +118,28 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
       );
 
       // 转换API响应为组件需要的ConfigMap格式
-      const convertedConfigMaps: ConfigMap[] = response.data.map((resource: K8sResource) => ({
-        name: resource.name,
-        namespace: resource.namespace,
-        data: (resource.spec as any)?.data || {},
-        creationTimestamp: resource.creationTimestamp,
-        age: resource.age || '-',
-        keysCount: Object.keys((resource.spec as any)?.data || {}).length,
-        size: calculateConfigMapSize((resource.spec as any)?.data || {})
-      }));
+      const convertedConfigMaps: ConfigMap[] = response.data.map((resource: any) => {
+        // 从多个可能的位置获取ConfigMap的实际数据
+        const configMapData = resource.data || resource.additionalProperties?.data || {};
+        
+        console.log('🔍 ConfigMap原始数据:', {
+          name: resource.name,
+          hasData: !!resource.data,
+          hasAdditionalPropsData: !!resource.additionalProperties?.data,
+          actualData: configMapData,
+          fullResource: resource
+        });
+        
+        return {
+          name: resource.name || '',
+          namespace: resource.namespace || '',
+          data: configMapData,
+          creationTimestamp: resource.creationTimestamp || '',
+          age: resource.age || getAge(resource.creationTimestamp || ''),
+          keysCount: Object.keys(configMapData).length,
+          size: calculateConfigMapSize(configMapData)
+        };
+      });
 
       setConfigMaps(convertedConfigMaps);
       setTotal(response.total || convertedConfigMaps.length);

@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -57,7 +57,7 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { KubernetesAPI, K8sResource, K8sResourceListResponse } from '@/lib/kubernetes-api';
+import { KubernetesAPI, K8sResourceListResponse } from '@/lib/kubernetes-api';
 
 interface SecretsDashboardProps {
   clusterId: string;
@@ -88,9 +88,8 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
 
   const [showDetails, setShowDetails] = useState(false);
   const [showValues, setShowValues] = useState<Record<string, boolean>>({});
-  // const [selectedSecret, setSelectedSecret] = useState<Secret | null>(null);
-  // const [pageNum, setPageNum] = useState(1);
-  // const [total, setTotal] = useState(0);
+  const [selectedSecret] = useState<Secret | null>(null);
+  const [pageNum] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const [pageSize] = useState(20);
@@ -126,7 +125,7 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
   }, [secrets]);
 
   // 获取Secrets数据
-  const fetchSecrets = async () => {
+  const fetchSecrets = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
@@ -140,19 +139,33 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
       );
 
       // 转换API响应为组件需要的Secret格式
-      const convertedSecrets: Secret[] = response.data.map((resource: K8sResource) => ({
-        name: resource.name,
-        namespace: resource.namespace,
-        type: (resource.spec as any)?.type || 'Opaque',
-        data: (resource.spec as any)?.data || {},
-        creationTimestamp: resource.creationTimestamp,
-        age: resource.age || '-',
-        keysCount: Object.keys((resource.spec as any)?.data || {}).length,
-        size: calculateSecretSize((resource.spec as any)?.data || {})
-      }));
+      const convertedSecrets: Secret[] = response.data.map((resource: any) => {
+        // 从多个可能的位置获取Secret的实际数据
+        const secretData = resource.data || resource.additionalProperties?.data || {};
+        const secretType = resource.type || resource.additionalProperties?.type || 'Opaque';
+        
+        console.log('🔍 Secret原始数据:', {
+          name: resource.name,
+          hasData: !!resource.data,
+          hasAdditionalPropsData: !!resource.additionalProperties?.data,
+          actualData: secretData,
+          type: secretType,
+          fullResource: resource
+        });
+        
+        return {
+          name: resource.name || '',
+          namespace: resource.namespace || '',
+          type: secretType,
+          data: secretData,
+          creationTimestamp: resource.creationTimestamp || '',
+          age: resource.age || getAge(resource.creationTimestamp || ''),
+          keysCount: Object.keys(secretData).length,
+          size: calculateSecretSize(secretData)
+        };
+      });
 
       setSecrets(convertedSecrets);
-      setTotal(response.total || convertedSecrets.length);
     } catch (error) {
       console.error('获取Secrets失败:', error);
       setError(error instanceof Error ? error.message : '获取Secrets失败');
@@ -160,7 +173,7 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, namespace, pageNum, pageSize]);
 
   // 计算Secret大小
   const calculateSecretSize = (data: Record<string, string>): string => {
@@ -246,7 +259,7 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchSecrets();
-  }, [clusterId, namespace, pageNum]);
+  }, [fetchSecrets]);
 
   if (loading && secrets.length === 0) {
     return (

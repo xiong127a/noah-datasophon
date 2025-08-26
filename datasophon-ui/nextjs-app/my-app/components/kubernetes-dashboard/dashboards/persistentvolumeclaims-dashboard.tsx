@@ -7,29 +7,18 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Filter,
   Download,
   RefreshCw,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  HardDrive,
   Database,
   CheckCircle,
   AlertCircle,
   Clock,
   Box,
-  ChevronDown,
-  ChevronRight,
-  Activity,
-  Storage,
-  Link,
-  ExternalLink
+  Link
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -50,13 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Card,
   CardContent,
@@ -65,9 +48,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
 
-import { KubernetesAPI, K8sResource, K8sResourceListResponse } from '@/lib/kubernetes-api';
+import { KubernetesAPI, K8sResourceListResponse } from '@/lib/kubernetes-api';
 
 interface PersistentVolumeClaimsDashboardProps {
   clusterId: string;
@@ -107,12 +89,11 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [selectedPVC, setSelectedPVC] = useState<PersistentVolumeClaim | null>(null);
+  const [selectedPVC] = useState<PersistentVolumeClaim | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pageNum, setPageNum] = useState(1);
+  const [pageNum] = useState(1);
   const [pageSize] = useState(20);
-  const [total, setTotal] = useState(0);
 
   // 筛选和搜索PVCs
   const filteredPVCs = useMemo(() => {
@@ -193,7 +174,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
   };
 
   // 获取PersistentVolumeClaims数据
-  const fetchPVCs = async () => {
+  const fetchPVCs = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
@@ -207,22 +188,32 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
       );
 
       // 转换API响应为组件需要的PVC格式
-      const convertedPVCs: PersistentVolumeClaim[] = response.data.map((resource: K8sResource) => {
-        const spec = resource.spec as any;
-        const status = resource.metadata as any;
+      const convertedPVCs: PersistentVolumeClaim[] = response.data.map((resource: any) => {
+        // 从多个可能的位置获取PVC的实际数据
+        const spec = resource.spec || resource.additionalProperties?.spec || {};
+        const status = resource.status || resource.metadata || resource.additionalProperties?.status || {};
+        
+        console.log('🔍 PVC原始数据:', {
+          name: resource.name,
+          hasSpec: !!resource.spec,
+          hasStatus: !!resource.status,
+          hasMetadata: !!resource.metadata,
+          hasAdditionalProps: !!resource.additionalProperties,
+          fullResource: resource
+        });
         
         return {
-          name: resource.name,
-          namespace: resource.namespace,
-          status: status?.phase || 'Pending',
+          name: resource.name || '',
+          namespace: resource.namespace || '',
+          status: (status?.phase || resource.status || 'Pending') as 'Bound' | 'Pending' | 'Lost' | 'Available',
           volume: status?.volumeName,
           capacity: status?.capacity?.storage,
           requestedCapacity: spec?.resources?.requests?.storage || '0Gi',
           accessModes: spec?.accessModes || [],
           storageClass: spec?.storageClassName || 'default',
           volumeMode: spec?.volumeMode || 'Filesystem',
-          age: resource.age || '-',
-          creationTimestamp: resource.creationTimestamp,
+          age: resource.age || getAge(resource.creationTimestamp || ''),
+          creationTimestamp: resource.creationTimestamp || '',
           conditions: status?.conditions || [],
           selector: spec?.selector?.matchLabels,
           finalizers: status?.finalizers || []
@@ -230,7 +221,6 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
       });
 
       setPVCs(convertedPVCs);
-      setTotal(response.total || convertedPVCs.length);
     } catch (error) {
       console.error('获取PersistentVolumeClaims失败:', error);
       setError(error instanceof Error ? error.message : '获取PersistentVolumeClaims失败');
@@ -238,7 +228,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, pageNum, pageSize]);
 
   // 获取年龄显示
   const getAge = (creationTimestamp: string): string => {
@@ -297,7 +287,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchPVCs();
-  }, [clusterId, namespace, pageNum]);
+  }, [fetchPVCs]);
 
   if (loading && pvcs.length === 0) {
     return (
@@ -543,7 +533,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
               <Database className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">暂无PersistentVolumeClaims</h3>
               <p className="text-gray-500 mb-4">
-                {searchTerm ? '没有找到匹配的PersistentVolumeClaims' : '当前命名空间中没有PVCs'}
+                {searchTerm ? '没有找到匹配的PersistentVolumeClaims' : '当前命名空间中没有PersistentVolumeClaims'}
               </p>
 
             </div>

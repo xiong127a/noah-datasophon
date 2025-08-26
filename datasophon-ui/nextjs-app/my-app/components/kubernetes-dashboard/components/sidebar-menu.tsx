@@ -190,7 +190,7 @@ const defaultCategories: MenuCategory[] = [
       },
       { 
         key: 'persistentvolumeclaims', 
-        label: 'PVCs', 
+        label: 'PersistentVolumeClaims', 
         icon: Database, 
         description: '存储声明',
         count: 12

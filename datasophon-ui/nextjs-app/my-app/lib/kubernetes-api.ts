@@ -335,9 +335,18 @@ export class KubernetesAPI {
         params,
         headers: { 'X-Cluster-Id': clusterId }
       });
+      
+      console.log('🔍 ConfigMaps API响应结构:', {
+        code: response.data?.code,
+        hasPageVO: !!response.data?.data,
+        dataLength: response.data?.data?.data?.length
+      });
+      
+      // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
+      const pageVO = response.data?.data || {};
       return {
-        data: response.data?.data || [],
-        total: response.data?.total,
+        data: pageVO.data || [],
+        total: pageVO.total || 0,
         pageNum,
         pageSize
       };
@@ -367,9 +376,12 @@ export class KubernetesAPI {
         params,
         headers: { 'X-Cluster-Id': clusterId }
       });
+      
+      // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
+      const pageVO = response.data?.data || {};
       return {
-        data: response.data?.data || [],
-        total: response.data?.total,
+        data: pageVO.data || [],
+        total: pageVO.total || 0,
         pageNum,
         pageSize
       };
@@ -567,9 +579,12 @@ export class KubernetesAPI {
         params,
         headers: { 'X-Cluster-Id': clusterId }
       });
+      
+      // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
+      const pageVO = response.data?.data || {};
       return {
-        data: response.data?.data || [],
-        total: response.data?.total,
+        data: pageVO.data || [],
+        total: pageVO.total || 0,
         pageNum,
         pageSize
       };
@@ -599,9 +614,12 @@ export class KubernetesAPI {
         params,
         headers: { 'X-Cluster-Id': clusterId }
       });
+      
+      // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
+      const pageVO = response.data?.data || {};
       return {
-        data: response.data?.data || [],
-        total: response.data?.total,
+        data: pageVO.data || [],
+        total: pageVO.total || 0,
         pageNum,
         pageSize
       };
@@ -629,9 +647,12 @@ export class KubernetesAPI {
         params,
         headers: { 'X-Cluster-Id': clusterId }
       });
+      
+      // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
+      const pageVO = response.data?.data || {};
       return {
-        data: response.data?.data || [],
-        total: response.data?.total,
+        data: pageVO.data || [],
+        total: pageVO.total || 0,
         pageNum,
         pageSize
       };

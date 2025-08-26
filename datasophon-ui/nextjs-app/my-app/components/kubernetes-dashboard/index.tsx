@@ -45,6 +45,11 @@ import CronJobsDashboard from './dashboards/cronjobs-dashboard';
 import IngressesDashboard from './dashboards/ingresses-dashboard';
 import IngressClassesDashboard from './dashboards/ingressclasses-dashboard';
 import EndpointsDashboard from './dashboards/endpoints-dashboard';
+import ConfigMapsDashboard from './dashboards/configmaps-dashboard';
+import SecretsDashboard from './dashboards/secrets-dashboard';
+import PersistentVolumesDashboard from './dashboards/persistentvolumes-dashboard';
+import PersistentVolumeClaimsDashboard from './dashboards/persistentvolumeclaims-dashboard';
+import StorageClassesDashboard from './dashboards/storageclasses-dashboard';
 
 // 导入类型定义
 import type { K8sResourceStats } from '@/lib/kubernetes-api';
@@ -125,7 +130,7 @@ const menuCategories: MenuCategory[] = [
       { key: 'configmaps', label: 'ConfigMaps', icon: Settings, description: '配置映射' },
       { key: 'secrets', label: 'Secrets', icon: Shield, description: '密钥管理' },
       { key: 'persistentvolumes', label: 'PersistentVolumes', icon: HardDrive, description: '持久卷' },
-      { key: 'persistentvolumeclaims', label: 'PVCs', icon: Database, description: '存储声明' },
+      { key: 'persistentvolumeclaims', label: 'PersistentVolumeClaims', icon: Database, description: '存储声明' },
       { key: 'storageclasses', label: 'StorageClasses', icon: Monitor, description: '存储类' },
     ]
   }
@@ -737,8 +742,44 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
                 />
               )}
 
+              {/* 存储配置Dashboard */}
+              {currentView === 'configmaps' && (
+                <ConfigMapsDashboard 
+                  clusterId={clusterId}
+                  namespace={selectedNamespace} 
+                />
+              )}
+
+              {currentView === 'secrets' && (
+                <SecretsDashboard 
+                  clusterId={clusterId}
+                  namespace={selectedNamespace} 
+                />
+              )}
+
+              {currentView === 'persistentvolumes' && (
+                <PersistentVolumesDashboard 
+                  clusterId={clusterId}
+                  namespace={selectedNamespace} 
+                />
+              )}
+
+              {currentView === 'persistentvolumeclaims' && (
+                <PersistentVolumeClaimsDashboard 
+                  clusterId={clusterId}
+                  namespace={selectedNamespace} 
+                />
+              )}
+
+              {currentView === 'storageclasses' && (
+                <StorageClassesDashboard 
+                  clusterId={clusterId}
+                  namespace={selectedNamespace} 
+                />
+              )}
+
               {/* 其他视图的占位符 */}
-              {!['overview', 'pods', 'services', 'deployments', 'statefulsets', 'daemonsets', 'replicasets', 'jobs', 'cronjobs', 'ingresses', 'ingressclasses', 'endpoints'].includes(currentView) && (
+              {!['overview', 'pods', 'services', 'deployments', 'statefulsets', 'daemonsets', 'replicasets', 'jobs', 'cronjobs', 'ingresses', 'ingressclasses', 'endpoints', 'configmaps', 'secrets', 'persistentvolumes', 'persistentvolumeclaims', 'storageclasses'].includes(currentView) && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Settings className="w-8 h-8 text-gray-400" />

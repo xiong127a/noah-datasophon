@@ -2,35 +2,23 @@
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2024-01-15
- * @description Kubernetes StorageClasses管理面板
+ * @description Kubernetes ActivityClasses管理面板
  */
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Filter,
   Download,
   RefreshCw,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
-  HardDrive,
-  Database,
   CheckCircle,
   AlertCircle,
-  Clock,
   Box,
-  ChevronDown,
-  ChevronRight,
   Activity,
-  Storage,
   Settings,
-  Shield,
-  ExternalLink
+  Shield
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -51,13 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Card,
   CardContent,
@@ -67,15 +49,15 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-import { KubernetesAPI, K8sResource, K8sResourceListResponse } from '@/lib/kubernetes-api';
+import { KubernetesAPI, K8sResourceListResponse } from '@/lib/kubernetes-api';
 
-interface StorageClassesDashboardProps {
+interface ActivityClassesDashboardProps {
   clusterId: string;
   namespace: string;
   className?: string;
 }
 
-interface StorageClass {
+interface ActivityClass {
   name: string;
   provisioner: string;
   reclaimPolicy: string;
@@ -90,23 +72,21 @@ interface StorageClass {
   usageCount: number; // PVC使用此存储类的数量
 }
 
-const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
+const ActivityClassesDashboard: React.FC<ActivityClassesDashboardProps> = ({
   clusterId,
-  namespace,
   className
 }) => {
-  const [storageClasses, setStorageClasses] = useState<StorageClass[]>([]);
+  const [storageClasses, setActivityClasses] = useState<ActivityClass[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [provisionerFilter, setProvisionerFilter] = useState<string>("all");
-  const [selectedSC, setSelectedSC] = useState<StorageClass | null>(null);
+  const [selectedSC] = useState<ActivityClass | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pageNum, setPageNum] = useState(1);
+  const [pageNum] = useState(1);
   const [pageSize] = useState(20);
-  const [total, setTotal] = useState(0);
 
-  // 筛选和搜索StorageClasses
+  // 筛选和搜索ActivityClasses
   const filteredSCs = useMemo(() => {
     return storageClasses.filter(sc => {
       const matchesSearch = 
@@ -124,7 +104,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
   // 统计信息
   const stats = useMemo(() => {
     const provisionerTypes = [...new Set(storageClasses.map(sc => sc.provisioner))].length;
-    const defaultStorageClass = storageClasses.find(sc => sc.isDefault);
+    const defaultActivityClass = storageClasses.find(sc => sc.isDefault);
     
     return {
       total: storageClasses.length,
@@ -132,12 +112,12 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
       expandable: storageClasses.filter(sc => sc.allowVolumeExpansion).length,
       provisionerTypes,
       totalUsage: storageClasses.reduce((sum, sc) => sum + sc.usageCount, 0),
-      defaultName: defaultStorageClass?.name || 'None'
+      defaultName: defaultActivityClass?.name || 'None'
     };
   }, [storageClasses]);
 
-  // 获取StorageClasses数据
-  const fetchStorageClasses = async () => {
+  // 获取ActivityClasses数据
+  const fetchActivityClasses = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
@@ -149,13 +129,22 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
         pageSize
       );
 
-      // 转换API响应为组件需要的StorageClass格式
-      const convertedSCs: StorageClass[] = response.data.map((resource: K8sResource) => {
-        const spec = resource.spec as any;
-        const metadata = resource.metadata as any;
+      // 转换API响应为组件需要的ActivityClass格式
+      const convertedSCs: ActivityClass[] = response.data.map((resource: any) => {
+        // 从多个可能的位置获取ActivityClass的实际数据
+        const spec = resource.spec || resource.additionalProperties?.spec || {};
+        const metadata = resource.metadata || resource.additionalProperties?.metadata || {};
+        
+        console.log('🔍 ActivityClass原始数据:', {
+          name: resource.name,
+          hasSpec: !!resource.spec,
+          hasMetadata: !!resource.metadata,
+          hasAdditionalProps: !!resource.additionalProperties,
+          fullResource: resource
+        });
         
         return {
-          name: resource.name,
+          name: resource.name || '',
           provisioner: spec?.provisioner || 'unknown',
           reclaimPolicy: spec?.reclaimPolicy || 'Delete',
           volumeBindingMode: spec?.volumeBindingMode || 'Immediate',
@@ -163,23 +152,22 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
           parameters: spec?.parameters || {},
           mountOptions: spec?.mountOptions,
           allowedTopologies: spec?.allowedTopologies,
-          isDefault: checkIsDefault(metadata?.annotations),
-          age: resource.age || '-',
-          creationTimestamp: resource.creationTimestamp,
+          isDefault: checkIsDefault(metadata?.annotations || resource.annotations),
+          age: resource.age || getAge(resource.creationTimestamp || ''),
+          creationTimestamp: resource.creationTimestamp || '',
           usageCount: generateUsageCount() // 实际应该从API获取
         };
       });
 
-      setStorageClasses(convertedSCs);
-      setTotal(response.total || convertedSCs.length);
+      setActivityClasses(convertedSCs);
     } catch (error) {
-      console.error('获取StorageClasses失败:', error);
-      setError(error instanceof Error ? error.message : '获取StorageClasses失败');
-      setStorageClasses([]);
+      console.error('获取ActivityClasses失败:', error);
+      setError(error instanceof Error ? error.message : '获取ActivityClasses失败');
+      setActivityClasses([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, pageNum, pageSize]);
 
   // 检查是否为默认存储类
   const checkIsDefault = (annotations: Record<string, string> = {}): boolean => {
@@ -243,7 +231,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
 
   // 刷新数据
   const handleRefresh = async () => {
-    await fetchStorageClasses();
+    await fetchActivityClasses();
   };
 
 
@@ -256,15 +244,15 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
 
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
-    fetchStorageClasses();
-  }, [clusterId, pageNum]);
+    fetchActivityClasses();
+  }, [fetchActivityClasses]);
 
   if (loading && storageClasses.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center space-x-2">
           <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-          <span className="text-gray-600">加载StorageClasses...</span>
+          <span className="text-gray-600">加载ActivityClasses...</span>
         </div>
       </div>
     );
@@ -319,7 +307,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
             title: "总使用量", 
             count: stats.totalUsage, 
             color: "orange", 
-            icon: Storage,
+            icon: Activity,
             description: "PVC使用总数"
           }
         ].map((stat, index) => (
@@ -352,7 +340,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-lg">StorageClasses</CardTitle>
+              <CardTitle className="text-lg">ActivityClasses</CardTitle>
               <CardDescription>管理Kubernetes存储类</CardDescription>
             </div>
             <div className="flex items-center space-x-2">
@@ -375,7 +363,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
               <Input
-                placeholder="搜索StorageClasses..."
+                placeholder="搜索ActivityClasses..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -412,7 +400,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
             </div>
           )}
 
-          {/* StorageClasses表格 */}
+          {/* ActivityClasses表格 */}
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
@@ -494,7 +482,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center space-x-2">
-                          <Storage className="w-4 h-4 text-gray-400" />
+                          <Activity className="w-4 h-4 text-gray-400" />
                           <span className="text-sm">{sc.usageCount}</span>
                         </div>
                       </TableCell>
@@ -514,9 +502,9 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
           {filteredSCs.length === 0 && !loading && (
             <div className="text-center py-8">
               <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">暂无StorageClasses</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">暂无ActivityClasses</h3>
               <p className="text-gray-500 mb-4">
-                {searchTerm ? '没有找到匹配的StorageClasses' : '集群中没有StorageClasses'}
+                {searchTerm ? '没有找到匹配的ActivityClasses' : '集群中没有ActivityClasses'}
               </p>
 
             </div>
@@ -524,7 +512,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
         </CardContent>
       </Card>
 
-      {/* StorageClass详情模态框 */}
+      {/* ActivityClass详情模态框 */}
       {showDetails && selectedSC && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -544,7 +532,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-xl font-semibold">{selectedSC.name}</h2>
-                  <p className="text-gray-600">StorageClass详细信息</p>
+                  <p className="text-gray-600">ActivityClass详细信息</p>
                 </div>
                 <Button variant="ghost" onClick={() => setShowDetails(false)}>
                   ✕
@@ -627,8 +615,8 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
                         <div className="flex items-center justify-between">
                           <span className="text-sm text-gray-600">使用量</span>
                           <div className="flex items-center space-x-2">
-                            <Storage className="w-4 h-4 text-gray-400" />
-                            <span className="text-sm">{selectedSC.usageCount} PVCs</span>
+                            <Activity className="w-4 h-4 text-gray-400" />
+                            <span className="text-sm">{selectedSC.usageCount} PersistentVolumeClaims</span>
                           </div>
                         </div>
                       </CardContent>
@@ -716,4 +704,4 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
   );
 };
 
-export default StorageClassesDashboard;
+export default ActivityClassesDashboard;

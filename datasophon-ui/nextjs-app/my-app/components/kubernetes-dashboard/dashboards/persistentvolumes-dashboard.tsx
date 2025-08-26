@@ -7,7 +7,7 @@
 
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -57,7 +57,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
-import { KubernetesAPI, K8sResource, K8sResourceListResponse } from '@/lib/kubernetes-api';
+import { KubernetesAPI, K8sResourceListResponse } from '@/lib/kubernetes-api';
 
 interface PersistentVolumesDashboardProps {
   clusterId: string;
@@ -86,7 +86,6 @@ interface PersistentVolume {
 
 const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
   clusterId,
-
   className
 }) => {
   const [persistentVolumes, setPersistentVolumes] = useState<PersistentVolume[]>([]);
@@ -95,10 +94,9 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [reclaimFilter, setReclaimFilter] = useState<string>("all");
 
-  // const [selectedPV, setSelectedPV] = useState<PersistentVolume | null>(null);
+  const [selectedPV] = useState<PersistentVolume | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  // const [pageNum, setPageNum] = useState(1);
-  // const [total, setTotal] = useState(0);
+  const [pageNum] = useState(1);
   const [error, setError] = useState<string | null>(null);
 
   const [pageSize] = useState(20);
@@ -173,7 +171,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
   };
 
   // 获取PersistentVolumes数据
-  const fetchPersistentVolumes = async () => {
+  const fetchPersistentVolumes = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
@@ -186,21 +184,31 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
       );
 
       // 转换API响应为组件需要的PV格式
-      const convertedPVs: PersistentVolume[] = response.data.map((resource: K8sResource) => {
-        const spec = resource.spec as any;
-        const status = resource.metadata as any;
+      const convertedPVs: PersistentVolume[] = response.data.map((resource: any) => {
+        // 从多个可能的位置获取PV的实际数据
+        const spec = resource.spec || resource.additionalProperties?.spec || {};
+        const status = resource.status || resource.metadata || resource.additionalProperties?.status || {};
+        
+        console.log('🔍 PV原始数据:', {
+          name: resource.name,
+          hasSpec: !!resource.spec,
+          hasStatus: !!resource.status,
+          hasMetadata: !!resource.metadata,
+          hasAdditionalProps: !!resource.additionalProperties,
+          fullResource: resource
+        });
         
         return {
-          name: resource.name,
+          name: resource.name || '',
           capacity: spec?.capacity?.storage || '0Gi',
           accessModes: spec?.accessModes || [],
           reclaimPolicy: spec?.persistentVolumeReclaimPolicy || 'Retain',
-          status: status?.phase || 'Pending',
+          status: (status?.phase || resource.status || 'Available') as 'Available' | 'Bound' | 'Released' | 'Failed',
           claim: status?.claimRef ? `${status.claimRef.namespace}/${status.claimRef.name}` : undefined,
           storageClass: spec?.storageClassName || 'default',
           reason: status?.reason,
-          age: resource.age || '-',
-          creationTimestamp: resource.creationTimestamp,
+          age: resource.age || getAge(resource.creationTimestamp || ''),
+          creationTimestamp: resource.creationTimestamp || '',
           volumeMode: spec?.volumeMode || 'Filesystem',
           nodeAffinity: spec?.nodeAffinity,
           source: determineVolumeSource(spec)
@@ -208,7 +216,6 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
       });
 
       setPersistentVolumes(convertedPVs);
-      setTotal(response.total || convertedPVs.length);
     } catch (error) {
       console.error('获取PersistentVolumes失败:', error);
       setError(error instanceof Error ? error.message : '获取PersistentVolumes失败');
@@ -216,24 +223,24 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [clusterId, pageNum, pageSize]);
 
   // 确定存储卷源类型
-  const determineVolumeSource = (spec: Record<string, unknown>): { type: string; details: Record<string, unknown> } => {
+  const determineVolumeSource = (spec: Record<string, any>): { type: string; details: Record<string, unknown> } => {
     if (spec?.hostPath) {
-      return { type: 'HostPath', details: { path: spec.hostPath.path } };
+      return { type: 'HostPath', details: { path: spec.hostPath?.path || '' } };
     } else if (spec?.nfs) {
-      return { type: 'NFS', details: { server: spec.nfs.server, path: spec.nfs.path } };
+      return { type: 'NFS', details: { server: spec.nfs?.server || '', path: spec.nfs?.path || '' } };
     } else if (spec?.iscsi) {
-      return { type: 'iSCSI', details: { targetPortal: spec.iscsi.targetPortal, iqn: spec.iscsi.iqn } };
+      return { type: 'iSCSI', details: { targetPortal: spec.iscsi?.targetPortal || '', iqn: spec.iscsi?.iqn || '' } };
     } else if (spec?.awsElasticBlockStore) {
-      return { type: 'AWS EBS', details: { volumeID: spec.awsElasticBlockStore.volumeID } };
+      return { type: 'AWS EBS', details: { volumeID: spec.awsElasticBlockStore?.volumeID || '' } };
     } else if (spec?.gcePersistentDisk) {
-      return { type: 'GCE PD', details: { pdName: spec.gcePersistentDisk.pdName } };
+      return { type: 'GCE PD', details: { pdName: spec.gcePersistentDisk?.pdName || '' } };
     } else if (spec?.azureDisk) {
-      return { type: 'Azure Disk', details: { diskName: spec.azureDisk.diskName } };
+      return { type: 'Azure Disk', details: { diskName: spec.azureDisk?.diskName || '' } };
     } else if (spec?.csi) {
-      return { type: 'CSI', details: { driver: spec.csi.driver, volumeHandle: spec.csi.volumeHandle } };
+      return { type: 'CSI', details: { driver: spec.csi?.driver || '', volumeHandle: spec.csi?.volumeHandle || '' } };
     }
     
     return { type: 'Unknown', details: {} };
@@ -302,7 +309,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
     fetchPersistentVolumes();
-  }, [clusterId, pageNum]);
+  }, [fetchPersistentVolumes]);
 
   if (loading && persistentVolumes.length === 0) {
     return (
