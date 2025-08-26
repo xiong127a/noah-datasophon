@@ -52,6 +52,8 @@ export type StatusType =
   // 通用状态
   | 'Ready'
   | 'NotReady'
+  | 'Ready,SchedulingDisabled'
+  | 'NotReady,SchedulingDisabled'
   | 'Terminating'
   | 'Creating';
 
@@ -252,6 +254,20 @@ const statusConfigs: Record<StatusType, StatusConfig> = {
     bgColor: 'bg-red-100',
     textColor: 'text-red-700',
     text: 'NotReady'
+  },
+  'Ready,SchedulingDisabled': {
+    icon: CheckCircle,
+    color: 'text-orange-500',
+    bgColor: 'bg-orange-100',
+    textColor: 'text-orange-700',
+    text: 'Ready, SchedulingDisabled'
+  },
+  'NotReady,SchedulingDisabled': {
+    icon: AlertCircle,
+    color: 'text-red-500',
+    bgColor: 'bg-red-100',
+    textColor: 'text-red-700',
+    text: 'NotReady, SchedulingDisabled'
   },
   Terminating: {
     icon: RefreshCw,

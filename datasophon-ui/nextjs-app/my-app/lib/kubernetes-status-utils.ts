@@ -69,6 +69,38 @@ export const getPodStatusConfig = (status: string) => {
         bgColor: 'bg-red-50',
         borderColor: 'border-red-200'
       };
+    case 'ready':
+      return {
+        variant: 'default' as const,
+        className: 'bg-green-100 text-green-800 border-green-200 font-medium',
+        color: 'text-green-600',
+        bgColor: 'bg-green-50',
+        borderColor: 'border-green-200'
+      };
+    case 'notready':
+      return {
+        variant: 'destructive' as const,
+        className: 'bg-red-100 text-red-800 border-red-200 font-medium',
+        color: 'text-red-600',
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200'
+      };
+    case 'ready,schedulingdisabled':
+      return {
+        variant: 'secondary' as const,
+        className: 'bg-orange-100 text-orange-800 border-orange-200 font-medium',
+        color: 'text-orange-600',
+        bgColor: 'bg-orange-50',
+        borderColor: 'border-orange-200'
+      };
+    case 'notready,schedulingdisabled':
+      return {
+        variant: 'destructive' as const,
+        className: 'bg-red-100 text-red-800 border-red-200 font-medium',
+        color: 'text-red-600',
+        bgColor: 'bg-red-50',
+        borderColor: 'border-red-200'
+      };
     default:
       return {
         variant: 'outline' as const,

@@ -168,18 +168,33 @@ public class KubeUtil {
      * 从Node对象中获取节点状态
      * 
      * @param node Node对象
-     * @return 节点状态字符串（Ready, NotReady等）
+     * @return 节点状态字符串（Ready, NotReady, Ready,SchedulingDisabled等）
      */
     private static String getNodeStatus(Node node) {
         if (node == null || node.getStatus() == null || node.getStatus().getConditions() == null) {
             return "Unknown";
         }
 
-        return node.getStatus().getConditions().stream()
+        // 检查Ready状态
+        String readyStatus = node.getStatus().getConditions().stream()
                 .filter(condition -> "Ready".equals(condition.getType()))
                 .findFirst()
                 .map(condition -> "True".equals(condition.getStatus()) ? "Ready" : "NotReady")
                 .orElse("Unknown");
+
+        // 检查是否被设置为不可调度（cordon状态）
+        boolean isUnschedulable = node.getSpec() != null && 
+                                 Boolean.TRUE.equals(node.getSpec().getUnschedulable());
+
+        // 构建完整状态
+        String finalStatus = isUnschedulable ? readyStatus + ",SchedulingDisabled" : readyStatus;
+        
+        // 添加调试日志
+        String nodeName = node.getMetadata() != null ? node.getMetadata().getName() : "unknown";
+        log.debug("节点 {} 状态解析: Ready={}, Unschedulable={}, 最终状态={}", 
+                  nodeName, readyStatus, isUnschedulable, finalStatus);
+        
+        return finalStatus;
     }
 
     /**
