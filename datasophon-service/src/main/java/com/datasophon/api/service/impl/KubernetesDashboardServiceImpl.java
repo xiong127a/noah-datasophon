@@ -52,6 +52,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 /**
  * Kubernetes仪表盘服务实现类
@@ -92,37 +93,236 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     /**
-     * 通用的分页查询方法
+     * 通用的分页查询方法 - 智能混合分页策略
+     * 
+     * 策略说明：
+     * 1. 无搜索/筛选条件：使用Continue Token原生分页（最优性能）
+     * 2. 有搜索/筛选条件：使用内存分页（确保功能正确性）
+     * 3. 未来优化：将部分筛选条件推送到Kubernetes API层（labelSelector、fieldSelector）
      */
     private <T extends HasMetadata> PaginatedResult<T> paginateResources(
             KubernetesClient client, Class<T> resourceClass, String namespace, Integer pageNum, Integer pageSize) {
         try {
-            List<T> allItems;
+            // 如果不需要分页，获取所有项目（保持向后兼容）
+            if (pageNum == null || pageSize == null) {
+                List<T> allItems;
+                if (namespace != null && !namespace.isEmpty()) {
+                    allItems = client.resources(resourceClass).inNamespace(namespace).list().getItems();
+                } else {
+                    allItems = client.resources(resourceClass).list().getItems();
+                }
+                return new PaginatedResult<>(allItems, allItems.size(), 1);
+            }
 
-            // 根据资源类型和命名空间获取资源列表
+            log.info("执行智能分页查询: 资源类型={}, 命名空间={}, 页码={}, 页大小={}", 
+                resourceClass.getSimpleName(), namespace, pageNum, pageSize);
+
+            // 对于不需要复杂筛选的资源，直接使用Continue Token分页
+            return paginateWithContinueToken(client, resourceClass, namespace, pageNum, pageSize);
+
+        } catch (Exception e) {
+            log.error("分页查询Kubernetes资源出错: {}", e.getMessage(), e);
+            return new PaginatedResult<>(Collections.emptyList(), 0, 0);
+        }
+    }
+
+    /**
+     * 通用的带搜索筛选的分页查询方法
+     * 当有搜索或筛选条件时，必须使用内存分页
+     */
+    private <T extends HasMetadata> PaginatedResult<T> paginateResourcesWithFiltering(
+            KubernetesClient client, Class<T> resourceClass, String namespace, 
+            Integer pageNum, Integer pageSize, java.util.function.Predicate<T> filterPredicate) {
+        try {
+            log.info("执行带筛选的分页查询: 资源类型={}, 命名空间={}, 页码={}, 页大小={}", 
+                resourceClass.getSimpleName(), namespace, pageNum, pageSize);
+
+            // 获取所有数据用于筛选
+            List<T> allItems;
             if (namespace != null && !namespace.isEmpty()) {
                 allItems = client.resources(resourceClass).inNamespace(namespace).list().getItems();
             } else {
                 allItems = client.resources(resourceClass).list().getItems();
             }
 
-            // 如果不需要分页，返回所有项目
-            if (pageNum == null || pageSize == null) {
-                return new PaginatedResult<>(allItems, allItems.size(), 1);
+            // 应用筛选条件
+            List<T> filteredItems = allItems.stream()
+                .filter(filterPredicate)
+                .collect(Collectors.toList());
+
+            log.info("筛选完成: 原始数据={}, 筛选后数据={}", allItems.size(), filteredItems.size());
+
+            // 对筛选后的数据进行内存分页
+            return applyPagination(filteredItems, pageNum, pageSize);
+
+        } catch (Exception e) {
+            log.error("带筛选的分页查询出错: {}", e.getMessage(), e);
+            return new PaginatedResult<>(Collections.emptyList(), 0, 0);
+        }
+    }
+
+    /**
+     * 使用Continue Token实现真正的Kubernetes API分页
+     */
+    private <T extends HasMetadata> PaginatedResult<T> paginateWithContinueToken(
+            KubernetesClient client, Class<T> resourceClass, String namespace, Integer pageNum, Integer pageSize) {
+        
+        // 第一步：获取总数（用于前端分页组件显示）
+        // 注意：在生产环境中，为了性能可以考虑缓存总数或者使用估算
+        int totalCount = getTotalResourceCount(client, resourceClass, namespace);
+        int totalPages = (int) Math.ceil((double) totalCount / pageSize);
+        
+        // 第二步：使用Continue Token获取当前页数据
+        List<T> currentPageItems = getCurrentPageWithContinueToken(
+            client, resourceClass, namespace, pageNum, pageSize);
+        
+        log.info("Continue Token分页完成: 总数={}, 当前页数据量={}, 总页数={}, 目标页码={}", 
+            totalCount, currentPageItems.size(), totalPages, pageNum);
+        
+        return new PaginatedResult<>(currentPageItems, totalCount, totalPages);
+    }
+
+    /**
+     * 获取资源总数
+     */
+    private <T extends HasMetadata> int getTotalResourceCount(
+            KubernetesClient client, Class<T> resourceClass, String namespace) {
+        try {
+            // 使用limit=1仅获取metadata信息来计算总数
+            io.fabric8.kubernetes.api.model.ListOptions countOptions = 
+                new io.fabric8.kubernetes.api.model.ListOptionsBuilder()
+                    .withLimit(1L) // 只要1个item，主要是为了获取remainingItemCount
+                    .build();
+
+            io.fabric8.kubernetes.api.model.KubernetesResourceList<T> result;
+            if (namespace != null && !namespace.isEmpty()) {
+                result = client.resources(resourceClass).inNamespace(namespace).list(countOptions);
+            } else {
+                result = client.resources(resourceClass).list(countOptions);
             }
 
-            // 计算分页
-            int total = allItems.size();
-            int totalPages = (int) Math.ceil((double) total / pageSize);
-            int startIndex = (pageNum - 1) * pageSize;
-            int endIndex = Math.min(startIndex + pageSize, total);
-
-            List<T> pagedItems = startIndex >= total ? Collections.emptyList() : allItems.subList(startIndex, endIndex);
-
-            return new PaginatedResult<>(pagedItems, total, totalPages);
+            // 计算总数：当前返回的数量 + 剩余数量
+            Long remainingItemCount = result.getMetadata().getRemainingItemCount();
+            int currentItems = result.getItems().size();
+            
+            if (remainingItemCount != null) {
+                return currentItems + remainingItemCount.intValue();
+            } else {
+                // 如果没有remainingItemCount，说明数据量较小，直接获取所有数据计算总数
+                List<T> allItems;
+                if (namespace != null && !namespace.isEmpty()) {
+                    allItems = client.resources(resourceClass).inNamespace(namespace).list().getItems();
+                } else {
+                    allItems = client.resources(resourceClass).list().getItems();
+                }
+                return allItems.size();
+            }
         } catch (Exception e) {
-            log.error("分页查询Kubernetes资源出错: {}", e.getMessage(), e);
-            return new PaginatedResult<>(Collections.emptyList(), 0, 0);
+            log.warn("获取资源总数失败，使用备用方法: {}", e.getMessage());
+            // 备用方案：获取所有数据计算总数
+            List<T> allItems;
+            if (namespace != null && !namespace.isEmpty()) {
+                allItems = client.resources(resourceClass).inNamespace(namespace).list().getItems();
+            } else {
+                allItems = client.resources(resourceClass).list().getItems();
+            }
+            return allItems.size();
+        }
+    }
+
+    /**
+     * 使用Continue Token获取指定页的数据
+     */
+    private <T extends HasMetadata> List<T> getCurrentPageWithContinueToken(
+            KubernetesClient client, Class<T> resourceClass, String namespace, 
+            Integer pageNum, Integer pageSize) {
+        
+        try {
+            // 计算需要跳过的项目数
+            int skipItems = (pageNum - 1) * pageSize;
+            String continueToken = null;
+            int currentSkipped = 0;
+            
+            // 通过Continue Token逐步获取到目标页
+            while (currentSkipped < skipItems) {
+                int remainingToSkip = skipItems - currentSkipped;
+                int currentLimit = Math.min(remainingToSkip + pageSize, 500); // 每次最多获取500个，避免单次请求过大
+                
+                io.fabric8.kubernetes.api.model.ListOptions options = 
+                    new io.fabric8.kubernetes.api.model.ListOptionsBuilder()
+                        .withLimit((long) currentLimit)
+                        .withContinue(continueToken)
+                        .build();
+
+                io.fabric8.kubernetes.api.model.KubernetesResourceList<T> result;
+                if (namespace != null && !namespace.isEmpty()) {
+                    result = client.resources(resourceClass).inNamespace(namespace).list(options);
+                } else {
+                    result = client.resources(resourceClass).list(options);
+                }
+
+                List<T> items = result.getItems();
+                
+                if (currentSkipped + items.size() > skipItems) {
+                    // 找到了目标页的起始位置
+                    int startIndex = skipItems - currentSkipped;
+                    int endIndex = Math.min(startIndex + pageSize, items.size());
+                    
+                    List<T> pageItems = items.subList(startIndex, endIndex);
+                    
+                    // 如果当前批次不够一页，需要继续获取
+                    if (pageItems.size() < pageSize && result.getMetadata().getContinue() != null) {
+                        List<T> additionalItems = getAdditionalItems(
+                            client, resourceClass, namespace, result.getMetadata().getContinue(), 
+                            pageSize - pageItems.size());
+                        pageItems.addAll(additionalItems);
+                    }
+                    
+                    return pageItems;
+                }
+                
+                currentSkipped += items.size();
+                continueToken = result.getMetadata().getContinue();
+                
+                // 如果没有更多数据，跳出循环
+                if (continueToken == null || continueToken.isEmpty()) {
+                    break;
+                }
+            }
+            
+            // 如果到这里，说明请求的页数超出了实际数据范围
+            return Collections.emptyList();
+            
+        } catch (Exception e) {
+            log.error("Continue Token分页获取数据失败: {}", e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+
+    /**
+     * 获取额外的项目以填满一页
+     */
+    private <T extends HasMetadata> List<T> getAdditionalItems(
+            KubernetesClient client, Class<T> resourceClass, String namespace, 
+            String continueToken, int neededItems) {
+        try {
+            io.fabric8.kubernetes.api.model.ListOptions options = 
+                new io.fabric8.kubernetes.api.model.ListOptionsBuilder()
+                    .withLimit((long) neededItems)
+                    .withContinue(continueToken)
+                    .build();
+
+            io.fabric8.kubernetes.api.model.KubernetesResourceList<T> result;
+            if (namespace != null && !namespace.isEmpty()) {
+                result = client.resources(resourceClass).inNamespace(namespace).list(options);
+            } else {
+                result = client.resources(resourceClass).list(options);
+            }
+
+            return result.getItems();
+        } catch (Exception e) {
+            log.error("获取额外项目失败: {}", e.getMessage(), e);
+            return Collections.emptyList();
         }
     }
 
@@ -211,30 +411,56 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            // 获取所有Pod（不分页，用于搜索和筛选）
-            List<Pod> allPods;
-            if (namespace != null && !namespace.isEmpty()) {
-                allPods = client.pods().inNamespace(namespace).list().getItems();
+            // 智能分页策略：如果没有搜索和筛选条件，使用Continue Token分页（最优性能）
+            boolean hasFilters = (searchTerm != null && !searchTerm.trim().isEmpty()) || 
+                                (statusFilter != null && !statusFilter.isEmpty() && !statusFilter.equals("all"));
+
+            if (!hasFilters) {
+                // 无过滤条件：使用Continue Token分页
+                log.info("使用Continue Token分页获取Pods（无过滤条件）");
+                PaginatedResult<Pod> paginationResult = paginateResources(
+                    client, Pod.class, namespace, pageNum, pageSize);
+                return createPageResult(paginationResult.items(), paginationResult, pageNum, pageSize);
             } else {
-                allPods = client.pods().inAnyNamespace().list().getItems();
+                // 有过滤条件：使用传统的全量获取+内存过滤+分页
+                log.info("使用内存过滤分页获取Pods（有过滤条件：searchTerm={}, statusFilter={})", 
+                    searchTerm, statusFilter);
+                return getPodsWithFiltering(client, namespace, searchTerm, statusFilter, pageNum, pageSize);
             }
 
-            log.info("从Kubernetes集群获取到{}个Pod", allPods.size());
-
-            // 应用搜索和筛选
-            List<Pod> filteredPods = applyPodsSearchAndFilter(allPods, searchTerm, statusFilter);
-            
-            log.info("搜索和筛选后剩余{}个Pod", filteredPods.size());
-
-            // 应用分页
-            PaginatedResult<Pod> paginationResult = applyPagination(filteredPods, pageNum, pageSize);
-
-            // 使用通用createPageResult方法
-            return createPageResult(paginationResult.items(), paginationResult, pageNum, pageSize);
         } catch (Exception e) {
             log.error("获取Pods列表出错", e);
             throw new RuntimeException("获取Pods列表出错: " + e.getMessage());
         }
+    }
+
+    /**
+     * 带过滤条件的Pods分页获取（内存分页）
+     */
+    private PageResult<KubernetesResourceDTO> getPodsWithFiltering(
+            KubernetesClient client, String namespace, String searchTerm, 
+            String statusFilter, Integer pageNum, Integer pageSize) {
+        
+        // 获取所有Pod（用于搜索和筛选）
+        List<Pod> allPods;
+        if (namespace != null && !namespace.isEmpty()) {
+            allPods = client.pods().inNamespace(namespace).list().getItems();
+        } else {
+            allPods = client.pods().inAnyNamespace().list().getItems();
+        }
+
+        log.info("从Kubernetes集群获取到{}个Pod用于过滤", allPods.size());
+
+        // 应用搜索和筛选
+        List<Pod> filteredPods = applyPodsSearchAndFilter(allPods, searchTerm, statusFilter);
+        
+        log.info("搜索和筛选后剩余{}个Pod", filteredPods.size());
+
+        // 应用分页
+        PaginatedResult<Pod> paginationResult = applyPagination(filteredPods, pageNum, pageSize);
+
+        // 使用通用createPageResult方法
+        return createPageResult(paginationResult.items(), paginationResult, pageNum, pageSize);
     }
 
     /**
@@ -325,7 +551,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     }
 
     /**
-     * 对已过滤的资源列表应用分页
+     * 对已过滤的资源列表应用分页 - 优化版本
+     * 注意：这是对已经过滤后的数据进行分页，主要用于Pods的搜索和筛选场景
      */
     private <T> PaginatedResult<T> applyPagination(List<T> items, Integer pageNum, Integer pageSize) {
         if (pageNum == null || pageSize == null) {
@@ -338,6 +565,8 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         int endIndex = Math.min(startIndex + pageSize, total);
 
         List<T> pagedItems = startIndex >= total ? Collections.emptyList() : items.subList(startIndex, endIndex);
+        
+        log.info("应用内存分页: 总数={}, 页码={}, 页大小={}, 当前页数据量={}", total, pageNum, pageSize, pagedItems.size());
 
         return new PaginatedResult<>(pagedItems, total, totalPages);
     }

@@ -50,14 +50,15 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { KubernetesAPI, K8sResourceListResponse } from '@/lib/kubernetes-api';
+import KubernetesPagination from "../components/kubernetes-pagination";
 
-interface ActivityClassesDashboardProps {
+interface StorageClassesDashboardProps {
   clusterId: string;
   namespace: string;
   className?: string;
 }
 
-interface ActivityClass {
+interface StorageClass {
   name: string;
   provisioner: string;
   reclaimPolicy: string;
@@ -72,19 +73,20 @@ interface ActivityClass {
   usageCount: number; // PVC使用此存储类的数量
 }
 
-const ActivityClassesDashboard: React.FC<ActivityClassesDashboardProps> = ({
+const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
   clusterId,
   className
 }) => {
-  const [storageClasses, setActivityClasses] = useState<ActivityClass[]>([]);
+  const [storageClasses, setStorageClasses] = useState<StorageClass[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [provisionerFilter, setProvisionerFilter] = useState<string>("all");
-  const [selectedSC] = useState<ActivityClass | null>(null);
+  const [selectedSC] = useState<StorageClass | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pageNum] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageNum, setPageNum] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
   // 筛选和搜索ActivityClasses
   const filteredSCs = useMemo(() => {
@@ -116,8 +118,8 @@ const ActivityClassesDashboard: React.FC<ActivityClassesDashboardProps> = ({
     };
   }, [storageClasses]);
 
-  // 获取ActivityClasses数据
-  const fetchActivityClasses = useCallback(async () => {
+  // 获取StorageClasses数据
+  const fetchStorageClasses = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
@@ -129,13 +131,13 @@ const ActivityClassesDashboard: React.FC<ActivityClassesDashboardProps> = ({
         pageSize
       );
 
-      // 转换API响应为组件需要的ActivityClass格式
-      const convertedSCs: ActivityClass[] = response.data.map((resource: any) => {
-        // 从多个可能的位置获取ActivityClass的实际数据
+      // 转换API响应为组件需要的StorageClass格式
+      const convertedSCs: StorageClass[] = response.data.map((resource: any) => {
+        // 从多个可能的位置获取StorageClass的实际数据
         const spec = resource.spec || resource.additionalProperties?.spec || {};
         const metadata = resource.metadata || resource.additionalProperties?.metadata || {};
         
-        console.log('🔍 ActivityClass原始数据:', {
+        console.log('🔍 StorageClass原始数据:', {
           name: resource.name,
           hasSpec: !!resource.spec,
           hasMetadata: !!resource.metadata,
@@ -159,11 +161,12 @@ const ActivityClassesDashboard: React.FC<ActivityClassesDashboardProps> = ({
         };
       });
 
-      setActivityClasses(convertedSCs);
+      setStorageClasses(convertedSCs);
+      setTotal(response.total || convertedSCs.length);
     } catch (error) {
-      console.error('获取ActivityClasses失败:', error);
-      setError(error instanceof Error ? error.message : '获取ActivityClasses失败');
-      setActivityClasses([]);
+      console.error('获取StorageClasses失败:', error);
+      setError(error instanceof Error ? error.message : '获取StorageClasses失败');
+      setStorageClasses([]);
     } finally {
       setLoading(false);
     }
@@ -231,7 +234,17 @@ const ActivityClassesDashboard: React.FC<ActivityClassesDashboardProps> = ({
 
   // 刷新数据
   const handleRefresh = async () => {
-    await fetchActivityClasses();
+    await fetchStorageClasses();
+  };
+
+  // 分页处理函数
+  const handlePageChange = (page: number) => {
+    setPageNum(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageNum(1); // 重置到第一页
   };
 
 
@@ -244,8 +257,8 @@ const ActivityClassesDashboard: React.FC<ActivityClassesDashboardProps> = ({
 
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
-    fetchActivityClasses();
-  }, [fetchActivityClasses]);
+    fetchStorageClasses();
+  }, [fetchStorageClasses]);
 
   if (loading && storageClasses.length === 0) {
     return (
@@ -502,17 +515,32 @@ const ActivityClassesDashboard: React.FC<ActivityClassesDashboardProps> = ({
           {filteredSCs.length === 0 && !loading && (
             <div className="text-center py-8">
               <Settings className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">暂无ActivityClasses</h3>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">暂无StorageClasses</h3>
               <p className="text-gray-500 mb-4">
-                {searchTerm ? '没有找到匹配的ActivityClasses' : '集群中没有ActivityClasses'}
+                {searchTerm ? '没有找到匹配的StorageClasses' : '集群中没有StorageClasses'}
               </p>
 
             </div>
           )}
         </CardContent>
+
+        {/* 分页控件 */}
+        {total > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            <KubernetesPagination
+              currentPage={pageNum}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              loading={loading}
+              className="!bg-transparent !border-0 !shadow-none !p-0"
+            />
+          </div>
+        )}
       </Card>
 
-      {/* ActivityClass详情模态框 */}
+      {/* StorageClass详情模态框 */}
       {showDetails && selectedSC && (
         <motion.div
           initial={{ opacity: 0 }}
@@ -704,4 +732,4 @@ const ActivityClassesDashboard: React.FC<ActivityClassesDashboardProps> = ({
   );
 };
 
-export default ActivityClassesDashboard;
+export default StorageClassesDashboard;

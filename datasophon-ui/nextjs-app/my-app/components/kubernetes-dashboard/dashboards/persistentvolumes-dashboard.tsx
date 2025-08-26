@@ -56,8 +56,8 @@ import {
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-
 import { KubernetesAPI, K8sResourceListResponse } from '@/lib/kubernetes-api';
+import KubernetesPagination from "../components/kubernetes-pagination";
 
 interface PersistentVolumesDashboardProps {
   clusterId: string;
@@ -96,10 +96,10 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
 
   const [selectedPV] = useState<PersistentVolume | null>(null);
   const [showDetails, setShowDetails] = useState(false);
-  const [pageNum] = useState(1);
+  const [pageNum, setPageNum] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
-
-  const [pageSize] = useState(20);
 
   // 解析容量（转换为字节）
   const parseCapacity = (capacityStr: string): number => {
@@ -216,6 +216,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
       });
 
       setPersistentVolumes(convertedPVs);
+      setTotal(response.total || convertedPVs.length);
     } catch (error) {
       console.error('获取PersistentVolumes失败:', error);
       setError(error instanceof Error ? error.message : '获取PersistentVolumes失败');
@@ -296,6 +297,16 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
   // 刷新数据
   const handleRefresh = async () => {
     await fetchPersistentVolumes();
+  };
+
+  // 分页处理函数
+  const handlePageChange = (page: number) => {
+    setPageNum(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageNum(1); // 重置到第一页
   };
 
 
@@ -570,6 +581,21 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
             </div>
           )}
         </CardContent>
+
+        {/* 分页控件 */}
+        {total > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            <KubernetesPagination
+              currentPage={pageNum}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              loading={loading}
+              className="!bg-transparent !border-0 !shadow-none !p-0"
+            />
+          </div>
+        )}
       </Card>
 
       {/* PV详情模态框 */}

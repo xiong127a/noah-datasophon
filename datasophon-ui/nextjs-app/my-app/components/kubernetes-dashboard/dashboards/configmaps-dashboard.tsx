@@ -49,6 +49,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { KubernetesAPI, K8sResource, K8sResourceListResponse } from '@/lib/kubernetes-api';
+import KubernetesPagination from "../components/kubernetes-pagination";
 
 interface ConfigMapsDashboardProps {
   clusterId: string;
@@ -81,7 +82,7 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  const [pageSize] = useState(20);
+  const [pageSize, setPageSize] = useState(10);
 
 
   // 筛选和搜索ConfigMaps
@@ -177,6 +178,16 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
   // 刷新数据
   const handleRefresh = async () => {
     await fetchConfigMaps();
+  };
+
+  // 分页处理函数
+  const handlePageChange = (page: number) => {
+    setPageNum(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageNum(1); // 重置到第一页
   };
 
 
@@ -382,6 +393,21 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
             </div>
           )}
         </CardContent>
+
+        {/* 分页控件 */}
+        {total > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            <KubernetesPagination
+              currentPage={pageNum}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              loading={loading}
+              className="!bg-transparent !border-0 !shadow-none !p-0"
+            />
+          </div>
+        )}
       </Card>
 
       {/* ConfigMap详情模态框 */}

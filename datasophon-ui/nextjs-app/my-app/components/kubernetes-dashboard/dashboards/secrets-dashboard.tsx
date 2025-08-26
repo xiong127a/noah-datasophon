@@ -58,6 +58,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { KubernetesAPI, K8sResourceListResponse } from '@/lib/kubernetes-api';
+import KubernetesPagination from "../components/kubernetes-pagination";
 
 interface SecretsDashboardProps {
   clusterId: string;
@@ -89,10 +90,10 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
   const [showDetails, setShowDetails] = useState(false);
   const [showValues, setShowValues] = useState<Record<string, boolean>>({});
   const [selectedSecret] = useState<Secret | null>(null);
-  const [pageNum] = useState(1);
+  const [pageNum, setPageNum] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
-
-  const [pageSize] = useState(20);
 
 
   // 筛选和搜索Secrets
@@ -166,6 +167,7 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
       });
 
       setSecrets(convertedSecrets);
+      setTotal(response.total || convertedSecrets.length);
     } catch (error) {
       console.error('获取Secrets失败:', error);
       setError(error instanceof Error ? error.message : '获取Secrets失败');
@@ -246,6 +248,16 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
   // 刷新数据
   const handleRefresh = async () => {
     await fetchSecrets();
+  };
+
+  // 分页处理函数
+  const handlePageChange = (page: number) => {
+    setPageNum(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageNum(1); // 重置到第一页
   };
 
 
@@ -485,6 +497,21 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
             </div>
           )}
         </CardContent>
+
+        {/* 分页控件 */}
+        {total > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            <KubernetesPagination
+              currentPage={pageNum}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              loading={loading}
+              className="!bg-transparent !border-0 !shadow-none !p-0"
+            />
+          </div>
+        )}
       </Card>
 
       {/* Secret详情模态框 */}

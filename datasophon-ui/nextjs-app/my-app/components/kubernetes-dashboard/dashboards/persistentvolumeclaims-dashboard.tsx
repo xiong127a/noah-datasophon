@@ -50,6 +50,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 import { KubernetesAPI, K8sResourceListResponse } from '@/lib/kubernetes-api';
+import KubernetesPagination from "../components/kubernetes-pagination";
 
 interface PersistentVolumeClaimsDashboardProps {
   clusterId: string;
@@ -92,8 +93,9 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
   const [selectedPVC] = useState<PersistentVolumeClaim | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pageNum] = useState(1);
-  const [pageSize] = useState(20);
+  const [pageNum, setPageNum] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [total, setTotal] = useState(0);
 
   // 解析容量（转换为字节）
   const parseCapacity = (capacityStr: string): number => {
@@ -226,6 +228,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
       });
 
       setPVCs(convertedPVCs);
+      setTotal(response.total || convertedPVCs.length);
     } catch (error) {
       console.error('获取PersistentVolumeClaims失败:', error);
       setError(error instanceof Error ? error.message : '获取PersistentVolumeClaims失败');
@@ -285,6 +288,16 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
   // 刷新数据
   const handleRefresh = async () => {
     await fetchPVCs();
+  };
+
+  // 分页处理函数
+  const handlePageChange = (page: number) => {
+    setPageNum(page);
+  };
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPageNum(1); // 重置到第一页
   };
 
 
@@ -544,6 +557,21 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
             </div>
           )}
         </CardContent>
+
+        {/* 分页控件 */}
+        {total > 0 && (
+          <div className="p-4 border-t border-gray-100 bg-gray-50/50">
+            <KubernetesPagination
+              currentPage={pageNum}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={handlePageChange}
+              onPageSizeChange={handlePageSizeChange}
+              loading={loading}
+              className="!bg-transparent !border-0 !shadow-none !p-0"
+            />
+          </div>
+        )}
       </Card>
 
       {/* PVC详情模态框 */}
