@@ -148,20 +148,20 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
   const [resourceStats, setResourceStats] = useState<K8sResourceStats | null>(null);
 
   // 添加调试日志
-  console.log('KubernetesDashboard 组件加载:', { clusterId, clusterName, selectedNamespace, currentView });
+  
 
   // 获取资源统计数据
   const fetchResourceStats = useCallback(async () => {
     if (!clusterId) return;
     
-    console.log('📊 开始获取集群全局资源统计数据:', { clusterId });
+
     
     try {
       // 动态导入API工具类
       const { KubernetesAPI } = await import('@/lib/kubernetes-api');
       // 集群总览应该显示所有命名空间的资源统计，而不是特定命名空间
       const stats = await KubernetesAPI.getResourceStats(clusterId, undefined, 'all');
-      console.log('✅ 获取资源统计成功:', stats);
+
       setResourceStats(stats);
     } catch (error) {
       console.error('❌ 获取资源统计失败:', error);

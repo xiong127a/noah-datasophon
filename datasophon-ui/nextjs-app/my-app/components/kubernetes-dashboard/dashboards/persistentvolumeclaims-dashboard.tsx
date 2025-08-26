@@ -200,14 +200,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
         const spec = resource.spec || resource.additionalProperties?.spec || {};
         const status = resource.status || resource.metadata || resource.additionalProperties?.status || {};
         
-        console.log('🔍 PVC原始数据:', {
-          name: resource.name,
-          hasSpec: !!resource.spec,
-          hasStatus: !!resource.status,
-          hasMetadata: !!resource.metadata,
-          hasAdditionalProps: !!resource.additionalProperties,
-          fullResource: resource
-        });
+
         
         return {
           name: resource.name || '',

@@ -94,11 +94,9 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
   const fetchServices = useCallback(async () => {
     if (!clusterId) return;
     
-    console.log('🔄 开始获取Services列表:', { clusterId, namespace, pageNum, pageSize });
     setLoading(true);
     setError(null);
     try {
-      console.log('📡 调用 KubernetesAPI.getServices API...');
       const response = await KubernetesAPI.getServices(
         clusterId,
         namespace || undefined,
@@ -106,7 +104,6 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
         pageNum,
         pageSize
       );
-      console.log('✅ 获取Services成功，数量:', response.data.length);
 
       // 转换API响应为组件需要的Service格式
       const convertedServices: Service[] = (response.data as unknown as ServiceApiResource[]).map((resource: ServiceApiResource) => ({

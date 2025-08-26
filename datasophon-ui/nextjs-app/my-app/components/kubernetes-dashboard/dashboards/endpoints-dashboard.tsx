@@ -129,29 +129,19 @@ const EndpointsDashboard: React.FC<EndpointsDashboardProps> = ({
     setLoading(true);
     setError(null);
     try {
-      console.log('📡 调用 KubernetesAPI.getEndpoints API...');
-      console.log('🔍 Endpoints 调用参数:', { 
-        clusterId, 
-        namespace: namespace || undefined, 
-        pageNum, 
-        pageSize 
-      });
       const response = await KubernetesAPI.getEndpoints(
         clusterId,
         namespace || undefined,
         pageNum,
         pageSize
       );
-      console.log('✅ 获取Endpoints成功，数据结构:', response);
-      console.log('✅ 获取Endpoints成功，数量:', response.data?.length);
-      console.log('✅ 实际数据数组:', response.data);
       
       // 检查数据结构并提取实际的数组
       const apiResponse = response as unknown as ApiResponse;
       const dataArray = Array.isArray(apiResponse.data) 
         ? apiResponse.data 
         : (apiResponse.data as { data: EndpointApiResource[]; total?: string | number })?.data || [];
-      console.log('✅ 使用的数据数组:', dataArray, '长度:', dataArray.length);
+
 
       // 转换API响应为组件需要的Endpoint格式
       const convertedEndpoints: Endpoint[] = dataArray.map((resource: EndpointApiResource) => ({
@@ -188,7 +178,7 @@ const EndpointsDashboard: React.FC<EndpointsDashboardProps> = ({
       // 使用正确的总数：优先使用API返回的total，其次使用数据长度
       const nestedData = !Array.isArray(apiResponse.data) ? apiResponse.data as { data: EndpointApiResource[]; total?: string | number } : null;
       const totalCount = apiResponse.total || nestedData?.total || convertedEndpoints.length;
-      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: apiResponse.total, dataTotal: nestedData?.total, arrayLength: convertedEndpoints.length });
+
       setTotal(typeof totalCount === 'string' ? parseInt(totalCount) : totalCount);
     } catch (error) {
       console.error('获取Endpoints失败:', error);

@@ -97,29 +97,19 @@ const IngressesDashboard: React.FC<IngressesDashboardProps> = ({
     setLoading(true);
     setError(null);
     try {
-      console.log('📡 调用 KubernetesAPI.getIngresses API...');
-      console.log('🔍 Ingresses 调用参数:', { 
-        clusterId, 
-        namespace: namespace || undefined, 
-        pageNum, 
-        pageSize 
-      });
       const response = await KubernetesAPI.getIngresses(
         clusterId,
         namespace || undefined,
         pageNum,
         pageSize
       );
-      console.log('✅ 获取Ingresses成功，数据结构:', response);
-      console.log('✅ 获取Ingresses成功，数量:', response.data?.length);
-      console.log('✅ 实际数据数组:', response.data);
       
       // 检查数据结构并提取实际的数组
       const apiResponse = response as unknown as ApiResponse;
       const dataArray = Array.isArray(apiResponse.data) 
         ? apiResponse.data 
         : (apiResponse.data as { data: IngressApiResource[]; total?: string | number })?.data || [];
-      console.log('✅ 使用的数据数组:', dataArray, '长度:', dataArray.length);
+
 
       // 转换API响应为组件需要的Ingress格式
       const convertedIngresses: Ingress[] = dataArray.map((resource: IngressApiResource) => ({
@@ -163,7 +153,7 @@ const IngressesDashboard: React.FC<IngressesDashboardProps> = ({
       // 使用正确的总数：优先使用API返回的total，其次使用数据长度
       const nestedData = !Array.isArray(apiResponse.data) ? apiResponse.data as { data: IngressApiResource[]; total?: string | number } : null;
       const totalCount = apiResponse.total || nestedData?.total || convertedIngresses.length;
-      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: apiResponse.total, dataTotal: nestedData?.total, arrayLength: convertedIngresses.length });
+
       setTotal(typeof totalCount === 'string' ? parseInt(totalCount) : totalCount);
     } catch (error) {
       console.error('获取Ingresses失败:', error);

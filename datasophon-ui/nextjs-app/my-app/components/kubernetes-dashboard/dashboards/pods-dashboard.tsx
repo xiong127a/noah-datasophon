@@ -107,7 +107,6 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
     try {
       const { KubernetesAPI } = await import('@/lib/kubernetes-api');
       const statsResponse = await KubernetesAPI.getResourceStats(clusterId, serviceId, namespace);
-      console.log('📊 获取全局Pod统计（后端计算）:', statsResponse);
       
       setGlobalStats({
         total: statsResponse.podCount || 0,
@@ -161,12 +160,10 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
   const fetchPods = useCallback(async () => {
     if (!clusterId) return;
     
-    console.log('🔄 开始获取Pods列表:', { clusterId, namespace, pageNum, pageSize });
     setLoading(true);
     try {
       // 动态导入API工具类
       const { KubernetesAPI } = await import('@/lib/kubernetes-api');
-      console.log('📡 调用 KubernetesAPI.getPods API...');
       const response = await KubernetesAPI.getPods(
         clusterId,
         namespace || undefined,
@@ -176,31 +173,6 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
         searchTerm || undefined,
         statusFilter || undefined
       );
-      console.log('✅ 获取Pods成功，数量:', response.data.length);
-      console.log('📄 分页信息:', { pageNum, pageSize, total: response.total });
-      
-      // 调试主机字段映射
-      if (response.data?.[0]) {
-        const firstPod = response.data[0];
-        console.log('🔍 第一个Pod的完整数据结构:', firstPod);
-        console.log('🔍 第一个Pod的所有字段:', Object.keys(firstPod));
-        console.log('🔍 第一个Pod的节点相关字段:', {
-          // 顶层字段
-          nodeName: firstPod.nodeName,
-          node: firstPod.node,
-          hostName: firstPod.hostName,
-          host: firstPod.host,
-          // additionalProperties中的字段
-          additionalProperties: firstPod.additionalProperties,
-          additionalNodeName: firstPod.additionalProperties?.nodeName,
-          additionalNode: firstPod.additionalProperties?.node,
-          additionalHostName: firstPod.additionalProperties?.hostName,
-          additionalHost: firstPod.additionalProperties?.host,
-          // 其他可能的字段
-          spec: firstPod.spec,
-          status: firstPod.status
-        });
-      }
 
       // 更新总数
       setTotal(response.total || response.data.length);

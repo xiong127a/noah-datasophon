@@ -99,7 +99,6 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
     setLoading(true);
     setError(null);
     try {
-      console.log('📡 调用 KubernetesAPI.getDeployments API...');
       const response = await KubernetesAPI.getDeployments(
         clusterId,
         namespace || undefined,
@@ -107,16 +106,12 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
         pageNum,
         pageSize
       );
-      console.log('✅ 获取Deployments成功，数据结构:', response);
-      console.log('✅ 获取Deployments成功，数量:', response.data?.length);
-      console.log('✅ 实际数据数组:', response.data);
       
       // 检查数据结构并提取实际的数组
       const apiResponse = response as unknown as ApiResponse;
       const dataArray = Array.isArray(apiResponse.data) 
         ? apiResponse.data 
         : (apiResponse.data as { data: DeploymentApiResource[]; total?: string | number })?.data || [];
-      console.log('✅ 使用的数据数组:', dataArray, '长度:', dataArray.length);
 
       // 转换API响应为组件需要的Deployment格式
       const convertedDeployments: Deployment[] = dataArray.map((resource: DeploymentApiResource) => ({
@@ -161,7 +156,6 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
       // 使用正确的总数：优先使用API返回的total，其次使用数据长度
       const nestedData = !Array.isArray(apiResponse.data) ? apiResponse.data as { data: DeploymentApiResource[]; total?: string | number } : null;
       const totalCount = apiResponse.total || nestedData?.total || convertedDeployments.length;
-      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: apiResponse.total, dataTotal: nestedData?.total, arrayLength: convertedDeployments.length });
       setTotal(typeof totalCount === 'string' ? parseInt(totalCount) : totalCount);
     } catch (error) {
       console.error('获取Deployments失败:', error);

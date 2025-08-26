@@ -109,20 +109,10 @@ function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
     // Kubernetes仪表盘页签（只有K8s集群才显示）
     const isK8sCluster = currentCluster?.isK8s || (currentCluster?.depType && ClusterTypeUtil.isKubernetes(currentCluster.depType))
     if (isK8sCluster) {
-      console.log('添加Kubernetes仪表盘标签页', { 
-        clusterName: currentCluster?.clusterName, 
-        isK8s: currentCluster?.isK8s, 
-        depType: currentCluster?.depType,
-        isK8sCluster 
-      })
+
       baseTabs.push({ key: 'k8s-dashboard', label: 'Kubernetes仪表盘', icon: Grid3X3 })
     } else {
-      console.log('不显示Kubernetes仪表盘', { 
-        currentCluster, 
-        isK8s: currentCluster?.isK8s, 
-        depType: currentCluster?.depType,
-        isK8sCluster 
-      })
+
     }
     
     // 连接信息页签（只有部分服务支持）
@@ -141,7 +131,7 @@ function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
       baseTabs.push({ key: 'queue', label: '资源配置', icon: Monitor })
     }
     
-    console.log('生成的标签页列表:', baseTabs.map(tab => tab.label))
+
     return baseTabs
   }, [service.serviceId, service.serviceName, currentCluster?.isK8s, currentCluster?.depType])
   
@@ -173,11 +163,7 @@ function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
       case 'config':
         return <ConfigTab {...commonProps} />
       case 'k8s-dashboard':
-        console.log('🔧 准备渲染KubernetesDashboard:', { 
-          clusterId: currentCluster?.id, 
-          clusterName: currentCluster?.clusterName,
-          currentCluster 
-        });
+;
         return <KubernetesDashboard 
           clusterId={currentCluster?.id || ''} 
           serviceId={service.serviceId || ''} 
@@ -395,7 +381,7 @@ export default function ServiceLayout() {
     
     // 存储到localStorage，供hasOverviewTab和总览组件使用
     localStorage.setItem('menuData', JSON.stringify(menuData))
-    console.log('已更新完整menuData到localStorage:', menuData)
+
   }, [services, coreServices, managementServices])
 
   // 当服务数据更新时，重新构建menuData
@@ -434,7 +420,7 @@ export default function ServiceLayout() {
       
       if (response.data && response.data.code === 200) {
         setMainDashboardUrl(response.data.data)
-        console.log('获取主页集群总览URL成功:', response.data.data)
+
       } else {
         console.error('获取主页集群总览URL失败:', response.data?.msg)
       }
@@ -452,7 +438,7 @@ export default function ServiceLayout() {
       
       if (response.data && response.data.code === 200) {
         setDatasophonDashboardUrl(response.data.data)
-        console.log('获取大数据基础平台总览URL成功:', response.data.data)
+
       } else {
         console.error('获取大数据基础平台总览URL失败:', response.data?.msg)
       }
@@ -491,7 +477,7 @@ export default function ServiceLayout() {
     switch (action) {
       case 'add':
         // 添加服务功能 - 打开服务安装向导
-        console.log('打开添加服务向导')
+
         setShowAddServiceWizard(true)
         break
         
@@ -507,7 +493,7 @@ export default function ServiceLayout() {
         try {
           // 获取所有服务的ID
           const serviceIds = services.map(s => s.serviceId).filter(Boolean)
-          console.log('启动所有服务:', serviceIds)
+
           
           // TODO: 调用批量启动API
           alert('启动所有服务功能开发中，敬请期待！')
@@ -529,7 +515,7 @@ export default function ServiceLayout() {
         try {
           // 获取所有服务的ID  
           const serviceIds = services.map(s => s.serviceId).filter(Boolean)
-          console.log('停止所有服务:', serviceIds)
+
           
           // TODO: 调用批量停止API
           alert('停止所有服务功能开发中，敬请期待！')
@@ -552,7 +538,7 @@ export default function ServiceLayout() {
         
         try {
           const serviceIds = needRestartServices.map(s => s.serviceId).filter(Boolean)
-          console.log('重启需要重启的服务:', serviceIds, needRestartServices.map(s => s.name))
+
           
           // TODO: 调用批量重启API
           alert('重启所有需要重启的服务功能开发中，敬请期待！')
@@ -1054,7 +1040,7 @@ export default function ServiceLayout() {
           clusterType={currentCluster.depType || 'PVM'}
           isAddServiceMode={true}
           onComplete={(step3Data) => {
-            console.log('服务选择完成:', step3Data)
+
             setShowAddServiceWizard(false)
             // 服务选择完成后刷新服务列表
             fetchServices()

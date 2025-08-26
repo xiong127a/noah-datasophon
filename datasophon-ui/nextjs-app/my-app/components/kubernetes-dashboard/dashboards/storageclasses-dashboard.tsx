@@ -137,13 +137,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
         const spec = resource.spec || resource.additionalProperties?.spec || {};
         const metadata = resource.metadata || resource.additionalProperties?.metadata || {};
         
-        console.log('🔍 StorageClass原始数据:', {
-          name: resource.name,
-          hasSpec: !!resource.spec,
-          hasMetadata: !!resource.metadata,
-          hasAdditionalProps: !!resource.additionalProperties,
-          fullResource: resource
-        });
+
         
         return {
           name: resource.name || '',

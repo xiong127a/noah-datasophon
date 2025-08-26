@@ -123,13 +123,7 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
         // 从多个可能的位置获取ConfigMap的实际数据
         const configMapData = resource.data || resource.additionalProperties?.data || {};
         
-        console.log('🔍 ConfigMap原始数据:', {
-          name: resource.name,
-          hasData: !!resource.data,
-          hasAdditionalPropsData: !!resource.additionalProperties?.data,
-          actualData: configMapData,
-          fullResource: resource
-        });
+
         
         return {
           name: resource.name || '',

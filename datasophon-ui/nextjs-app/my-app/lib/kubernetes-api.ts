@@ -138,18 +138,14 @@ export class KubernetesAPI {
    */
   static async getNamespaces(clusterId: string): Promise<K8sNamespace[]> {
     try {
-      console.log('🌐 发送HTTP请求:', `GET ${API_PATHS_V1.K8S_NAMESPACES}`, { headers: { 'X-Cluster-Id': clusterId } });
       const response = await apiV1.get(API_PATHS_V1.K8S_NAMESPACES, {
         headers: { 'X-Cluster-Id': clusterId }
       });
-      console.log('🌐 HTTP响应:', response.status, response.data);
       
       // 🚀 极简版本：只返回命名空间基础信息，性能最佳
       const namespaces: K8sNamespace[] = response.data?.data || [];
       
-      console.log('🚀 极简优化生效！无统计数据负担');
-      console.log('📊 命名空间列表:', `${namespaces.length}个命名空间`);
-      console.log('⚡ 加载速度: 极快！');
+
       
       return namespaces;
     } catch (error) {
@@ -171,12 +167,10 @@ export class KubernetesAPI {
       if (serviceId) params.serviceId = serviceId;
       if (namespace) params.namespace = namespace;
       
-      console.log('🌐 发送HTTP请求:', `GET ${API_PATHS_V1.K8S_RESOURCE_STATS}`, { params, headers: { 'X-Cluster-Id': clusterId } });
       const response = await apiV1.get(API_PATHS_V1.K8S_RESOURCE_STATS, {
         params,
         headers: { 'X-Cluster-Id': clusterId }
       });
-      console.log('🌐 HTTP响应:', response.status, response.data);
       return response.data?.data || {};
     } catch (error) {
       console.error('❌ 获取资源统计失败:', error);
@@ -206,12 +200,10 @@ export class KubernetesAPI {
       if (searchTerm) params.searchTerm = searchTerm;
       if (statusFilter && statusFilter !== 'all') params.statusFilter = statusFilter;
 
-      console.log('🌐 发送HTTP请求:', `GET ${API_PATHS_V1.K8S_PODS}`, { params, headers: { 'X-Cluster-Id': clusterId } });
       const response = await apiV1.get(API_PATHS_V1.K8S_PODS, {
         params,
         headers: { 'X-Cluster-Id': clusterId }
       });
-      console.log('🌐 HTTP响应:', response.status, response.data);
       
       // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
       const pageVO = response.data?.data || {};
@@ -250,11 +242,7 @@ export class KubernetesAPI {
         headers: { 'X-Cluster-Id': clusterId }
       });
       
-      console.log('🔍 Services API响应结构:', {
-        code: response.data?.code,
-        hasPageVO: !!response.data?.data,
-        dataLength: response.data?.data?.data?.length
-      });
+
       
       // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
       const pageVO = response.data?.data || {};
@@ -293,13 +281,7 @@ export class KubernetesAPI {
         headers: { 'X-Cluster-Id': clusterId }
       });
       
-      console.log('🔍 Deployments API响应结构:', {
-        code: response.data?.code,
-        hasPageVO: !!response.data?.data,
-        rawResponse: response.data,
-        pageVOData: response.data?.data?.data,
-        dataLength: response.data?.data?.data?.length
-      });
+
       
       // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
       const pageVO = response.data?.data || {};
@@ -336,11 +318,7 @@ export class KubernetesAPI {
         headers: { 'X-Cluster-Id': clusterId }
       });
       
-      console.log('🔍 ConfigMaps API响应结构:', {
-        code: response.data?.code,
-        hasPageVO: !!response.data?.data,
-        dataLength: response.data?.data?.data?.length
-      });
+
       
       // 后端现在返回PageVO结构：{ data, total, pageNum, pageSize }
       const pageVO = response.data?.data || {};

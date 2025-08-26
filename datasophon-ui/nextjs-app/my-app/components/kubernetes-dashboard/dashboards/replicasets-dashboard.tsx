@@ -125,14 +125,6 @@ const ReplicaSetsDashboard: React.FC<ReplicaSetsDashboardProps> = ({
     setLoading(true);
     setError(null);
     try {
-      console.log('📡 调用 KubernetesAPI.getReplicaSets API...');
-      console.log('🔍 ReplicaSets 调用参数:', { 
-        clusterId, 
-        namespace: namespace || undefined, 
-        serviceId: serviceId || undefined, 
-        pageNum, 
-        pageSize 
-      });
       const response = await KubernetesAPI.getReplicaSets(
         clusterId,
         namespace || undefined,
@@ -140,16 +132,13 @@ const ReplicaSetsDashboard: React.FC<ReplicaSetsDashboardProps> = ({
         pageNum,
         pageSize
       );
-      console.log('✅ 获取ReplicaSets成功，数据结构:', response);
-      console.log('✅ 获取ReplicaSets成功，数量:', response.data?.length);
-      console.log('✅ 实际数据数组:', response.data);
       
       // 检查数据结构并提取实际的数组
       const apiResponse = response as unknown as ApiResponse;
       const dataArray = Array.isArray(apiResponse.data) 
         ? apiResponse.data 
         : (apiResponse.data as { data: ReplicaSetApiResource[]; total?: string | number })?.data || [];
-      console.log('✅ 使用的数据数组:', dataArray, '长度:', dataArray.length);
+
 
       // 转换API响应为组件需要的ReplicaSet格式
       const convertedReplicaSets: ReplicaSet[] = dataArray.map((resource: ReplicaSetApiResource) => ({
@@ -187,7 +176,7 @@ const ReplicaSetsDashboard: React.FC<ReplicaSetsDashboardProps> = ({
       // 使用正确的总数：优先使用API返回的total，其次使用数据长度
       const nestedData = !Array.isArray(apiResponse.data) ? apiResponse.data as { data: ReplicaSetApiResource[]; total?: string | number } : null;
       const totalCount = apiResponse.total || nestedData?.total || convertedReplicaSets.length;
-      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: apiResponse.total, dataTotal: nestedData?.total, arrayLength: convertedReplicaSets.length });
+
       setTotal(typeof totalCount === 'string' ? parseInt(totalCount) : totalCount);
     } catch (error) {
       console.error('获取ReplicaSets失败:', error);

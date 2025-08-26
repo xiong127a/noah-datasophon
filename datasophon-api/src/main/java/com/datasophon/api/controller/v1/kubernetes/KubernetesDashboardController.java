@@ -87,8 +87,7 @@ public class KubernetesDashboardController {
             @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
 
-        log.info("获取Deployments列表请求：clusterId={}, serviceId={}, namespace={}, pageNum={}, pageSize={}",
-                clusterId, serviceId, namespace, pageNum, pageSize);
+        
 
         try {
             PageResult<KubernetesResourceDTO> deploymentDTOs = kubernetesDashboardService.getDeployments(clusterId,
@@ -120,8 +119,7 @@ public class KubernetesDashboardController {
             @RequestParam(name = "pageNum", required = false, defaultValue = "1") Integer pageNum,
             @RequestParam(name = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
         try {
-            log.info("获取Pods列表请求：clusterId={}, serviceId={}, namespace={}, searchTerm={}, statusFilter={}, pageNum={}, pageSize={}",
-                    clusterId, serviceId, namespace, searchTerm, statusFilter, pageNum, pageSize);
+            
             
             PageResult<KubernetesResourceDTO> podDTOs = kubernetesDashboardService.getPods(clusterId, serviceId,
                     namespace, searchTerm, statusFilter, pageNum, pageSize);
@@ -542,7 +540,7 @@ public class KubernetesDashboardController {
             @RequestParam(value = "namespace", required = false) String namespace) {
         try {
             // 添加调试日志
-            log.info("收到resource-stats请求：clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
+
 
             // 确保clusterId不为空
             if (clusterId == null) {
@@ -557,8 +555,7 @@ public class KubernetesDashboardController {
             K8sResourceStatsVO statsVO = k8sResourceConverter.statsToVo(statsDTO);
 
             // 日志记录返回结果
-            log.info("resource-stats接口返回统计数据: pods={}, services={}, deployments={}", 
-                statsVO.getPodCount(), statsVO.getServiceCount(), statsVO.getDeploymentCount());
+
 
             return Result.success(statsVO);
         } catch (Exception e) {

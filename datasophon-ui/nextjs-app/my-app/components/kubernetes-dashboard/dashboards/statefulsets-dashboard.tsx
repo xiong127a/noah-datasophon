@@ -97,14 +97,6 @@ const StatefulSetsDashboard: React.FC<StatefulSetsDashboardProps> = ({
     setLoading(true);
     setError(null);
     try {
-      console.log('📡 调用 KubernetesAPI.getStatefulSets API...');
-      console.log('🔍 StatefulSets 调用参数:', { 
-        clusterId, 
-        namespace: namespace || undefined, 
-        serviceId: serviceId || undefined, 
-        pageNum, 
-        pageSize 
-      });
       const response = await KubernetesAPI.getStatefulSets(
         clusterId,
         namespace || undefined,
@@ -112,16 +104,13 @@ const StatefulSetsDashboard: React.FC<StatefulSetsDashboardProps> = ({
         pageNum,
         pageSize
       );
-      console.log('✅ 获取StatefulSets成功，数据结构:', response);
-      console.log('✅ 获取StatefulSets成功，数量:', response.data?.length);
-      console.log('✅ 实际数据数组:', response.data);
       
       // 检查数据结构并提取实际的数组
       const apiResponse = response as unknown as ApiResponse;
       const dataArray = Array.isArray(apiResponse.data) 
         ? apiResponse.data 
         : (apiResponse.data as { data: StatefulSetApiResource[]; total?: string | number })?.data || [];
-      console.log('✅ 使用的数据数组:', dataArray, '长度:', dataArray.length);
+
 
       // 转换API响应为组件需要的StatefulSet格式
       const convertedStatefulSets: StatefulSet[] = dataArray.map((resource: StatefulSetApiResource) => ({
@@ -160,7 +149,7 @@ const StatefulSetsDashboard: React.FC<StatefulSetsDashboardProps> = ({
       // 使用正确的总数：优先使用API返回的total，其次使用数据长度
       const nestedData = !Array.isArray(apiResponse.data) ? apiResponse.data as { data: StatefulSetApiResource[]; total?: string | number } : null;
       const totalCount = apiResponse.total || nestedData?.total || convertedStatefulSets.length;
-      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: apiResponse.total, dataTotal: nestedData?.total, arrayLength: convertedStatefulSets.length });
+
       setTotal(typeof totalCount === 'string' ? parseInt(totalCount) : totalCount);
     } catch (error) {
       console.error('获取StatefulSets失败:', error);

@@ -145,14 +145,7 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
         const secretData = resource.data || resource.additionalProperties?.data || {};
         const secretType = resource.type || resource.additionalProperties?.type || 'Opaque';
         
-        console.log('🔍 Secret原始数据:', {
-          name: resource.name,
-          hasData: !!resource.data,
-          hasAdditionalPropsData: !!resource.additionalProperties?.data,
-          actualData: secretData,
-          type: secretType,
-          fullResource: resource
-        });
+
         
         return {
           name: resource.name || '',

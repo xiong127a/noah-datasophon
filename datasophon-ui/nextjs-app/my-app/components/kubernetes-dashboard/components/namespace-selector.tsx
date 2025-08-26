@@ -146,14 +146,11 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
   const fetchNamespaces = useCallback(async () => {
     if (!clusterId) return;
     
-    console.log('🔄 开始获取命名空间列表，clusterId:', clusterId);
     setLoading(true);
     try {
       // 调用优化后的API获取命名空间数据（已含基础统计）
       const { KubernetesAPI } = await import('@/lib/kubernetes-api');
-      console.log('📡 调用 KubernetesAPI.getNamespaces API...');
       const k8sNamespaces = await KubernetesAPI.getNamespaces(clusterId);
-      console.log('✅ 获取命名空间成功，数量:', k8sNamespaces.length);
       
       // 转换为内部组件格式（保持兼容性）
       const convertedNamespaces: Namespace[] = k8sNamespaces.map(ns => ({
@@ -169,7 +166,6 @@ const NamespaceSelector: React.FC<NamespaceSelectorProps> = ({
       setNamespaces(convertedNamespaces);
       
       // 🚀 极简版本：无统计数据，性能最佳
-      console.log('✅ 命名空间列表加载完成，性能极佳！无统计数据负担');
       
     } catch (error) {
       console.error('❌ 获取命名空间失败:', error);

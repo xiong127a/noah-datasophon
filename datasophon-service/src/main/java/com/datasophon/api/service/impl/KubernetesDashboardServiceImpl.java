@@ -114,8 +114,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 return new PaginatedResult<>(allItems, allItems.size(), 1);
             }
 
-            log.info("执行智能分页查询: 资源类型={}, 命名空间={}, 页码={}, 页大小={}", 
-                resourceClass.getSimpleName(), namespace, pageNum, pageSize);
+            
 
             // 对于不需要复杂筛选的资源，直接使用Continue Token分页
             return paginateWithContinueToken(client, resourceClass, namespace, pageNum, pageSize);
@@ -134,8 +133,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             KubernetesClient client, Class<T> resourceClass, String namespace, 
             Integer pageNum, Integer pageSize, java.util.function.Predicate<T> filterPredicate) {
         try {
-            log.info("执行带筛选的分页查询: 资源类型={}, 命名空间={}, 页码={}, 页大小={}", 
-                resourceClass.getSimpleName(), namespace, pageNum, pageSize);
+            
 
             // 获取所有数据用于筛选
             List<T> allItems;
@@ -150,7 +148,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 .filter(filterPredicate)
                 .collect(Collectors.toList());
 
-            log.info("筛选完成: 原始数据={}, 筛选后数据={}", allItems.size(), filteredItems.size());
+
 
             // 对筛选后的数据进行内存分页
             return applyPagination(filteredItems, pageNum, pageSize);
@@ -176,8 +174,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         List<T> currentPageItems = getCurrentPageWithContinueToken(
             client, resourceClass, namespace, pageNum, pageSize);
         
-        log.info("Continue Token分页完成: 总数={}, 当前页数据量={}, 总页数={}, 目标页码={}", 
-            totalCount, currentPageItems.size(), totalPages, pageNum);
+
         
         return new PaginatedResult<>(currentPageItems, totalCount, totalPages);
     }
@@ -218,7 +215,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 return allItems.size();
             }
         } catch (Exception e) {
-            log.warn("获取资源总数失败，使用备用方法: {}", e.getMessage());
+
             // 备用方案：获取所有数据计算总数
             List<T> allItems;
             if (namespace != null && !namespace.isEmpty()) {
@@ -374,7 +371,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 获取所有命名空间
             NamespaceList namespaceList = client.namespaces().list();
 
-            log.info("获取{}个命名空间列表", namespaceList.getItems().size());
+
 
             // 🚀 极简版本：只返回命名空间基础信息，无统计数据
             return namespaceList.getItems().stream()
@@ -423,8 +420,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
     public PageResult<KubernetesResourceDTO> getPods(Long clusterId, Long serviceId, String namespace,
             String searchTerm, String statusFilter, Integer pageNum, Integer pageSize) {
         try {
-            log.info("获取Pods列表请求：clusterId={}, serviceId={}, namespace={}, searchTerm={}, statusFilter={}, pageNum={}, pageSize={}",
-                    clusterId, serviceId, namespace, searchTerm, statusFilter, pageNum, pageSize);
+            
 
             // 使用kubeconfig创建Kubernetes客户端
             KubernetesClient client = getKubernetesClient(clusterId);
@@ -435,14 +431,13 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
             if (!hasFilters) {
                 // 无过滤条件：使用Continue Token分页
-                log.info("使用Continue Token分页获取Pods（无过滤条件）");
+
                 PaginatedResult<Pod> paginationResult = paginateResources(
                     client, Pod.class, namespace, pageNum, pageSize);
                 return createPageResult(paginationResult.items(), paginationResult, pageNum, pageSize);
             } else {
                 // 有过滤条件：使用传统的全量获取+内存过滤+分页
-                log.info("使用内存过滤分页获取Pods（有过滤条件：searchTerm={}, statusFilter={})", 
-                    searchTerm, statusFilter);
+                
                 return getPodsWithFiltering(client, namespace, searchTerm, statusFilter, pageNum, pageSize);
             }
 
@@ -467,12 +462,12 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             allPods = client.pods().inAnyNamespace().list().getItems();
         }
 
-        log.info("从Kubernetes集群获取到{}个Pod用于过滤", allPods.size());
+
 
         // 应用搜索和筛选
         List<Pod> filteredPods = applyPodsSearchAndFilter(allPods, searchTerm, statusFilter);
         
-        log.info("搜索和筛选后剩余{}个Pod", filteredPods.size());
+
 
         // 应用分页
         PaginatedResult<Pod> paginationResult = applyPagination(filteredPods, pageNum, pageSize);
@@ -584,7 +579,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
 
         List<T> pagedItems = startIndex >= total ? Collections.emptyList() : items.subList(startIndex, endIndex);
         
-        log.info("应用内存分页: 总数={}, 页码={}, 页大小={}, 当前页数据量={}", total, pageNum, pageSize, pagedItems.size());
+
 
         return new PaginatedResult<>(pagedItems, total, totalPages);
     }
@@ -983,7 +978,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         try {
             KubernetesClient client = getKubernetesClient(clusterId);
 
-            log.info("开始统计Kubernetes资源，clusterId={}, serviceId={}, namespace={}", clusterId, serviceId, namespace);
+
             
             // 构建统计结果
             K8sResourceStatsDTO.K8sResourceStatsDTOBuilder builder = K8sResourceStatsDTO.builder();
@@ -992,18 +987,14 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             // 只有在明确指定namespace且不为空时才限制到特定命名空间
             boolean queryAllNamespaces = namespace == null || namespace.isEmpty() || "all".equals(namespace);
             
-            if (queryAllNamespaces) {
-                log.info("查询所有命名空间的资源统计");
-            } else {
-                log.info("查询命名空间 '{}' 的资源统计", namespace);
-            }
+            // 查询所有命名空间或指定命名空间的资源
             
             // 统计Pods
             List<Pod> pods = queryAllNamespaces ? 
                 client.pods().inAnyNamespace().list().getItems() :
                 client.pods().inNamespace(namespace).list().getItems();
             
-            log.info("查询到 {} 个Pod", pods.size());
+
             builder.podCount(pods.size());
             
             long runningPods = pods.stream().filter(pod -> {
@@ -1042,8 +1033,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 }
             }).count();
                 
-            log.info("Pod统计: 总数={}, 运行中={}, 等待中={}, 失败={}, 成功={}", 
-                pods.size(), runningPods, pendingPods, failedPods, succeededPods);
+
                 
             builder.runningPodCount((int) runningPods)
                    .pendingPodCount((int) pendingPods)
@@ -1055,7 +1045,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 client.services().inAnyNamespace().list().getItems() :
                 client.services().inNamespace(namespace).list().getItems();
             
-            log.info("查询到 {} 个Service", services.size());
+
             builder.serviceCount(services.size());
             
             long clusterIpServices = services.stream().filter(svc -> {
@@ -1086,8 +1076,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 }
             }).count();
                 
-            log.info("Service统计: 总数={}, ClusterIP={}, NodePort={}, LoadBalancer={}", 
-                services.size(), clusterIpServices, nodePortServices, loadBalancerServices);
+
                 
             builder.clusterIpServiceCount((int) clusterIpServices)
                    .nodePortServiceCount((int) nodePortServices)
@@ -1098,7 +1087,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 client.apps().deployments().inAnyNamespace().list().getItems() :
                 client.apps().deployments().inNamespace(namespace).list().getItems();
             
-            log.info("查询到 {} 个Deployment", deployments.size());
+
             builder.deploymentCount(deployments.size());
             
             long availableDeployments = deployments.stream().filter(dep -> {
@@ -1123,14 +1112,14 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             int configMapsCount = queryAllNamespaces ?
                 client.configMaps().inAnyNamespace().list().getItems().size() :
                 client.configMaps().inNamespace(namespace).list().getItems().size();
-            log.info("查询到 {} 个ConfigMap", configMapsCount);
+
             builder.configMapCount(configMapsCount);
 
             // 统计Secrets
             int secretsCount = queryAllNamespaces ?
                 client.secrets().inAnyNamespace().list().getItems().size() :
                 client.secrets().inNamespace(namespace).list().getItems().size();
-            log.info("查询到 {} 个Secret", secretsCount);
+
             builder.secretCount(secretsCount);
 
             // 统计StatefulSets
@@ -1138,7 +1127,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 client.apps().statefulSets().inAnyNamespace().list().getItems() :
                 client.apps().statefulSets().inNamespace(namespace).list().getItems();
             
-            log.info("查询到 {} 个StatefulSet", statefulSets.size());
+
             builder.statefulSetCount(statefulSets.size());
             
             long readyStatefulSets = statefulSets.stream().filter(sts -> {
@@ -1162,7 +1151,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 client.apps().daemonSets().inAnyNamespace().list().getItems() :
                 client.apps().daemonSets().inNamespace(namespace).list().getItems();
             
-            log.info("查询到 {} 个DaemonSet", daemonSets.size());
+
             builder.daemonSetCount(daemonSets.size());
             
             long readyDaemonSets = daemonSets.stream().filter(ds -> {
@@ -1186,7 +1175,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 client.batch().v1().jobs().inAnyNamespace().list().getItems() :
                 client.batch().v1().jobs().inNamespace(namespace).list().getItems();
             
-            log.info("查询到 {} 个Job", jobs.size());
+
             builder.jobCount(jobs.size());
             
             long completedJobs = jobs.stream().filter(job -> {
@@ -1208,7 +1197,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
                 client.batch().v1().cronjobs().inAnyNamespace().list().getItems() :
                 client.batch().v1().cronjobs().inNamespace(namespace).list().getItems();
             
-            log.info("查询到 {} 个CronJob", cronJobs.size());
+
             builder.cronJobCount(cronJobs.size());
             
             long activeCronJobs = cronJobs.stream().filter(cj -> {
@@ -1287,8 +1276,7 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
             builder.readyReplicaSetCount((int) readyReplicaSets);
 
             K8sResourceStatsDTO result = builder.build();
-            log.info("完成Kubernetes资源统计: pods={}, services={}, deployments={}", 
-                result.getPodCount(), result.getServiceCount(), result.getDeploymentCount());
+
             
             return result;
         } catch (Exception e) {
