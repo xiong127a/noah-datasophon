@@ -557,7 +557,13 @@
                 <configuration>
                     <skipTests>true</skipTests>
                     <encoding>UTF-8</encoding>
-                    <argLine>-Dfile.encoding=UTF-8</argLine>
+                    <argLine>-Dfile.encoding=UTF-8 -Dconsole.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8</argLine>
+                    <!-- 设置系统属性 -->
+                    <systemPropertyVariables>
+                        <file.encoding>UTF-8</file.encoding>
+                        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+                        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
 
@@ -601,6 +607,10 @@
                 <version>3.3.1</version>
                 <configuration>
                     <encoding>UTF-8</encoding>
+                    <!-- 明确指定资源文件处理编码 -->
+                    <propertiesEncoding>UTF-8</propertiesEncoding>
+                    <!-- 非Latin1字符不转义，保持UTF-8 -->
+                    <useDefaultDelimiters>true</useDefaultDelimiters>
                 </configuration>
             </plugin>
 
