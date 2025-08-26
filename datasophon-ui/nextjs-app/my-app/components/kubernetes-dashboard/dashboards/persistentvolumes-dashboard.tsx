@@ -298,22 +298,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
     await fetchPersistentVolumes();
   };
 
-  // PV操作
-  const handlePVAction = (action: string, pv: PersistentVolume) => {
-    console.log(`执行操作: ${action} on PV: ${pv.name}`);
-    switch (action) {
-      case 'view':
-        setSelectedPV(pv);
-        setShowDetails(true);
-        break;
-      case 'edit':
-        // 实现编辑逻辑
-        break;
-      case 'delete':
-        // 实现删除逻辑
-        break;
-    }
-  };
+
 
   // 获取可用的回收策略
   const reclaimPolicies = useMemo(() => {
@@ -503,7 +488,6 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
                   <TableHead>声明</TableHead>
                   <TableHead>存储类</TableHead>
                   <TableHead>创建时间</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -569,33 +553,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
                             <div>{getAge(pv.creationTimestamp)}</div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handlePVAction('view', pv)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                查看详情
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePVAction('edit', pv)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                编辑
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => handlePVAction('delete', pv)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                删除
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+
                       </motion.tr>
                     );
                   })}
@@ -611,12 +569,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
               <p className="text-gray-500 mb-4">
                 {searchTerm ? '没有找到匹配的PersistentVolumes' : '集群中没有PersistentVolumes'}
               </p>
-              {!searchTerm && (
-                <Button>
-                  <HardDrive className="w-4 h-4 mr-2" />
-                  创建第一个PV
-                </Button>
-              )}
+
             </div>
           )}
         </CardContent>

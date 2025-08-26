@@ -284,17 +284,7 @@ const ReplicaSetsDashboard: React.FC<ReplicaSetsDashboardProps> = ({
     }
   };
 
-  // ReplicaSet操作
-  const handleReplicaSetAction = (action: string, replicaSet: ReplicaSet) => {
-    console.log(`执行操作: ${action} on ReplicaSet: ${replicaSet.metadata.name}`);
-    switch (action) {
-      case 'view':
-        console.log('查看ReplicaSet详情:', replicaSet.metadata.name);
-        break;
-      default:
-        break;
-    }
-  };
+
 
   if (loading && replicaSets.length === 0) {
     return (
@@ -408,7 +398,6 @@ const ReplicaSetsDashboard: React.FC<ReplicaSetsDashboardProps> = ({
                   <TableHead>就绪情况</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>年龄</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -461,17 +450,7 @@ const ReplicaSetsDashboard: React.FC<ReplicaSetsDashboardProps> = ({
                             {getReplicaSetAge(replicaSet.metadata.creationTimestamp)}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleReplicaSetAction('view', replicaSet)}
-                            className="hover:bg-blue-50"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            查看
-                          </Button>
-                        </TableCell>
+
                       </motion.tr>
                     );
                   })}

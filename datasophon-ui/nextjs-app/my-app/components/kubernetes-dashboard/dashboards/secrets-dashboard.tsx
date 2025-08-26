@@ -241,22 +241,7 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
     await fetchSecrets();
   };
 
-  // Secret操作
-  const handleSecretAction = (action: string, secret: Secret) => {
-    console.log(`执行操作: ${action} on Secret: ${secret.name}`);
-    switch (action) {
-      case 'view':
-        setSelectedSecret(secret);
-        setShowDetails(true);
-        break;
-      case 'edit':
-        // 实现编辑逻辑
-        break;
-      case 'delete':
-        // 实现删除逻辑
-        break;
-    }
-  };
+
 
   // 获取可用的Secret类型
   const secretTypes = useMemo(() => {
@@ -427,7 +412,6 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
                   <TableHead>密钥数量</TableHead>
                   <TableHead>大小</TableHead>
                   <TableHead>创建时间</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -477,33 +461,7 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
                             <div>{getAge(secret.creationTimestamp)}</div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handleSecretAction('view', secret)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                查看详情
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handleSecretAction('edit', secret)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                编辑
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => handleSecretAction('delete', secret)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                删除
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+
                       </motion.tr>
                     );
                   })}
@@ -519,12 +477,7 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
               <p className="text-gray-500 mb-4">
                 {searchTerm ? '没有找到匹配的Secrets' : '当前命名空间中没有Secrets'}
               </p>
-              {!searchTerm && (
-                <Button>
-                  <Shield className="w-4 h-4 mr-2" />
-                  创建第一个Secret
-                </Button>
-              )}
+
             </div>
           )}
         </CardContent>

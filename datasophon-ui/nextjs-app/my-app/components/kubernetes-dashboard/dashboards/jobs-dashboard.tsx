@@ -267,17 +267,7 @@ const JobsDashboard: React.FC<JobsDashboardProps> = ({
     }
   };
 
-  // Job操作
-  const handleJobAction = (action: string, job: Job) => {
-    console.log(`执行操作: ${action} on Job: ${job.metadata.name}`);
-    switch (action) {
-      case 'view':
-        console.log('查看Job详情:', job.metadata.name);
-        break;
-      default:
-        break;
-    }
-  };
+
 
   if (loading && jobs.length === 0) {
     return (
@@ -392,7 +382,6 @@ const JobsDashboard: React.FC<JobsDashboardProps> = ({
                   <TableHead>运行状态</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>年龄</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -448,17 +437,7 @@ const JobsDashboard: React.FC<JobsDashboardProps> = ({
                             {getJobAge(job.metadata.creationTimestamp)}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleJobAction('view', job)}
-                            className="hover:bg-blue-50"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            查看
-                          </Button>
-                        </TableCell>
+
                       </motion.tr>
                     );
                   })}

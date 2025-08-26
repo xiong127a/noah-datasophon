@@ -65,6 +65,7 @@ export const API_PATHS_V1 = {
   K8S_STORAGECLASSES: `${API_BASE}/kubernetes/dashboard/storageclasses`,
   K8S_INGRESSES: `${API_BASE}/kubernetes/dashboard/ingresses`,
   K8S_INGRESSCLASSES: `${API_BASE}/kubernetes/dashboard/ingressclasses`,
+  K8S_ENDPOINTS: `${API_BASE}/kubernetes/dashboard/endpoints`,
   K8S_RESOURCE_STATS: `${API_BASE}/kubernetes/dashboard/resource-stats`,
   K8S_DEPLOYMENT_DETAIL: `${API_BASE}/kubernetes/dashboard/deployment/detail`,
   K8S_DEPLOYMENT_EVENTS: `${API_BASE}/kubernetes/dashboard/deployment/events`,

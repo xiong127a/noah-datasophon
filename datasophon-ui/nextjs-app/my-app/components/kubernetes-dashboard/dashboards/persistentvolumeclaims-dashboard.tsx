@@ -292,25 +292,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
     await fetchPVCs();
   };
 
-  // PVC操作
-  const handlePVCAction = (action: string, pvc: PersistentVolumeClaim) => {
-    console.log(`执行操作: ${action} on PVC: ${pvc.name}`);
-    switch (action) {
-      case 'view':
-        setSelectedPVC(pvc);
-        setShowDetails(true);
-        break;
-      case 'expand':
-        // 实现扩容逻辑
-        break;
-      case 'edit':
-        // 实现编辑逻辑
-        break;
-      case 'delete':
-        // 实现删除逻辑
-        break;
-    }
-  };
+
 
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
@@ -474,7 +456,6 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
                   <TableHead>访问模式</TableHead>
                   <TableHead>存储类</TableHead>
                   <TableHead>创建时间</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -551,37 +532,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
                             <div>{getAge(pvc.creationTimestamp)}</div>
                           </div>
                         </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm">
-                                <MoreHorizontal className="w-4 h-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem onClick={() => handlePVCAction('view', pvc)}>
-                                <Eye className="w-4 h-4 mr-2" />
-                                查看详情
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePVCAction('expand', pvc)}>
-                                <Storage className="w-4 h-4 mr-2" />
-                                扩容
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => handlePVCAction('edit', pvc)}>
-                                <Edit className="w-4 h-4 mr-2" />
-                                编辑
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => handlePVCAction('delete', pvc)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="w-4 h-4 mr-2" />
-                                删除
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
+
                       </motion.tr>
                     );
                   })}
@@ -597,12 +548,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
               <p className="text-gray-500 mb-4">
                 {searchTerm ? '没有找到匹配的PersistentVolumeClaims' : '当前命名空间中没有PVCs'}
               </p>
-              {!searchTerm && (
-                <Button>
-                  <Database className="w-4 h-4 mr-2" />
-                  创建第一个PVC
-                </Button>
-              )}
+
             </div>
           )}
         </CardContent>

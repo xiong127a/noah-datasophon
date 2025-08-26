@@ -257,17 +257,7 @@ const StatefulSetsDashboard: React.FC<StatefulSetsDashboardProps> = ({
     }
   };
 
-  // StatefulSet操作
-  const handleStatefulSetAction = (action: string, statefulSet: StatefulSet) => {
-    console.log(`执行操作: ${action} on StatefulSet: ${statefulSet.metadata.name}`);
-    switch (action) {
-      case 'view':
-        console.log('查看StatefulSet详情:', statefulSet.metadata.name);
-        break;
-      default:
-        break;
-    }
-  };
+
 
   if (loading && statefulSets.length === 0) {
     return (
@@ -381,7 +371,6 @@ const StatefulSetsDashboard: React.FC<StatefulSetsDashboardProps> = ({
                   <TableHead>就绪情况</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>年龄</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -434,17 +423,7 @@ const StatefulSetsDashboard: React.FC<StatefulSetsDashboardProps> = ({
                             {getStatefulSetAge(statefulSet.metadata.creationTimestamp)}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleStatefulSetAction('view', statefulSet)}
-                            className="hover:bg-blue-50"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            查看
-                          </Button>
-                        </TableCell>
+
                       </motion.tr>
                     );
                   })}

@@ -132,6 +132,11 @@ public interface KubernetesDashboardService {
         PageResult<KubernetesResourceDTO> getIngressClasses(Long clusterId, Integer pageNum, Integer pageSize);
 
         /**
+         * 获取Endpoints列表（返回通用对象，暂时保持兼容）
+         */
+        PageResult<KubernetesResourceDTO> getEndpoints(Long clusterId, String namespace, Integer pageNum, Integer pageSize);
+
+        /**
          * 获取DaemonSets列表（返回通用对象，暂时保持兼容）
          */
         PageResult<KubernetesResourceDTO> getDaemonSets(Long clusterId, Long serviceId, String namespace,

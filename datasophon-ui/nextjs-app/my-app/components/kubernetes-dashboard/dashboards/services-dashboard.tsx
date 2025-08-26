@@ -204,21 +204,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
     setPageNum(1); // 重置到第一页
   };
 
-  // Service操作
-  const handleServiceAction = (action: string, service: Service) => {
-    console.log(`执行操作: ${action} on Service: ${service.metadata.name}`);
-    switch (action) {
-      case 'view':
-        console.log('查看Service详情:', service.metadata.name);
-        break;
-      case 'edit':
-        // 实现编辑逻辑
-        break;
-      case 'delete':
-        // 实现删除逻辑
-        break;
-    }
-  };
+
 
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
@@ -349,7 +335,6 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
                   <TableHead>Cluster IP</TableHead>
                   <TableHead>端口</TableHead>
                   <TableHead>年龄</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -393,33 +378,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
                           {getServiceAge(service.metadata.creationTimestamp)}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleServiceAction('view', service)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              查看详情
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleServiceAction('edit', service)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              编辑
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleServiceAction('delete', service)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              删除
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+
                     </motion.tr>
                   ))}
                 </AnimatePresence>
@@ -434,12 +393,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
               <p className="text-gray-500 mb-4">
                 {searchTerm ? '没有找到匹配的Services' : '当前命名空间中没有Services'}
               </p>
-              {!searchTerm && (
-                <Button>
-                  <Network className="w-4 h-4 mr-2" />
-                  创建第一个Service
-                </Button>
-              )}
+
             </div>
           )}
         </CardContent>

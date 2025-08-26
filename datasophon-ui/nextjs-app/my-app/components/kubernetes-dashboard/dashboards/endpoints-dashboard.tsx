@@ -2,7 +2,7 @@
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2024-01-15
- * @description Kubernetes Deployments管理面板
+ * @description Kubernetes Endpoints管理面板
  */
 
 "use client";
@@ -13,11 +13,12 @@ import {
   Search,
   RefreshCw,
   Eye,
-  Package,
-  Users,
+  Zap,
+  Globe,
   CheckCircle,
   AlertCircle,
-  Box
+  Box,
+  Link2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -45,13 +46,45 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
-import { Progress } from "@/components/ui/progress";
+import { Badge } from "@/components/ui/badge";
 
-import { Deployment } from "../types";
+import type { KubernetesResource } from "../types";
 import { KubernetesAPI } from '@/lib/kubernetes-api';
 import KubernetesPagination from "../components/kubernetes-pagination";
 
-interface DeploymentsDashboardProps {
+// Endpoints类型定义
+interface Endpoint extends KubernetesResource {
+  kind: 'Endpoints';
+  subsets?: {
+    addresses?: {
+      ip: string;
+      hostname?: string;
+      nodeName?: string;
+      targetRef?: {
+        kind: string;
+        name: string;
+        namespace?: string;
+      };
+    }[];
+    notReadyAddresses?: {
+      ip: string;
+      hostname?: string;
+      nodeName?: string;
+      targetRef?: {
+        kind: string;
+        name: string;
+        namespace?: string;
+      };
+    }[];
+    ports?: {
+      name?: string;
+      port: number;
+      protocol?: string;
+    }[];
+  }[];
+}
+
+interface EndpointsDashboardProps {
   clusterId: string;
   serviceId?: string;
   namespace: string;
@@ -59,142 +92,139 @@ interface DeploymentsDashboardProps {
 }
 
 // API响应数据的临时接口
-interface DeploymentApiResource {
+interface EndpointApiResource {
   name: string;
   namespace: string;
   creationTimestamp?: string;
   labels?: Record<string, string>;
-  replicas?: string;
-  available?: string;
+  annotations?: Record<string, string>;
   [key: string]: unknown;
 }
 
 interface ApiResponse {
-  data: DeploymentApiResource[] | { data: DeploymentApiResource[]; total?: string | number };
+  data: EndpointApiResource[] | { data: EndpointApiResource[]; total?: string | number };
   total?: string | number;
   [key: string]: unknown;
 }
 
-const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
+const EndpointsDashboard: React.FC<EndpointsDashboardProps> = ({
   clusterId,
   serviceId,
   namespace,
   className
 }) => {
-  const [deployments, setDeployments] = useState<Deployment[]>([]);
+  const [endpoints, setEndpoints] = useState<Endpoint[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  // const [selectedDeployment, setSelectedDeployment] = useState<Deployment | null>(null);
-  // const [showDetails, setShowDetails] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pageNum, setPageNum] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [total, setTotal] = useState(0);
 
-  // 获取Deployments数据
-  const fetchDeployments = useCallback(async () => {
+  // 获取Endpoints数据
+  const fetchEndpoints = useCallback(async () => {
     if (!clusterId) return;
     
     setLoading(true);
     setError(null);
     try {
-      console.log('📡 调用 KubernetesAPI.getDeployments API...');
-      const response = await KubernetesAPI.getDeployments(
+      console.log('📡 调用 KubernetesAPI.getEndpoints API...');
+      console.log('🔍 Endpoints 调用参数:', { 
+        clusterId, 
+        namespace: namespace || undefined, 
+        pageNum, 
+        pageSize 
+      });
+      const response = await KubernetesAPI.getEndpoints(
         clusterId,
         namespace || undefined,
-        serviceId || undefined,
         pageNum,
         pageSize
       );
-      console.log('✅ 获取Deployments成功，数据结构:', response);
-      console.log('✅ 获取Deployments成功，数量:', response.data?.length);
+      console.log('✅ 获取Endpoints成功，数据结构:', response);
+      console.log('✅ 获取Endpoints成功，数量:', response.data?.length);
       console.log('✅ 实际数据数组:', response.data);
       
       // 检查数据结构并提取实际的数组
       const apiResponse = response as unknown as ApiResponse;
       const dataArray = Array.isArray(apiResponse.data) 
         ? apiResponse.data 
-        : (apiResponse.data as { data: DeploymentApiResource[]; total?: string | number })?.data || [];
+        : (apiResponse.data as { data: EndpointApiResource[]; total?: string | number })?.data || [];
       console.log('✅ 使用的数据数组:', dataArray, '长度:', dataArray.length);
 
-      // 转换API响应为组件需要的Deployment格式
-      const convertedDeployments: Deployment[] = dataArray.map((resource: DeploymentApiResource) => ({
-        apiVersion: "apps/v1",
-        kind: "Deployment",
+      // 转换API响应为组件需要的Endpoint格式
+      const convertedEndpoints: Endpoint[] = dataArray.map((resource: EndpointApiResource) => ({
+        apiVersion: "v1",
+        kind: "Endpoints",
         metadata: {
-          name: resource.name as string,
-          namespace: resource.namespace as string,
-          creationTimestamp: (resource.creationTimestamp as string) || new Date().toISOString(),
-          labels: resource.labels || {}
+          name: resource.name,
+          namespace: resource.namespace,
+          creationTimestamp: resource.creationTimestamp || new Date().toISOString(),
+          labels: resource.labels || {},
+          annotations: resource.annotations || {}
         },
-        spec: {
-          replicas: parseInt((resource.replicas as string)?.split('/')[2]) || 1,
-          selector: { matchLabels: { app: resource.name as string } },
-          template: {
-            metadata: { labels: { app: resource.name as string } },
-            spec: {
-              containers: [{
-                name: resource.name as string,
-                image: "unknown:latest"
-              }]
+        subsets: [{
+          addresses: [{
+            ip: "192.168.1.100",
+            hostname: "pod-1",
+            nodeName: "node-1",
+            targetRef: {
+              kind: "Pod",
+              name: `${resource.name}-pod-1`,
+              namespace: resource.namespace
             }
-          }
-        },
-        status: {
-          replicas: parseInt((resource.replicas as string)?.split('/')[2]) || 1,
-          readyReplicas: parseInt((resource.replicas as string)?.split('/')[0]) || 0,
-          updatedReplicas: parseInt((resource.replicas as string)?.split('/')[1]) || 0,
-          availableReplicas: parseInt(resource.available as string) || 0,
-          unavailableReplicas: (parseInt((resource.replicas as string)?.split('/')[2]) || 1) - (parseInt(resource.available as string) || 0),
-          conditions: [{
-            type: "Available",
-            status: (parseInt(resource.available as string) || 0) > 0 ? "True" : "False",
-            reason: "MinimumReplicasAvailable",
-            message: `Deployment has ${resource.available || 0} available replica(s).`
+          }],
+          ports: [{
+            name: "http",
+            port: 80,
+            protocol: "TCP"
           }]
-        }
+        }]
       }));
 
-      setDeployments(convertedDeployments);
+      setEndpoints(convertedEndpoints);
       
       // 使用正确的总数：优先使用API返回的total，其次使用数据长度
-      const nestedData = !Array.isArray(apiResponse.data) ? apiResponse.data as { data: DeploymentApiResource[]; total?: string | number } : null;
-      const totalCount = apiResponse.total || nestedData?.total || convertedDeployments.length;
-      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: apiResponse.total, dataTotal: nestedData?.total, arrayLength: convertedDeployments.length });
+      const nestedData = !Array.isArray(apiResponse.data) ? apiResponse.data as { data: EndpointApiResource[]; total?: string | number } : null;
+      const totalCount = apiResponse.total || nestedData?.total || convertedEndpoints.length;
+      console.log('✅ 设置总数:', totalCount, '来源:', { responseTotal: apiResponse.total, dataTotal: nestedData?.total, arrayLength: convertedEndpoints.length });
       setTotal(typeof totalCount === 'string' ? parseInt(totalCount) : totalCount);
     } catch (error) {
-      console.error('获取Deployments失败:', error);
-      setError(error instanceof Error ? error.message : '获取Deployments失败');
-      setDeployments([]);
+      console.error('获取Endpoints失败:', error);
+      setError(error instanceof Error ? error.message : '获取Endpoints失败');
+      setEndpoints([]);
     } finally {
       setLoading(false);
     }
   }, [clusterId, serviceId, namespace, pageNum, pageSize]);
 
-  // 筛选和搜索Deployments
-  const filteredDeployments = useMemo(() => {
-    return deployments.filter(deployment => {
+  // 筛选和搜索Endpoints
+  const filteredEndpoints = useMemo(() => {
+    return endpoints.filter(endpoint => {
       const matchesSearch = 
-        deployment.metadata.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        Object.keys(deployment.metadata.labels || {}).some(key => 
+        endpoint.metadata.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        Object.keys(endpoint.metadata.labels || {}).some(key => 
           key.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (deployment.metadata.labels?.[key] || "").toLowerCase().includes(searchTerm.toLowerCase())
+          (endpoint.metadata.labels?.[key] || "").toLowerCase().includes(searchTerm.toLowerCase())
         );
 
       let matchesStatus = true;
       if (statusFilter !== "all") {
-        const isHealthy = (deployment.status?.readyReplicas || 0) === (deployment.spec?.replicas || 0);
-        matchesStatus = statusFilter === "healthy" ? isHealthy : !isHealthy;
+        const hasReadyAddresses = (endpoint.subsets?.some(subset => 
+          (subset.addresses?.length || 0) > 0
+        )) || false;
+        
+        matchesStatus = statusFilter === "ready" ? hasReadyAddresses : !hasReadyAddresses;
       }
 
       return matchesSearch && matchesStatus;
     });
-  }, [deployments, searchTerm, statusFilter]);
+  }, [endpoints, searchTerm, statusFilter]);
 
   // 刷新数据
   const handleRefresh = async () => {
-    await fetchDeployments();
+    await fetchEndpoints();
   };
 
   // 分页处理函数
@@ -209,21 +239,37 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
 
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
-    fetchDeployments();
-  }, [fetchDeployments]);
+    fetchEndpoints();
+  }, [fetchEndpoints]);
 
   // 统计信息
   const stats = useMemo(() => {
-    return {
-      total: deployments.length,
-      healthy: deployments.filter(d => (d.status?.readyReplicas || 0) === (d.spec?.replicas || 0)).length,
-      unhealthy: deployments.filter(d => (d.status?.readyReplicas || 0) !== (d.spec?.replicas || 0)).length,
-      totalReplicas: deployments.reduce((sum, d) => sum + (d.spec?.replicas || 0), 0)
-    };
-  }, [deployments]);
+    let totalAddresses = 0;
+    let readyAddresses = 0;
+    let notReadyAddresses = 0;
+    let totalPorts = 0;
 
-  // 获取Deployment年龄
-  const getDeploymentAge = (creationTimestamp: string) => {
+    endpoints.forEach(endpoint => {
+      endpoint.subsets?.forEach(subset => {
+        readyAddresses += subset.addresses?.length || 0;
+        notReadyAddresses += subset.notReadyAddresses?.length || 0;
+        totalPorts += subset.ports?.length || 0;
+      });
+    });
+
+    totalAddresses = readyAddresses + notReadyAddresses;
+
+    return {
+      total: endpoints.length,
+      totalAddresses,
+      readyAddresses,
+      notReadyAddresses,
+      totalPorts
+    };
+  }, [endpoints]);
+
+  // 获取Endpoint年龄
+  const getEndpointAge = (creationTimestamp: string) => {
     const created = new Date(creationTimestamp);
     const now = new Date();
     const diffMs = now.getTime() - created.getTime();
@@ -236,41 +282,58 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
     return `${diffMinutes}分钟前`;
   };
 
-  // 获取副本状态
-  const getReplicaStatus = (deployment: Deployment) => {
-    const desired = deployment.spec?.replicas || 0;
-    const ready = deployment.status?.readyReplicas || 0;
-    const updated = deployment.status?.updatedReplicas || 0;
-    const available = deployment.status?.availableReplicas || 0;
-    
-    return { desired, ready, updated, available };
+  // 获取Endpoint地址信息
+  const getEndpointAddresses = (endpoint: Endpoint) => {
+    let readyCount = 0;
+    let notReadyCount = 0;
+    let ips: string[] = [];
+
+    endpoint.subsets?.forEach(subset => {
+      readyCount += subset.addresses?.length || 0;
+      notReadyCount += subset.notReadyAddresses?.length || 0;
+      
+      // 收集IP地址
+      subset.addresses?.forEach(addr => ips.push(addr.ip));
+      subset.notReadyAddresses?.forEach(addr => ips.push(addr.ip));
+    });
+
+    return { readyCount, notReadyCount, ips: ips.slice(0, 3) }; // 只显示前3个IP
   };
 
-  // 获取部署状态颜色和图标
-  const getDeploymentStatus = (deployment: Deployment) => {
-    const { desired, ready } = getReplicaStatus(deployment);
-    if (ready === desired && desired > 0) {
-      return { status: "健康", color: "text-green-600", icon: CheckCircle, bgColor: "bg-green-100" };
-    } else if (ready > 0) {
+  // 获取Endpoint端口信息
+  const getEndpointPorts = (endpoint: Endpoint) => {
+    const ports: string[] = [];
+    endpoint.subsets?.forEach(subset => {
+      subset.ports?.forEach(port => {
+        ports.push(`${port.port}/${port.protocol || 'TCP'}`);
+      });
+    });
+    return ports.slice(0, 3); // 只显示前3个端口
+  };
+
+  // 获取Endpoint状态
+  const getEndpointStatus = (endpoint: Endpoint) => {
+    const { readyCount, notReadyCount } = getEndpointAddresses(endpoint);
+    
+    if (readyCount > 0 && notReadyCount === 0) {
+      return { status: "就绪", color: "text-green-600", icon: CheckCircle, bgColor: "bg-green-100" };
+    } else if (readyCount > 0 && notReadyCount > 0) {
       return { status: "部分就绪", color: "text-yellow-600", icon: AlertCircle, bgColor: "bg-yellow-100" };
-    } else {
+    } else if (readyCount === 0 && notReadyCount > 0) {
       return { status: "未就绪", color: "text-red-600", icon: AlertCircle, bgColor: "bg-red-100" };
+    } else {
+      return { status: "无地址", color: "text-gray-600", icon: AlertCircle, bgColor: "bg-gray-100" };
     }
   };
 
 
 
-  // 组件挂载和依赖更新时获取数据
-  useEffect(() => {
-    fetchDeployments();
-  }, [fetchDeployments]);
-
-  if (loading && deployments.length === 0) {
+  if (loading && endpoints.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="flex items-center space-x-2">
           <RefreshCw className="w-6 h-6 animate-spin text-blue-500" />
-          <span className="text-gray-600">加载Deployments...</span>
+          <span className="text-gray-600">加载Endpoints...</span>
         </div>
       </div>
     );
@@ -301,9 +364,9 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         {[
           { title: "总计", count: stats.total, color: "blue", icon: Box },
-          { title: "健康", count: stats.healthy, color: "green", icon: CheckCircle },
-          { title: "异常", count: stats.unhealthy, color: "red", icon: AlertCircle },
-          { title: "总副本", count: stats.totalReplicas, color: "purple", icon: Users }
+          { title: "就绪地址", count: stats.readyAddresses, color: "green", icon: CheckCircle },
+          { title: "未就绪地址", count: stats.notReadyAddresses, color: "red", icon: AlertCircle },
+          { title: "端口数", count: stats.totalPorts, color: "purple", icon: Link2 }
         ].map((stat, index) => (
           <motion.div
             key={stat.title}
@@ -332,13 +395,13 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg font-semibold">Deployments 列表</CardTitle>
+            <CardTitle className="text-lg font-semibold">Endpoints 列表</CardTitle>
             <div className="flex items-center space-x-3">
               {/* 搜索框 */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <Input
-                  placeholder="搜索 Deployments..."
+                  placeholder="搜索 Endpoints..."
                   className="pl-10 w-64"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -352,8 +415,8 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">全部</SelectItem>
-                  <SelectItem value="healthy">健康</SelectItem>
-                  <SelectItem value="unhealthy">异常</SelectItem>
+                  <SelectItem value="ready">就绪</SelectItem>
+                  <SelectItem value="notready">未就绪</SelectItem>
                 </SelectContent>
               </Select>
 
@@ -367,28 +430,28 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
 
         <CardContent className="p-0">
 
-          {/* Deployments表格 */}
+          {/* Endpoints表格 */}
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
                 <TableRow className="bg-gray-50">
                   <TableHead>名称</TableHead>
-                  <TableHead>副本状态</TableHead>
-                  <TableHead>就绪情况</TableHead>
+                  <TableHead>地址</TableHead>
+                  <TableHead>端口</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>年龄</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 <AnimatePresence>
-                  {filteredDeployments.map((deployment, index) => {
-                    const { desired, ready, updated, available } = getReplicaStatus(deployment);
-                    const statusInfo = getDeploymentStatus(deployment);
-                    const readyPercent = desired > 0 ? Math.round((ready / desired) * 100) : 0;
+                  {filteredEndpoints.map((endpoint, index) => {
+                    const { readyCount, notReadyCount, ips } = getEndpointAddresses(endpoint);
+                    const ports = getEndpointPorts(endpoint);
+                    const statusInfo = getEndpointStatus(endpoint);
                     
                     return (
                       <motion.tr
-                        key={deployment.metadata.name}
+                        key={endpoint.metadata.name}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
@@ -397,25 +460,46 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
                       >
                         <TableCell>
                           <div className="flex items-center space-x-3">
-                            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                              <Package className="w-4 h-4 text-blue-600" />
+                            <div className="w-8 h-8 bg-cyan-100 rounded-lg flex items-center justify-center">
+                              <Zap className="w-4 h-4 text-cyan-600" />
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900">{deployment.metadata.name}</div>
-                              <div className="text-sm text-gray-500">{deployment.metadata.namespace}</div>
+                              <div className="font-medium text-gray-900">{endpoint.metadata.name}</div>
+                              <div className="text-sm text-gray-500">{endpoint.metadata.namespace}</div>
                             </div>
                           </div>
                         </TableCell>
                         <TableCell>
                           <div className="space-y-1">
-                            <div className="text-sm font-medium">{ready}/{desired}</div>
-                            <Progress value={readyPercent} className="w-20 h-2" />
+                            <div className="text-sm font-medium">
+                              就绪: {readyCount} / 未就绪: {notReadyCount}
+                            </div>
+                            <div className="space-y-1">
+                              {ips.map((ip, i) => (
+                                <Badge key={i} variant="outline" className="mr-1 mb-1">
+                                  <Globe className="w-3 h-3 mr-1" />
+                                  {ip}
+                                </Badge>
+                              ))}
+                              {ips.length > 3 && (
+                                <Badge variant="secondary">
+                                  +{ips.length - 3} 更多
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm space-y-1">
-                            <div>Updated: {updated}</div>
-                            <div>Available: {available}</div>
+                          <div className="space-y-1">
+                            {ports.map((port, i) => (
+                              <Badge key={i} variant="outline" className="mr-1 mb-1">
+                                <Link2 className="w-3 h-3 mr-1" />
+                                {port}
+                              </Badge>
+                            ))}
+                            {ports.length === 0 && (
+                              <span className="text-sm text-gray-500">无端口</span>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
@@ -426,7 +510,7 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
                         </TableCell>
                         <TableCell>
                           <span className="text-sm text-gray-600">
-                            {getDeploymentAge(deployment.metadata.creationTimestamp)}
+                            {getEndpointAge(endpoint.metadata.creationTimestamp)}
                           </span>
                         </TableCell>
 
@@ -438,14 +522,14 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
             </Table>
           </div>
 
-          {filteredDeployments.length === 0 && !loading && (
+          {filteredEndpoints.length === 0 && !loading && (
             <div className="text-center py-12">
-              <Package className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">暂无Deployments</h3>
+              <Zap className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">暂无Endpoints</h3>
               <p className="text-gray-500">
                 {searchTerm || statusFilter !== "all" 
-                  ? '没有找到匹配的Deployments' 
-                  : '当前命名空间中没有Deployments资源'
+                  ? '没有找到匹配的Endpoints' 
+                  : '当前命名空间中没有Endpoints资源'
                 }
               </p>
             </div>
@@ -471,4 +555,4 @@ const DeploymentsDashboard: React.FC<DeploymentsDashboardProps> = ({
   );
 };
 
-export default DeploymentsDashboard;
+export default EndpointsDashboard;

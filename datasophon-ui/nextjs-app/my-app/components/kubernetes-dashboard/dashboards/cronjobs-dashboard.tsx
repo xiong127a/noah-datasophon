@@ -273,17 +273,7 @@ const CronJobsDashboard: React.FC<CronJobsDashboardProps> = ({
     }
   };
 
-  // CronJob操作
-  const handleCronJobAction = (action: string, cronJob: CronJob) => {
-    console.log(`执行操作: ${action} on CronJob: ${cronJob.metadata.name}`);
-    switch (action) {
-      case 'view':
-        console.log('查看CronJob详情:', cronJob.metadata.name);
-        break;
-      default:
-        break;
-    }
-  };
+
 
   if (loading && cronJobs.length === 0) {
     return (
@@ -399,7 +389,6 @@ const CronJobsDashboard: React.FC<CronJobsDashboardProps> = ({
                   <TableHead>活跃任务</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>年龄</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -457,17 +446,7 @@ const CronJobsDashboard: React.FC<CronJobsDashboardProps> = ({
                             {getCronJobAge(cronJob.metadata.creationTimestamp)}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleCronJobAction('view', cronJob)}
-                            className="hover:bg-blue-50"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            查看
-                          </Button>
-                        </TableCell>
+
                       </motion.tr>
                     );
                   })}

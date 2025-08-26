@@ -323,11 +323,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
     };
   }, []);
 
-  // Pod操作
-  const handlePodAction = (action: string, pod: Pod) => {
-    console.log(`执行操作: ${action} on Pod: ${pod.metadata.name}`);
-    // 这里实现具体的Pod操作逻辑
-  };
+
 
   return (
     <div className={`space-y-6 ${className || ''}`}>
@@ -419,7 +415,6 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
                   <TableHead className="hidden md:table-cell">重启次数</TableHead>
                   <TableHead className="hidden lg:table-cell">节点</TableHead>
                   <TableHead className="hidden md:table-cell">年龄</TableHead>
-                  <TableHead className="w-12"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -487,66 +482,7 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
                           {getPodAge(pod.metadata.creationTimestamp)}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button 
-                              variant="ghost" 
-                              size="icon"
-                              className="w-8 h-8"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              handlePodAction('view', pod);
-                            }}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              查看详情
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              handlePodAction('logs', pod);
-                            }}>
-                              <Terminal className="w-4 h-4 mr-2" />
-                              查看日志
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={(e) => {
-                              e.stopPropagation();
-                              handlePodAction('exec', pod);
-                            }}>
-                              <Terminal className="w-4 h-4 mr-2" />
-                              进入容器
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            {pod.status?.phase === 'Running' ? (
-                              <DropdownMenuItem 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handlePodAction('restart', pod);
-                                }}
-                                className="text-orange-600"
-                              >
-                                <RefreshCw className="w-4 h-4 mr-2" />
-                                重启
-                              </DropdownMenuItem>
-                            ) : null}
-                            <DropdownMenuItem 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handlePodAction('delete', pod);
-                              }}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              删除
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+
                     </motion.tr>
                   ))}
                 </AnimatePresence>

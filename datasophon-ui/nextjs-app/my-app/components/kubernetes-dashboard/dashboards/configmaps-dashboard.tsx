@@ -180,22 +180,7 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
     await fetchConfigMaps();
   };
 
-  // ConfigMap操作
-  const handleConfigMapAction = (action: string, configMap: ConfigMap) => {
-    console.log(`执行操作: ${action} on ConfigMap: ${configMap.name}`);
-    switch (action) {
-      case 'view':
-        setSelectedConfigMap(configMap);
-        setShowDetails(true);
-        break;
-      case 'edit':
-        // 实现编辑逻辑
-        break;
-      case 'delete':
-        // 实现删除逻辑
-        break;
-    }
-  };
+
 
   // 组件挂载和依赖更新时获取数据
   useEffect(() => {
@@ -340,7 +325,6 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
                   <TableHead>配置项数量</TableHead>
                   <TableHead>大小</TableHead>
                   <TableHead>创建时间</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -383,33 +367,7 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
                           <div>{getAge(configMap.creationTimestamp)}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleConfigMapAction('view', configMap)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              查看详情
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleConfigMapAction('edit', configMap)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              编辑
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleConfigMapAction('delete', configMap)}
-                              className="text-red-600"
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              删除
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+                      
                     </motion.tr>
                   ))}
                 </AnimatePresence>
@@ -424,12 +382,7 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
               <p className="text-gray-500 mb-4">
                 {searchTerm ? '没有找到匹配的ConfigMaps' : '当前命名空间中没有ConfigMaps'}
               </p>
-              {!searchTerm && (
-                <Button>
-                  <FileText className="w-4 h-4 mr-2" />
-                  创建第一个ConfigMap
-                </Button>
-              )}
+
             </div>
           )}
         </CardContent>

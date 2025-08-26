@@ -42,6 +42,9 @@ import DaemonSetsDashboard from './dashboards/daemonsets-dashboard';
 import ReplicaSetsDashboard from './dashboards/replicasets-dashboard';
 import JobsDashboard from './dashboards/jobs-dashboard';
 import CronJobsDashboard from './dashboards/cronjobs-dashboard';
+import IngressesDashboard from './dashboards/ingresses-dashboard';
+import IngressClassesDashboard from './dashboards/ingressclasses-dashboard';
+import EndpointsDashboard from './dashboards/endpoints-dashboard';
 
 // 导入类型定义
 import type { K8sResourceStats } from '@/lib/kubernetes-api';
@@ -69,7 +72,8 @@ type DashboardView =
   | 'persistentvolumeclaims'
   | 'storageclasses'
   | 'ingresses'
-  | 'ingressclasses';
+  | 'ingressclasses'
+  | 'endpoints';
 
 interface MenuCategory {
   title: string;
@@ -111,6 +115,7 @@ const menuCategories: MenuCategory[] = [
       { key: 'services', label: 'Services', icon: Network, description: '服务发现' },
       { key: 'ingresses', label: 'Ingresses', icon: Settings, description: '入口控制' },
       { key: 'ingressclasses', label: 'IngressClasses', icon: Shield, description: '入口类' },
+      { key: 'endpoints', label: 'Endpoints', icon: Zap, description: '服务端点' },
     ]
   },
   {
@@ -708,8 +713,32 @@ const KubernetesDashboard: React.FC<KubernetesDashboardProps> = ({
                 />
               )}
 
+              {currentView === 'ingresses' && (
+                <IngressesDashboard 
+                  clusterId={clusterId}
+                  serviceId={serviceId}
+                  namespace={selectedNamespace} 
+                />
+              )}
+
+              {currentView === 'ingressclasses' && (
+                <IngressClassesDashboard 
+                  clusterId={clusterId}
+                  serviceId={serviceId}
+                  namespace={selectedNamespace} 
+                />
+              )}
+
+              {currentView === 'endpoints' && (
+                <EndpointsDashboard 
+                  clusterId={clusterId}
+                  serviceId={serviceId}
+                  namespace={selectedNamespace} 
+                />
+              )}
+
               {/* 其他视图的占位符 */}
-              {!['overview', 'pods', 'services', 'deployments', 'statefulsets', 'daemonsets', 'replicasets', 'jobs', 'cronjobs'].includes(currentView) && (
+              {!['overview', 'pods', 'services', 'deployments', 'statefulsets', 'daemonsets', 'replicasets', 'jobs', 'cronjobs', 'ingresses', 'ingressclasses', 'endpoints'].includes(currentView) && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
                   <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <Settings className="w-8 h-8 text-gray-400" />

@@ -48,7 +48,8 @@ export type DashboardView =
   | 'persistentvolumeclaims'
   | 'storageclasses'
   | 'ingresses'
-  | 'ingressclasses';
+  | 'ingressclasses'
+  | 'endpoints';
 
 interface MenuCategory {
   title: string;
@@ -152,6 +153,13 @@ const defaultCategories: MenuCategory[] = [
         icon: Shield, 
         description: '入口类',
         count: 2
+      },
+      { 
+        key: 'endpoints', 
+        label: 'Endpoints', 
+        icon: Zap, 
+        description: '服务端点',
+        count: 5
       },
     ]
   },

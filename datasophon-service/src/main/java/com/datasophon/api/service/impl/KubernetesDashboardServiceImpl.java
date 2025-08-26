@@ -39,6 +39,7 @@ import io.fabric8.kubernetes.api.model.batch.v1.CronJob;
 import io.fabric8.kubernetes.api.model.batch.v1.Job;
 import io.fabric8.kubernetes.api.model.networking.v1.Ingress;
 import io.fabric8.kubernetes.api.model.networking.v1.IngressClass;
+import io.fabric8.kubernetes.api.model.Endpoints;
 import io.fabric8.kubernetes.api.model.storage.StorageClass;
 import io.fabric8.kubernetes.client.Config;
 import io.fabric8.kubernetes.client.KubernetesClient;
@@ -526,6 +527,29 @@ public class KubernetesDashboardServiceImpl implements KubernetesDashboardServic
         } catch (Exception e) {
             log.error("获取IngressClasses列表出错", e);
             throw new RuntimeException("获取IngressClasses列表出错: " + e.getMessage());
+        }
+    }
+
+    @Override
+    public PageResult<KubernetesResourceDTO> getEndpoints(Long clusterId, String namespace, Integer pageNum,
+            Integer pageSize) {
+        try {
+            // 使用kubeconfig创建Kubernetes客户端
+            KubernetesClient client = getKubernetesClient(clusterId);
+
+            // 使用通用分页方法获取Endpoints列表
+            PaginatedResult<Endpoints> paginationResult = paginateResources(
+                    client,
+                    Endpoints.class,
+                    namespace,
+                    pageNum,
+                    pageSize);
+
+            // 使用通用createPageResult方法
+            return createPageResult(paginationResult.items(), paginationResult, pageNum, pageSize);
+        } catch (Exception e) {
+            log.error("获取Endpoints列表出错", e);
+            throw new RuntimeException("获取Endpoints列表出错: " + e.getMessage());
         }
     }
 

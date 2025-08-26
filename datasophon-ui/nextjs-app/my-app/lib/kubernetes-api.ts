@@ -702,4 +702,36 @@ export class KubernetesAPI {
       throw error;
     }
   }
+
+  /**
+   * 获取Endpoints列表
+   */
+  static async getEndpoints(
+    clusterId: string,
+    namespace?: string,
+    pageNum: number = 1,
+    pageSize: number = 10
+  ): Promise<K8sResourceListResponse> {
+    try {
+      const params: Record<string, unknown> = { 
+        pageNum, 
+        pageSize 
+      };
+      if (namespace) params.namespace = namespace;
+
+      const response = await apiV1.get(API_PATHS_V1.K8S_ENDPOINTS, {
+        params,
+        headers: { 'X-Cluster-Id': clusterId }
+      });
+      return {
+        data: response.data?.data || [],
+        total: response.data?.total,
+        pageNum,
+        pageSize
+      };
+    } catch (error) {
+      console.error('获取Endpoints失败:', error);
+      throw error;
+    }
+  }
 }

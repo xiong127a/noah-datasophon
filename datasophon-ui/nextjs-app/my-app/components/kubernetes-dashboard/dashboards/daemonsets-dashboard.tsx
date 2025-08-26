@@ -255,17 +255,7 @@ const DaemonSetsDashboard: React.FC<DaemonSetsDashboardProps> = ({
     }
   };
 
-  // DaemonSet操作
-  const handleDaemonSetAction = (action: string, daemonSet: DaemonSet) => {
-    console.log(`执行操作: ${action} on DaemonSet: ${daemonSet.metadata.name}`);
-    switch (action) {
-      case 'view':
-        console.log('查看DaemonSet详情:', daemonSet.metadata.name);
-        break;
-      default:
-        break;
-    }
-  };
+
 
   if (loading && daemonSets.length === 0) {
     return (
@@ -379,7 +369,6 @@ const DaemonSetsDashboard: React.FC<DaemonSetsDashboardProps> = ({
                   <TableHead>就绪情况</TableHead>
                   <TableHead>状态</TableHead>
                   <TableHead>年龄</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -432,17 +421,7 @@ const DaemonSetsDashboard: React.FC<DaemonSetsDashboardProps> = ({
                             {getDaemonSetAge(daemonSet.metadata.creationTimestamp)}
                           </span>
                         </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleDaemonSetAction('view', daemonSet)}
-                            className="hover:bg-blue-50"
-                          >
-                            <Eye className="w-4 h-4 mr-1" />
-                            查看
-                          </Button>
-                        </TableCell>
+
                       </motion.tr>
                     );
                   })}

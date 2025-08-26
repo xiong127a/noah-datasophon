@@ -318,6 +318,28 @@ public class KubernetesDashboardController {
     }
 
     /**
+     * 获取Endpoints列表
+     */
+    @RequestMapping("/endpoints")
+    public Result<PageVO<KubernetesResourceVO>> getEndpoints(
+            @ClusterId Long clusterId,
+            @RequestParam(value = "namespace", required = false) String namespace,
+            @RequestParam(value = "pageNum", required = false, defaultValue = "1") Integer pageNum,
+            @RequestParam(value = "pageSize", required = false, defaultValue = "10") Integer pageSize) {
+        try {
+            PageResult<KubernetesResourceDTO> endpointDTOs = kubernetesDashboardService.getEndpoints(clusterId, namespace,
+                    pageNum, pageSize);
+            List<KubernetesResourceVO> endpointVOs = kubernetesResourceVOConverter
+                    .dtoListToVoList(endpointDTOs.getRecords());
+            PageVO<KubernetesResourceVO> pageVO = PageVO.from(endpointDTOs, endpointVOs);
+            return Result.success(pageVO);
+        } catch (Exception e) {
+            log.error("获取Endpoints列表失败: {}", e.getMessage(), e);
+            return Result.error("获取Endpoints列表失败: " + e.getMessage());
+        }
+    }
+
+    /**
      * 获取DaemonSets列表
      */
     @RequestMapping("/daemonsets")

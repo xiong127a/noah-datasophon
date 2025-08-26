@@ -246,25 +246,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
     await fetchStorageClasses();
   };
 
-  // StorageClass操作
-  const handleSCAction = (action: string, sc: StorageClass) => {
-    console.log(`执行操作: ${action} on StorageClass: ${sc.name}`);
-    switch (action) {
-      case 'view':
-        setSelectedSC(sc);
-        setShowDetails(true);
-        break;
-      case 'setDefault':
-        // 实现设为默认逻辑
-        break;
-      case 'edit':
-        // 实现编辑逻辑
-        break;
-      case 'delete':
-        // 实现删除逻辑
-        break;
-    }
-  };
+
 
   // 获取可用的供应商类型
   const provisionerTypes = useMemo(() => {
@@ -445,7 +427,6 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
                   <TableHead>扩容</TableHead>
                   <TableHead>使用量</TableHead>
                   <TableHead>创建时间</TableHead>
-                  <TableHead>操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -525,40 +506,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
                           <div>{getAge(sc.creationTimestamp)}</div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="sm">
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleSCAction('view', sc)}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              查看详情
-                            </DropdownMenuItem>
-                            {!sc.isDefault && (
-                              <DropdownMenuItem onClick={() => handleSCAction('setDefault', sc)}>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                设为默认
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={() => handleSCAction('edit', sc)}>
-                              <Edit className="w-4 h-4 mr-2" />
-                              编辑
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => handleSCAction('delete', sc)}
-                              className="text-red-600"
-                              disabled={sc.usageCount > 0}
-                            >
-                              <Trash2 className="w-4 h-4 mr-2" />
-                              删除
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
+
                     </motion.tr>
                   ))}
                 </AnimatePresence>
@@ -573,12 +521,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
               <p className="text-gray-500 mb-4">
                 {searchTerm ? '没有找到匹配的StorageClasses' : '集群中没有StorageClasses'}
               </p>
-              {!searchTerm && (
-                <Button>
-                  <Settings className="w-4 h-4 mr-2" />
-                  创建第一个StorageClass
-                </Button>
-              )}
+
             </div>
           )}
         </CardContent>
