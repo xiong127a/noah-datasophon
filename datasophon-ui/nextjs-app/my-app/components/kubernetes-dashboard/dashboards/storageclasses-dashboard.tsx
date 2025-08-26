@@ -365,10 +365,7 @@ const StorageClassesDashboard: React.FC<StorageClassesDashboardProps> = ({
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 刷新
               </Button>
-              <Button size="sm">
-                <Settings className="w-4 h-4 mr-2" />
-                新建StorageClass
-              </Button>
+
             </div>
           </div>
         </CardHeader>

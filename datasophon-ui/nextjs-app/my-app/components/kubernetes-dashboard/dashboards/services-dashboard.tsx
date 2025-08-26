@@ -292,10 +292,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 刷新
               </Button>
-              <Button size="sm">
-                <Network className="w-4 h-4 mr-2" />
-                新建Service
-              </Button>
+
             </div>
           </div>
         </CardHeader>

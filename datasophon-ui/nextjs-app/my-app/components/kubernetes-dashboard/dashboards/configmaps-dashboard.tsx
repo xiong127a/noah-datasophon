@@ -286,10 +286,7 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 刷新
               </Button>
-              <Button size="sm">
-                <FileText className="w-4 h-4 mr-2" />
-                新建ConfigMap
-              </Button>
+
             </div>
           </div>
         </CardHeader>

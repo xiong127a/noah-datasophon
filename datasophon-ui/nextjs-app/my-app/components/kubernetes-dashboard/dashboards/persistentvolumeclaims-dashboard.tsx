@@ -406,10 +406,7 @@ const PersistentVolumeClaimsDashboard: React.FC<PersistentVolumeClaimsDashboardP
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 刷新
               </Button>
-              <Button size="sm">
-                <Database className="w-4 h-4 mr-2" />
-                新建PVC
-              </Button>
+
             </div>
           </div>
         </CardHeader>

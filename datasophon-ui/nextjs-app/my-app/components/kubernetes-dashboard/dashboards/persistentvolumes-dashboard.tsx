@@ -425,10 +425,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
                 <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                 刷新
               </Button>
-              <Button size="sm">
-                <HardDrive className="w-4 h-4 mr-2" />
-                新建PV
-              </Button>
+
             </div>
           </div>
         </CardHeader>
