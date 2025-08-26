@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   RefreshCw,
-  Eye,
+
   Settings,
   Globe,
   CheckCircle,
@@ -77,7 +77,7 @@ interface ApiResponse {
 
 const IngressesDashboard: React.FC<IngressesDashboardProps> = ({
   clusterId,
-  serviceId,
+
   namespace,
   className
 }) => {
@@ -172,7 +172,7 @@ const IngressesDashboard: React.FC<IngressesDashboardProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [clusterId, serviceId, namespace, pageNum, pageSize]);
+  }, [clusterId, namespace, pageNum, pageSize]);
 
   // 筛选和搜索Ingresses
   const filteredIngresses = useMemo(() => {

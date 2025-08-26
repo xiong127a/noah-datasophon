@@ -12,10 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   RefreshCw,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
+
   Network,
   Globe,
   AlertCircle,
@@ -41,13 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Card,
   CardContent,
@@ -66,6 +57,22 @@ interface ServicesDashboardProps {
   serviceId?: string;
   namespace: string;
   className?: string;
+}
+
+// API响应数据的临时接口
+interface ServiceApiResource {
+  name?: string;
+  namespace?: string;
+  creationTimestamp?: string;
+  labels?: Record<string, string>;
+  type?: string;
+  spec?: {
+    selector?: Record<string, string>;
+  };
+  ports?: string;
+  clusterIp?: string;
+  externalIp?: string;
+  [key: string]: unknown;
 }
 
 const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
@@ -102,7 +109,7 @@ const ServicesDashboard: React.FC<ServicesDashboardProps> = ({
       console.log('✅ 获取Services成功，数量:', response.data.length);
 
       // 转换API响应为组件需要的Service格式
-      const convertedServices: Service[] = response.data.map((resource: any) => ({
+      const convertedServices: Service[] = (response.data as unknown as ServiceApiResource[]).map((resource: ServiceApiResource) => ({
         apiVersion: "v1",
         kind: "Service",
         metadata: {

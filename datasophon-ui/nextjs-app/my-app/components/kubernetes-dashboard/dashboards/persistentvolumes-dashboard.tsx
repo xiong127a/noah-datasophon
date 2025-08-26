@@ -11,25 +11,21 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Filter,
+
   Download,
   RefreshCw,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
+
   HardDrive,
   Database,
   CheckCircle,
   AlertCircle,
-  Clock,
+
   Box,
-  ChevronDown,
-  ChevronRight,
+
   Activity,
-  Storage,
+
   Shield,
-  ExternalLink
+
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -50,13 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Card,
   CardContent,
@@ -65,7 +55,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Progress } from "@/components/ui/progress";
+
 
 import { KubernetesAPI, K8sResource, K8sResourceListResponse } from '@/lib/kubernetes-api';
 
@@ -87,16 +77,16 @@ interface PersistentVolume {
   age: string;
   creationTimestamp: string;
   volumeMode: string;
-  nodeAffinity?: Record<string, any>;
+  nodeAffinity?: Record<string, unknown>;
   source: {
     type: string;
-    details: Record<string, any>;
+    details: Record<string, unknown>;
   };
 }
 
 const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
   clusterId,
-  namespace,
+
   className
 }) => {
   const [persistentVolumes, setPersistentVolumes] = useState<PersistentVolume[]>([]);
@@ -104,12 +94,15 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [reclaimFilter, setReclaimFilter] = useState<string>("all");
-  const [selectedPV, setSelectedPV] = useState<PersistentVolume | null>(null);
+
+  // const [selectedPV, setSelectedPV] = useState<PersistentVolume | null>(null);
   const [showDetails, setShowDetails] = useState(false);
+  // const [pageNum, setPageNum] = useState(1);
+  // const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [pageNum, setPageNum] = useState(1);
+
   const [pageSize] = useState(20);
-  const [total, setTotal] = useState(0);
+
 
   // 筛选和搜索PersistentVolumes
   const filteredPVs = useMemo(() => {
@@ -226,7 +219,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
   };
 
   // 确定存储卷源类型
-  const determineVolumeSource = (spec: any): { type: string; details: Record<string, any> } => {
+  const determineVolumeSource = (spec: Record<string, unknown>): { type: string; details: Record<string, unknown> } => {
     if (spec?.hostPath) {
       return { type: 'HostPath', details: { path: spec.hostPath.path } };
     } else if (spec?.nfs) {
@@ -378,7 +371,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
             title: "总容量", 
             count: stats.totalCapacity, 
             color: "purple", 
-            icon: Storage,
+            icon: HardDrive,
             description: "存储容量",
             isText: true
           }
@@ -515,7 +508,7 @@ const PersistentVolumesDashboard: React.FC<PersistentVolumesDashboardProps> = ({
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center space-x-2">
-                            <Storage className="w-4 h-4 text-gray-400" />
+                            <HardDrive className="w-4 h-4 text-gray-400" />
                             <span className="text-sm font-medium">{pv.capacity}</span>
                           </div>
                         </TableCell>

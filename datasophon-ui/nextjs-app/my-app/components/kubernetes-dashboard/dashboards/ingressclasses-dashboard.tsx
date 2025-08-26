@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   RefreshCw,
-  Eye,
+
   Shield,
   Settings,
   CheckCircle,
@@ -93,8 +93,7 @@ interface ApiResponse {
 
 const IngressClassesDashboard: React.FC<IngressClassesDashboardProps> = ({
   clusterId,
-  serviceId,
-  namespace,
+
   className
 }) => {
   const [ingressClasses, setIngressClasses] = useState<IngressClass[]>([]);
@@ -169,7 +168,7 @@ const IngressClassesDashboard: React.FC<IngressClassesDashboardProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [clusterId, serviceId, namespace, pageNum, pageSize]);
+  }, [clusterId, pageNum, pageSize]);
 
   // 筛选和搜索IngressClasses
   const filteredIngressClasses = useMemo(() => {

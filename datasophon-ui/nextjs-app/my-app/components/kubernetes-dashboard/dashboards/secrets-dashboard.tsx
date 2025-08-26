@@ -11,25 +11,22 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
-  Filter,
+
   Download,
   RefreshCw,
-  MoreHorizontal,
+
   Eye,
   EyeOff,
-  Edit,
-  Trash2,
+
   Shield,
   Key,
   Lock,
   AlertCircle,
-  CheckCircle,
-  Clock,
+
   Box,
-  ChevronDown,
-  ChevronRight,
+
   Copy,
-  ExternalLink
+
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -50,13 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Card,
   CardContent,
@@ -94,13 +85,16 @@ const SecretsDashboard: React.FC<SecretsDashboardProps> = ({
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [selectedSecret, setSelectedSecret] = useState<Secret | null>(null);
+
   const [showDetails, setShowDetails] = useState(false);
   const [showValues, setShowValues] = useState<Record<string, boolean>>({});
+  // const [selectedSecret, setSelectedSecret] = useState<Secret | null>(null);
+  // const [pageNum, setPageNum] = useState(1);
+  // const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [pageNum, setPageNum] = useState(1);
+
   const [pageSize] = useState(20);
-  const [total, setTotal] = useState(0);
+
 
   // 筛选和搜索Secrets
   const filteredSecrets = useMemo(() => {

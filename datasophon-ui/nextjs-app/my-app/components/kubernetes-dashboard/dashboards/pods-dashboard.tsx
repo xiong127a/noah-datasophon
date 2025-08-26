@@ -12,10 +12,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
   RefreshCw,
-  MoreHorizontal,
-  Trash2,
-  Eye,
-  Terminal,
+
   Clock,
   Box,
   AlertCircle,
@@ -41,13 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 
@@ -230,15 +221,15 @@ const PodsDashboard: React.FC<PodsDashboardProps> = ({
             image: 'unknown',
             ports: []
           }],
-          nodeName: resource.additionalProperties?.nodeName || 
-                    resource.additionalProperties?.node || 
-                    resource.additionalProperties?.hostName || 
-                    resource.additionalProperties?.host ||
-                    resource.nodeName || 
-                    resource.node || 
-                    resource.hostName || 
-                    resource.host || 
-                    'unknown'
+          nodeName: String(resource.additionalProperties?.nodeName || 
+                          resource.additionalProperties?.node || 
+                          resource.additionalProperties?.hostName || 
+                          resource.additionalProperties?.host ||
+                          resource.nodeName || 
+                          resource.node || 
+                          resource.hostName || 
+                          resource.host || 
+                          'unknown')
         },
         status: {
           phase: (resource.status as 'Pending' | 'Running' | 'Succeeded' | 'Failed' | 'Unknown') || 'Unknown',

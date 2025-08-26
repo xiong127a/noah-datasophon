@@ -14,32 +14,21 @@ import {
   Filter,
   Download,
   RefreshCw,
-  MoreHorizontal,
-  Eye,
-  Edit,
-  Trash2,
+
   FileText,
   Settings,
   Key,
   AlertCircle,
-  CheckCircle,
-  Clock,
+
   Box,
-  ChevronDown,
-  ChevronRight,
+
   Copy,
-  ExternalLink
+
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -49,13 +38,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Card,
   CardContent,
@@ -91,12 +74,15 @@ const ConfigMapsDashboard: React.FC<ConfigMapsDashboardProps> = ({
   const [configMaps, setConfigMaps] = useState<ConfigMap[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedConfigMap, setSelectedConfigMap] = useState<ConfigMap | null>(null);
+
   const [showDetails, setShowDetails] = useState(false);
+  // const [selectedConfigMap, setSelectedConfigMap] = useState<ConfigMap | null>(null);
+  // const [pageNum, setPageNum] = useState(1);
+  // const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [pageNum, setPageNum] = useState(1);
+
   const [pageSize] = useState(20);
-  const [total, setTotal] = useState(0);
+
 
   // 筛选和搜索ConfigMaps
   const filteredConfigMaps = useMemo(() => {
