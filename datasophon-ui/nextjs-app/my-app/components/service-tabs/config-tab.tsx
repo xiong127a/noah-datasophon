@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 
+import ConfigParameterForm from '@/components/config/ConfigParameterForm'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { apiV1, API_PATHS_V1, API_BASE_URL } from '@/lib/api-config-v1'
 
@@ -60,6 +61,7 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
   const [roleGroups, setRoleGroups] = useState<RoleGroup[]>([])
   const [currentRoleGroup, setCurrentRoleGroup] = useState<number>()
   const [compareMode, setCompareMode] = useState(false)
+  const [compareVersion] = useState<number>()
   
   // 配置导出相关状态
   const [configFiles, setConfigFiles] = useState<ConfigFile[]>([])
@@ -357,6 +359,59 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
       toast.error('复制失败')
     }
   }, [previewContent])
+
+  // 处理配置保存
+  const handleSaveConfig = useCallback(async (configData: Record<string, unknown>) => {
+    if (!serviceId || !clusterId || !currentRoleGroup) {
+      toast.error('缺少必要参数')
+      return
+    }
+
+    try {
+      // 将配置数据转换为后端需要的格式
+      const configItems = Object.entries(configData as Record<string, unknown>).map(([name, value]) => ({
+        name: name.replaceAll('!', '.'), // 转换回原始格式
+        value: value
+      }))
+
+      // 过滤掉空值和隐藏项
+      const filteredItems = configItems.filter(item => 
+        item.value !== null && item.value !== undefined && item.value !== ''
+      )
+
+      const headers = createClusterHeaders(clusterId)
+      const userStr = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null
+      const currentUser = userStr ? JSON.parse(atob(userStr.split('.')[1])) : {}
+
+      const saveParams = {
+        clusterId: parseInt(clusterId),
+        serviceName: serviceName,
+        serviceConfig: JSON.stringify(filteredItems),
+        roleGroupId: currentRoleGroup,
+        description: `保存 ${serviceName} 配置 - ${new Date().toLocaleString()}`,
+        userId: currentUser.id || 1,
+        username: currentUser.username || 'admin'
+      }
+
+      const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_CONFIG, saveParams, { headers })
+
+      if (response.data.code === 200) {
+        const versionCreated = response.data.versionCreated
+        if (versionCreated === false) {
+          toast.info('配置未发生变更，未生成新版本')
+        } else {
+          toast.success('配置保存成功，已生成新版本')
+          // 重新获取版本列表
+          fetchConfigVersions()
+        }
+      } else {
+        toast.error(response.data.msg || '保存配置失败')
+      }
+    } catch (error) {
+      console.error('保存配置失败:', error)
+      toast.error('保存配置失败')
+    }
+  }, [serviceId, clusterId, currentRoleGroup, serviceName, fetchConfigVersions])
 
   // 获取文件图标类型和颜色
   const getFileIconClass = useCallback((fileName: string) => {
@@ -1017,15 +1072,12 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
 
           {/* 配置表单区域 - 苹果风格 */}
           <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
-            <div className="text-center py-16">
-              <div className="p-6 bg-gray-50 rounded-3xl w-24 h-24 mx-auto mb-6 flex items-center justify-center">
-                <Settings className="w-12 h-12 text-gray-400" />
-        </div>
-              <h3 className="text-2xl font-semibold text-gray-900 mb-3">配置参数</h3>
-              <p className="text-lg text-gray-600 max-w-md mx-auto">
-                此处将显示 {serviceName} 服务的详细配置参数，支持在线编辑、版本对比等功能
-              </p>
-            </div>
+            <ConfigParameterForm
+              serviceId={serviceId}
+              currentVersion={currentVersion}
+              currentRoleGroup={currentRoleGroup}
+              className="min-h-[400px]"
+            />
           </div>
         </div>
       </div>

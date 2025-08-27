@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useCallback, useMemo } from 'react'
+import React, { useCallback } from 'react'
 import { 
   ChevronDown, ChevronUp, Save, Loader2
 } from 'lucide-react'
@@ -80,28 +80,8 @@ const ServiceConfigContent: React.FC<ServiceConfigContentProps> = ({
     }
   }, [configGroups.groups, expandedGroups.size, onExpandedGroupsChange])
 
-  // 排序配置组
-  const sortedGroups = useMemo(() => {
-    return Object.entries(configGroups.groups).sort(([groupName1], [groupName2]) => {
-      const getGroupPriority = (groupName: string): number => {
-        if (groupName === 'General') return 1
-        if (groupName.startsWith('advanced_')) return 3
-        if (groupName.startsWith('custom_')) return 4
-        if (groupName.startsWith('高级')) return 3
-        if (groupName.startsWith('自定义')) return 4
-        return 2
-      }
-
-      const priority1 = getGroupPriority(groupName1)
-      const priority2 = getGroupPriority(groupName2)
-      
-      if (priority1 !== priority2) {
-        return priority1 - priority2
-      }
-      
-      return groupName1.localeCompare(groupName2)
-    })
-  }, [configGroups.groups])
+  // 使用后端排序好的配置组，不需要前端排序
+  const sortedGroups = Object.entries(configGroups.groups)
 
   // 处理保存
   const handleSave = async () => {

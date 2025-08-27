@@ -159,7 +159,7 @@ function ServiceDetailTabs({ service }: ServiceDetailTabsProps) {
       case 'overview':
         return <OverviewTab {...commonProps} />
       case 'instances':
-        return <InstancesTab {...commonProps} />
+        return <InstancesTab {...commonProps} isActive={activeTab === 'instances'} />
       case 'config':
         return <ConfigTab {...commonProps} />
       case 'k8s-dashboard':

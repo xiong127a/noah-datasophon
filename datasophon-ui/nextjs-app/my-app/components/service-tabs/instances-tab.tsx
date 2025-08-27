@@ -50,6 +50,7 @@ import { apiV1, API_PATHS_V1 } from '@/lib/api-config-v1'
 interface InstancesTabProps {
   serviceId: string
   serviceName: string
+  isActive?: boolean  // 添加激活状态标志
 }
 
 interface Instance {
@@ -82,7 +83,7 @@ const SERVICE_STATES = [
   { id: "5", key: "已退役", color: "secondary" },
 ]
 
-export default function InstancesTab({ serviceId, serviceName }: InstancesTabProps) {
+export default function InstancesTab({ serviceId, serviceName, isActive = true }: InstancesTabProps) {
   const searchParams = useSearchParams()
   const clusterId = searchParams.get('clusterId') || ''
   
@@ -129,38 +130,77 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
     }
   }, [clusterId])
 
-  // 组件挂载
+  // 页面卸载时的最后保障清理
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      console.log('🧹 页面卸载，强制清理定时器')
+      if (timer) {
+        clearInterval(timer)
+      }
+    }
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+      // 组件卸载时也确保清理
+      if (timer) {
+        console.log('🧹 组件卸载，清理定时器:', timer)
+        clearInterval(timer)
+      }
+    }
+  }, [timer])
+
+  // 组件挂载 - 只有在激活状态下才执行
   useEffect(() => {
     let isMounted = true
     
     const initialize = async () => {
-      if (isMounted) {
+      if (isMounted && isActive) {
         setMounted(true)
         await Promise.all([
           loadRoleGroups(),
           loadServiceRoles(),
           loadAutoScaleStatus()
         ])
-        startPolling()
+        // 不在这里启动轮询，由单独的useEffect管理
       }
     }
     
-    initialize()
+    if (isActive) {
+      initialize()
+    }
     
     return () => {
       isMounted = false
-      if (timer) clearInterval(timer)
+      stopPolling() // 清理定时器
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [serviceId])
+  }, [serviceId, isActive])
 
-  // 分页变更时重新加载数据
+  // 专门管理轮询的生命周期
   useEffect(() => {
-    if (mounted) {
+    if (isActive && mounted) {
+      console.log('🟢 启动轮询 - 实例标签页激活且已初始化')
+      startPolling()
+    } else {
+      console.log('🔴 停止轮询 - 实例标签页未激活或未初始化')
+      stopPolling()
+    }
+    
+    return () => {
+      stopPolling() // 确保清理
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isActive, mounted])
+
+  // 分页变更时重新加载数据 - 只有在激活状态下才执行
+  useEffect(() => {
+    if (mounted && isActive) {
       loadInstances()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagination.current, pagination.pageSize])
+  }, [pagination.current, pagination.pageSize, isActive])
 
 
 
@@ -168,6 +208,11 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
   const loadRoleGroups = async () => {
     if (!serviceId) {
       console.error('serviceId is required for loadRoleGroups')
+      return
+    }
+    
+    if (!isActive) {
+      console.log('🚫 标签页未激活，跳过角色组加载')
       return
     }
     
@@ -192,6 +237,11 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
       return
     }
     
+    if (!isActive) {
+      console.log('🚫 标签页未激活，跳过服务角色加载')
+      return
+    }
+    
     try {
       const finalUrl = `${API_PATHS_V1.CLUSTER_SERVICE_ROLE_TYPE_LIST}?serviceInstanceId=${serviceId}`
       console.log('loadServiceRoles called with serviceId:', serviceId, 'Final URL:', finalUrl)
@@ -209,6 +259,11 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
   // 获取自动伸缩状态
   const loadAutoScaleStatus = async () => {
     if (serviceName !== 'SEATUNNEL') return
+    
+    if (!isActive) {
+      console.log('🚫 标签页未激活，跳过自动伸缩状态加载')
+      return
+    }
     
     try {
       const response = await apiV1.get(API_PATHS_V1.AUTO_SCALE_STATUS, {
@@ -228,10 +283,18 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
 
   // 获取实例列表
   const loadInstances = async (silent = false) => {
+    // 最高优先级检查：标签页是否激活
+    if (!isActive) {
+      console.log('🚫 loadInstances - 标签页未激活，立即返回')
+      return
+    }
+    
     if (!serviceId) {
       console.error('serviceId is required for loadInstances')
       return
     }
+    
+    console.log(silent ? '🔄 静默刷新实例列表' : '📥 加载实例列表')
     
     if (!silent) setLoading(true)
     
@@ -291,22 +354,64 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
 
   // 启动轮询
   const startPolling = () => {
+    if (!isActive) {
+      console.log('⚠️ startPolling被调用但标签页未激活，跳过')
+      return
+    }
+    
+    console.log('🚀 开始启动轮询，当前timer ID:', timer)
+    
+    // 先清除现有定时器
+    if (timer) {
+      console.log('🗑️ 清除现有定时器:', timer)
+      clearInterval(timer)
+      setTimer(null)
+    }
+    
     // 立即加载一次
     loadInstances()
     
-    // 清除现有定时器
-    if (timer) clearInterval(timer)
-    
     // 设置新的定时器
     const newTimer = setInterval(() => {
+      console.log('⏰ 定时器触发，isActive:', isActive, 'serviceId:', serviceId)
+      
+      // 多重检查确保安全
+      if (!isActive) {
+        console.log('❌ 定时器触发但标签页未激活，跳过API调用')
+        return
+      }
+      
+      if (!serviceId) {
+        console.log('❌ 定时器触发但serviceId不存在，跳过API调用')
+        return
+      }
+      
       loadInstances(true) // 静默刷新
     }, 10000) // 10秒刷新间隔
     
+    console.log('✅ 新定时器已设置，ID:', newTimer)
     setTimer(newTimer)
+  }
+
+  // 停止轮询
+  const stopPolling = () => {
+    console.log('🛑 停止轮询，当前timer ID:', timer)
+    if (timer) {
+      console.log('🗑️ 清除定时器:', timer)
+      clearInterval(timer)
+      setTimer(null)
+      console.log('✅ 定时器已清除')
+    } else {
+      console.log('ℹ️ 没有活跃的定时器需要清除')
+    }
   }
 
   // 搜索处理
   const handleSearch = () => {
+    if (!isActive) {
+      console.log('🚫 搜索操作 - 标签页未激活，跳过')
+      return
+    }
     setPagination(prev => ({ ...prev, current: 1 }))
     loadInstances()
   }
@@ -367,7 +472,9 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
         if (response.data.code === 200) {
           alert('删除成功')
           setSelectedRowKeys([])
-          loadInstances()
+          if (isActive) {
+            loadInstances()
+          }
         } else {
           alert(response.data.msg || '删除失败')
         }
@@ -379,7 +486,9 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
         if (response.data.code === 200) {
           alert('退役操作成功')
           setSelectedRowKeys([])
-          loadInstances()
+          if (isActive) {
+            loadInstances()
+          }
         } else {
           alert(response.data.msg || '退役操作失败')
         }
@@ -392,7 +501,9 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
         if (response.data.code === 200) {
           alert('操作成功')
           setSelectedRowKeys([])
-          loadInstances()
+          if (isActive) {
+            loadInstances()
+          }
         } else {
           alert(response.data.msg || '操作失败')
         }
@@ -433,7 +544,9 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
       if (response.data.code === 200) {
         setAutoScaleEnabled(!autoScaleEnabled)
         alert('操作成功')
-        loadInstances()
+        if (isActive) {
+          loadInstances()
+        }
       }
     } catch (error) {
       console.error('自动伸缩操作失败:', error)
@@ -648,7 +761,13 @@ export default function InstancesTab({ serviceId, serviceName }: InstancesTabPro
                   <Users className="w-4 h-4 mr-2" />
                   添加角色组
                 </Button>
-                <Button onClick={() => loadInstances()} size="sm" variant="ghost">
+                <Button onClick={() => {
+                  if (isActive) {
+                    loadInstances()
+                  } else {
+                    console.log('🚫 刷新按钮点击 - 标签页未激活，跳过')
+                  }
+                }} size="sm" variant="ghost">
                   <RefreshCw className="w-4 h-4" />
           </Button>
         </div>
