@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { 
   Settings, Download, Eye, FileText, Database, History, Users,
-  Search, List, Grid3x3, Copy, Package
+  Search, List, Grid3x3, Copy, Package, ChevronDown, Check, RotateCcw
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 
@@ -48,8 +49,11 @@ interface ConfigTabProps {
 // 接口定义
 interface ConfigVersion {
   version: number
-  createTime: string
+  description?: string
+  editor?: string
+  editTime?: string
   isCurrent: boolean
+  validVersion?: boolean
 }
 
 interface RoleGroup {
@@ -82,6 +86,10 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
   const [roleGroups, setRoleGroups] = useState<RoleGroup[]>([])
   const [currentRoleGroup, setCurrentRoleGroup] = useState<number>()
   const [compareMode, setCompareMode] = useState(false)
+  const [compareVersion, setCompareVersion] = useState<number>()
+  const [searchKeyword, setSearchKeyword] = useState('')
+  const [versionSearchKeyword, setVersionSearchKeyword] = useState('')
+  const [isVersionDropdownOpen, setIsVersionDropdownOpen] = useState(false)
   
   // 配置导出相关状态
   const [configFiles, setConfigFiles] = useState<ConfigFile[]>([])
@@ -434,6 +442,42 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
       toast.error('保存配置失败')
     }
   }, [serviceId, clusterId, currentRoleGroup, currentVersion, fetchConfigVersions])
+
+
+
+
+
+  // 过滤版本列表
+  const filteredVersions = useMemo(() => {
+    if (!versionSearchKeyword.trim()) return configVersions
+    
+    const keyword = versionSearchKeyword.toLowerCase()
+    return configVersions.filter(version => 
+      version.version.toString().includes(keyword) ||
+      version.description?.toLowerCase().includes(keyword) ||
+      version.editor?.toLowerCase().includes(keyword)
+    )
+  }, [configVersions, versionSearchKeyword])
+
+  // 启动版本对比
+  const startCompareWithVersion = useCallback((versionToCompare: number) => {
+    setCompareVersion(versionToCompare)
+    setCompareMode(true)
+    setIsVersionDropdownOpen(false)
+    toast.info(`开始对比版本 ${currentVersion} 和版本 ${versionToCompare}`)
+  }, [currentVersion])
+
+  // 恢复版本
+  const restoreVersion = useCallback(async (versionToRestore: number) => {
+    try {
+      // TODO: 实现版本恢复API调用
+      toast.info(`恢复到版本 ${versionToRestore} 的功能正在开发中`)
+      setIsVersionDropdownOpen(false)
+    } catch (error) {
+      console.error('版本恢复失败:', error)
+      toast.error('版本恢复失败')
+    }
+  }, [])
 
   // 获取文件图标类型和颜色
   const getFileIconClass = useCallback((fileName: string) => {
@@ -1020,31 +1064,122 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
       {/* 主要内容区域 - 配置参数 */}
       <div className="flex-1 p-8">
         <div className="space-y-8">
-          {/* 版本和角色组选择 - 苹果风格卡片 */}
-          <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
-            <div className="flex flex-wrap items-center gap-6">
+          {/* 版本和角色组控制栏 - Vue2风格集中设计 */}
+          <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-6">
+            <div className="flex flex-wrap items-center gap-4">
+              
+              {/* 版本选择器 - 集成搜索和操作功能 */}
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-blue-100 rounded-2xl">
                   <History className="w-5 h-5 text-blue-600" />
                 </div>
                 <div>
                   <Label className="text-sm font-medium text-gray-700">配置版本</Label>
-                  <Select value={currentVersion?.toString()} onValueChange={(value) => setCurrentVersion(parseInt(value))}>
-                    <SelectTrigger className="w-40 mt-1 rounded-xl">
-                      <SelectValue placeholder="选择版本" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {configVersions.map((version) => (
-                        <SelectItem key={version.version} value={version.version.toString()}>
-                          版本 {version.version}
-                          {version.isCurrent && <Badge variant="secondary" className="ml-2">当前</Badge>}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <DropdownMenu open={isVersionDropdownOpen} onOpenChange={setIsVersionDropdownOpen}>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="outline"
+                        className="w-64 mt-1 rounded-xl justify-between"
+                      >
+                        <span>
+                          {currentVersion !== undefined ? `版本 ${currentVersion}` : '选择版本'}
+                        </span>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-80 p-0" align="start">
+                      {/* 搜索框 */}
+                      <div className="p-3 border-b">
+                        <Input
+                          placeholder="搜索版本..."
+                          value={versionSearchKeyword}
+                          onChange={(e) => setVersionSearchKeyword(e.target.value)}
+                          className="w-full"
+                        />
+                      </div>
+                      
+                      {/* 版本列表 */}
+                      <div className="max-h-80 overflow-y-auto">
+                        {filteredVersions.map((version) => (
+                          <div key={version.version} className="relative border-b last:border-b-0">
+                            {/* 版本信息区域 */}
+                            <div 
+                              className={`p-3 cursor-pointer hover:bg-gray-50 ${
+                                currentVersion === version.version ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                              }`}
+                              onClick={() => {
+                                setCurrentVersion(version.version)
+                                setIsVersionDropdownOpen(false)
+                              }}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <span className="font-medium text-sm">版本 {version.version}</span>
+                                    {version.isCurrent && (
+                                      <Badge variant="secondary" className="text-xs">当前使用</Badge>
+                                    )}
+                                    {currentVersion === version.version && (
+                                      <Check className="h-4 w-4 text-blue-600" />
+                                    )}
+                                  </div>
+                                  {version.description && (
+                                    <div className="text-xs text-gray-600 mb-1">
+                                      {version.description}
+                                    </div>
+                                  )}
+                                  <div className="flex items-center gap-3 text-xs text-gray-400">
+                                    {version.editor && <span>{version.editor}</span>}
+                                    {version.editTime && <span>编辑于 {version.editTime}</span>}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* 操作按钮区域 */}
+                            {currentVersion !== version.version && (
+                              <div className="flex justify-end gap-1 p-2 bg-gray-50 border-t">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    startCompareWithVersion(version.version)
+                                  }}
+                                  className="h-7 px-2 text-xs"
+                                >
+                                  <Eye className="h-3 w-3 mr-1" />
+                                  对比
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    restoreVersion(version.version)
+                                  }}
+                                  className="h-7 px-2 text-xs"
+                                >
+                                  <RotateCcw className="h-3 w-3 mr-1" />
+                                  恢复
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                        
+                        {filteredVersions.length === 0 && (
+                          <div className="p-4 text-center text-gray-500 text-sm">
+                            未找到匹配的版本
+                          </div>
+                        )}
+                      </div>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
               
+              {/* 角色组选择器 */}
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-green-100 rounded-2xl">
                   <Users className="w-5 h-5 text-green-600" />
@@ -1066,23 +1201,49 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
                 </div>
               </div>
 
+              {/* 配置搜索 */}
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-purple-100 rounded-2xl">
-                  <Eye className="w-5 h-5 text-purple-600" />
+                <div className="p-3 bg-gray-100 rounded-2xl">
+                  <Search className="w-5 h-5 text-gray-600" />
                 </div>
                 <div>
-                  <Label className="text-sm font-medium text-gray-700">版本对比</Label>
-                  <Button 
-                    size="sm"
-                    variant={compareMode ? "default" : "outline"}
-                    onClick={() => setCompareMode(!compareMode)}
-                    className="mt-1 rounded-xl"
-                  >
-                    {compareMode ? "关闭" : "开启"}
-                  </Button>
+                  <Label className="text-sm font-medium text-gray-700">配置搜索</Label>
+                  <Input
+                    placeholder="搜索配置项..."
+                    value={searchKeyword}
+                    onChange={(e) => setSearchKeyword(e.target.value)}
+                    className="w-40 mt-1 rounded-xl"
+                  />
                 </div>
               </div>
 
+              {/* 对比模式提示 */}
+              {compareMode && compareVersion && (
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-purple-100 rounded-2xl">
+                    <Eye className="w-5 h-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-700">对比模式</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant="outline" className="text-xs">
+                        版本 {currentVersion} vs 版本 {compareVersion}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setCompareMode(false)
+                          setCompareVersion(undefined)
+                        }}
+                        className="h-6 w-6 p-0"
+                      >
+                        ×
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
             </div>
           </div>
@@ -1094,6 +1255,9 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
               serviceName={serviceName}
               currentVersion={currentVersion}
               currentRoleGroup={currentRoleGroup}
+              compareMode={compareMode}
+              compareVersion={compareVersion}
+              searchKeyword={searchKeyword}
               onSave={handleSaveConfig}
               className="min-h-[400px]"
             />

@@ -60,8 +60,11 @@ interface ConfigParameterFormProps {
 
 export default function ConfigParameterForm({
   serviceId,
+  serviceName, // eslint-disable-line @typescript-eslint/no-unused-vars
   currentVersion,
   currentRoleGroup,
+  compareMode = false, // eslint-disable-line @typescript-eslint/no-unused-vars
+  compareVersion, // eslint-disable-line @typescript-eslint/no-unused-vars
   searchKeyword = '',
   onSave,
   className = ''
