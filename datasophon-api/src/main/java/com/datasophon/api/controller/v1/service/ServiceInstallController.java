@@ -84,19 +84,19 @@ public class ServiceInstallController {
     @UserPermission
     @Timed(value = "service.install.config.save", description = "保存服务配置的时间")
     public Result<Boolean> saveServiceConfig(@ClusterId Long clusterId,
-                                            @RequestParam("serviceName") String serviceName, 
+                                            @RequestParam("serviceId") Long serviceId, 
                                             @RequestParam("serviceConfig") String serviceConfig, 
                                             @RequestParam(name = "roleGroupId", required = false) Long roleGroupId,
                                             @RequestParam(name = "description", required = false) String description, 
                                             @RequestParam(name = "userId", required = false) Long userId,
                                             @RequestParam(name = "username", required = false) String username) {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
-        log.debug("保存服务配置: clusterId={}, serviceName={} - {}", 
-                 clusterId, serviceName, threadInfo);
+        log.debug("保存服务配置: clusterId={}, serviceId={} - {}", 
+                 clusterId, serviceId, threadInfo);
         
         var jsonArray = JSONArray.parseArray(serviceConfig); // JDK21特性
         var configList = jsonArray.toJavaList(ServiceConfig.class);
-        var result = serviceInstallService.saveServiceConfig(clusterId, serviceName, configList, 
+        var result = serviceInstallService.saveServiceConfig(clusterId, serviceId, configList, 
                                                             roleGroupId, description, userId, username);
         return Result.success(result);
     }

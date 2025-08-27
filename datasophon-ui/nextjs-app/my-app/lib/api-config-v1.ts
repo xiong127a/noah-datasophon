@@ -107,7 +107,6 @@ export const API_PATHS_V1 = {
   PARCEL_INSTALL: `${API_BASE}/cluster/parcel/install`,
 
   // 服务配置相关 - v1（规范化后端路径）
-  SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`, // 保存服务配置
   GET_SERVICE_CONFIG: `${API_BASE}/cluster/service/instance/config/info`, // 获取服务配置信息
   GET_CONFIG_VERSION: `${API_BASE}/cluster/service/instance/config/getConfigVersion`, // 获取配置版本
   GET_ROLE_GROUP_LIST: `${API_BASE}/cluster/service/instance/role/group/list`, // 获取角色组列表

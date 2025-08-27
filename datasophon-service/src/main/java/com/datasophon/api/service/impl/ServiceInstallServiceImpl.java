@@ -28,6 +28,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.TypeReference;
 import com.datasophon.api.exceptions.ServiceException;
+import com.datasophon.common.exception.BusinessException;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.load.ServiceInfoMap;
@@ -241,9 +242,17 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     @Override
     public boolean saveServiceConfig(
-            Long clusterId, String serviceName, List<ServiceConfig> list,
+            Long clusterId, Long serviceId, List<ServiceConfig> list,
             Long roleGroupId, String description, Long userId, String username) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
+        
+        // 通过serviceId获取集群服务实例
+        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceId);
+        if (serviceInstance == null) {
+            throw new BusinessException("集群服务实例不存在: " + serviceId);
+        }
+        String serviceName = serviceInstance.getServiceName();
+        
         ServiceConfigMap.put(clusterInfo.getClusterCode() + UNDERLINE + serviceName + CONFIG,
                 list);
         putRemoteServiceConfigMap(
@@ -257,10 +266,10 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             serviceRoleHandler.handlerConfig(clusterId, list);
         }
 
-        // add variable - Service层：获取DTO后转换为Entity
-        FrameServiceDTO frameServiceDTO2 = frameService.getServiceByFrameCodeAndServiceName(
+        // 获取框架服务信息，用于后续逻辑
+        FrameServiceDTO frameServiceDTO = frameService.getServiceByFrameCodeAndServiceName(
                 clusterInfo.getClusterFrame(), serviceName);
-        FrameServiceEntity frameServiceEntity = frameServiceConverter.dtoToEntity(frameServiceDTO2);
+        FrameServiceEntity frameServiceEntity = frameServiceConverter.dtoToEntity(frameServiceDTO);
 
         // TODO 检查是否为重复逻辑
         for (ServiceConfig serviceConfig : list) {
@@ -302,114 +311,88 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
             addHostNodeToPrometheus(clusterId, configFileMap);
         }
 
-        // Service层：获取DTO后转换为Entity
-        ClusterServiceInstanceDTO serviceInstanceDTO = serviceInstanceService
-                .getServiceInstanceByClusterIdAndServiceName(
-                        clusterId, serviceName);
-        ClusterServiceInstanceEntity serviceInstanceEntity = null;
-        if (serviceInstanceDTO != null) {
-            serviceInstanceEntity = clusterServiceInstanceConverter.dtoToEntity(serviceInstanceDTO);
-        }
+        // 直接使用已获取的服务实例
+        ClusterServiceInstanceEntity serviceInstanceEntity = serviceInstance;
 
         boolean versionCreated = false; // 标记是否创建了新版本
 
-        if (Objects.isNull(serviceInstanceEntity)) {
-            serviceInstanceEntity = saveServiceInstance(clusterId, serviceName, frameServiceEntity);
-            ClusterServiceInstanceRoleGroupEntity clusterServiceInstanceRoleGroupEntity = saveServiceInstanceRoleGroup(clusterId,
-                    serviceName, serviceInstanceEntity);
+        // 更新现有服务实例的配置（因为通过serviceId获取，服务实例必然存在）
+        Set<String> configUpdateRoleSet = new HashSet<>();
+        List<ServiceConfig> originalConfigs = listServiceConfigByServiceInstance(serviceInstanceEntity);
 
-            // 如果描述为空，使用默认描述
-            String finalDescription = description;
-            if (StringUtils.isBlank(finalDescription)) {
-                finalDescription = "初始配置";
-            }
+        // 如果描述为空，生成修改内容的描述
+        String finalDescription = description;
+        if (StringUtils.isBlank(finalDescription)) {
+            finalDescription = generateChangeDescription(originalConfigs, list);
+        }
 
-            boolean initialSaveResult = saveServiceRoleGroupConfig(
-                    clusterId, serviceName, list, configFileMap, clusterServiceInstanceRoleGroupEntity, finalDescription,
-                    userId, username);
-            CacheUtils.put(
-                    "UseRoleGroup_" + serviceInstanceEntity.getId(),
-                    clusterServiceInstanceRoleGroupEntity.getId());
-
-            versionCreated = initialSaveResult; // 只有当成功保存到数据库时才标记为创建了新版本
+        configNeedUpdate(serviceInstanceEntity, list, configUpdateRoleSet);
+        ClusterServiceRoleGroupConfigEntity roleGroupConfig;
+        if (Objects.isNull(roleGroupId)) {
+            // Service层：获取DTO后转换为Entity
+            ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService.getRoleGroupByServiceInstanceId(
+                    serviceInstanceEntity.getId());
+            ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
+            ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService
+                    .getConfigByRoleGroupId(roleGroup.getId());
+            roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
         } else {
-            Set<String> configUpdateRoleSet = new HashSet<>();
-            List<ServiceConfig> originalConfigs = listServiceConfigByServiceInstance(serviceInstanceEntity);
-
-            // 如果描述为空，生成修改内容的描述
-            String finalDescription = description;
-            if (StringUtils.isBlank(finalDescription)) {
-                finalDescription = generateChangeDescription(originalConfigs, list);
-            }
-
-            configNeedUpdate(serviceInstanceEntity, list, configUpdateRoleSet);
-            ClusterServiceRoleGroupConfigEntity roleGroupConfig;
+            // Service层：获取DTO后转换为Entity
+            ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService.getConfigByRoleGroupId(roleGroupId);
+            roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
+        }
+        CacheUtils.put(
+                "UseRoleGroup_" + serviceInstanceEntity.getId(),
+                roleGroupConfig.getRoleGroupId());
+        if (!configUpdateRoleSet.isEmpty()) {
+            ClusterServiceRoleGroupConfigEntity newRoleGroupConfig = new ClusterServiceRoleGroupConfigEntity();
             if (Objects.isNull(roleGroupId)) {
-                // Service层：获取DTO后转换为Entity
-                ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService.getRoleGroupByServiceInstanceId(
-                        serviceInstanceEntity.getId());
-                ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
-                ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService
-                        .getConfigByRoleGroupId(roleGroup.getId());
-                roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
+                ClusterServiceInstanceRoleGroupEntity roleGroup = saveNewRoleGroup(serviceInstanceEntity);
+                newRoleGroupConfig.setConfigVersion(1);
+                newRoleGroupConfig.setRoleGroupId(roleGroup.getId());
+                CacheUtils.put(
+                        "UseRoleGroup_" + serviceInstanceEntity.getId(), roleGroup.getId());
             } else {
-                // Service层：获取DTO后转换为Entity
-                ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService.getConfigByRoleGroupId(roleGroupId);
-                roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
-            }
-            CacheUtils.put(
-                    "UseRoleGroup_" + serviceInstanceEntity.getId(),
-                    roleGroupConfig.getRoleGroupId());
-            if (!configUpdateRoleSet.isEmpty()) {
-                ClusterServiceRoleGroupConfigEntity newRoleGroupConfig = new ClusterServiceRoleGroupConfigEntity();
-                if (Objects.isNull(roleGroupId)) {
-                    ClusterServiceInstanceRoleGroupEntity roleGroup = saveNewRoleGroup(serviceInstanceEntity);
-                    newRoleGroupConfig.setConfigVersion(1);
-                    newRoleGroupConfig.setRoleGroupId(roleGroup.getId());
-                    CacheUtils.put(
-                            "UseRoleGroup_" + serviceInstanceEntity.getId(), roleGroup.getId());
-                } else {
-                    newRoleGroupConfig.setConfigVersion(roleGroupConfig.getConfigVersion() + 1);
-                    newRoleGroupConfig.setRoleGroupId(roleGroupConfig.getRoleGroupId());
-                    roleGroupService.updateToNeedRestart(roleGroupId);
+                newRoleGroupConfig.setConfigVersion(roleGroupConfig.getConfigVersion() + 1);
+                newRoleGroupConfig.setRoleGroupId(roleGroupConfig.getRoleGroupId());
+                roleGroupService.updateToNeedRestart(roleGroupId);
 
-                    boolean hasCommonConfig = configUpdateRoleSet.contains(GENERAL);
-                    if (hasCommonConfig) {
-                        // 通用配置更新，重启整个角色组
-                        roleInstanceService.updateToNeedRestart(roleGroupId);
-                        serviceInstanceEntity.setNeedRestart(NeedRestart.YES);
-                    } else {
-                        // 仅更新特定服务角色
-                        for (String serviceRoleName : configUpdateRoleSet) {
-                            roleInstanceService.updateToNeedRestart(roleGroupId, serviceRoleName);
-                        }
+                boolean hasCommonConfig = configUpdateRoleSet.contains(GENERAL);
+                if (hasCommonConfig) {
+                    // 通用配置更新，重启整个角色组
+                    roleInstanceService.updateToNeedRestart(roleGroupId);
+                    serviceInstanceEntity.setNeedRestart(NeedRestart.YES);
+                } else {
+                    // 仅更新特定服务角色
+                    for (String serviceRoleName : configUpdateRoleSet) {
+                        roleInstanceService.updateToNeedRestart(roleGroupId, serviceRoleName);
                     }
                 }
-                newRoleGroupConfig.setClusterId(clusterId);
-                newRoleGroupConfig.setCreateTime(LocalDateTime.now());
-                newRoleGroupConfig.setUpdateTime(LocalDateTime.now());
-                newRoleGroupConfig.setServiceName(serviceInstanceEntity.getServiceName());
-                buildConfig(list, configFileMap, newRoleGroupConfig, finalDescription);
-
-                // 保存配置并检查是否成功插入数据库
-                boolean saveResult = groupConfigService.save(newRoleGroupConfig);
-
-                // 只有当数据库操作确实成功时才标记为创建了新版本
-                if (saveResult) {
-                    // 保存配置版本信息，包含用户信息
-                    saveConfigVersionInfo(newRoleGroupConfig, "GROUP_CONFIG", newRoleGroupConfig.getId(), userId,
-                            username, finalDescription);
-                    versionCreated = true; // 有配置更新且成功保存到数据库时创建了新版本
-                } else {
-                    logger.warn("Configuration was not updated in database for service: {}, roleGroupId: {}",
-                            serviceName, newRoleGroupConfig.getRoleGroupId());
-                }
             }
-            // update service instance
-            serviceInstanceEntity.setUpdateTime(LocalDateTime.now());
-            serviceInstanceEntity.setLabel(frameServiceEntity.getLabel());
-            serviceInstanceService.updateById(serviceInstanceEntity);
+            newRoleGroupConfig.setClusterId(clusterId);
+            newRoleGroupConfig.setCreateTime(LocalDateTime.now());
+            newRoleGroupConfig.setUpdateTime(LocalDateTime.now());
+            newRoleGroupConfig.setServiceName(serviceInstanceEntity.getServiceName());
+            buildConfig(list, configFileMap, newRoleGroupConfig, finalDescription);
+
+            // 保存配置并检查是否成功插入数据库
+            boolean saveResult = groupConfigService.save(newRoleGroupConfig);
+
+            // 只有当数据库操作确实成功时才标记为创建了新版本
+            if (saveResult) {
+                // 保存配置版本信息，包含用户信息
+                saveConfigVersionInfo(newRoleGroupConfig, "GROUP_CONFIG", newRoleGroupConfig.getId(), userId,
+                        username, finalDescription);
+                versionCreated = true; // 有配置更新且成功保存到数据库时创建了新版本
+            } else {
+                logger.warn("Configuration was not updated in database for service: {}, roleGroupId: {}",
+                        serviceName, newRoleGroupConfig.getRoleGroupId());
+            }
         }
+        // update service instance
+        serviceInstanceEntity.setUpdateTime(LocalDateTime.now());
+        serviceInstanceEntity.setLabel(frameServiceEntity.getLabel());
+        serviceInstanceService.updateById(serviceInstanceEntity);
 
         // 返回是否创建了新版本
         return versionCreated;

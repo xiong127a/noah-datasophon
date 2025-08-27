@@ -242,7 +242,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                 }
             }
             logger.info("Update hdfs enable ranger plugin");
-            serviceInstallService.saveServiceConfig(clusterId, serviceInstance.getServiceName(), serviceConfigs,
+            serviceInstallService.saveServiceConfig(clusterId, serviceInstance.getId(), serviceConfigs,
                     roleGroupId, "(AUTO) Update hdfs enable ranger plugin",-1L,"system");
         }
     }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { 
-  Settings, ChevronDown, ChevronUp, FileText
+  Settings, ChevronDown, ChevronUp, FileText, Save, Loader2
 } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
@@ -63,10 +63,12 @@ export default function ConfigParameterForm({
   currentVersion,
   currentRoleGroup,
   searchKeyword = '',
+  onSave,
   className = ''
 }: ConfigParameterFormProps) {
   // 状态管理
   const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
   const [configData, setConfigData] = useState<Record<string, ConfigGroup>>({})
   const [formData, setFormData] = useState<Record<string, unknown>>({})
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set())
@@ -287,10 +289,8 @@ export default function ConfigParameterForm({
       const headers = createClusterHeaders(clusterId)
       const params = {
         serviceInstanceId: serviceId,
-        page: 1,
-        pageSize: 10000,
         version: currentVersion || '',
-        roleGroupId: currentRoleGroup || ''  // 直接传递，不用JSON.stringify
+        roleGroupId: currentRoleGroup || ''
       }
       console.log('📡 调用API (GET):', API_PATHS_V1.GET_SERVICE_CONFIG)
       console.log('📦 查询参数:', params)
@@ -387,18 +387,23 @@ export default function ConfigParameterForm({
   //   return isValid
   // }, [configData, formData])
 
-  // 在组件内部处理保存（如果需要按钮的话可以使用）
-  // const handleSave = useCallback(async () => {
-  //   if (!validateForm()) {
-  //     toast.error('请检查必填项')
-  //     return
-  //   }
-  //   if (onSave) {
-  //     onSave(formData)
-  //   } else {
-  //     toast.success('配置已保存')
-  //   }
-  // }, [formData, validateForm, onSave])
+  // 在组件内部处理保存
+  const handleSave = useCallback(async () => {
+    try {
+      setSaving(true)
+      // 先检查是否有onSave回调
+      if (onSave) {
+        await onSave(formData)
+      } else {
+        toast.success('配置已保存')
+      }
+    } catch (error) {
+      console.error('保存配置失败:', error)
+      toast.error('保存配置失败')
+    } finally {
+      setSaving(false)
+    }
+  }, [formData, onSave])
 
   // 过滤配置项
   const filterConfigItems = useCallback((items: ConfigItem[]): ConfigItem[] => {
@@ -592,6 +597,24 @@ export default function ConfigParameterForm({
     }
   }, [serviceId, currentVersion, currentRoleGroup, clusterId, fetchConfigData])
 
+  // 监听配置保存成功事件，刷新配置数据
+  useEffect(() => {
+    const handleConfigSaved = (event: CustomEvent) => {
+      const { serviceId: eventServiceId, clusterId: eventClusterId, currentRoleGroup: eventRoleGroup } = event.detail
+      // 只有当前服务的配置保存成功时才刷新
+      if (eventServiceId === serviceId && eventClusterId === clusterId && eventRoleGroup === currentRoleGroup) {
+        console.log('🔄 配置保存成功，刷新配置数据')
+        fetchConfigData()
+      }
+    }
+
+    window.addEventListener('configSaved', handleConfigSaved as EventListener)
+    
+    return () => {
+      window.removeEventListener('configSaved', handleConfigSaved as EventListener)
+    }
+  }, [serviceId, clusterId, currentRoleGroup, fetchConfigData])
+
   // 渲染主内容
   if (loading) {
     return (
@@ -713,6 +736,37 @@ export default function ConfigParameterForm({
     <div className="h-full flex flex-col relative">
       {/* 浮动操作按钮组 */}
       <div className="absolute top-4 right-4 z-10 flex items-center gap-2">
+        {onSave && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleSave}
+            disabled={saving}
+            className="
+              h-9 px-3 
+              bg-green-50/80 backdrop-blur-xl border border-green-200/60
+              hover:bg-green-100/90 hover:border-green-300/70
+              text-green-700 hover:text-green-800
+              rounded-xl shadow-lg hover:shadow-xl
+              transition-all duration-300 transform hover:scale-[1.02]
+              ring-1 ring-green-100/40 hover:ring-green-200/60
+              disabled:opacity-50 disabled:transform-none
+            "
+          >
+            {saving ? (
+              <>
+                <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                <span className="text-xs font-medium">保存中...</span>
+              </>
+            ) : (
+              <>
+                <Save className="h-3.5 w-3.5 mr-1" />
+                <span className="text-xs font-medium">保存配置</span>
+              </>
+            )}
+          </Button>
+        )}
         <Button
           type="button"
           variant="ghost"

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import { 
-  Settings, Save, Download, Eye, FileText, Database, History, Users,
+  Settings, Download, Eye, FileText, Database, History, Users,
   Search, List, Grid3x3, Copy, Package
 } from 'lucide-react'
 
@@ -61,7 +61,6 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
   const [roleGroups, setRoleGroups] = useState<RoleGroup[]>([])
   const [currentRoleGroup, setCurrentRoleGroup] = useState<number>()
   const [compareMode, setCompareMode] = useState(false)
-  const [compareVersion] = useState<number>()
   
   // 配置导出相关状态
   const [configFiles, setConfigFiles] = useState<ConfigFile[]>([])
@@ -383,26 +382,38 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
       const userStr = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null
       const currentUser = userStr ? JSON.parse(atob(userStr.split('.')[1])) : {}
 
-      const saveParams = {
-        clusterId: parseInt(clusterId),
-        serviceName: serviceName,
-        serviceConfig: JSON.stringify(filteredItems),
-        roleGroupId: currentRoleGroup,
-        description: `保存 ${serviceName} 配置 - ${new Date().toLocaleString()}`,
-        userId: currentUser.id || 1,
-        username: currentUser.username || 'admin'
-      }
+      // 创建URL编码数据以匹配后端@RequestParam格式
+      const params = new URLSearchParams()
+      params.append('serviceId', serviceId)
+      params.append('serviceConfig', JSON.stringify(filteredItems))
+      params.append('roleGroupId', currentRoleGroup.toString())
+      // description 让后端智能生成，不传递此参数
+      params.append('userId', (currentUser.id || 1).toString())
+      params.append('username', currentUser.username || 'admin')
 
-      const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_CONFIG, saveParams, { headers })
+      const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_CONFIG, params, { 
+        headers: {
+          ...headers,
+          'Content-Type': 'application/x-www-form-urlencoded'
+        }
+      })
 
       if (response.data.code === 200) {
         const versionCreated = response.data.versionCreated
         if (versionCreated === false) {
           toast.info('配置未发生变更，未生成新版本')
+          // 配置未变更，直接刷新配置数据
+          window.dispatchEvent(new CustomEvent('configSaved', { 
+            detail: { serviceId, clusterId, currentRoleGroup, currentVersion } 
+          }))
         } else {
           toast.success('配置保存成功，已生成新版本')
-          // 重新获取版本列表
-          fetchConfigVersions()
+          // 先重新获取版本列表，版本更新完成后再通知刷新配置
+          await fetchConfigVersions()
+          // 版本已更新，通知ConfigParameterForm刷新配置数据（使用最新版本）
+          window.dispatchEvent(new CustomEvent('configSaved', { 
+            detail: { serviceId, clusterId, currentRoleGroup, currentVersion: null } // 传 null 让 ConfigParameterForm 使用最新版本
+          }))
         }
       } else {
         toast.error(response.data.msg || '保存配置失败')
@@ -411,7 +422,7 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
       console.error('保存配置失败:', error)
       toast.error('保存配置失败')
     }
-  }, [serviceId, clusterId, currentRoleGroup, serviceName, fetchConfigVersions])
+  }, [serviceId, clusterId, currentRoleGroup, currentVersion, fetchConfigVersions])
 
   // 获取文件图标类型和颜色
   const getFileIconClass = useCallback((fileName: string) => {
@@ -1061,12 +1072,7 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
                 </div>
               </div>
 
-              <div className="ml-auto">
-                <Button className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white px-6 py-3 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300">
-                  <Save className="w-5 h-5 mr-2" />
-                  保存配置
-                </Button>
-              </div>
+
             </div>
           </div>
 
@@ -1074,8 +1080,10 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
           <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-8">
             <ConfigParameterForm
               serviceId={serviceId}
+              serviceName={serviceName}
               currentVersion={currentVersion}
               currentRoleGroup={currentRoleGroup}
+              onSave={handleSaveConfig}
               className="min-h-[400px]"
             />
           </div>
