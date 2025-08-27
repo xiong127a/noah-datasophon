@@ -311,12 +311,80 @@ export const useServiceSelection = ({
     }
   }, [selectedServiceIds, services, requiredServices, serviceTypeFilter])
 
-  // 初始化加载
+  // 初始化加载 - 移除对fetchServices函数的依赖，避免重复调用
   useEffect(() => {
-    if (clusterId) {
-      fetchServices()
+    if (!clusterId) return
+    
+    // 直接在useEffect中调用API，避免函数依赖导致的重复执行
+    const loadInitialServices = async () => {
+      setLoading(true)
+      setError(null)
+      
+      try {
+        const headers = createClusterHeaders(clusterId)
+        
+        let response
+        if (isAddServiceMode) {
+          // 添加服务模式：调用 /api/frame/service/list
+          response = await apiV1.get(API_PATHS_V1.FRAME_SERVICE_LIST, { headers })
+        } else {
+          // 新建集群模式：调用 /api/frame/service/listWithRequired
+          const params = new URLSearchParams({ 
+            type: serviceTypeFilter
+          }).toString()
+          const url = `${API_PATHS_V1.FRAME_SERVICE_LIST_WITH_REQUIRED}?${params}`
+          response = await apiV1.get(url, { headers })
+        }
+        
+        if (response.data?.success && response.data?.data) {
+          const rawServicesData = response.data.data
+          const servicesData = rawServicesData.map((s: Record<string, unknown>) => ({
+            ...s,
+            isRequired: Boolean(s.isRequired)
+          }))
+          
+          setServices(servicesData)
+          
+          if (isAddServiceMode) {
+            // 添加服务模式：自动选中已安装的服务
+            const installedServices = servicesData.filter((s: Service) => s.installed)
+            const installedIds = installedServices.map((s: Service) => s.id)
+            setSelectedServiceIds(installedIds)
+            
+            toast.success(`已加载 ${servicesData.length} 个可选服务${installedIds.length > 0 ? `，${installedIds.length} 个已安装` : ''}`)
+          } else {
+            // 新建集群模式：自动选中必需服务
+            const requiredServices = servicesData.filter((s: Service) => s.isRequired)
+            const newRequiredIds = requiredServices.map((s: Service) => s.id)
+            setSelectedServiceIds(newRequiredIds)
+            
+            if (serviceTypeFilter === ServiceType.MINIMAL) {
+              toast.success(`✅ 最小化模式：已自动选择 ${newRequiredIds.length} 个必需服务`)
+            } else {
+              toast.success(`✅ 自定义模式：已自动选择 ${newRequiredIds.length} 个必需服务，可继续选择其他服务`)
+            }
+          }
+        } else {
+          const errorMsg = response.data?.message || response.data?.msg || '获取服务列表失败'
+          throw new Error(errorMsg)
+        }
+      } catch (err: unknown) {
+        const errorMessage = (() => {
+          if (err instanceof Error) {
+            return err.message
+          }
+          const errorResponse = err as { response?: { data?: { message?: string; msg?: string } } }
+          return errorResponse?.response?.data?.message || errorResponse?.response?.data?.msg || '获取服务列表失败'
+        })()
+        setError(errorMessage)
+        toast.error(errorMessage)
+      } finally {
+        setLoading(false)
+      }
     }
-  }, [clusterId, fetchServices])
+    
+    loadInitialServices()
+  }, [clusterId, serviceTypeFilter, isAddServiceMode])
 
   return {
     // 数据状态
