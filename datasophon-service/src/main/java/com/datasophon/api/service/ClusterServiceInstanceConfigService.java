@@ -43,13 +43,10 @@ public interface ClusterServiceInstanceConfigService extends IService<ClusterSer
      * @param serviceInstanceId 服务实例ID
      * @param version           配置版本
      * @param roleGroupId       角色组ID
-     * @param page             页码
-     * @param pageSize         每页大小
      * @return 服务实例配置结果DTO
      */
     ServiceInstanceConfigResultDTO getServiceInstanceConfig(
-            Long serviceInstanceId, Integer version, Long roleGroupId,
-            Integer page, Integer pageSize);
+            Long serviceInstanceId, Integer version, Long roleGroupId);
 
     /**
      * 根据服务ID获取服务配置

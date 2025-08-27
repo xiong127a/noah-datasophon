@@ -23,6 +23,7 @@ import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.ClusterServiceInstanceConfigService;
 import com.datasophon.common.dto.ClusterServiceInstanceConfigDTO;
 import com.datasophon.common.dto.ConfigVersionDTO;
+import com.datasophon.common.dto.ServiceInstanceConfigResultDTO;
 import com.datasophon.common.vo.ClusterServiceInstanceConfigVO;
 import io.micrometer.core.annotation.Timed;
 import lombok.extern.slf4j.Slf4j;
@@ -81,19 +82,17 @@ public class ClusterServiceInstanceConfigController {
      */
     @GetMapping("/info")
     @Timed(value = "config.instance.info", description = "获取服务实例配置信息的时间")
-    public Result<Object> info(
+    public Result<ServiceInstanceConfigResultDTO> info(
             @RequestParam("serviceInstanceId") Long serviceInstanceId,
             @RequestParam("version") Integer version, 
-            @RequestParam("roleGroupId") Long roleGroupId, 
-            @RequestParam("page") Integer page,
-            @RequestParam("pageSize") Integer pageSize) {
+            @RequestParam("roleGroupId") Long roleGroupId) {
         
         log.debug("获取服务实例配置信息: serviceInstanceId={}, version={}, roleGroupId={}", 
                  serviceInstanceId, version, roleGroupId);
         
         // 调用Service获取配置结果DTO
         var configResult = clusterServiceInstanceConfigService.getServiceInstanceConfig(
-                serviceInstanceId, version, roleGroupId, page, pageSize);
+                serviceInstanceId, version, roleGroupId);
         
         return Result.success(configResult);
     }

@@ -72,7 +72,7 @@ public class ClusterServiceInstanceConfigServiceImpl
 
         @Override
         public ServiceInstanceConfigResultDTO getServiceInstanceConfig(Long serviceInstanceId, Integer version,
-                        Long roleGroupId, Integer page, Integer pageSize) {
+                        Long roleGroupId) {
                 log.debug("获取服务实例配置: serviceInstanceId={}, version={}, roleGroupId={}", 
                          serviceInstanceId, version, roleGroupId);
                 
