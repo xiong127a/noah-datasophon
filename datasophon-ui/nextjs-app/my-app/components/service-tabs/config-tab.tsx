@@ -224,16 +224,40 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
     if (!serviceId || !clusterId) return
     
     try {
-      const downloadUrl = `${API_BASE_URL}${API_PATHS_V1.DOWNLOAD_SINGLE_CONFIG_FILE}?serviceInstanceId=${serviceId}&fileName=${encodeURIComponent(file.fileName)}&clusterId=${clusterId}`
+      // 使用fetch API并添加认证头
+      const token = localStorage.getItem('jwt_token')
+      const headers = createClusterHeaders(clusterId, {
+        'Authorization': token ? `Bearer ${token}` : '',
+        'Content-Type': 'application/json'
+      })
+      const response = await fetch(`${API_BASE_URL}${API_PATHS_V1.DOWNLOAD_SINGLE_CONFIG_FILE}?serviceInstanceId=${serviceId}&fileName=${encodeURIComponent(file.fileName)}`, {
+        method: 'GET',
+        headers: headers,
+        credentials: 'include'
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast.error('认证失败，请重新登录')
+          return
+        }
+        throw new Error('下载失败')
+      }
+
+      // 获取文件内容并创建下载链接
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = downloadUrl
+      link.href = url
       link.download = file.fileName
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
       
-      toast.success('开始下载配置文件')
-    } catch {
+      toast.success('配置文件下载成功')
+    } catch (error) {
+      console.error('下载配置文件失败:', error)
       toast.error('下载配置文件失败')
     }
   }, [serviceId, clusterId])
@@ -256,11 +280,18 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
     setDownloadProgress(0)
     
     try {
-      let downloadUrl = `${API_BASE_URL}${API_PATHS_V1.DOWNLOAD_ALL_SERVICE_CONFIG_FILES}?serviceInstanceId=${serviceId}&format=${selectedFormat}&clusterId=${clusterId}`
+      let downloadUrl = `${API_BASE_URL}${API_PATHS_V1.DOWNLOAD_ALL_SERVICE_CONFIG_FILES}?serviceInstanceId=${serviceId}&format=${selectedFormat}`
       
       if (usePassword && password) {
         downloadUrl += `&password=${encodeURIComponent(password)}`
       }
+      
+      // 使用fetch API并添加认证头
+      const token = localStorage.getItem('jwt_token')
+      const headers = createClusterHeaders(clusterId, {
+        'Authorization': token ? `Bearer ${token}` : '',
+        'Content-Type': 'application/json'
+      })
       
       // 模拟下载进度
       const progressInterval = setInterval(() => {
@@ -273,25 +304,41 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
         })
       }, 200)
       
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: headers,
+        credentials: 'include'
+      })
+
+      if (!response.ok) {
+        clearInterval(progressInterval)
+        if (response.status === 401) {
+          toast.error('认证失败，请重新登录')
+          return
+        }
+        throw new Error('下载失败')
+      }
+
+      // 获取文件内容并创建下载链接
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
       const link = document.createElement('a')
-      link.href = downloadUrl
+      link.href = url
       link.download = `${serviceName}_configs.${selectedFormat}`
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
       
       // 完成下载
+      setDownloadProgress(100)
       setTimeout(() => {
-        setDownloadProgress(100)
         setDownloadModalVisible(false)
         setPassword('')
         setConfirmPassword('')
-        toast.success(`正在下载 ${selectedFormat.toUpperCase()} 格式配置文件`)
-        
-        setTimeout(() => {
-          setDownloadProgress(0)
-        }, 1000)
-      }, 1000)
+        toast.success(`${selectedFormat.toUpperCase()} 格式配置文件下载成功`)
+        setDownloadProgress(0)
+      }, 500)
       
     } catch (error) {
       console.error('下载配置文件失败:', error)
@@ -668,189 +715,113 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
 
         {/* 右侧批量下载设置 */}
         <div className="w-80 flex flex-col">
-          <div className="bg-white rounded-2xl border-2 border-gray-100 p-6 flex-1">
-            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
-              <Package className="w-6 h-6 mr-3 text-blue-500" />
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-lg p-6 flex-1">
+            <h3 className="text-lg font-bold text-gray-800 mb-6 flex items-center">
+              <Package className="w-5 h-5 mr-2 text-blue-600" />
               批量下载设置
             </h3>
             
             <div className="space-y-6">
               <div>
-                <Label className="text-lg font-bold text-gray-800 mb-4 block flex items-center space-x-2">
-                  <Package className="w-5 h-5 text-blue-600" />
-                  <span>压缩格式选择</span>
-                </Label>
+                <Label className="text-base font-semibold text-gray-700 mb-3 block">压缩格式</Label>
                 <Select value={selectedFormat} onValueChange={setSelectedFormat}>
-                  <SelectTrigger className="h-14 rounded-2xl border-2 border-gray-200 hover:border-blue-300 transition-all duration-200 shadow-sm bg-white">
+                  <SelectTrigger className="h-12 rounded-xl border-2 border-gray-200 hover:border-blue-400 transition-all duration-200 bg-white text-lg font-medium">
                     <SelectValue>
-                      <div className="flex items-center space-x-3">
-                        <div className="p-2 bg-blue-100 rounded-lg">
-                          <Package className="w-4 h-4 text-blue-600" />
-                        </div>
-                        <div className="text-left">
-                          <div className="font-semibold text-gray-900">{selectedFormat.toUpperCase()}</div>
-                          <div className="text-xs text-gray-500">
-                            {downloadFormats.find(f => f.format === selectedFormat)?.description?.substring(0, 20) || ''}...
-                          </div>
-                        </div>
-                      </div>
+                      {selectedFormat.toUpperCase()}
                     </SelectValue>
                   </SelectTrigger>
-                  <SelectContent className="w-[500px] rounded-2xl border-2 border-gray-200 shadow-2xl bg-white/95 backdrop-blur-sm">
-                    <div className="p-2">
-                      {downloadFormats.map((format) => (
-                        <SelectItem 
-                          key={format.format} 
-                          value={format.format} 
-                          className="p-4 rounded-xl mb-2 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border border-transparent hover:border-blue-200 transition-all duration-200 cursor-pointer"
-                        >
-                          <div className="flex items-start space-x-4 w-full">
-                            <div className={`p-3 rounded-xl ${
-                              format.supportPassword ? 'bg-gradient-to-br from-green-100 to-green-200' : 'bg-gradient-to-br from-gray-100 to-gray-200'
-                            }`}>
-                              <Package className={`w-5 h-5 ${format.supportPassword ? 'text-green-600' : 'text-gray-500'}`} />
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center space-x-3 mb-2">
-                                <h4 className="font-bold text-lg text-gray-900">{format.format.toUpperCase()}</h4>
-                                <Badge 
-                                  variant={format.supportPassword === true ? 'default' : 'secondary'} 
-                                  className={`text-xs px-3 py-1 rounded-lg ${
-                                    format.supportPassword 
-                                      ? 'bg-gradient-to-r from-green-500 to-green-600 text-white' 
-                                      : 'bg-gray-200 text-gray-600'
-                                  }`}
-                                >
-                                  {format.supportPassword === true ? '🔒 支持密码' : '🔓 无密码保护'}
-                                </Badge>
+                  <SelectContent className="w-80 rounded-2xl border border-gray-200 shadow-2xl bg-white/95 backdrop-blur-sm p-2">
+                    {downloadFormats.map((format) => (
+                      <SelectItem 
+                        key={format.format} 
+                        value={format.format} 
+                        className="p-4 rounded-xl mb-2 hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 border border-transparent hover:border-blue-200 transition-all duration-200 cursor-pointer"
+                      >
+                        <div className="flex flex-col space-y-2 w-full">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center space-x-3">
+                              <div className={`p-2 rounded-lg ${
+                                format.supportPassword ? 'bg-green-100' : 'bg-gray-100'
+                              }`}>
+                                <Package className={`w-4 h-4 ${
+                                  format.supportPassword ? 'text-green-600' : 'text-gray-500'
+                                }`} />
                               </div>
-                              <p className="text-sm text-gray-600 leading-relaxed">{format.description}</p>
-                              <div className="mt-2 flex items-center space-x-2">
-                                <span className="text-xs text-gray-500">兼容性:</span>
-                                <div className="flex space-x-1">
-                                  {format.format === 'zip' && (
-                                    <>
-                                      <Badge variant="outline" className="text-xs">Windows</Badge>
-                                      <Badge variant="outline" className="text-xs">macOS</Badge>
-                                      <Badge variant="outline" className="text-xs">Linux</Badge>
-                                    </>
-                                  )}
-                                  {['tar.gz', 'tar.xz', 'gz', 'bz2'].includes(format.format) && (
-                                    <>
-                                      <Badge variant="outline" className="text-xs">Linux</Badge>
-                                      <Badge variant="outline" className="text-xs">Unix</Badge>
-                                    </>
-                                  )}
-                                  {format.format === '7z' && (
-                                    <>
-                                      <Badge variant="outline" className="text-xs">跨平台</Badge>
-                                      <Badge variant="outline" className="text-xs">高压缩率</Badge>
-                                    </>
-                                  )}
-                                </div>
-                              </div>
+                              <span className="font-bold text-lg text-gray-900">{format.format.toUpperCase()}</span>
                             </div>
+                            {format.supportPassword === true && (
+                              <Badge className="bg-gradient-to-r from-green-500 to-green-600 text-white text-xs px-2 py-1">
+                                🔒 支持密码
+                              </Badge>
+                            )}
                           </div>
-                        </SelectItem>
-                      ))}
-                    </div>
+                          <p className="text-sm text-gray-600 leading-relaxed pl-10">{format.description}</p>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* 密码保护设置区域 - 固定高度避免布局跳动 */}
-              <div className="bg-gradient-to-br from-slate-50 to-gray-100 rounded-2xl border-2 border-gray-200 shadow-sm min-h-[240px]">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center space-x-4">
-                      <div className={`p-3 rounded-xl transition-all duration-300 ${
-                        isPasswordSupported ? 'bg-gradient-to-br from-blue-100 to-blue-200' : 'bg-gradient-to-br from-gray-200 to-gray-300'
-                      }`}>
-                        <Package className={`w-6 h-6 ${isPasswordSupported ? 'text-blue-600' : 'text-gray-500'}`} />
+              {/* 密码保护设置区域 - 固定占位避免移动 */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-semibold text-gray-700">密码保护</Label>
+                  {isPasswordSupported ? (
+                    <button
+                      type="button"
+                      onClick={() => setUsePassword(!usePassword)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        usePassword ? 'bg-blue-600' : 'bg-gray-200'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform duration-200 ease-in-out ${
+                          usePassword ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  ) : (
+                    <span className="text-sm text-gray-500">不支持</span>
+                  )}
+                </div>
+                
+                {/* 固定高度的密码输入区域 - 防止布局移动 */}
+                <div className="min-h-[140px]">
+                  {isPasswordSupported && (
+                    <div className={`space-y-4 pt-2 transition-opacity duration-200 ${
+                      usePassword ? 'opacity-100' : 'opacity-30 pointer-events-none'
+                    }`}>
+                      <div>
+                        <Label className="text-sm font-medium text-gray-600 mb-2 block">密码</Label>
+                        <Input 
+                          type="password" 
+                          value={password} 
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder="请输入密码"
+                          className="h-10 rounded-lg"
+                          disabled={!usePassword}
+                        />
                       </div>
                       <div>
-                        <Label className="text-lg font-bold text-gray-800 block">安全密码保护</Label>
-                        <p className="text-sm text-gray-600 mt-1">
-                          {isPasswordSupported ? '为下载的压缩包设置访问密码' : '当前选择的格式不支持密码保护功能'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center">
-                      {isPasswordSupported ? (
-                        <Button 
-                          size="lg"
-                          variant={usePassword ? "default" : "outline"}
-                          onClick={() => setUsePassword(!usePassword)}
-                          className={`px-8 py-3 rounded-2xl font-semibold transition-all duration-300 transform hover:scale-105 ${
-                            usePassword 
-                              ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-lg' 
-                              : 'border-2 border-gray-300 hover:border-emerald-400 hover:text-emerald-600'
+                        <Label className="text-sm font-medium text-gray-600 mb-2 block">确认密码</Label>
+                        <Input 
+                          type="password" 
+                          value={confirmPassword} 
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="请再次输入密码"
+                          className={`h-10 rounded-lg ${
+                            confirmPassword && password !== confirmPassword 
+                              ? 'border-red-300 focus:border-red-400' 
+                              : ''
                           }`}
-                        >
-                          {usePassword ? "✓ 已启用" : "启用保护"}
-                        </Button>
-                      ) : (
-                        <Badge variant="secondary" className="px-4 py-2 text-sm rounded-xl">
-                          格式不支持
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* 密码输入区域 */}
-                  {isPasswordSupported && (
-                    <div className={`transition-all duration-500 ease-in-out ${
-                      usePassword 
-                        ? 'opacity-100 transform translate-y-0' 
-                        : 'opacity-30 transform translate-y-2 pointer-events-none'
-                    }`}>
-                      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          <div>
-                            <Label className="text-sm font-semibold text-gray-700 mb-3 block flex items-center space-x-2">
-                              <span>设置密码</span>
-                              <Badge variant="destructive" className="text-xs px-2 py-1">必填</Badge>
-                            </Label>
-                            <Input 
-                              type="password" 
-                              value={password} 
-                              onChange={(e) => setPassword(e.target.value)}
-                              placeholder="建议使用8位以上复杂密码"
-                              disabled={!usePassword}
-                              className="h-12 rounded-xl border-2 border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-sm font-semibold text-gray-700 mb-3 block">确认密码</Label>
-                            <Input 
-                              type="password" 
-                              value={confirmPassword} 
-                              onChange={(e) => setConfirmPassword(e.target.value)}
-                              placeholder="请再次输入相同密码"
-                              disabled={!usePassword}
-                              className={`h-12 rounded-xl border-2 transition-all duration-200 ${
-                                confirmPassword && password !== confirmPassword 
-                                  ? 'border-red-300 focus:border-red-400 focus:ring-2 focus:ring-red-200' 
-                                  : 'border-gray-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-200'
-                              }`}
-                            />
-                            {confirmPassword && password !== confirmPassword && (
-                              <p className="text-sm text-red-600 mt-2 flex items-center space-x-2 animate-pulse">
-                                <span>⚠️</span>
-                                <span>两次输入的密码不一致</span>
-                              </p>
-                            )}
-                          </div>
+                          disabled={!usePassword}
+                        />
+                        <div className="h-5 mt-1">
+                          {confirmPassword && password !== confirmPassword && usePassword && (
+                            <p className="text-xs text-red-500">密码不匹配</p>
+                          )}
                         </div>
-                        
-                        {usePassword && password && confirmPassword && password === confirmPassword && (
-                          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-xl">
-                            <p className="text-sm text-green-700 flex items-center space-x-2">
-                              <span>✓</span>
-                              <span>密码设置成功，下载时将使用此密码保护压缩包</span>
-                            </p>
-                          </div>
-                        )}
                       </div>
                     </div>
                   )}
@@ -858,37 +829,55 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
               </div>
 
               {downloadProgress > 0 && (
-                <div className="bg-blue-50 rounded-xl p-4">
-                  <div className="flex justify-between text-sm font-medium text-blue-700 mb-2">
+                <div className="border border-blue-200 rounded-lg p-3 bg-blue-50">
+                  <div className="flex justify-between text-sm text-blue-700 mb-2">
                     <span>下载进度</span>
-                    <span>{downloadProgress}%</span>
+                    <span className="font-medium">{downloadProgress}%</span>
                   </div>
-                  <div className="w-full bg-blue-200 rounded-full h-3">
+                  <div className="w-full bg-blue-100 rounded-full h-2 overflow-hidden">
                     <div 
-                      className="bg-blue-500 h-3 rounded-full transition-all duration-300" 
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
                       style={{ width: `${downloadProgress}%` }}
-                    ></div>
+                    />
                   </div>
                 </div>
               )}
             </div>
           </div>
 
+          {/* 安全提示 */}
+          <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+            <div className="flex items-center">
+              <Settings className="w-3 h-3 mr-2 flex-shrink-0" />
+              <span>配置文件包含敏感信息，请妥善保管</span>
+            </div>
+          </div>
+          
           {/* 底部操作按钮 */}
           <div className="flex gap-3 mt-6">
             <Button 
               variant="outline" 
               onClick={() => setDownloadModalVisible(false)}
-              className="flex-1 h-12 rounded-xl text-base"
+              className="flex-1 h-11 rounded-lg"
             >
               取消
             </Button>
             <Button 
               onClick={downloadAllConfigs} 
-              disabled={downloadLoading}
-              className="flex-1 h-12 rounded-xl text-base bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700"
+              disabled={downloadLoading || (usePassword && (!password || password !== confirmPassword))}
+              className="flex-1 h-11 rounded-lg"
             >
-              {downloadLoading ? '下载中...' : '批量下载'}
+              {downloadLoading ? (
+                <span className="flex items-center">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  下载中...
+                </span>
+              ) : (
+                <span className="flex items-center">
+                  <Download className="w-4 h-4 mr-2" />
+                  下载
+                </span>
+              )}
             </Button>
           </div>
         </div>
