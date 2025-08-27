@@ -19,6 +19,27 @@ import ConfigParameterForm from '@/components/config/ConfigParameterForm'
 import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { apiV1, API_PATHS_V1, API_BASE_URL } from '@/lib/api-config-v1'
 
+interface ConfigItem {
+  name: string
+  value: unknown
+  type: string
+  label?: string
+  description?: string
+  required?: boolean
+  hidden?: boolean
+  defaultValue?: unknown
+  options?: Array<{ label: string; value: unknown }>
+  selectValue?: string[]
+  templateContent?: string
+  minValue?: number
+  maxValue?: number
+  unit?: string
+  placeholder?: string
+  heightMultiple?: number
+  configType?: string
+  configGroup?: string
+}
+
 interface ConfigTabProps {
   serviceId: string
   serviceName: string
@@ -360,24 +381,14 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
   }, [previewContent])
 
   // 处理配置保存
-  const handleSaveConfig = useCallback(async (configData: Record<string, unknown>) => {
+  const handleSaveConfig = useCallback(async (configItems: ConfigItem[]) => {
     if (!serviceId || !clusterId || !currentRoleGroup) {
       toast.error('缺少必要参数')
       return
     }
 
     try {
-      // 将配置数据转换为后端需要的格式
-      const configItems = Object.entries(configData as Record<string, unknown>).map(([name, value]) => ({
-        name: name.replaceAll('!', '.'), // 转换回原始格式
-        value: value
-      }))
-
-      // 过滤掉空值和隐藏项
-      const filteredItems = configItems.filter(item => 
-        item.value !== null && item.value !== undefined && item.value !== ''
-      )
-
+      // 前端不做任何过滤，把所有配置数据原样传给后端
       const headers = createClusterHeaders(clusterId)
       const userStr = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null
       const currentUser = userStr ? JSON.parse(atob(userStr.split('.')[1])) : {}
@@ -385,7 +396,7 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
       // 创建URL编码数据以匹配后端@RequestParam格式
       const params = new URLSearchParams()
       params.append('serviceId', serviceId)
-      params.append('serviceConfig', JSON.stringify(filteredItems))
+      params.append('serviceConfig', JSON.stringify(configItems))
       params.append('roleGroupId', currentRoleGroup.toString())
       // description 让后端智能生成，不传递此参数
       params.append('userId', (currentUser.id || 1).toString())

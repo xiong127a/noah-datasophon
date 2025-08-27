@@ -54,7 +54,7 @@ interface ConfigParameterFormProps {
   compareMode?: boolean
   compareVersion?: number
   searchKeyword?: string
-  onSave?: (configData: Record<string, unknown>) => void
+  onSave?: (configItems: ConfigItem[]) => void
   className?: string
 }
 
@@ -393,7 +393,21 @@ export default function ConfigParameterForm({
       setSaving(true)
       // 先检查是否有onSave回调
       if (onSave) {
-        await onSave(formData)
+        // 构建完整的配置项数组，合并表单数据和原始元数据
+        const configItems: ConfigItem[] = []
+        
+        Object.entries(configData).forEach(([, group]) => {
+          group.items?.forEach(item => {
+            // 创建完整的配置项，保留所有元数据，只更新value
+            const completeItem: ConfigItem = {
+              ...item,
+              value: formData[item.name] !== undefined ? formData[item.name] : item.value
+            }
+            configItems.push(completeItem)
+          })
+        })
+        
+        await onSave(configItems)
       } else {
         toast.success('配置已保存')
       }
@@ -403,7 +417,7 @@ export default function ConfigParameterForm({
     } finally {
       setSaving(false)
     }
-  }, [formData, onSave])
+  }, [formData, onSave, configData])
 
   // 过滤配置项
   const filterConfigItems = useCallback((items: ConfigItem[]): ConfigItem[] => {
