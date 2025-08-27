@@ -216,7 +216,7 @@ export const clusterApiV1 = {
     
     // 删除服务实例
     delete: (serviceInstanceId: string) => 
-      apiV1.post(API_PATHS_V1.CLUSTER_SERVICE_INSTANCE_DELETE, { serviceInstanceId }),
+      apiV1.get(`${API_PATHS_V1.CLUSTER_SERVICE_INSTANCE_DELETE}?serviceInstanceId=${serviceInstanceId}`),
   },
 
   // 统一主机管理相关 - 新架构

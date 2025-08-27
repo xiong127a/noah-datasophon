@@ -26,7 +26,7 @@ import lombok.Getter;
 public enum ServiceState {
 
     WAIT_INSTALL(1, "待安装"),
-    RUNNING(2, "正常"),
+    RUNNING(2, "正在运行"),
     EXISTS_ALARM(3, "存在告警"),
     EXISTS_EXCEPTION(4, "存在异常"),
     ;

@@ -71,6 +71,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -244,7 +245,55 @@ public class ClusterServiceInstanceServiceImpl
                 updateById(serviceInstance);
             }
         }
+        
+        // 添加固定的"大数据基础平台"服务 - 代表系统本身
+        ClusterServiceInstanceEntity datasophonService = createDatasophonSystemService(clusterId, globalVariables);
+        serviceInstances.addFirst(datasophonService);
+        
         return clusterServiceInstanceConverter.entityListToDtoList(serviceInstances);
+    }
+
+    /**
+     * 创建固定的"大数据基础平台"服务实例
+     * 
+     * @author 任相鹏
+     * @email 635887935@qq.com
+     * @date 2025-08-27
+     */
+    private ClusterServiceInstanceEntity createDatasophonSystemService(Long clusterId, Map<String, String> globalVariables) {
+        ClusterServiceInstanceEntity datasophonService = new ClusterServiceInstanceEntity();
+        
+        // 基本信息
+        datasophonService.setId(999999999L); // 固定ID，避免与数据库冲突
+        datasophonService.setClusterId(clusterId);
+        datasophonService.setServiceName("DATASOPHON");
+        datasophonService.setLabel("大数据基础平台");
+        
+        // 状态信息
+        datasophonService.setServiceState(ServiceState.RUNNING);
+        datasophonService.setServiceStateCode(ServiceState.RUNNING.getValue());
+        datasophonService.setNeedRestart(NeedRestart.NO);
+        datasophonService.setAlertNum(0L);
+        datasophonService.setSortNum(-1); // 显示在最前面
+        
+        // 系统信息
+        datasophonService.setCreateBy("system");
+        datasophonService.setUpdateBy("system");
+        datasophonService.setCreateTime(LocalDateTime.now());
+        datasophonService.setUpdateTime(LocalDateTime.now());
+        
+        // 设置大数据基础平台的仪表盘URL
+        ClusterServiceDashboardEntity datasophonDashboard = clusterServiceDashboardService
+                .getByServiceName("DATASOPHON");
+        if (Objects.nonNull(datasophonDashboard)) {
+            String dashboardUrl = PlaceholderUtils.replacePlaceholders(
+                    datasophonDashboard.getDashboardUrl(), 
+                    globalVariables, 
+                    Constants.REGEX_VARIABLE);
+            datasophonService.setDashboardUrl(dashboardUrl);
+        }
+        
+        return datasophonService;
     }
 
     @Override

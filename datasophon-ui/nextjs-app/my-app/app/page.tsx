@@ -44,6 +44,7 @@ import KubernetesDashboard from '@/components/kubernetes-dashboard'
 
 // 导入对话框组件
 import ServiceSelectionDialog from '@/components/cluster/common/service-selection-dialog'
+import DeleteServiceDialog from '@/components/service/delete-service-dialog'
 
 // 导入工具函数
 import { hasOverviewTab, hasConnectionTab } from '@/components/service-tabs/utils/service-tab-utils'
@@ -240,6 +241,10 @@ export default function ServiceLayout() {
   // 添加服务向导状态
   const [showAddServiceWizard, setShowAddServiceWizard] = useState(false)
   
+  // 删除服务对话框状态
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false)
+  const [serviceToDelete, setServiceToDelete] = useState<ServiceItem | null>(null)
+  
   // 集群总览状态
   const [dashboardLoading, setDashboardLoading] = useState(false)
   
@@ -330,32 +335,16 @@ export default function ServiceLayout() {
     return !managementServiceNames.includes(serviceNameForFilter.toUpperCase())
   })
 
-  // 计算管理服务分组，包含固定的"大数据基础平台"服务 + 后端真实数据
+  // 计算管理服务分组，只包含后端真实数据
   const managementServices = useMemo(() => {
-    // 固定的"大数据基础平台"服务 - 代表系统本身，不是模拟数据
-    const datasophonService: ServiceItem = {
-      id: 'datasophon',
-      name: '大数据基础平台',
-      serviceName: 'DATASOPHON',
-      icon: 'datasophon',
-      serviceId: 'datasophon',
-      path: '/overview',
-      serviceStateCode: ServiceState.RUNNING,
-      alertNum: 0,
-      needRestart: false,
-      dashboardUrl: datasophonDashboardUrl, // 使用状态中的URL
-      rawData: {},
-      menuVisible: false
-    }
-    
-    // 从后端获取的管理服务
+    // 从后端获取的管理服务（包括DATASOPHON，如果后端返回的话）
     const backendManagementServices = services.filter(service => {
       const serviceNameForFilter = service.serviceName || service.name
       return managementServiceNames.includes(serviceNameForFilter.toUpperCase())
     })
     
-    return [datasophonService, ...backendManagementServices]
-  }, [services, datasophonDashboardUrl, managementServiceNames])
+    return backendManagementServices
+  }, [services, managementServiceNames])
 
   // 构建Vue2格式的menuData (关键：包含所有服务的dashboardUrl)
   const buildMenuData = useCallback(() => {
@@ -389,9 +378,13 @@ export default function ServiceLayout() {
     buildMenuData()
   }, [buildMenuData])
 
-  // 获取服务状态点样式
+  // 获取服务状态点样式 - 与后端ServiceState枚举保持一致
   const getServiceStatusInfo = (stateCode: ServiceState) => {
     switch (stateCode) {
+      case ServiceState.WAIT_INSTALL:
+        return { 
+          dotClassName: 'bg-blue-500 animate-pulse'
+        }
       case ServiceState.RUNNING:
         return { 
           dotClassName: 'bg-green-500 animate-pulse'
@@ -469,6 +462,51 @@ export default function ServiceLayout() {
   }
 
   // 注意：移除了自定义事件处理器，现在使用Radix UI DropdownMenu自动处理点击外部关闭
+
+  // 处理单个服务删除 - 打开确认对话框
+  const handleDeleteService = (service: ServiceItem) => {
+    setServiceToDelete(service)
+    setShowDeleteDialog(true)
+  }
+
+  // 确认删除服务
+  const handleConfirmDeleteService = async () => {
+    if (!serviceToDelete) return
+
+    try {
+      console.log('删除服务:', serviceToDelete.serviceId)
+      const response = await clusterApiV1.service.delete(serviceToDelete.serviceId)
+      
+      if (response.data.code === 200) {
+        // 成功删除，关闭对话框并重新加载数据
+        setShowDeleteDialog(false)
+        setServiceToDelete(null)
+        
+        // 重新加载服务列表
+        await fetchServices()
+        
+        // 如果删除的是当前选中的服务，清除选中状态
+        if (selectedService?.id === serviceToDelete.id) {
+          setSelectedService(null)
+        }
+        
+        // 使用更优雅的成功提示（如果项目有toast组件）
+        alert('删除服务成功')
+      } else {
+        throw new Error(response.data.msg || '删除服务失败')
+      }
+    } catch (error) {
+      console.error('删除服务失败:', error)
+      alert('删除服务失败，请重试')
+      throw error // 让对话框组件处理loading状态
+    }
+  }
+
+  // 取消删除服务
+  const handleCancelDeleteService = () => {
+    setShowDeleteDialog(false)
+    setServiceToDelete(null)
+  }
 
   // 处理总服务操作
   const handleGlobalServiceAction = async (action: 'add' | 'start-all' | 'stop-all' | 'restart-needed') => {
@@ -799,7 +837,10 @@ export default function ServiceLayout() {
                                       <Users className="w-4 h-4 mr-3 text-indigo-600" />
                                       <span className="font-medium">分配角色组</span>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-red-50/80 transition-all duration-150 text-sm text-red-600">
+                                    <DropdownMenuItem 
+                                      className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-red-50/80 transition-all duration-150 text-sm text-red-600"
+                                      onClick={() => handleDeleteService(service)}
+                                    >
                                       <Trash2 className="w-4 h-4 mr-3" />
                                       <span className="font-medium">删除</span>
                                     </DropdownMenuItem>
@@ -930,7 +971,10 @@ export default function ServiceLayout() {
                                         <Users className="w-4 h-4 mr-3 text-indigo-600" />
                                         <span className="font-medium">分配角色组</span>
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-red-50/80 transition-all duration-150 text-sm text-red-600">
+                                      <DropdownMenuItem 
+                                        className="flex items-center p-3 cursor-pointer rounded-xl hover:bg-red-50/80 transition-all duration-150 text-sm text-red-600"
+                                        onClick={() => handleDeleteService(service)}
+                                      >
                                         <Trash2 className="w-4 h-4 mr-3" />
                                         <span className="font-medium">删除</span>
                                       </DropdownMenuItem>
@@ -1047,6 +1091,14 @@ export default function ServiceLayout() {
           }}
         />
       )}
+
+      {/* 删除服务确认对话框 */}
+      <DeleteServiceDialog
+        open={showDeleteDialog}
+        onClose={handleCancelDeleteService}
+        onConfirm={handleConfirmDeleteService}
+        service={serviceToDelete}
+      />
     </div>
   )
 }
