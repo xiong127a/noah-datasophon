@@ -53,9 +53,9 @@ export function getStepsByType(
       steps = steps.slice(0, 3)
       break
     case StepsType.ADD_SERVICE:
-      // 从第3步开始
-      steps = steps.slice(3)
-      // 重新编号
+      // 添加服务模式：从"选择服务"步骤开始（跳过前3个主机相关步骤）
+      steps = steps.slice(3)  // 从index 3开始，即"选择服务"
+      // 重新编号：第1步 = 选择服务，第2步 = 分配Master角色，依此类推
       steps = steps.map((step, index) => ({
         ...step,
         number: index + 1

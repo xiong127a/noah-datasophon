@@ -22,6 +22,8 @@ interface ClusterWizardLayoutProps {
   clusterName: string
   /** 集群类型 */
   clusterType?: string
+  /** 步骤类型 */
+  stepsType?: StepsType
   /** 当前步骤标题 */
   stepTitle: string
   /** 当前步骤描述 */
@@ -41,6 +43,7 @@ const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
   onClose,
   clusterName,
   clusterType = '',
+  stepsType = StepsType.NORMAL,
   stepTitle,
   stepDescription,
   currentStep,
@@ -51,7 +54,7 @@ const ClusterWizardLayout: React.FC<ClusterWizardLayoutProps> = ({
   // 步骤配置
   const isK8s = ClusterTypeUtil.isKubernetes(clusterType)
   const depType = isK8s ? ClusterType.KUBERNETES : ClusterType.PVM
-  const steps = getStepsByType(StepsType.NORMAL, depType)
+  const steps = getStepsByType(stepsType, depType)
   
   // 优先使用传入的具体步骤标题，如果没有再使用通用标题
   const currentStepInfo = steps.find(step => step.number === currentStep)

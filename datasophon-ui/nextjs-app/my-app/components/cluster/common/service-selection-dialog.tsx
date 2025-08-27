@@ -188,6 +188,7 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
       onClose={() => onOpenChange(false)}
       clusterName={cluster?.clusterName || ''}
       clusterType={safeClusterType}
+      stepsType={stepsType}
       stepTitle={isAddServiceMode ? "添加服务" : "选择大数据服务"}
       stepDescription={isAddServiceMode 
         ? "添加服务 - 选择要添加到现有集群的大数据服务组件"
