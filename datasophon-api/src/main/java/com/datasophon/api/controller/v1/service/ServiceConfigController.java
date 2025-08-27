@@ -197,9 +197,9 @@ public class ServiceConfigController {
     public Result getSupportedCompressFormats() {
         try {
             // 获取所有支持的压缩格式
-            List<Map<String, String>> formats = Arrays.stream(CompressUtils.CompressType.values())
+            List<Map<String, Object>> formats = Arrays.stream(CompressUtils.CompressType.values())
                     .map(type -> {
-                        Map<String, String> formatInfo = new HashMap<>();
+                        Map<String, Object> formatInfo = new HashMap<>();
                         formatInfo.put("format", type.getExtension());
                         formatInfo.put("description", getFormatDescription(type.getExtension()));
                         formatInfo.put("supportPassword", getSupportPasswordStatus(type.getExtension()));
@@ -233,14 +233,8 @@ public class ServiceConfigController {
     /**
      * 获取格式是否支持密码保护
      */
-    private String getSupportPasswordStatus(String format) {
-        // 目前仅zip和7z支持密码保护
-        if ("zip".equals(format)) {
-            return "需安装zip4j库";
-        } else if ("7z".equals(format)) {
-            return "不支持";
-        } else {
-            return "不支持";
-        }
+    private boolean getSupportPasswordStatus(String format) {
+        // 目前仅zip格式支持密码保护
+        return "zip".equals(format);
     }
 }

@@ -106,6 +106,17 @@ export const API_PATHS_V1 = {
   PARCEL_DOWNLOAD: `${API_BASE}/cluster/parcel/download`,
   PARCEL_INSTALL: `${API_BASE}/cluster/parcel/install`,
 
+  // 服务配置相关 - v1（规范化后端路径）
+  SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`, // 保存服务配置
+  GET_SERVICE_CONFIG: `${API_BASE}/cluster/service/instance/config/info`, // 获取服务配置信息
+  GET_CONFIG_VERSION: `${API_BASE}/cluster/service/instance/config/getConfigVersion`, // 获取配置版本
+  GET_ROLE_GROUP_LIST: `${API_BASE}/cluster/service/instance/role/group/list`, // 获取角色组列表
+  GET_SERVICE_CONFIG_FILES: `${API_BASE}/service/config/getConfigFiles`, // 获取服务配置文件列表
+  PREVIEW_SERVICE_CONFIG_FILE: `${API_BASE}/service/config/previewFile`, // 预览配置文件内容
+  DOWNLOAD_SINGLE_CONFIG_FILE: `${API_BASE}/service/config/downloadFile`, // 下载单个配置文件
+  DOWNLOAD_ALL_SERVICE_CONFIG_FILES: `${API_BASE}/service/config/downloadAllFiles`, // 打包下载所有配置文件
+  GET_SUPPORTED_COMPRESS_FORMATS: `${API_BASE}/service/config/getSupportedCompressFormats`, // 获取支持的压缩格式
+
   // 标签管理相关 - v1
   TAG_LIST: `${API_BASE}/cluster/node/label/list`,
   TAG_SAVE: `${API_BASE}/cluster/node/label/save`,
