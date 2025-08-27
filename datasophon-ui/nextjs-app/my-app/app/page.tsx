@@ -49,6 +49,7 @@ import DeleteServiceDialog from '@/components/service/delete-service-dialog'
 // 导入工具函数
 import { hasOverviewTab, hasConnectionTab } from '@/components/service-tabs/utils/service-tab-utils'
 import { ClusterTypeUtil } from '@/types/cluster-type'
+import { appleToast } from '@/lib/apple-toast'
 
 // 服务状态枚举
 enum ServiceState {
@@ -490,14 +491,14 @@ export default function ServiceLayout() {
           setSelectedService(null)
         }
         
-        // 使用更优雅的成功提示（如果项目有toast组件）
-        alert('删除服务成功')
+        // 使用优雅的苹果样式Toast通知
+        appleToast.success('删除服务成功', `服务 "${serviceToDelete.name}" 已成功删除`)
       } else {
         throw new Error(response.data.msg || '删除服务失败')
       }
     } catch (error) {
       console.error('删除服务失败:', error)
-      alert('删除服务失败，请重试')
+      appleToast.error('删除服务失败', error instanceof Error ? error.message : '请重试')
       throw error // 让对话框组件处理loading状态
     }
   }
