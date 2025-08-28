@@ -197,7 +197,7 @@ public class SshConnectionPoolManager {
         
         // 空闲连接清理配置
         poolConfig.setTimeBetweenEvictionRuns(Duration.ofMinutes(1));  // 清理间隔
-        poolConfig.setMinEvictableIdleTime(Duration.ofMinutes(5));     // 最小空闲时间
+        poolConfig.setMinEvictableIdleDuration(Duration.ofMinutes(5)); // 最小空闲时间
         poolConfig.setNumTestsPerEvictionRun(3); // 每次清理测试连接数
         
         // 注意：连接泄漏检测功能在新版本中已移除或改变API
