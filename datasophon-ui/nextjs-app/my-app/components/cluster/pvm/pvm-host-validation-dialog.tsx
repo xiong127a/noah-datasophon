@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { 
   CheckCircle, Loader2, RefreshCw,
   AlertCircle, Clock, Server, Activity, Shield, AlertTriangle
@@ -56,6 +56,12 @@ export default function PvmHostValidationDialog({
   const [loading, setLoading] = useState(false)
   const [hosts, setHosts] = useState<PvmHost[]>([])
   const [checkStatus, setCheckStatus] = useState<'idle' | 'checking' | 'completed' | 'failed'>('idle')
+  const hostsRef = useRef<PvmHost[]>([])
+  
+  // 同步hosts状态到ref
+  useEffect(() => {
+    hostsRef.current = hosts
+  }, [hosts])
 
   const currentStep = 2
 
@@ -117,14 +123,15 @@ export default function PvmHostValidationDialog({
   // 检查单个主机
   const checkSingleHost = useCallback(async (host: PvmHost): Promise<PvmHost> => {
     try {
-      // 使用现有的主机分析API
+      // 使用现有的主机分析API，传递集群ID
       const response = await clusterApi.host.analysisHostList({
         ips: host.ip,
         sshUser: step1Data.sshUser,
         sshPort: step1Data.sshPort,
         sshPassword: step1Data.sshPassword,
         page: 1,
-        pageSize: 1
+        pageSize: 1,
+        clusterId: cluster?.id
       })
 
       if (response.data?.success && response.data?.data?.data?.length > 0) {
@@ -166,7 +173,8 @@ export default function PvmHostValidationDialog({
 
   // 检查所有主机
   const handleCheckHosts = useCallback(async (hostList?: PvmHost[]) => {
-    const currentHosts = hostList || hosts
+    // 如果没有提供hostList，则从当前ref获取
+    const currentHosts = hostList || hostsRef.current
     if (currentHosts.length === 0) {
       toast.error('没有要检查的主机')
       return
@@ -219,7 +227,7 @@ export default function PvmHostValidationDialog({
     } finally {
       setLoading(false)
     }
-  }, [hosts, checkSingleHost])
+  }, [checkSingleHost])
 
   // 监听弹窗打开，初始化主机列表
   useEffect(() => {
@@ -232,7 +240,7 @@ export default function PvmHostValidationDialog({
         }, 500)
       }
     }
-  }, [open, step1Data.hosts, initializeHosts, handleCheckHosts])
+  }, [open, step1Data.hosts, initializeHosts])
 
 
 
@@ -314,7 +322,7 @@ export default function PvmHostValidationDialog({
         }] : []),
         {
           text: checkStatus === 'completed' ? "下一步" : "检查主机",
-          onClick: checkStatus === 'completed' ? handleNext : handleCheckHosts,
+          onClick: checkStatus === 'completed' ? handleNext : () => handleCheckHosts(),
           disabled: loading || (checkStatus === 'completed' && hosts.filter(h => h.status === 'success').length === 0),
           loading: loading,
           loadingText: checkStatus === 'completed' ? "处理中..." : "检查中..."

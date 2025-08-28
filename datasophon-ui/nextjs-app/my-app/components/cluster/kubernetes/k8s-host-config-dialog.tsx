@@ -22,7 +22,7 @@ import Image from "next/image"
 
 // K8S集群信息接口
 export interface K8sClusterInfo {
-  id: number
+  id: string
   clusterName: string
   depType: string
   clusterCode: string

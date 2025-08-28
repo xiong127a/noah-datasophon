@@ -49,7 +49,22 @@ export const clusterApiV1 = {
       sshPassword: string
       page: number
       pageSize: number
-    }) => apiV1.post(API_PATHS_V1.ANALYSIS_HOST_LIST, params),
+      clusterId?: string | null
+    }) => {
+      // 使用URLSearchParams以表单编码方式发送参数，匹配后端@RequestParam
+      const formData = new URLSearchParams();
+      formData.append('ips', params.ips);
+      formData.append('sshUser', params.sshUser);
+      formData.append('sshPort', params.sshPort);
+      formData.append('sshPassword', params.sshPassword);
+      formData.append('page', params.page.toString());
+      formData.append('pageSize', params.pageSize.toString());
+      
+      // 使用统一的集群ID请求头设置方法
+      const headers = createClusterHeaders(params.clusterId);
+      
+      return apiV1.post(API_PATHS_V1.ANALYSIS_HOST_LIST, formData, { headers });
+    },
   },
 
   // 标签管理
@@ -450,21 +465,6 @@ export const clusterApiV1 = {
       
       // 对于相对路径，返回一个标记，让组件知道需要异步加载
       return `__ASYNC_IMAGE__:${imagePath}`
-    }
-  },
-
-  // 总览相关API - v1 (按照Vue2实际使用的接口)
-  overview: {
-    /** 获取集群Dashboard URL (对应Vue2的getDashboardUrl) */
-    getDashboardUrl: (clusterId: string) => {
-      const headers = createClusterHeaders(clusterId)
-      return apiV1.get(API_PATHS_V1.GET_DASHBOARD_URL, {}, { headers })
-    },
-
-    /** 获取Datasophon Dashboard URL (对应Vue2的getDatasophonDashboardUrl) */
-    getDatasophonDashboard: (clusterId: string) => {
-      const headers = createClusterHeaders(clusterId)
-      return apiV1.get(API_PATHS_V1.GET_DATASOPHON_DASHBOARD, {}, { headers })
     }
   }
 }

@@ -18,7 +18,7 @@ import { CARD_STYLES } from '../common/shared-styles'
 
 // PVM集群信息接口
 export interface PvmClusterInfo {
-  id: number
+  id: string
   clusterName: string
   depType: string
   clusterCode: string

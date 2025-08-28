@@ -79,7 +79,7 @@ public class HostInstallController {
     @UserPermission
     public Result<PageResult<HostInfo>> analysisHostList(@ClusterId Long clusterId,
             @RequestParam(name = "kubeConfigContent", required = false) String kubeConfigContent,
-            @RequestParam(name = "hosts", required = false) String hosts,
+            @RequestParam(name = "ips", required = false) String ips,
             @RequestParam(name = "sshUser", required = false) String sshUser,
             @RequestParam(name = "sshPort", required = false) Integer sshPort,
             @RequestParam(name = "sshPassword", required = false) String sshPassword,
@@ -97,7 +97,7 @@ public class HostInstallController {
             }
 
             log.debug("解析主机列表，集群ID: {}, 页码: {}, 每页大小: {}", clusterId, page, pageSize);
-            PageResult<HostInfo> pageResult = installService.analysisHostList(clusterId, hosts, sshUser, sshPort,
+            PageResult<HostInfo> pageResult = installService.analysisHostList(clusterId, ips, sshUser, sshPort,
                     sshPassword, kubeConfigContent, page, pageSize);
             return Result.success(pageResult);
         } catch (Exception e) {
