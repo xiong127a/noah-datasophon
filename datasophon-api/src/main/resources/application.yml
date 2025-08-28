@@ -168,13 +168,31 @@ datasophon:
   
   # 插件管理器配置 (延迟加载优化)  
   plugins:
-    directory: plugins
+    # 插件目录
+    directory: ${user.dir}/plugins
+    
+    # 开发模式配置
+    development:
+      # 是否启用开发模式（开发时设为true，生产时设为false）
+      enabled: true
+      # 开发模式下的插件路径（编译后的JAR位置）
+      plugin-paths:
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target/dev-plugins
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/cpu-checker-plugin/target/dev-plugins
+    
+    # 额外的插件扫描路径（可选）
+    scan-paths: []
+    
+    # 插件加载配置
     loading:
       enabled: true                           # 插件功能总开关
       lazy: true                              # 启用延迟加载 - 显著减少启动时间
       hot-reload: true                        # 支持热重载
+      
+    # SSH连接池配置
     ssh-connection-pool:
-      default-config:
+      # 全局默认配置
+      default:
         max-total: 10
         max-idle: 5  
         min-idle: 2
@@ -184,6 +202,15 @@ datasophon:
         test-while-idle: true
         time-between-eviction-runs-millis: 30000
         min-evictable-idle-time-millis: 300000
+        
+      # 主机特定配置（可选）
+      hosts:
+        "192.168.1.100":
+          max-total: 20
+          max-idle: 10
+        "192.168.1.101":
+          max-total: 15
+          max-idle: 8
 
 jwt:
   # JWT密钥 - 使用base64编码的秘钥

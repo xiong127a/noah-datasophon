@@ -57,10 +57,7 @@ public class PluginProperties {
         /**
          * 开发模式下的插件路径
          */
-        private List<String> pluginPaths = List.of(
-                "datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target",
-                "datasophon-plugins/datasophon-plugins-impl/core-plugins/cpu-checker-plugin/target"
-        );
+        private List<String> pluginPaths = new ArrayList<>();
     }
     
     /**
