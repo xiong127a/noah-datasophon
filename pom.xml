@@ -641,13 +641,17 @@
                     <source>${java.version}</source>
                     <target>${java.version}</target>
                     <encoding>UTF-8</encoding>
-                    <!-- 高性能编译配置 - 96GB内存优化 -->
+                    <!-- Windows乱码修复：强制设置文件编码 -->
                     <fork>true</fork>
                     <meminitial>2048m</meminitial>
                     <maxmem>8192m</maxmem>
-                    <!-- 启用参数名保留和并行编译 -->
+                    <!-- 启用参数名保留、并行编译和UTF-8编码 -->
                     <compilerArgs>
                         <arg>-parameters</arg>
+                        <arg>-J-Dfile.encoding=UTF-8</arg>
+                        <arg>-J-Duser.language=zh</arg>
+                        <arg>-J-Duser.country=CN</arg>
+                        <arg>-J-Dconsole.encoding=UTF-8</arg>
                         <arg>-J-Xmx8g</arg>
                         <arg>-J-Xms2g</arg>
                         <arg>-J-XX:+UseG1GC</arg>
