@@ -1,0 +1,114 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
+package com.datasophon.plugins.manager;
+
+import lombok.extern.slf4j.Slf4j;
+import org.pf4j.DefaultPluginManager;
+
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * 可配置的插件管理器
+ * 继承PF4J的DefaultPluginManager，支持动态添加插件根目录
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com  
+ * @date 2025-08-28
+ */
+@Slf4j
+public class ConfigurablePluginManager extends DefaultPluginManager {
+    
+    private List<Path> customPluginRoots;
+    
+    /**
+     * 确保customPluginRoots已初始化
+     */
+    private void ensureCustomPluginRootsInitialized() {
+        if (customPluginRoots == null) {
+            customPluginRoots = new ArrayList<>();
+            log.debug("延迟初始化customPluginRoots");
+        }
+    }
+    
+    /**
+     * 添加插件根目录
+     */
+    public void addPluginRoot(Path pluginRoot) {
+        ensureCustomPluginRootsInitialized();
+        if (pluginRoot != null && !customPluginRoots.contains(pluginRoot)) {
+            customPluginRoots.add(pluginRoot);
+            log.debug("添加插件根目录: {}", pluginRoot);
+        }
+    }
+    
+    /**
+     * 批量添加插件根目录
+     */
+    public void addPluginRoots(List<Path> pluginRoots) {
+        if (pluginRoots != null) {
+            for (Path root : pluginRoots) {
+                addPluginRoot(root);
+            }
+        }
+    }
+    
+    /**
+     * 重写getPluginsRoots方法，返回包含自定义路径的列表
+     */
+    @Override
+    public List<Path> getPluginsRoots() {
+        ensureCustomPluginRootsInitialized();
+        
+        List<Path> allRoots = new ArrayList<>();
+        
+        // 防止父类返回null的情况
+        List<Path> superRoots = super.getPluginsRoots();
+        if (superRoots != null) {
+            allRoots.addAll(superRoots);
+        }
+        
+        // 添加自定义根目录（现在保证不为null）
+        allRoots.addAll(customPluginRoots);
+        
+        log.debug("插件根目录总数: {}, 默认: {}, 自定义: {}", 
+                allRoots.size(), 
+                (superRoots != null ? superRoots.size() : 0), 
+                customPluginRoots.size());
+        
+        return allRoots;
+    }
+    
+    /**
+     * 获取自定义插件根目录数量
+     */
+    public int getCustomPluginRootsCount() {
+        ensureCustomPluginRootsInitialized();
+        return customPluginRoots.size();
+    }
+    
+    /**
+     * 清理自定义插件根目录
+     */
+    public void clearCustomPluginRoots() {
+        ensureCustomPluginRootsInitialized();
+        customPluginRoots.clear();
+        log.debug("已清理所有自定义插件根目录");
+    }
+}

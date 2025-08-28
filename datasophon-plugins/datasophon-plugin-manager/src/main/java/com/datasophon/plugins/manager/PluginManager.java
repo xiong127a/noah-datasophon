@@ -58,43 +58,45 @@ public class PluginManager {
     private List<String> pluginScanPaths;
     
     public PluginManager() {
-        // 默认构造函数，插件路径将通过setter注入
+        // 创建可配置的插件管理器
+        this.pf4jManager = new ConfigurablePluginManager();
         this.pluginScanPaths = new ArrayList<>();
     }
     
-    /**
-     * 初始化PF4J插件管理器（在配置注入后调用）
-     */
-    public void initializePF4J() {
-        if (this.pf4jManager == null) {
-            throw new IllegalStateException("PF4J插件管理器尚未初始化，请先调用createConfiguredPluginManager");
-        }
-    }
+
     
     /**
-     * 创建和配置PF4J插件管理器（由配置类调用）
+     * 配置PF4J插件管理器路径（由配置类调用）
      */
-    public void createConfiguredPluginManager() {
-        this.pf4jManager = new DefaultPluginManager();
+    public void configurePluginPaths() {
         configurePF4JManager();
+        
+        // 如果是立即模式且尚未初始化，现在进行初始化
+        if (!lazyLoading && !initialized) {
+            log.info("插件路径配置完成，开始初始化插件管理器...");
+            initializePlugins();
+        }
     }
     
     private void configurePF4JManager() {
         // 添加插件扫描路径
+        ConfigurablePluginManager configurableManager = (ConfigurablePluginManager) pf4jManager;
+        
         for (String pluginPath : pluginScanPaths) {
             Path path = Paths.get(pluginPath);
             if (path.toFile().exists()) {
                 log.info("添加插件扫描路径: {}", pluginPath);
                 // 对于目录，添加到插件路径
                 if (path.toFile().isDirectory()) {
-                    ((DefaultPluginManager) pf4jManager).getPluginsRoots().add(path);
+                    configurableManager.addPluginRoot(path);
                 }
             } else {
                 log.debug("插件路径不存在，跳过: {}", pluginPath);
             }
         }
         
-        log.info("PF4J插件管理器配置完成，扫描路径数量: {}", pluginScanPaths.size());
+        log.info("PF4J插件管理器配置完成，扫描路径数量: {}, 自定义根目录数量: {}", 
+                pluginScanPaths.size(), configurableManager.getCustomPluginRootsCount());
     }
     
 
@@ -117,7 +119,12 @@ public class PluginManager {
     public void init() {
         if (!lazyLoading) {
             log.info("立即模式：初始化插件管理器...");
-            initializePlugins();
+            // 检查是否已配置插件路径，如果没有则推迟到配置完成后
+            if (pluginScanPaths.isEmpty()) {
+                log.info("插件路径尚未配置，将在配置完成后初始化");
+            } else {
+                initializePlugins();
+            }
         } else {
             log.info("延迟模式：插件管理器已就绪，等待手动初始化");
         }

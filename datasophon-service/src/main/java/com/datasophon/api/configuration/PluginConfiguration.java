@@ -41,8 +41,8 @@ public class PluginConfiguration {
         List<String> pluginPaths = buildPluginScanPaths();
         pluginManager.setPluginScanPaths(pluginPaths);
         
-        // 创建PF4J插件管理器
-        pluginManager.createConfiguredPluginManager();
+        // 配置PF4J插件管理器路径
+        pluginManager.configurePluginPaths();
         
         // 设置延迟加载配置
         boolean lazyLoading = pluginProperties.getLoading().isLazy();
