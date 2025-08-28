@@ -20,146 +20,192 @@ package com.datasophon.common.model;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 主机信息管理模型
+ * 专注于主机管理、验证检查、安装状态等核心职责
+ * 
+ * 设计原则：
+ * 1. 单一职责 - 专注主机管理和状态跟踪
+ * 2. 组合模式 - 通过组合OsInfo获取系统详细信息
+ * 3. 状态隔离 - 主机验证状态与系统信息状态分离
+ * 4. 现代特性 - 使用JDK21特性提升代码质量
+ * 
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-01-28
+ */
 @Data
 public class HostInfo implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
 
+    // ==================== 主机基本标识信息 ====================
+    
+    /**
+     * 集群ID
+     */
     private Long clusterId;
+    
+    /**
+     * 集群代码
+     */
+    private String clusterCode;
 
+    /**
+     * 主机IP地址（主键标识）
+     */
     private String ip;
 
-    @Setter
+    /**
+     * 主机名
+     */
     private String hostname;
 
     /**
      * 完全限定域名(FQDN)
      */
-    @Setter
     private String fqdn;
+
+    /**
+     * CPU架构信息
+     */
+    private String cpuArchitecture;
+    
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createTime;
+
+    // ==================== SSH连接配置 ====================
+
+    /**
+     * SSH用户名
+     */
+    private String sshUser;
+
+    /**
+     * SSH端口
+     */
+    private Integer sshPort;
+
+    /**
+     * SSH密码
+     */
+    private String sshPassword;
+
+    // ==================== 主机管理状态 ====================
 
     /**
      * 是否受管
      */
-    private boolean managed;
+    private Boolean managed;
+    
+    /**
+     * 主机整体验证状态
+     */
+    private CheckItem.Status status;
 
     /**
-     * 检测结果
+     * 验证检查结果摘要
      */
     private CheckResult checkResult;
 
     /**
      * 检查项列表
-     * -- SETTER --
-     *  设置检查项列表
-     *  重写此方法以在设置新的检查项时标记状态缓存为脏
-
      */
     private List<CheckItem> checkItems;
 
-    private String sshUser;
-
-    private Integer sshPort;
-
-    private String sshPassword;
-    /**
-     * 安装进度
-     */
-    private Integer progress;
-
-    private String clusterCode;
-
-    /**
-     * 安装状态1:正在安装 2：安装成功 3：安装失败
-     */
-    private InstallState installState;
-
-    private Integer installStateCode;
-
-    private String errMsg;
-
-    private String message;
-
-    private LocalDateTime createTime;
-
-    private String cpuArchitecture;
-
-    /**
-     * 操作系统信息
-     */
-    private OsInfo osInfo;
-
-    /**
-     * 操作系统信息收集状态
-     * 可能的值: LOADING, SUCCESS, ERROR
-     */
-    @Setter
-    @Getter
-    private OsInfoStatusEnum osInfoStatus;
-
+    // ==================== SSH连接状态 ====================
+    
     /**
      * SSH连接状态
-     * 可能的值: SUCCESS, ERROR, LOADING
      */
-    @Setter
-    @Getter
     private OsInfoStatusEnum sshConnectStatus;
 
     /**
      * SSH连接错误信息
-     * 当SSH连接失败时，存储详细的错误原因
      */
     private String sshErrorMsg;
 
+    // ==================== 安装管理 ====================
+
     /**
-     * 操作系统信息收集错误信息
-     * 当操作系统信息收集失败时，存储详细的错误原因
+     * 安装状态
      */
-    private String osErrorMsg;
+    private InstallState installState;
+
+    /**
+     * 安装状态代码（向后兼容）
+     */
+    private Integer installStateCode;
+
+    /**
+     * 安装进度 (0-100)
+     */
+    private Integer progress;
+
+    // ==================== 系统信息组合 ====================
+
+    /**
+     * 操作系统详细信息
+     * 使用组合模式，不代理内部状态
+     */
+    private OsInfo osInfo;
+
+    // ==================== 错误和消息管理 ====================
+
+    /**
+     * 主要错误消息
+     */
+    private String errMsg;
+
+    /**
+     * 状态消息
+     */
+    private String message;
 
     /**
      * 通用错误信息
-     * 用于存储其他类型的错误或者简洁的错误摘要
      */
     private String errorMessage;
 
+    // ==================== 构造函数 ====================
+    
     /**
-     * 硬件信息收集状态
-     * 可能的值: LOADING, SUCCESS, ERROR
+     * 兼容性构造函数
      */
-    private OsInfoStatusEnum hardwareCollectionStatus;
-
-    /**
-     * 主机整体状态 - 枚举类型，与CheckItem.Status保持一致
-     * -- SETTER --
-     * 设置主机整体状态 - 枚举类型
-     * 
-     */
-    @Setter
-    private CheckItem.Status status;
-
     public HostInfo(String ip, int sshPort, String sshUser) {
+        this();
         this.ip = ip;
         this.sshPort = sshPort;
         this.sshUser = sshUser;
     }
 
+    /**
+     * 默认构造函数
+     */
     public HostInfo() {
+        this.sshPort = 22;
+        this.managed = false;
+        this.status = CheckItem.Status.WAITING;
+        this.sshConnectStatus = OsInfoStatusEnum.LOADING;
+        this.installState = InstallState.RUNNING;
+        this.progress = 0;
+        this.createTime = LocalDateTime.now();
     }
 
+    // ==================== 状态管理工具方法 ====================
+
     /**
-     * 获取主机整体状态 - 枚举类型
+     * 获取主机整体状态（触发状态计算）
      */
     public CheckItem.Status getStatus() {
         calculateStatus();
@@ -169,9 +215,9 @@ public class HostInfo implements Serializable {
     /**
      * 获取用于前端展示的状态
      * 对于混合状态(部分成功部分跳过)的特殊处理，返回"MIXED"
-     * 这样前端代码可以保持不变
      */
     public String getStatusStr() {
+        calculateStatus();
         if (status == CheckItem.Status.SKIPPED && hasMixedItems()) {
             return "MIXED";
         }
@@ -185,49 +231,40 @@ public class HostInfo implements Serializable {
         if (checkItems == null || checkItems.isEmpty()) {
             return false;
         }
-        boolean hasSkipped = false;
-        boolean hasSuccess = false;
-        for (CheckItem item : checkItems) {
-            if (item.getStatus() == CheckItem.Status.SKIPPED) {
-                hasSkipped = true;
-            }
-            if (item.getStatus() == CheckItem.Status.SUCCESS) {
-                hasSuccess = true;
-            }
-            if (hasSkipped && hasSuccess) {
-                return true;
-            }
-        }
-        return false;
+        boolean hasSkipped = checkItems.stream()
+                .anyMatch(item -> item.getStatus() == CheckItem.Status.SKIPPED);
+        boolean hasSuccess = checkItems.stream()
+                .anyMatch(item -> item.getStatus() == CheckItem.Status.SUCCESS);
+        return hasSkipped && hasSuccess;
     }
 
     /**
      * 更新单个检查项的状态并自动计算主机状态
-     * 这是推荐的更新检查项状态的方法，可以自动触发状态计算
      *
      * @param itemId    检查项ID
      * @param newStatus 新状态
      * @param message   状态消息
      * @return 状态是否发生变化
      */
-    public boolean updateCheckItemStatus(Integer itemId, CheckItem.Status newStatus, String message) {
+    public boolean updateCheckItemStatus(Long itemId, CheckItem.Status newStatus, String message) {
         if (checkItems == null) {
             return false;
         }
 
-        boolean statusChanged = false;
-        for (CheckItem item : checkItems) {
-            if (item.getId().equals(itemId)) {
-                if (item.getStatus() != newStatus) {
-                    item.setStatus(newStatus);
-                    if (message != null) {
-                        item.setMessage(message);
+        boolean statusChanged = checkItems.stream()
+                .filter(item -> item.getId().equals(itemId))
+                .findFirst()
+                .map(item -> {
+                    boolean changed = item.getStatus() != newStatus;
+                    if (changed) {
+                        item.setStatus(newStatus);
+                        if (message != null) {
+                            item.setMessage(message);
+                        }
                     }
-                    statusChanged = true;
-                }
-                break;
-            }
-        }
+                    return changed;
+                })
+                .orElse(false);
 
         if (statusChanged) {
             calculateStatus();
@@ -238,384 +275,134 @@ public class HostInfo implements Serializable {
 
     /**
      * 批量更新检查项状态
-     * 对于需要同时更新多个检查项的场景，性能更优
      *
      * @param updates 检查项ID与新状态的映射
      */
-    public void batchUpdateCheckItems(Map<Integer, CheckItem.Status> updates) {
+    public void batchUpdateCheckItems(Map<Long, CheckItem.Status> updates) {
         if (checkItems == null || updates == null || updates.isEmpty()) {
             return;
         }
 
-        boolean anyChange = false;
-        for (CheckItem item : checkItems) {
-            if (updates.containsKey(item.getId())) {
-                CheckItem.Status newStatus = updates.get(item.getId());
-                if (item.getStatus() != newStatus) {
-                    item.setStatus(newStatus);
-                    anyChange = true;
-                }
-            }
-        }
+        boolean anyChange = checkItems.stream()
+                .anyMatch(item -> {
+                    Long itemId = item.getId();
+                    CheckItem.Status newStatus = updates.get(itemId);
+                    if (newStatus != null && item.getStatus() != newStatus) {
+                        item.setStatus(newStatus);
+                        return true;
+                    }
+                    return false;
+                });
 
         if (anyChange) {
             calculateStatus();
         }
-
     }
 
     /**
      * 计算主机的整体状态
+     * 
      * 状态计算规则：
-     * 1. 如果主机状态已经是FIXING或WAITING_FIX，保持不变（手动设置的状态优先）
-     * 2. 如果有任何检查项正在检查中，则状态为CHECKING
-     * 3. 如果有任何检查项失败，则状态为FAILED
-     * 4. 如果所有检查项都成功，则状态为SUCCESS
-     * 5. 如果有等待检查的项目，则状态为WAITING
-     * 6. 如果所有项目都被跳过，则状态为SKIPPED
-     * <p>
-     * 该方法同时设置status和checkResult字段，确保两者一致
+     * 1. 手动设置的修复状态优先（FIXING/WAITING_FIX）
+     * 2. 有检查中项目 → CHECKING
+     * 3. 有失败项目 → FAILED  
+     * 4. 全部成功 → SUCCESS
+     * 5. 有等待项目 → WAITING
+     * 6. 全部跳过 → SKIPPED
      */
     public void calculateStatus() {
-        // 如果状态是手动设置的修复中或等待修复状态，保持不变
+        // 保护手动设置的修复状态
         if (this.status == CheckItem.Status.FIXING || this.status == CheckItem.Status.WAITING_FIX) {
-            String statusName = this.status == CheckItem.Status.FIXING ? "修复中" : "等待修复";
-            if (this.status == CheckItem.Status.WAITING_FIX) {
-                // 如果是等待修复状态，更新checkResult以反映等待修复
-                this.checkResult = new CheckResult(10045, "等待修复：等待修复失败的检查项");
-            } else {
-                // 如果是修复中状态，更新checkResult以反映正在修复
-                this.checkResult = new CheckResult(10046, "修复进行中：正在修复失败的检查项");
-            }
+            updateCheckResultForFixingStatus();
             return;
         }
 
         if (checkItems == null || checkItems.isEmpty()) {
             this.status = CheckItem.Status.WAITING;
-            // 没有检查项或检查项为空时，设置为等待检查
             this.checkResult = new CheckResult(9999, "等待主机校验");
             return;
         }
 
-        boolean hasChecking = false;
-        boolean hasFailed = false;
-        boolean hasWaiting = false;
-        boolean hasSkipped = false;
-        boolean hasSuccess = false;
-        boolean hasFixing = false;
+        // 统计各种状态的数量
+        var statusCounts = checkItems.stream()
+                .collect(java.util.stream.Collectors.groupingBy(
+                        CheckItem::getStatus,
+                        java.util.stream.Collectors.counting()
+                ));
 
-        // 统计检查项的状态
-        int total = checkItems.size();
-        int successCount = 0;
-        int failedCount = 0;
-        int waitingCount = 0;
-        int checkingCount = 0;
-        int skippedCount = 0;
-        int fixingCount = 0;
+        long total = checkItems.size();
+        long checkingCount = statusCounts.getOrDefault(CheckItem.Status.CHECKING, 0L);
+        long failedCount = statusCounts.getOrDefault(CheckItem.Status.FAILED, 0L);
+        long successCount = statusCounts.getOrDefault(CheckItem.Status.SUCCESS, 0L);
+        long waitingCount = statusCounts.getOrDefault(CheckItem.Status.WAITING, 0L);
+        long skippedCount = statusCounts.getOrDefault(CheckItem.Status.SKIPPED, 0L);
+        long fixingCount = statusCounts.getOrDefault(CheckItem.Status.FIXING, 0L);
 
-        for (CheckItem item : checkItems) {
-            CheckItem.Status itemStatus = item.getStatus();
-
-            if (itemStatus == CheckItem.Status.CHECKING) {
-                hasChecking = true;
-                checkingCount++;
-            } else if (itemStatus == CheckItem.Status.FAILED) {
-                hasFailed = true;
-                failedCount++;
-            } else if (itemStatus == CheckItem.Status.WAITING) {
-                hasWaiting = true;
-                waitingCount++;
-            } else if (itemStatus == CheckItem.Status.SKIPPED) {
-                hasSkipped = true;
-                skippedCount++;
-            } else if (itemStatus == CheckItem.Status.SUCCESS) {
-                hasSuccess = true;
-                successCount++;
-            } else if (itemStatus == CheckItem.Status.FIXING) {
-                hasFixing = true;
-                fixingCount++;
-            }
-        }
-
-        // 根据检查项状态计算主机整体状态
-        if (hasFixing) {
+        // 根据优先级计算状态
+        if (fixingCount > 0) {
             this.status = CheckItem.Status.FIXING;
-            // 修复中，提供更详细的信息
-            this.checkResult = new CheckResult(10046,
+            this.checkResult = new CheckResult(10046, 
                     String.format("修复进行中：正在修复%d个检查项", fixingCount));
-        } else if (hasChecking) {
+        } else if (checkingCount > 0) {
             this.status = CheckItem.Status.CHECKING;
-            // 检查中，提供更详细的信息
             this.checkResult = new CheckResult(10000,
-                    String.format("开始主机校验：进行中(%d/%d)，已通过(%d)，已失败(%d)，已跳过(%d)",
-                            checkingCount, total, successCount, failedCount, skippedCount));
-        } else if (hasFailed) {
+                    String.format("主机校验进行中：%d/%d项检查中", checkingCount, total));
+        } else if (failedCount > 0) {
             this.status = CheckItem.Status.FAILED;
-            // 主机校验不通过，提供失败数量
             this.checkResult = new CheckResult(10043,
-                    String.format("主机校验不通过：%d个检查项未通过，%d个检查项通过",
-                            failedCount, successCount));
-        } else if (hasWaiting) {
+                    String.format("主机校验失败：%d项未通过，%d项通过", failedCount, successCount));
+        } else if (waitingCount > 0) {
             this.status = CheckItem.Status.WAITING;
-            // 等待检查，提供等待检查的数量
             this.checkResult = new CheckResult(9999,
-                    String.format("等待主机校验：%d个检查项待检查", waitingCount));
-        } else if (hasSuccess && !hasSkipped) {
+                    String.format("等待主机校验：%d项待检查", waitingCount));
+        } else if (successCount == total) {
             this.status = CheckItem.Status.SUCCESS;
-            // 主机校验成功
             this.checkResult = new CheckResult(10001,
-                    String.format("主机校验成功：全部%d个检查项通过", successCount));
+                    String.format("主机校验成功：全部%d项检查通过", total));
         } else if (skippedCount == total) {
             this.status = CheckItem.Status.SKIPPED;
-            // 全部检查项都已跳过
             this.checkResult = new CheckResult(10044, "主机校验已跳过：所有检查项已跳过");
-        } else if (hasSuccess) {
-            // 添加新条件：部分检查项通过，部分跳过，没有失败项
-            this.status = CheckItem.Status.SUCCESS; // 仍然使用SUCCESS状态
+        } else {
+            // 混合状态
+            this.status = CheckItem.Status.SUCCESS;
             this.checkResult = new CheckResult(10001,
-                    String.format("主机校验成功：%d个检查项通过，%d个检查项已跳过",
-                            successCount, skippedCount));
+                    String.format("主机校验完成：%d项通过，%d项跳过", successCount, skippedCount));
+        }
+    }
+
+    /**
+     * 更新修复状态的检查结果
+     */
+    private void updateCheckResultForFixingStatus() {
+        if (this.status == CheckItem.Status.WAITING_FIX) {
+            this.checkResult = new CheckResult(10045, "等待修复：等待修复失败的检查项");
         } else {
-            // 部分检查项已跳过部分通过，仍使用SKIPPED状态，但前端可通过getStatusStr()获取"MIXED"
-            this.status = CheckItem.Status.SKIPPED;
-            this.checkResult = new CheckResult(10043,
-                    String.format("主机校验不完整：已通过(%d)，已失败(%d)，已跳过(%d)",
-                            successCount, failedCount, skippedCount));
+            this.checkResult = new CheckResult(10046, "修复进行中：正在修复失败的检查项");
         }
     }
 
+    // ==================== 系统信息访问方法 ====================
+    
     /**
-     * 获取主机名状态
+     * 获取操作系统信息收集状态
+     * 优先从OsInfo获取，如果不存在则返回LOADING
      */
-    public OsInfoStatusEnum getHostnameStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getHostnameStatus() != null) {
-            return osInfo.getHostnameStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
+    public OsInfoStatusEnum getOsInfoStatus() {
+        return osInfo != null ? osInfo.getOverallStatus() : OsInfoStatusEnum.LOADING;
     }
-
+    
     /**
-     * 设置主机名状态
+     * 检查系统信息是否收集完成
      */
-    public void setHostnameStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setHostnameStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setHostnameStatus(status);
-        }
+    public boolean isSystemInfoComplete() {
+        return osInfo != null && osInfo.isCollectionComplete();
     }
-
+    
     /**
-     * 获取操作系统状态
+     * 获取系统信息收集进度
      */
-    public OsInfoStatusEnum getOsStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getOsStatus() != null) {
-            return osInfo.getOsStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
-    }
-
-    /**
-     * 设置操作系统状态
-     */
-    public void setOsStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setOsStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setOsStatus(status);
-        }
-    }
-
-    /**
-     * 获取DNS状态
-     */
-    public OsInfoStatusEnum getDnsStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getDnsStatus() != null) {
-            return osInfo.getDnsStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
-    }
-
-    /**
-     * 设置DNS状态
-     */
-    public void setDnsStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setDnsStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setDnsStatus(status);
-        }
-    }
-
-    /**
-     * 获取CPU状态
-     */
-    public OsInfoStatusEnum getCpuStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getCpuStatus() != null) {
-            return osInfo.getCpuStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
-    }
-
-    /**
-     * 设置CPU状态
-     */
-    public void setCpuStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setCpuStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setCpuStatus(status);
-        }
-    }
-
-    /**
-     * 获取内存状态
-     */
-    public OsInfoStatusEnum getMemoryStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getMemoryStatus() != null) {
-            return osInfo.getMemoryStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
-    }
-
-    /**
-     * 设置内存状态
-     */
-    public void setMemoryStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setMemoryStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setMemoryStatus(status);
-        }
-    }
-
-    /**
-     * 获取磁盘状态
-     */
-    public OsInfoStatusEnum getDiskStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getDiskStatus() != null) {
-            return osInfo.getDiskStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
-    }
-
-    /**
-     * 设置磁盘状态
-     */
-    public void setDiskStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setDiskStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setDiskStatus(status);
-        }
-    }
-
-    /**
-     * 获取交换空间状态
-     */
-    public OsInfoStatusEnum getSwapStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getSwapStatus() != null) {
-            return osInfo.getSwapStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
-    }
-
-    /**
-     * 设置交换空间状态
-     */
-    public void setSwapStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setSwapStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setSwapStatus(status);
-        }
-    }
-
-    /**
-     * 获取GPU状态
-     */
-    public OsInfoStatusEnum getGpuStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getGpuStatus() != null) {
-            return osInfo.getGpuStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
-    }
-
-    /**
-     * 设置GPU状态
-     */
-    public void setGpuStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setGpuStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setGpuStatus(status);
-        }
-    }
-
-    /**
-     * 获取网络状态
-     */
-    public OsInfoStatusEnum getNetworkStatus() {
-        // 首先检查osInfo对象是否存在
-        if (osInfo != null && osInfo.getNetworkStatus() != null) {
-            return osInfo.getNetworkStatus();
-        }
-        // 如果osInfo为空或其中没有状态信息，返回LOADING
-        return OsInfoStatusEnum.LOADING;
-    }
-
-    /**
-     * 设置网络状态
-     */
-    public void setNetworkStatus(OsInfoStatusEnum status) {
-        // 如果osInfo存在，设置osInfo中的状态
-        if (osInfo != null) {
-            osInfo.setNetworkStatus(status);
-        } else {
-            // 如果osInfo不存在，创建新的OsInfo对象
-            osInfo = new OsInfo();
-            osInfo.setNetworkStatus(status);
-        }
+    public int getSystemInfoProgress() {
+        return osInfo != null ? osInfo.getCollectionProgress() : 0;
     }
 
 }
