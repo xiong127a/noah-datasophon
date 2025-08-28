@@ -42,17 +42,15 @@ import com.datasophon.plugins.api.model.CommandResult;
 
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.utils.MinaUtils;
+
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.dto.HostCheckStatusDto;
 import com.datasophon.common.enums.CommandType;
-import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.exception.ServiceException;
 import com.datasophon.common.exception.BusinessException;
-import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.WorkerServiceMessage;
@@ -69,13 +67,12 @@ import com.datasophon.api.converter.K8sToClusterHostConverter;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorRef;
-import org.apache.sshd.client.session.ClientSession;
+import com.datasophon.api.service.SshPluginAdapterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -107,6 +104,8 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     private  ClusterHostService hostService;
     @Autowired
     private  HostValidationService hostValidationService;
+    @Autowired
+    private  SshPluginAdapterService sshPluginAdapter;
 
     private  OsInfoService osInfoService;
     @Autowired
@@ -918,69 +917,55 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * @return 连接是否成功
      */
     private boolean validateSshConnection(HostInfo hostInfo) {
-        ClientSession session = null;
         try {
-            // getOrCreateSession内部会调用openConnectionWithPassword
-            // openConnectionWithPassword如果异常会设置hostInfo的错误信息
-            session = getOrCreateSession(hostInfo);
-
-            // 如果session为null，表示连接失败
-            // 错误信息已经在openConnectionWithPassword中设置到hostInfo
-            if (session == null) {
-                // 确保SSH连接状态为ERROR
-                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-
-                // 如果没有错误信息，则设置一个默认值
-                if (StringUtils.isBlank(hostInfo.getSshErrorMsg())) {
-                    hostInfo.setSshErrorMsg("无法创建SSH连接，请检查网络连接和SSH配置");
+            log.debug("【安装服务】开始验证SSH连接: {}@{}:{}", 
+                    hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort());
+            
+            // 通过SSH插件适配器测试连接
+            CommandResult connectionTestResult = sshPluginAdapter.testConnection(hostInfo);
+            
+            if (connectionTestResult.isSuccess()) {
+                // 连接成功，执行测试命令验证功能
+                String testOutput = sshPluginAdapter.executeCommand(hostInfo, "echo connection_test");
+                
+                boolean commandSuccess = testOutput != null && testOutput.contains("connection_test");
+                
+                if (commandSuccess) {
+                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
+                    log.info("【安装服务】SSH连接验证成功: {}", hostInfo.getIp());
+                    return true;
+                } else {
+                    // 连接成功但命令执行失败
+                    hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+                    hostInfo.setSshErrorMsg("SSH连接成功但无法执行命令，请检查用户权限");
+                    hostInfo.setErrorMessage("SSH连接成功但无法执行命令，请检查用户权限");
+                    log.warn("【安装服务】SSH连接成功但命令执行失败: {}", hostInfo.getIp());
+                    return false;
                 }
-
-                if (StringUtils.isBlank(hostInfo.getErrorMessage())) {
-                    hostInfo.setErrorMessage("SSH连接失败：无法创建连接");
-                }
-
-                return false;
-            }
-
-            // 连接成功，执行测试命令
-            CommandResult connectionTestResult = MinaUtils.execCmdWithResultObject(session,
-                    "echo connection_test");
-            String result = connectionTestResult.isSuccess() ? connectionTestResult.output()
-                    : "EXIT_CODE_" + connectionTestResult.exitCode() + ": " + connectionTestResult.error();
-
-            boolean success = result != null && result.contains("connection_test");
-
-            // 连接成功
-            if (success) {
-                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
-                return true;
             } else {
-                // 命令执行失败
+                // 连接失败
                 hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                hostInfo.setSshErrorMsg("SSH连接成功但无法执行命令，请检查用户权限");
-                hostInfo.setErrorMessage("SSH连接成功但无法执行命令，请检查用户权限");
+                
+                String errorMsg = connectionTestResult.error() != null ? 
+                        connectionTestResult.error() : "无法创建SSH连接，请检查网络连接和SSH配置";
+                
+                hostInfo.setSshErrorMsg(errorMsg);
+                hostInfo.setErrorMessage("SSH连接失败：" + errorMsg);
+                
+                log.error("【安装服务】SSH连接验证失败: {} -> {}", hostInfo.getIp(), errorMsg);
                 return false;
             }
+            
         } catch (Exception e) {
-            // 处理不同类型的异常，设置更友好的错误信息
+            // 处理异常，设置错误信息
             hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-
+            
             String formattedErrorMsg = formatSshErrorMessage(e);
             hostInfo.setSshErrorMsg(formattedErrorMsg);
             hostInfo.setErrorMessage("SSH连接失败：" + formattedErrorMsg);
-
-            log.error("主机[{}]SSH连接验证失败: {}", hostInfo.getIp(), formattedErrorMsg, e);
+            
+            log.error("【安装服务】SSH连接验证异常: {} -> {}", hostInfo.getIp(), formattedErrorMsg, e);
             return false;
-        } finally {
-            // 安全关闭会话，避免关闭异常影响验证结果
-            if (session != null) {
-                try {
-                    MinaUtils.closeConnection(session);
-                } catch (Exception e) {
-                    // 仅记录关闭连接时的异常，不影响验证结果
-                    log.warn("关闭主机[{}]的SSH连接时发生异常: {}", hostInfo.getIp(), e.getMessage());
-                }
-            }
         }
     }
 
@@ -1134,25 +1119,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         return hostInfo;
     }
 
-    /**
-     * 获取或创建SSH会话
-     *
-     * @return SSH会话
-     */
-    private ClientSession getOrCreateSession(HostInfo hostInfo) throws IOException {
-        // 使用host作为连接池的键
-        String ip = hostInfo.getIp();
-        // 创建新会话
-        log.info("创建主机 {} 的新SSH连接", ip);
-        ClientSession newSession = MinaUtils.openConnectionWithPassword(hostInfo);
-        if (newSession != null) {
-            // 将新会话添加到Map中
-            log.info("成功创建主机 {} 的SSH连接", ip);
-        } else {
-            log.warn("无法创建主机 {} 的SSH连接", ip);
-        }
-        return newSession;
-    }
+    // getOrCreateSession方法已删除 - SSH连接现在通过插件适配器管理
 
     /**
      * 设置已受管主机的信息
@@ -1468,15 +1435,19 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             result.put("ip", clusterHostEntity.getIp());
             result.put("command", "service datasophon-worker " + commandType);
 
-            try (ClientSession session = MinaUtils.openConnectionWithPassword(new HostInfo(clusterHostEntity.getIp(), 22, Constants.ROOT))) {
-                String commandResult = MinaUtils.execCmdWithResult(session, "service datasophon-worker " + commandType);
+            try {
+                // 通过SSH插件适配器执行命令
+                HostInfo hostInfo = new HostInfo(clusterHostEntity.getIp(), 22, Constants.ROOT);
+                String command = "service datasophon-worker " + commandType;
+                
+                String commandResult = sshPluginAdapter.executeCommand(hostInfo, command);
                 result.put("success", true);
                 result.put("output", commandResult);
-                log.info("hostAgent command executed successfully on {}: {}", clusterHostEntity.getIp(), commandResult);
+                log.info("【安装服务】主机代理命令执行成功: {} -> {}", clusterHostEntity.getIp(), commandResult);
             } catch (Exception e) {
                 result.put("success", false);
                 result.put("error", e.getMessage());
-                log.error("Failed to execute hostAgent command on {}: {}", clusterHostEntity.getIp(), e.getMessage());
+                log.error("【安装服务】主机代理命令执行失败: {} -> {}", clusterHostEntity.getIp(), e.getMessage());
             }
             results.add(result);
         }
@@ -1729,21 +1700,19 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 throw new BusinessException(Status.IP_IS_EMPTY.getCode(), "未找到主机信息");
             }
 
-            // 3. 建立SSH连接
-            ClientSession session = MinaUtils.openConnectionWithPassword(hostInfo);
-            if (session == null) {
-                throw new ServiceException("SSH连接失败: " + hostInfo.getSshErrorMsg());
-            }
-
+            // 3. 通过SSH插件适配器执行日志获取命令
             try {
-                // 4. 执行tail命令查看运行日志
                 String command = "tail -n 100 /opt/datasophon/datasophon-worker/logs/datasophon-worker.log";
-
-                // 5. 返回日志内容
-                return MinaUtils.execCmdWithResult(session, command);
-            } finally {
-                // 6. 关闭SSH连接
-                MinaUtils.closeConnection(session);
+                
+                // 4. 使用SSH插件适配器执行命令并返回日志内容
+                String logContent = sshPluginAdapter.executeCommand(hostInfo, command);
+                
+                log.debug("【安装服务】获取主机工作日志成功: {} -> {} 字符", hostInfo.getIp(), 
+                        logContent != null ? logContent.length() : 0);
+                
+                return logContent;
+            } catch (Exception sshException) {
+                throw new ServiceException("SSH连接失败: " + sshException.getMessage());
             }
         } catch (BusinessException e) {
             throw e;
