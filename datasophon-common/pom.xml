@@ -226,10 +226,7 @@
 <!--                    <artifactId>commons-lang</artifactId>-->
 <!--                    <groupId>commons-lang</groupId>-->
 <!--                </exclusion>-->
-<!--                <exclusion>-->
-<!--                    <artifactId>jsch</artifactId>-->
-<!--                    <groupId>com.jcraft</groupId>-->
-<!--                </exclusion>-->
+
 <!--                <exclusion>-->
 <!--                    <artifactId>slf4j-reload4j</artifactId>-->
 <!--                    <groupId>org.slf4j</groupId>-->

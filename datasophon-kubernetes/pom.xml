@@ -35,11 +35,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
-        <dependency>
-            <groupId>com.jcraft</groupId>
-            <artifactId>jsch</artifactId>
-            <version>${jsch-old.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>org.apache.pekko</groupId>
             <artifactId>pekko-actor_3</artifactId>
@@ -56,14 +52,7 @@
             <groupId>org.apache.pekko</groupId>
             <artifactId>pekko-persistence_3</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.sshd</groupId>
-            <artifactId>sshd-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.sshd</groupId>
-            <artifactId>sshd-sftp</artifactId>
-        </dependency>
+
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-pool2</artifactId>

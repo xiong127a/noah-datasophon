@@ -65,7 +65,7 @@
         <mybatis-flex.version>1.11.1</mybatis-flex.version>
         <mysql.connector.version>8.4.0</mysql.connector.version>
         <sqlite.connector.version>3.48.0.0</sqlite.connector.version>
-        <org.apache.sshd.version>2.15.0</org.apache.sshd.version>
+
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <spotless.ratchetFrom>origin/dev</spotless.ratchetFrom>
@@ -86,7 +86,7 @@
         <docker-maven-plugin.version>0.46.0</docker-maven-plugin.version>
         <jackson.version>2.19.2</jackson.version>
         <ant.version>1.10.12</ant.version>
-        <jsch.version>2.27.2</jsch.version>
+
         <commons-collections.version>3.2.2</commons-collections.version>
         <eddsa.version>0.3.0</eddsa.version>
         <mockito-core.version>2.23.4</mockito-core.version>
@@ -100,7 +100,6 @@
         <commons-pool2.version>2.12.1</commons-pool2.version>
         <commons-io.version>2.20.0</commons-io.version>
         <sshj.version>0.40.0</sshj.version>
-        <jsch-old.version>0.1.55</jsch-old.version>
         <mapstruct.version>1.6.3</mapstruct.version>
         <!-- 插件化框架版本 -->
         <pf4j.version>3.13.0</pf4j.version>
@@ -257,11 +256,7 @@
                 <artifactId>ant</artifactId>
                 <version>${ant.version}</version>
             </dependency>
-            <dependency>
-                <groupId>com.github.mwiede</groupId>
-                <artifactId>jsch</artifactId>
-                <version>${jsch.version}</version>
-            </dependency>
+
             <dependency>
                 <groupId>commons-collections</groupId>
                 <artifactId>commons-collections</artifactId>

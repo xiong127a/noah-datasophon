@@ -66,14 +66,7 @@
             <groupId>org.apache.pekko</groupId>
             <artifactId>pekko-persistence_3</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.sshd</groupId>
-            <artifactId>sshd-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.sshd</groupId>
-            <artifactId>sshd-sftp</artifactId>
-        </dependency>
+
         <!-- 插件生态系统依赖 -->
         <dependency>
             <groupId>com.datasophon</groupId>
