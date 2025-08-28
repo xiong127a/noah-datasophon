@@ -3,8 +3,8 @@ spring:
   application:
     name: datasophon-service
   profiles:
-    active: temporal
-    include: temporal
+    active: default
+    include: db-scheduler
 
 # 服务器配置
 server:
@@ -60,7 +60,49 @@ logging:
     com.datasophon: INFO
     com.datasophon.plugins: DEBUG
     org.apache.commons.pool2: DEBUG
+    # db-scheduler相关日志
+    com.github.kagkarlsson.scheduler: INFO
+    no.bekk.db-scheduler-ui: INFO
+    io.rocketbase.extension: INFO
     root: INFO
   pattern:
     console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{50} - %msg%n"
+
+---
+# db-scheduler 配置
+spring:
+  profiles: db-scheduler
+
+# db-scheduler基础配置
+db-scheduler:
+  enabled: true
+  table-name: datasophon_scheduled_tasks
+  scheduler-name: datasophon-scheduler
+  polling-interval: PT10S
+  heartbeat-interval: PT30S
+  delete-unresolved-after: P7D
+  immediate-execution-enabled: true
+  upper-limit-fraction-of-threads: 0.8
+  shutdown:
+    max-wait: PT30S
+
+# db-scheduler-ui 可视化界面配置
+db-scheduler-ui:
+  enabled: true                    # 启用Web UI界面
+  path: /db-scheduler             # UI访问路径: http://localhost:8080/datasophon/db-scheduler
+  auth:
+    enabled: false                 # 暂时禁用认证（生产环境建议启用）
+  refresh-interval: 5s            # 页面自动刷新间隔
+  show-data: true                 # 显示任务数据内容
+  show-logs: true                 # 显示任务执行日志
+  page-size: 50                   # 每页显示任务数量
+
+# db-scheduler-log 任务历史记录配置
+db-scheduler-log:
+  enabled: true                   # 启用任务执行历史记录
+  table-name: datasophon_scheduled_execution_logs  # 历史记录表名
+  cleanup:
+    enabled: true                 # 启用历史记录自动清理
+    max-age: P30D                # 保留30天的执行历史
+    cleanup-interval: PT1H       # 每小时执行一次清理任务

@@ -133,14 +133,25 @@
 
         <!-- 插件生态系统依赖已在前面声明，此处移除重复依赖 -->
 
-        <!-- Temporal工作流引擎 -->
+        <!-- db-scheduler 现代化调度框架 -->
         <dependency>
-            <groupId>io.temporal</groupId>
-            <artifactId>temporal-sdk</artifactId>
+            <groupId>com.github.kagkarlsson</groupId>
+            <artifactId>db-scheduler-spring-boot-starter</artifactId>
+            <version>16.0.0</version>
         </dependency>
+        
+        <!-- db-scheduler-ui 可视化管理界面 -->
         <dependency>
-            <groupId>io.temporal</groupId>
-            <artifactId>temporal-spring-boot-starter-alpha</artifactId>
+            <groupId>no.bekk.db-scheduler-ui</groupId>
+            <artifactId>db-scheduler-ui-starter</artifactId>
+            <version>4.4.0</version>
+        </dependency>
+        
+        <!-- db-scheduler 任务历史记录 -->
+        <dependency>
+            <groupId>io.rocketbase.extension</groupId>
+            <artifactId>db-scheduler-log-spring-boot-starter</artifactId>
+            <version>0.7.0</version>
         </dependency>
 
         <!-- PF4J插件框架 -->
@@ -174,8 +185,8 @@
 
         <!-- 测试支持 -->
         <dependency>
-            <groupId>io.temporal</groupId>
-            <artifactId>temporal-testing</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
 
