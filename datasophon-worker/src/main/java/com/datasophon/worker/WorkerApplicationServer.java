@@ -88,8 +88,8 @@ public class WorkerApplicationServer {
 
         createDefaultUser(userMap);
 
-        tellToMaster(hostname, workDir, masterHost, cpuArchitecture, system);
-        logger.info("start worker");
+        logger.info("start worker - 等待Master主动连接");
+        logger.info("Worker节点已启动，主机名: {}, 工作目录: {}, CPU架构: {}", hostname, workDir, cpuArchitecture);
 
         /*
          * registry hooks, which are called before the process exits
@@ -149,15 +149,12 @@ public class WorkerApplicationServer {
     }
 
     /**
-     * 向Master发送Worker状态信息
-     * 发送成功后Master会更新主机状态为"安装成功"
-     *
-     * @param hostname        主机名
-     * @param workDir         工作目录
-     * @param masterHost      Master主机地址
-     * @param cpuArchitecture CPU架构
-     * @param system          Actor系统
+     * 向Master发送Worker状态信息 [已废弃]
+     * 现在改为Master主动连接Worker，这个方法不再使用
+     * 
+     * @deprecated Master现在主动连接Worker，不再需要Worker主动发送状态
      */
+    @Deprecated
     private static void tellToMaster(
             String hostname,
             String workDir,

@@ -74,6 +74,8 @@ public class WorkerActor extends AbstractActor {
                                 getActorRefName(TenantResourceActor.class));
                 ActorRef executeShellActor = getContext().actorOf(Props.create(ExecuteShellActor.class),
                                 getActorRefName(ExecuteShellActor.class));
+                ActorRef systemInfoActor = getContext().actorOf(Props.create(SystemInfoActor.class),
+                                getActorRefName(SystemInfoActor.class));
 
                 // 添加监听服务
                 getContext().watch(installServiceActor);
@@ -94,6 +96,7 @@ public class WorkerActor extends AbstractActor {
                 getContext().watch(ldapActor);
                 getContext().watch(tenantResourceActor);
                 getContext().watch(executeShellActor);
+                getContext().watch(systemInfoActor);
         }
 
         /** Get ActorRef name from Class name. */

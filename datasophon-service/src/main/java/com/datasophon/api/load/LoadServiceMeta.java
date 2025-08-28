@@ -23,6 +23,7 @@ package com.datasophon.api.load;
 import com.datasophon.api.load.model.LoadContext;
 import com.datasophon.api.load.model.ParseResult;
 import com.datasophon.api.load.model.ServiceMetaConfig;
+import com.datasophon.api.master.WorkerDiscoveryActor;
 import com.datasophon.api.service.BatchServiceMetadataTransactionService;
 
 import cn.hutool.core.collection.CollUtil;
@@ -149,6 +150,10 @@ public class LoadServiceMeta implements ApplicationRunner {
         ActorUtils.actorSystem.actorOf(Props.create(serviceCacheSyncActor.class),
                 getActorRefName(serviceCacheSyncActor.class));
         
+        // 创建Worker发现和管理Actor
+        ActorUtils.actorSystem.actorOf(Props.create(WorkerDiscoveryActor.class),
+                getActorRefName(WorkerDiscoveryActor.class));
+        
         logger.info("服务元数据加载完成");
     }
 
@@ -217,7 +222,7 @@ public class LoadServiceMeta implements ApplicationRunner {
         // 并行解析所有服务文件 - 利用JDK21的虚拟线程
         var parseResults = serviceFiles.parallelStream()
                 .map(file -> parseServiceFileForBatch(frameInfo.getFrameCode(), frameInfo, file, loadContext))
-                .collect(Collectors.toList());
+                .toList();
         
         // 收集成功解析的配置和失败统计
         var configs = new ArrayList<ServiceMetaConfig>();
