@@ -1,1 +1,1 @@
-com.datasophon.plugins.impl.ssh.SshConnectorPlugin
+com.datasophon.plugins.ssh.SshConnectivityCheckPlugin

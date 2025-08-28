@@ -1,1 +1,2 @@
-com.datasophon.plugins.impl.cpu.CpuCheckerPlugin
+com.datasophon.plugins.os.OsInfoCollectionPlugin
+com.datasophon.plugins.hardware.HardwareInfoCollectionPlugin
