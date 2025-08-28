@@ -145,6 +145,17 @@
             <groupId>no.bekk.db-scheduler-ui</groupId>
             <artifactId>db-scheduler-ui-starter</artifactId>
             <version>4.4.0</version>
+            <exclusions>
+                <!-- 排除旧版本的db-scheduler，使用16.0.0版本 -->
+                <exclusion>
+                    <groupId>com.github.kagkarlsson</groupId>
+                    <artifactId>db-scheduler</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.github.kagkarlsson</groupId>
+                    <artifactId>db-scheduler-spring-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         
         <!-- db-scheduler 任务历史记录 -->
@@ -152,6 +163,17 @@
             <groupId>io.rocketbase.extension</groupId>
             <artifactId>db-scheduler-log-spring-boot-starter</artifactId>
             <version>0.7.0</version>
+            <exclusions>
+                <!-- 排除旧版本的db-scheduler，使用16.0.0版本 -->
+                <exclusion>
+                    <groupId>com.github.kagkarlsson</groupId>
+                    <artifactId>db-scheduler</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>com.github.kagkarlsson</groupId>
+                    <artifactId>db-scheduler-spring-boot-starter</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- PF4J插件框架 -->
