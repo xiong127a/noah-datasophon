@@ -191,6 +191,40 @@ public class SshConnectivityCheckPlugin implements HostCheckerPlugin {
     }
     
     /**
+     * 直接执行SSH命令（适配器专用接口）
+     * 
+     * @param hostIp 主机IP
+     * @param port SSH端口
+     * @param username 用户名
+     * @param password 密码
+     * @param command 要执行的命令
+     * @return 命令输出
+     * @throws Exception 执行失败
+     */
+    public String executeCommandDirectly(String hostIp, int port, String username, String password, String command) throws Exception {
+        log.debug("【SSH插件】直接执行命令: {}@{}:{} -> {}", username, hostIp, port, command);
+        
+        if (sshPoolManager == null) {
+            throw new RuntimeException("SSH连接池管理器未初始化");
+        }
+        
+        try {
+            // 使用连接池管理器执行命令
+            String result = sshPoolManager.executeCommand(hostIp, port, username, password, command);
+            
+            log.debug("【SSH插件】命令执行完成: {} -> {} chars", command, 
+                    result != null ? result.length() : 0);
+            
+            return result != null ? result : "";
+            
+        } catch (Exception e) {
+            log.error("【SSH插件】直接命令执行失败: {}@{}:{} -> {}, 错误: {}", 
+                    username, hostIp, port, command, e.getMessage(), e);
+            throw e;
+        }
+    }
+    
+    /**
      * 获取SSH连接池状态（通过反射调用）
      */
     public Map<String, Object> getSshPoolStats() {

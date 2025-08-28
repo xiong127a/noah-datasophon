@@ -21,21 +21,15 @@ import com.datasophon.common.Constants;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.apache.sshd.client.channel.ChannelExec;
-import org.apache.sshd.client.channel.ClientChannelEvent;
-import org.apache.sshd.client.session.ClientSession;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedReader;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
-import java.util.EnumSet;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -309,59 +303,5 @@ public class ShellUtils {
         command.add(user + ":" + group);
         command.add(path);
         execWithStatus(Constants.INSTALL_PATH, command, 60, log);
-    }
-
-    /**
-     * 执行命令并获取结果
-     * @param session SSH会话
-     * @param command 要执行的命令
-     * @return 命令执行结果
-     */
-    public static String execCmdWithResult(ClientSession session, String command) {
-        if (session == null) {
-            logger.error("SSH会话为空，无法执行命令: {}", command);
-            return null;
-        }
-        session.resetAuthTimeout();
-        logger.info("执行命令: {}", command);
-
-        ByteArrayOutputStream out = new ByteArrayOutputStream();
-        ByteArrayOutputStream err = new ByteArrayOutputStream();
-        try (ChannelExec ce = session.createExecChannel(command)) {
-            try {
-                ce.setOut(out);
-                ce.setErr(err);
-                ce.open();
-
-                Set<ClientChannelEvent> events = ce.waitFor(EnumSet.of(ClientChannelEvent.CLOSED), TimeUnit.SECONDS.toMillis(100000));
-
-                if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                    logger.error("命令执行超时: {}", command);
-                    return "ERROR: Command timed out";
-                }
-
-                int exitStatus = ce.getExitStatus();
-                logger.info("命令执行状态: {}", exitStatus);
-
-                String outResult = out.toString();
-                String errResult = err.toString();
-
-                if (exitStatus != 0) {
-                    if (!errResult.isEmpty()) {
-                        logger.error("命令执行失败: {} - 错误信息: {}", command, errResult);
-                        return "ERROR: " + errResult;
-                    }
-                }
-
-                logger.info("命令执行结果: {}", outResult);
-                return outResult;
-            } catch (Exception e) {
-                logger.error("执行命令异常: {} - {}", command, e.getMessage());
-                return "ERROR: " + e.getMessage();
-            }
-        } catch (Exception e) {
-            logger.error("关闭命令通道异常", e);
-        }
-        return command;
     }
 }

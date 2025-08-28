@@ -19,7 +19,7 @@ package com.datasophon.api.utils;
 
 import com.datasophon.api.service.SshPluginAdapterService;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.common.command.CommandResult;
+import com.datasophon.plugins.api.model.CommandResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -51,7 +51,7 @@ public class SshPluginUtils {
      */
     public CommandResult openConnection(HostInfo hostInfo) {
         log.debug("【SSH插件工具】打开SSH连接: {}@{}:{}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort());
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort());
         
         return sshPluginAdapter.testConnection(hostInfo);
     }
@@ -62,7 +62,7 @@ public class SshPluginUtils {
      */
     public CommandResult openConnectionWithPassword(HostInfo hostInfo) {
         log.debug("【SSH插件工具】使用密码打开SSH连接: {}@{}:{}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort());
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort());
         
         return sshPluginAdapter.testConnection(hostInfo);
     }
@@ -73,7 +73,7 @@ public class SshPluginUtils {
      */
     public String execCmdWithResult(HostInfo hostInfo, String command) {
         log.debug("【SSH插件工具】执行SSH命令: {}@{}:{} -> {}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort(), command);
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), command);
         
         return sshPluginAdapter.executeCommand(hostInfo, command);
     }
@@ -84,7 +84,7 @@ public class SshPluginUtils {
      */
     public CommandResult execCmdWithResultObject(HostInfo hostInfo, String command) {
         log.debug("【SSH插件工具】执行SSH命令(详细): {}@{}:{} -> {}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort(), command);
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), command);
         
         return sshPluginAdapter.executeCommandWithResult(hostInfo, command);
     }
@@ -95,7 +95,7 @@ public class SshPluginUtils {
      */
     public CommandResult execCmdWithResultObject(HostInfo hostInfo, String command, long timeoutSeconds) {
         log.debug("【SSH插件工具】执行SSH命令(详细+超时): {}@{}:{} -> {}, 超时: {}s", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort(), command, timeoutSeconds);
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), command, timeoutSeconds);
         
         return sshPluginAdapter.executeCommandWithResult(hostInfo, command, timeoutSeconds);
     }
@@ -106,7 +106,7 @@ public class SshPluginUtils {
      */
     public boolean uploadFile(HostInfo hostInfo, String localFilePath, String remoteFilePath) {
         log.info("【SSH插件工具】上传文件: {}@{}:{} {} -> {}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort(), localFilePath, remoteFilePath);
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), localFilePath, remoteFilePath);
         
         return sshPluginAdapter.uploadFile(hostInfo, localFilePath, remoteFilePath);
     }
@@ -117,7 +117,7 @@ public class SshPluginUtils {
      */
     public boolean downloadFile(HostInfo hostInfo, String remoteFilePath, String localFilePath) {
         log.info("【SSH插件工具】下载文件: {}@{}:{} {} -> {}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort(), remoteFilePath, localFilePath);
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), remoteFilePath, localFilePath);
         
         return sshPluginAdapter.downloadFile(hostInfo, remoteFilePath, localFilePath);
     }
@@ -128,7 +128,7 @@ public class SshPluginUtils {
      */
     public String detectLinuxDistro(HostInfo hostInfo) {
         log.debug("【SSH插件工具】检测Linux发行版: {}@{}:{}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort());
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort());
         
         return sshPluginAdapter.detectLinuxDistro(hostInfo);
     }
@@ -139,7 +139,7 @@ public class SshPluginUtils {
      */
     public String adaptCommandToDistro(HostInfo hostInfo, String command) {
         log.debug("【SSH插件工具】适配命令到发行版: {}@{}:{} -> {}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort(), command);
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), command);
         
         return sshPluginAdapter.adaptCommandToDistro(hostInfo, command);
     }
@@ -150,7 +150,7 @@ public class SshPluginUtils {
      */
     public String safeExecCommand(HostInfo hostInfo, String command) {
         log.debug("【SSH插件工具】安全执行SSH命令: {}@{}:{} -> {}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort(), command);
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), command);
         
         return sshPluginAdapter.safeExecuteCommand(hostInfo, command);
     }
@@ -161,7 +161,7 @@ public class SshPluginUtils {
      */
     public boolean createSystemdServiceForDebian(HostInfo hostInfo, String scriptPath, String installPath) {
         log.info("【SSH插件工具】创建Debian systemd服务: {}@{}:{} script={}, install={}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort(), scriptPath, installPath);
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), scriptPath, installPath);
         
         return sshPluginAdapter.createSystemdServiceForDebian(hostInfo, scriptPath, installPath);
     }
@@ -172,7 +172,7 @@ public class SshPluginUtils {
      */
     public boolean isConnectionValid(HostInfo hostInfo) {
         log.debug("【SSH插件工具】检查SSH连接有效性: {}@{}:{}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort());
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort());
         
         return sshPluginAdapter.isConnectionValid(hostInfo);
     }
@@ -193,7 +193,7 @@ public class SshPluginUtils {
      */
     public java.util.List<CommandResult> executeBatchCommands(HostInfo hostInfo, java.util.List<String> commands) {
         log.info("【SSH插件工具】批量执行SSH命令: {}@{}:{}, 命令数量: {}", 
-                hostInfo.getUser(), hostInfo.getIp(), hostInfo.getPort(), commands.size());
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), commands.size());
         
         return sshPluginAdapter.executeBatchCommands(hostInfo, commands);
     }

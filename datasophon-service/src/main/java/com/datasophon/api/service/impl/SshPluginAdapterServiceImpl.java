@@ -23,7 +23,6 @@ import com.datasophon.plugins.api.model.CommandResult;
 import com.datasophon.plugins.manager.LazyPluginLifecycleManager;
 import com.datasophon.plugins.api.HostCheckerPlugin;
 import com.datasophon.plugins.api.model.HostCheckContext;
-import com.datasophon.plugins.api.model.SshConnectionInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -31,7 +30,6 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -197,9 +195,21 @@ public class SshPluginAdapterServiceImpl implements SshPluginAdapterService {
         try {
             // 创建systemd服务文件的命令
             String serviceContent = String.format(
-                "[Unit]\nDescription=DataSophon Worker Service\nAfter=network.target\n\n" +
-                "[Service]\nType=forking\nExecStart=%s/bin/start.sh\nExecStop=%s/bin/stop.sh\n" +
-                "User=root\nGroup=root\nRestart=always\n\n[Install]\nWantedBy=multi-user.target",
+                    """
+                            [Unit]
+                            Description=DataSophon Worker Service
+                            After=network.target
+                            
+                            [Service]
+                            Type=forking
+                            ExecStart=%s/bin/start.sh
+                            ExecStop=%s/bin/stop.sh
+                            User=root
+                            Group=root
+                            Restart=always
+                            
+                            [Install]
+                            WantedBy=multi-user.target""",
                 installPath, installPath);
             
             String createServiceCmd = String.format("echo '%s' > /etc/systemd/system/datasophon-worker.service", serviceContent);
@@ -292,12 +302,6 @@ public class SshPluginAdapterServiceImpl implements SshPluginAdapterService {
      * 构建主机检查上下文
      */
     private HostCheckContext buildHostCheckContext(HostInfo hostInfo) {
-        SshConnectionInfo sshInfo = SshConnectionInfo.builder()
-                .username(hostInfo.getSshUser())
-                .password(hostInfo.getSshPassword())
-                .port(hostInfo.getSshPort())
-                .build();
-        
         return HostCheckContext.builder()
                 .hostIp(hostInfo.getIp())
                 .sshUser(hostInfo.getSshUser())
@@ -310,19 +314,84 @@ public class SshPluginAdapterServiceImpl implements SshPluginAdapterService {
      * 通过SSH插件执行命令
      */
     private String executeCommandViaPlugin(HostInfo hostInfo, String command, long timeoutSeconds) throws Exception {
-        // 目前使用模拟实现，实际应该通过SSH插件的扩展接口执行
-        // TODO: 需要扩展SSH插件，提供命令执行接口
+        log.debug("【SSH适配器】通过插件执行命令: {} -> {}", hostInfo.getIp(), command);
         
-        log.debug("【SSH适配器】通过插件执行命令: {}", command);
-        
-        // 暂时返回模拟结果
-        if (command.contains("echo") || command.contains("cat /etc/os-release")) {
-            if (command.contains("ID=")) {
-                return "ubuntu"; // 模拟Ubuntu系统
+        try {
+            // 获取SSH插件实例
+            HostCheckerPlugin sshPlugin = getSshPlugin();
+            if (sshPlugin == null) {
+                throw new RuntimeException("SSH插件不可用");
             }
-            return "command_output_via_plugin";
+            
+            // 使用反射调用SSH插件的命令执行方法
+            // SSH插件内部的 SshConnectionPoolManager 有 executeCommand 方法
+            java.lang.reflect.Method method = sshPlugin.getClass().getMethod("executeCommandDirectly", 
+                    String.class, int.class, String.class, String.class, String.class);
+            
+            String result = (String) method.invoke(sshPlugin, 
+                    hostInfo.getIp(),
+                    hostInfo.getSshPort(), 
+                    hostInfo.getSshUser(),
+                    hostInfo.getSshPassword(),
+                    command);
+            
+            log.debug("【SSH适配器】SSH命令执行完成: {} -> {}", command, result != null ? result.length() + " chars" : "null");
+            return result != null ? result : "";
+            
+        } catch (java.lang.NoSuchMethodException e) {
+            // 如果SSH插件没有直接执行命令的方法，回退到连接测试方式
+            log.warn("【SSH适配器】SSH插件缺少直接命令执行方法，使用备用方案");
+            return executeCommandFallback(hostInfo, command);
+            
+        } catch (Exception e) {
+            log.error("【SSH适配器】通过插件执行命令失败: {} -> {}, 错误: {}", 
+                    hostInfo.getIp(), command, e.getMessage(), e);
+            throw new RuntimeException("SSH插件命令执行失败: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * 命令执行备用方案
+     * 通过修改测试命令的方式来执行任意命令
+     */
+    private String executeCommandFallback(HostInfo hostInfo, String command) throws Exception {
+        log.debug("【SSH适配器】使用备用方案执行命令: {}", command);
+        
+        // 构建上下文，但将测试命令替换为要执行的命令
+        HostCheckContext context = buildHostCheckContextWithCommand(hostInfo, command);
+        HostCheckerPlugin sshPlugin = getSshPlugin();
+        
+        if (sshPlugin == null || !sshPlugin.canExecute(context)) {
+            throw new RuntimeException("SSH插件不可用或连接信息不完整");
         }
         
-        return ""; // 默认返回空结果
+        // 执行检查（实际执行我们的命令）
+        var future = sshPlugin.executeCheck(context);
+        var result = future.get(30, TimeUnit.SECONDS); // 备用方案使用30秒固定超时
+        
+        if (result.isSuccess()) {
+            // 从检查结果中提取命令输出
+            Map<String, Object> data = result.getData();
+            if (data != null && data.containsKey("command_output")) {
+                Object output = data.get("command_output");
+                return output != null ? output.toString() : "";
+            }
+            return result.getMessage() != null ? result.getMessage() : "";
+        } else {
+            throw new RuntimeException("命令执行失败: " + result.getError());
+        }
+    }
+    
+    /**
+     * 构建自定义命令的主机检查上下文
+     */
+    private HostCheckContext buildHostCheckContextWithCommand(HostInfo hostInfo, String command) {
+        return HostCheckContext.builder()
+                .hostIp(hostInfo.getIp())
+                .sshUser(hostInfo.getSshUser())
+                .sshPassword(hostInfo.getSshPassword())
+                .sshPort(hostInfo.getSshPort())
+                .parameters(Map.of("customCommand", command))  // 通过parameters传入自定义命令
+                .build();
     }
 }
