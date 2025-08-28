@@ -46,8 +46,8 @@ COMMENT ON COLUMN scheduled_tasks.priority IS '任务优先级';
 -- 2. 任务执行历史日志表 (db-scheduler-log 达梦数据库扩展表)
 CREATE TABLE scheduled_execution_logs (
   id bigint NOT NULL, -- '主键ID'
-  task_name varchar(40) NOT NULL, -- '任务名称'
-  task_instance varchar(40) NOT NULL, -- '任务实例ID'
+  task_name varchar(100) NOT NULL, -- '任务名称'
+  task_instance varchar(100) NOT NULL, -- '任务实例ID'
   task_data blob, -- '任务数据快照'
   picked_by varchar(50), -- '执行器标识'
   time_started datetime NOT NULL, -- '任务开始执行时间'

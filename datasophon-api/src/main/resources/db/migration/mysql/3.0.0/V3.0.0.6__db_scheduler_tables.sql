@@ -30,8 +30,8 @@ COMMENT='db-scheduler 主调度任务表';
 -- 2. 任务执行历史日志表 (db-scheduler-log 扩展表)
 CREATE TABLE IF NOT EXISTS `scheduled_execution_logs` (
   `id` BIGINT NOT NULL AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
-  `task_name` VARCHAR(40) NOT NULL COMMENT '任务名称',
-  `task_instance` VARCHAR(40) NOT NULL COMMENT '任务实例ID',
+  `task_name` VARCHAR(100) NOT NULL COMMENT '任务名称',
+  `task_instance` VARCHAR(100) NOT NULL COMMENT '任务实例ID',
   `task_data` BLOB COMMENT '任务数据快照',
   `picked_by` VARCHAR(50) COMMENT '执行器标识',
   `time_started` TIMESTAMP(6) NOT NULL COMMENT '任务开始执行时间',
