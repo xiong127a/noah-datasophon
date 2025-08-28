@@ -1,5 +1,4 @@
 /*
- *
  *  Licensed to the Apache Software Foundation (ASF) under one or more
  *  contributor license agreements.  See the NOTICE file distributed with
  *  this work for additional information regarding copyright ownership.
@@ -14,111 +13,62 @@
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
- *
  */
 
 package com.datasophon.kubernetes.util;
 
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.UserEnum;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.service.SshConnectionService;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.model.CommandResult;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.sshd.client.SshClient;
-import org.apache.sshd.client.channel.ChannelExec;
-import org.apache.sshd.client.channel.ClientChannelEvent;
-import org.apache.sshd.client.session.ClientSession;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ObjectOutputStream;
-import java.io.OutputStream;
 import java.io.RandomAccessFile;
 import java.nio.charset.Charset;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.KeyPair;
-import java.security.KeyPairGenerator;
-import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.EnumSet;
-import java.util.Set;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Kubernetes SSH/SFTP utility class for remote operations.
- * Provides methods for executing commands, file transfer and management on
- * remote hosts.
+ * 
+ * 重构后的实现：通过SSH插件适配器提供SSH功能，完全隔离SSH库依赖
+ * 设计原则：
+ * 1. 所有SSH操作通过SSH插件适配器实现
+ * 2. 保持与原有接口的兼容性
+ * 3. 移除直接SSH库依赖
+ * 4. 提供更好的错误处理和日志记录
+ * 
+ * @author DataSophon Team
  */
 @Slf4j
 public class KubernetesMinaUtils {
 
-    private static final int COMMAND_TIMEOUT_SECONDS = 100000;
-    private static final int BUFFER_SIZE = 1024;
-
+    private static final String DEFAULT_SSH_USER = "root";
+    private static final int DEFAULT_SSH_PORT = 22;
+    private static final String DEFAULT_SSH_PASSWORD = "defaultPassword"; // TODO: 从配置中获取
+    
     /**
-     * Opens a SSH connection to a remote host.
-     *
-     * @param sshHost The hostname or IP address of the remote host
-     * @param sshPort The SSH port number
-     * @param sshUser The SSH username
-     * @return A ClientSession if connection succeeds, null otherwise
-     * @throws IOException If connection or authentication fails
+     * 获取SSH连接服务实例
      */
-    public static ClientSession openConnection(String sshHost, Integer sshPort, String sshUser) throws IOException {
-        if (StringUtils.isAnyBlank(sshHost, sshUser) || sshPort == null) {
-            throw new IllegalArgumentException("SSH host, port, and user must not be null or empty");
-        }
-
-        ClientSession session;
-        try (SshClient sshClient = SshClient.setUpDefaultClient()) {
-            sshClient.start();
-            String privateKeyPath = System.getProperty("user.home") + Constants.ID_RSA;
-            try {
-                log.debug("Attempting to connect to {}@{}:{} using private key: {}",
-                        sshUser, sshHost, sshPort, privateKeyPath);
-
-                String privateKeyContent = new String(Files.readAllBytes(Paths.get(privateKeyPath)));
-                session = sshClient.connect(sshUser, sshHost, sshPort).verify().getClientSession();
-                session.addPublicKeyIdentity(getKeyPairFromString(privateKeyContent));
-
-                if (session.auth().verify().isFailure()) {
-                    log.error("Authentication failed for {}@{}:{}", sshUser, sshHost, sshPort);
-                    return null;
-                }
-            } catch (IOException e) {
-                log.error("Failed to connect to {}@{}:{}: {}", sshUser, sshHost, sshPort, e.getMessage());
-                throw new IOException("SSH connection failed", e);
-            }
-        }
-        log.info("Successfully connected to {}@{}:{}", sshUser, sshHost, sshPort);
-        return session;
+    private static SshConnectionService getSshConnectionService() {
+        return SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
     }
-
+    
     /**
-     * Creates a KeyPair from a private key string.
-     * Note: This is a simplified implementation and should be improved for
-     * production use.
-     *
-     * @param privateKeyContent The private key content as string
-     * @return A KeyPair object
-     * @throws RuntimeException If key generation fails
+     * 构建HostCheckContext对象
      */
-    static KeyPair getKeyPairFromString(String privateKeyContent) {
-        try {
-            final KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-            final KeyPair keyPair = keyGen.generateKeyPair();
-            final ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            stream.write(privateKeyContent.getBytes());
-            final ObjectOutputStream o = new ObjectOutputStream(stream);
-            o.writeObject(keyPair);
-            return keyPair;
-        } catch (NoSuchAlgorithmException | IOException e) {
-            log.error("Failed to generate key pair: {}", e.getMessage());
-            throw new RuntimeException("Key pair generation failed", e);
-        }
+    private static HostCheckContext buildHostCheckContext(String hostname) {
+        return HostCheckContext.builder()
+                .hostIp(hostname)
+                .sshPort(DEFAULT_SSH_PORT)
+                .sshUser(DEFAULT_SSH_USER)
+                .sshPassword(DEFAULT_SSH_PASSWORD)
+                .build();
     }
 
     /**
@@ -127,58 +77,43 @@ public class KubernetesMinaUtils {
      * @param hostname The hostname or IP address of the remote host
      * @param command  The command to execute
      * @return The command output as string, null if execution fails, or
-     *         Constants.FAILED if exit status is 1
+     *         Constants.FAILED if exit status is not 0
      */
     public static String execCmdWithResult(String hostname, String command) {
         if (StringUtils.isAnyBlank(hostname, command)) {
-            log.error("Hostname and command must not be null or empty");
+            log.error("【Kubernetes SSH工具】主机名和命令不能为空");
             return null;
         }
 
-        return SshSftpUtil.withClientSession(hostname, session -> {
-            session.resetAuthTimeout();
-            log.debug("Executing command on {}: {}", hostname, command);
-
-            try (ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    ByteArrayOutputStream err = new ByteArrayOutputStream();
-                    ChannelExec ce = session.createExecChannel(command)) {
-
-                ce.setOut(out);
-                ce.setErr(err);
-
-                ce.open();
-                Set<ClientChannelEvent> events = ce.waitFor(
-                        EnumSet.of(ClientChannelEvent.CLOSED),
-                        TimeUnit.SECONDS.toMillis(COMMAND_TIMEOUT_SECONDS));
-
-                if (events.contains(ClientChannelEvent.TIMEOUT)) {
-                    log.error("Command execution timed out after {} seconds on {}: {}",
-                            COMMAND_TIMEOUT_SECONDS, hostname, command);
-                    throw new Exception("SSH command execution timed out");
-                }
-
-                int exitStatus = ce.getExitStatus();
-
-                // If there's error output, log it at appropriate level
-                String errorOutput = err.toString().trim();
-                if (!errorOutput.isEmpty()) {
-                    log.warn("Command on {} produced error output: {}", hostname, errorOutput);
-                }
-
-                if (exitStatus == 0) {
-                    String result = out.toString().trim();
-                    log.debug("Command execution successful on {}. Output: {}", hostname,
-                            result.length() > 100 ? result.substring(0, 100) + "..." : result);
-                    return result;
-                } else {
-                    log.warn("Command on {} failed with exit status {}", hostname, exitStatus);
-                    return Constants.FAILED;
-                }
-            } catch (Exception e) {
-                log.error("Failed to execute command on {}: {}", hostname, e.getMessage());
+        try {
+            log.debug("【Kubernetes SSH工具】在主机 {} 上执行命令: {}", hostname, command);
+            
+            SshConnectionService sshService = getSshConnectionService();
+            if (sshService == null) {
+                log.error("【Kubernetes SSH工具】SSH连接服务不可用");
                 return null;
             }
-        });
+            
+            HostCheckContext context = buildHostCheckContext(hostname);
+            CommandResult result = sshService.executeCommand(context, command);
+            
+            if (result != null && result.isSuccess()) {
+                String output = result.output().trim();
+                log.debug("【Kubernetes SSH工具】命令执行成功: {}, 输出: {}", 
+                        hostname, output.length() > 100 ? output.substring(0, 100) + "..." : output);
+                return output;
+            } else {
+                String errorMsg = result != null ? result.error() : "未知错误";
+                log.warn("【Kubernetes SSH工具】命令执行失败: {} -> {}, 错误: {}", 
+                        hostname, command, errorMsg);
+                return Constants.FAILED;
+            }
+            
+        } catch (Exception e) {
+            log.error("【Kubernetes SSH工具】命令执行异常: {} -> {}, 错误: {}", 
+                    hostname, command, e.getMessage(), e);
+            return null;
+        }
     }
 
     /**
@@ -191,34 +126,50 @@ public class KubernetesMinaUtils {
      */
     public static boolean uploadFile(String hostname, String remotePath, String inputFile) {
         if (StringUtils.isAnyBlank(hostname, remotePath, inputFile)) {
-            log.error("Hostname, remote path, and input file must not be null or empty");
+            log.error("【Kubernetes SSH工具】参数不能为空: hostname={}, remotePath={}, inputFile={}", 
+                    hostname, remotePath, inputFile);
             return false;
         }
 
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            File uploadFile = new File(inputFile);
-            if (!uploadFile.exists() || !uploadFile.isFile()) {
-                log.error("Local file does not exist or is not a regular file: {}", inputFile);
+        File uploadFile = new File(inputFile);
+        if (!uploadFile.exists() || !uploadFile.isFile()) {
+            log.error("【Kubernetes SSH工具】本地文件不存在或不是文件: {}", inputFile);
+            return false;
+        }
+
+        log.info("【Kubernetes SSH工具】开始上传文件: {} -> {}:{}/{}", 
+                inputFile, hostname, remotePath, uploadFile.getName());
+        
+        try {
+            SshConnectionService sshService = getSshConnectionService();
+            if (sshService == null) {
+                log.error("【Kubernetes SSH工具】SSH连接服务不可用");
                 return false;
             }
-
-            try (InputStream input = Files.newInputStream(uploadFile.toPath())) {
-                Path path = sftp.getDefaultDir().resolve(remotePath);
-                ensureDirectoryExists(path, hostname);
-
-                Path file = path.resolve(uploadFile.getName());
-                deleteFileIfExists(file, hostname);
-
-                Files.copy(input, file);
-                log.info("Successfully uploaded file {} to {}:{}",
-                        uploadFile.getName(), hostname, remotePath);
-                return true;
-            } catch (IOException e) {
-                log.error("Failed to upload file {} to {}:{}: {}",
-                        inputFile, hostname, remotePath, e.getMessage());
-                return false;
+            
+            HostCheckContext context = buildHostCheckContext(hostname);
+            
+            // 构建完整的远程文件路径（目录 + 文件名）
+            String fullRemotePath = remotePath.endsWith("/") ? 
+                    remotePath + uploadFile.getName() : remotePath + "/" + uploadFile.getName();
+            
+            boolean success = sshService.uploadFile(context, inputFile, fullRemotePath);
+            
+            if (success) {
+                log.info("【Kubernetes SSH工具】文件上传成功: {} -> {}:{}", 
+                        uploadFile.getName(), hostname, fullRemotePath);
+            } else {
+                log.error("【Kubernetes SSH工具】文件上传失败: {} -> {}:{}", 
+                        inputFile, hostname, fullRemotePath);
             }
-        });
+            
+            return success;
+            
+        } catch (Exception e) {
+            log.error("【Kubernetes SSH工具】文件上传异常: {} -> {}:{}, 错误: {}", 
+                    inputFile, hostname, remotePath, e.getMessage(), e);
+            return false;
+        }
     }
 
     /**
@@ -232,35 +183,44 @@ public class KubernetesMinaUtils {
      */
     public static boolean uploadFile(String hostname, String remotePath, InputStream inputStream, String fileName) {
         if (StringUtils.isAnyBlank(hostname, remotePath, fileName) || inputStream == null) {
-            log.error("Hostname, remote path, input stream, and file name must not be null or empty");
+            log.error("【Kubernetes SSH工具】参数不能为空: hostname={}, remotePath={}, fileName={}, inputStream={}", 
+                    hostname, remotePath, fileName, inputStream != null ? "非空" : "空");
             return false;
         }
 
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            try {
-                Path path = sftp.getDefaultDir().resolve(remotePath);
-                ensureDirectoryExists(path, hostname);
-
-                Path file = path.resolve(fileName);
-                deleteFileIfExists(file, hostname);
-
-                try (OutputStream outputStream = Files.newOutputStream(file)) {
-                    byte[] buffer = new byte[BUFFER_SIZE];
-                    int bytesRead;
-                    while ((bytesRead = inputStream.read(buffer)) != -1) {
-                        outputStream.write(buffer, 0, bytesRead);
-                    }
-                }
-
-                log.info("Successfully uploaded stream as file {} to {}:{}",
-                        fileName, hostname, remotePath);
-                return true;
-            } catch (IOException e) {
-                log.error("Failed to upload stream as file {} to {}:{}: {}",
-                        fileName, hostname, remotePath, e.getMessage());
+        log.info("【Kubernetes SSH工具】开始上传文件流: {} -> {}:{}/{}", 
+                "InputStream", hostname, remotePath, fileName);
+        
+        try {
+            SshConnectionService sshService = getSshConnectionService();
+            if (sshService == null) {
+                log.error("【Kubernetes SSH工具】SSH连接服务不可用");
                 return false;
             }
-        });
+            
+            HostCheckContext context = buildHostCheckContext(hostname);
+            
+            // 构建完整的远程文件路径（目录 + 文件名）
+            String fullRemotePath = remotePath.endsWith("/") ? 
+                    remotePath + fileName : remotePath + "/" + fileName;
+            
+            boolean success = sshService.uploadFileFromStream(context, inputStream, fullRemotePath);
+            
+            if (success) {
+                log.info("【Kubernetes SSH工具】文件流上传成功: {} -> {}:{}", 
+                        fileName, hostname, fullRemotePath);
+            } else {
+                log.error("【Kubernetes SSH工具】文件流上传失败: {} -> {}:{}", 
+                        fileName, hostname, fullRemotePath);
+            }
+            
+            return success;
+            
+        } catch (Exception e) {
+            log.error("【Kubernetes SSH工具】文件流上传异常: {} -> {}:{}, 错误: {}", 
+                    fileName, hostname, remotePath, e.getMessage(), e);
+            return false;
+        }
     }
 
     /**
@@ -271,20 +231,32 @@ public class KubernetesMinaUtils {
      */
     public static void createDir(String hostname, String path) {
         if (StringUtils.isAnyBlank(hostname, path)) {
-             log.error("Hostname and path must not be null or empty for createDir operation");
+            log.error("【Kubernetes SSH工具】参数不能为空: hostname={}, path={}", hostname, path);
             return;
         }
 
-        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            try {
-                Path remoteRoot = sftp.getDefaultDir().resolve(path);
-                ensureDirectoryExists(remoteRoot, hostname);
-                return true;
-            } catch (IOException e) {
-                log.error("Failed to create directory at {}:{}: {}", hostname, path, e.getMessage());
-                return false;
+        log.info("【Kubernetes SSH工具】开始创建目录: {}:{}", hostname, path);
+        
+        try {
+            SshConnectionService sshService = getSshConnectionService();
+            if (sshService == null) {
+                log.error("【Kubernetes SSH工具】SSH连接服务不可用");
+                return;
             }
-        });
+            
+            HostCheckContext context = buildHostCheckContext(hostname);
+            boolean success = sshService.createDirectory(context, path);
+            
+            if (success) {
+                log.info("【Kubernetes SSH工具】目录创建成功: {}:{}", hostname, path);
+            } else {
+                log.error("【Kubernetes SSH工具】目录创建失败: {}:{}", hostname, path);
+            }
+            
+        } catch (Exception e) {
+            log.error("【Kubernetes SSH工具】目录创建异常: {}:{}, 错误: {}", 
+                    hostname, path, e.getMessage(), e);
+        }
     }
 
     /**
@@ -295,25 +267,39 @@ public class KubernetesMinaUtils {
      */
     public static void createFile(String hostname, String path) {
         if (StringUtils.isAnyBlank(hostname, path)) {
-            log.error("Hostname and path must not be null or empty");
+            log.error("【Kubernetes SSH工具】参数不能为空: hostname={}, path={}", hostname, path);
             return;
         }
 
-        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            Path remoteFile = sftp.getPath(path);
-            try {
-                if (!Files.exists(remoteFile)) {
-                    Files.createFile(remoteFile);
-                    log.info("Successfully created file at {}:{}", hostname, path);
-                } else {
-                    log.debug("File already exists at {}:{}", hostname, path);
-                }
-                return true;
-            } catch (IOException e) {
-                log.error("Failed to create file at {}:{}: {}", hostname, path, e.getMessage());
-                return false;
+        log.info("【Kubernetes SSH工具】开始创建文件: {}:{}", hostname, path);
+        
+        try {
+            SshConnectionService sshService = getSshConnectionService();
+            if (sshService == null) {
+                log.error("【Kubernetes SSH工具】SSH连接服务不可用");
+                return;
             }
-        });
+            
+            HostCheckContext context = buildHostCheckContext(hostname);
+            
+            // 首先检查文件是否已经存在
+            if (sshService.checkPathExists(context, path)) {
+                log.debug("【Kubernetes SSH工具】文件已存在: {}:{}", hostname, path);
+                return;
+            }
+            
+            boolean success = sshService.createFile(context, path);
+            
+            if (success) {
+                log.info("【Kubernetes SSH工具】文件创建成功: {}:{}", hostname, path);
+            } else {
+                log.error("【Kubernetes SSH工具】文件创建失败: {}:{}", hostname, path);
+            }
+            
+        } catch (Exception e) {
+            log.error("【Kubernetes SSH工具】文件创建异常: {}:{}, 错误: {}", 
+                    hostname, path, e.getMessage(), e);
+        }
     }
 
     /**
@@ -324,26 +310,39 @@ public class KubernetesMinaUtils {
      */
     public static void deleteFile(String hostname, String path) {
         if (StringUtils.isAnyBlank(hostname, path)) {
-            log.error("Hostname and path must not be null or empty for deleteFile operation");
+            log.error("【Kubernetes SSH工具】参数不能为空: hostname={}, path={}", hostname, path);
             return;
         }
 
-        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            try {
-                Path remoteFile = sftp.getPath(path);
-                if (Files.exists(remoteFile) && Files.isRegularFile(remoteFile)) {
-                    Files.delete(remoteFile);
-                    log.info("Successfully deleted file at {}:{}", hostname, path);
-                    return true;
-                } else {
-                    log.debug("File does not exist or is not a regular file at {}:{}", hostname, path);
-                    return false;
-                }
-            } catch (IOException e) {
-                log.error("Failed to delete file at {}:{}: {}", hostname, path, e.getMessage());
-                return false;
+        log.info("【Kubernetes SSH工具】开始删除文件: {}:{}", hostname, path);
+        
+        try {
+            SshConnectionService sshService = getSshConnectionService();
+            if (sshService == null) {
+                log.error("【Kubernetes SSH工具】SSH连接服务不可用");
+                return;
             }
-        });
+            
+            HostCheckContext context = buildHostCheckContext(hostname);
+            
+            // 首先检查文件是否存在
+            if (!sshService.checkPathExists(context, path)) {
+                log.debug("【Kubernetes SSH工具】文件不存在，无需删除: {}:{}", hostname, path);
+                return;
+            }
+            
+            boolean success = sshService.deleteFile(context, path);
+            
+            if (success) {
+                log.info("【Kubernetes SSH工具】文件删除成功: {}:{}", hostname, path);
+            } else {
+                log.error("【Kubernetes SSH工具】文件删除失败: {}:{}", hostname, path);
+            }
+            
+        } catch (Exception e) {
+            log.error("【Kubernetes SSH工具】文件删除异常: {}:{}, 错误: {}", 
+                    hostname, path, e.getMessage(), e);
+        }
     }
 
     /**
@@ -355,21 +354,30 @@ public class KubernetesMinaUtils {
      */
     public static boolean checkPathExists(String hostname, String path) {
         if (StringUtils.isAnyBlank(hostname, path)) {
-            log.error("Hostname and path must not be null or empty for checkPathExists operation");
+            log.error("【Kubernetes SSH工具】参数不能为空: hostname={}, path={}", hostname, path);
             return false;
         }
 
-        return SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
-            try {
-                Path remoteRoot = sftp.getDefaultDir().resolve(path);
-                boolean exists = Files.exists(remoteRoot);
-                log.debug("Path {}:{} exists: {}", hostname, path, exists);
-                return exists;
-            } catch (Exception e) {
-                log.error("Failed to check path existence at {}:{}: {}", hostname, path, e.getMessage());
+        log.debug("【Kubernetes SSH工具】检查路径是否存在: {}:{}", hostname, path);
+        
+        try {
+            SshConnectionService sshService = getSshConnectionService();
+            if (sshService == null) {
+                log.error("【Kubernetes SSH工具】SSH连接服务不可用");
                 return false;
             }
-        });
+            
+            HostCheckContext context = buildHostCheckContext(hostname);
+            boolean exists = sshService.checkPathExists(context, path);
+            
+            log.debug("【Kubernetes SSH工具】路径 {}:{} 存在: {}", hostname, path, exists);
+            return exists;
+            
+        } catch (Exception e) {
+            log.error("【Kubernetes SSH工具】路径检查异常: {}:{}, 错误: {}", 
+                    hostname, path, e.getMessage(), e);
+            return false;
+        }
     }
 
     /**
@@ -424,17 +432,20 @@ public class KubernetesMinaUtils {
      */
     public static void createUserAndGroup(String hostname, String user, String group) {
         if (StringUtils.isAnyBlank(hostname, user, group)) {
-            throw new IllegalArgumentException("Hostname, user, and group must not be null or empty");
+            throw new IllegalArgumentException("【Kubernetes SSH工具】参数不能为空: hostname, user, group");
         }
 
         Integer userId = UserEnum.getUserIdByUsername(user);
         Integer groupId = UserEnum.getGroupIdByGroupName(group);
 
         if (userId == null || groupId == null) {
-            throw new IllegalArgumentException("User or group ID not found");
+            throw new IllegalArgumentException("【Kubernetes SSH工具】未找到用户或组的ID配置");
         }
 
-        SshSftpUtil.withSftpFileSystem(hostname, sftp -> {
+        log.info("【Kubernetes SSH工具】开始创建用户和组: {}@{} (uid={}, gid={})", 
+                user, hostname, userId, groupId);
+        
+        try {
             String command = String.format(
                     "if ! getent group %s > /dev/null; then groupadd -g %d %s; fi && " +
                             "if ! getent passwd %s > /dev/null; then useradd -m -u %d -g %d %s; fi",
@@ -444,42 +455,17 @@ public class KubernetesMinaUtils {
             boolean success = result != null && !Constants.FAILED.equals(result);
 
             if (success) {
-                log.info("Successfully created/verified user {} and group {} on {}", user, group, hostname);
+                log.info("【Kubernetes SSH工具】用户和组创建/验证成功: {} 和 {} 在 {}", user, group, hostname);
             } else {
-                log.error("Failed to create user {} and group {} on {}", user, group, hostname);
+                log.error("【Kubernetes SSH工具】用户和组创建失败: {} 和 {} 在 {}", user, group, hostname);
             }
-
-            return success;
-        });
-    }
-
-    // Helper methods to reduce code duplication
-
-    /**
-     * Ensures a directory exists on the remote host, creating it if necessary.
-     *
-     * @param path     The path to ensure exists
-     * @param hostname The hostname (for logging purposes)
-     * @throws IOException If directory creation fails
-     */
-    private static void ensureDirectoryExists(Path path, String hostname) throws IOException {
-        if (!Files.exists(path)) {
-            log.debug("Creating directory at {}:{}", hostname, path);
-            Files.createDirectories(path);
+            
+        } catch (Exception e) {
+            log.error("【Kubernetes SSH工具】用户和组创建异常: {}@{}, 错误: {}", 
+                    user, hostname, e.getMessage(), e);
+            throw new RuntimeException("用户和组创建失败", e);
         }
     }
 
-    /**
-     * Deletes a file if it exists on the remote host.
-     *
-     * @param file     The file path to delete
-     * @param hostname The hostname (for logging purposes)
-     * @throws IOException If file deletion fails
-     */
-    private static void deleteFileIfExists(Path file, String hostname) throws IOException {
-        if (Files.exists(file)) {
-            log.debug("Deleting existing file at {}:{}", hostname, file);
-            Files.deleteIfExists(file);
-        }
-    }
+
 }

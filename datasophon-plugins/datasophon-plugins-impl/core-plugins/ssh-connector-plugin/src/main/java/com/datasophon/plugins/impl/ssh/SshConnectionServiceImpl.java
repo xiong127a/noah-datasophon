@@ -200,4 +200,366 @@ public class SshConnectionServiceImpl implements SshConnectionService {
             return Map.of("error", e.getMessage());
         }
     }
+    
+    // ==================== 文件传输方法实现 ====================
+    
+    @Override
+    public boolean uploadFile(HostCheckContext context, String localFilePath, String remoteFilePath) {
+        if (context == null || localFilePath == null || remoteFilePath == null) {
+            log.error("【SSH连接服务】上传文件参数不能为空");
+            return false;
+        }
+        
+        log.info("【SSH连接服务】上传文件: {}@{}:{} {} -> {}", 
+                context.getSshUser(), context.getHostIp(), context.getSshPort(), localFilePath, remoteFilePath);
+        
+        try {
+            if (poolManager == null) {
+                log.error("【SSH连接服务】连接池管理器未初始化");
+                return false;
+            }
+            
+            return poolManager.executeWithConnection(
+                context.getHostIp(), context.getSshPort(), 
+                context.getSshUser(), context.getSshPassword(),
+                sshClient -> {
+                    try (var sftpClient = sshClient.newSFTPClient()) {
+                        // 确保远程目录存在
+                        ensureRemoteDirectoryExists(sftpClient, getParentPath(remoteFilePath));
+                        
+                        // 上传文件
+                        sftpClient.put(localFilePath, remoteFilePath);
+                        
+                        log.info("【SSH连接服务】文件上传成功: {} -> {}:{}", 
+                                localFilePath, context.getHostIp(), remoteFilePath);
+                        return true;
+                    }
+                }
+            );
+            
+        } catch (Exception e) {
+            log.error("【SSH连接服务】文件上传失败: {}@{}:{} {} -> {}, 错误: {}", 
+                    context.getSshUser(), context.getHostIp(), context.getSshPort(), 
+                    localFilePath, remoteFilePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean uploadFileFromStream(HostCheckContext context, java.io.InputStream inputStream, String remoteFilePath) {
+        if (context == null || inputStream == null || remoteFilePath == null) {
+            log.error("【SSH连接服务】上传文件流参数不能为空");
+            return false;
+        }
+        
+        log.info("【SSH连接服务】上传文件流: {}@{}:{} -> {}", 
+                context.getSshUser(), context.getHostIp(), context.getSshPort(), remoteFilePath);
+        
+        try {
+            if (poolManager == null) {
+                log.error("【SSH连接服务】连接池管理器未初始化");
+                return false;
+            }
+            
+            return poolManager.executeWithConnection(
+                context.getHostIp(), context.getSshPort(), 
+                context.getSshUser(), context.getSshPassword(),
+                sshClient -> {
+                    try (var sftpClient = sshClient.newSFTPClient()) {
+                        // 确保远程目录存在
+                        ensureRemoteDirectoryExists(sftpClient, getParentPath(remoteFilePath));
+                        
+                        // 上传文件流
+                        try (var remoteFile = sftpClient.open(remoteFilePath, 
+                                java.util.EnumSet.of(net.schmizz.sshj.sftp.OpenMode.WRITE, 
+                                                   net.schmizz.sshj.sftp.OpenMode.CREAT, 
+                                                   net.schmizz.sshj.sftp.OpenMode.TRUNC))) {
+                            
+                            byte[] buffer = new byte[8192];
+                            int bytesRead;
+                            long totalBytes = 0;
+                            
+                            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                                remoteFile.write(totalBytes, buffer, 0, bytesRead);
+                                totalBytes += bytesRead;
+                            }
+                            
+                            log.info("【SSH连接服务】文件流上传成功: {}:{}, 总大小: {} bytes", 
+                                    context.getHostIp(), remoteFilePath, totalBytes);
+                        }
+                        
+                        return true;
+                    }
+                }
+            );
+            
+        } catch (Exception e) {
+            log.error("【SSH连接服务】文件流上传失败: {}@{}:{} -> {}, 错误: {}", 
+                    context.getSshUser(), context.getHostIp(), context.getSshPort(), 
+                    remoteFilePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean downloadFile(HostCheckContext context, String remoteFilePath, String localFilePath) {
+        if (context == null || remoteFilePath == null || localFilePath == null) {
+            log.error("【SSH连接服务】下载文件参数不能为空");
+            return false;
+        }
+        
+        log.info("【SSH连接服务】下载文件: {}@{}:{} {} -> {}", 
+                context.getSshUser(), context.getHostIp(), context.getSshPort(), remoteFilePath, localFilePath);
+        
+        try {
+            if (poolManager == null) {
+                log.error("【SSH连接服务】连接池管理器未初始化");
+                return false;
+            }
+            
+            return poolManager.executeWithConnection(
+                context.getHostIp(), context.getSshPort(), 
+                context.getSshUser(), context.getSshPassword(),
+                sshClient -> {
+                    try (var sftpClient = sshClient.newSFTPClient()) {
+                        // 确保本地目录存在
+                        java.io.File localFile = new java.io.File(localFilePath);
+                        localFile.getParentFile().mkdirs();
+                        
+                        // 下载文件
+                        sftpClient.get(remoteFilePath, localFilePath);
+                        
+                        log.info("【SSH连接服务】文件下载成功: {}:{} -> {}", 
+                                context.getHostIp(), remoteFilePath, localFilePath);
+                        return true;
+                    }
+                }
+            );
+            
+        } catch (Exception e) {
+            log.error("【SSH连接服务】文件下载失败: {}@{}:{} {} -> {}, 错误: {}", 
+                    context.getSshUser(), context.getHostIp(), context.getSshPort(), 
+                    remoteFilePath, localFilePath, e.getMessage(), e);
+        return false;
+        }
+    }
+    
+    @Override
+    public boolean createDirectory(HostCheckContext context, String remotePath) {
+        if (context == null || remotePath == null) {
+            log.error("【SSH连接服务】创建目录参数不能为空");
+            return false;
+        }
+        
+        log.info("【SSH连接服务】创建目录: {}@{}:{} -> {}", 
+                context.getSshUser(), context.getHostIp(), context.getSshPort(), remotePath);
+        
+        try {
+            if (poolManager == null) {
+                log.error("【SSH连接服务】连接池管理器未初始化");
+                return false;
+            }
+            
+            return poolManager.executeWithConnection(
+                context.getHostIp(), context.getSshPort(), 
+                context.getSshUser(), context.getSshPassword(),
+                sshClient -> {
+                    try (var sftpClient = sshClient.newSFTPClient()) {
+                        ensureRemoteDirectoryExists(sftpClient, remotePath);
+                        
+                        log.info("【SSH连接服务】目录创建成功: {}:{}", context.getHostIp(), remotePath);
+                        return true;
+                    }
+                }
+            );
+            
+        } catch (Exception e) {
+            log.error("【SSH连接服务】目录创建失败: {}@{}:{} -> {}, 错误: {}", 
+                    context.getSshUser(), context.getHostIp(), context.getSshPort(), 
+                    remotePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean deleteFile(HostCheckContext context, String remoteFilePath) {
+        if (context == null || remoteFilePath == null) {
+            log.error("【SSH连接服务】删除文件参数不能为空");
+            return false;
+        }
+        
+        log.info("【SSH连接服务】删除文件: {}@{}:{} -> {}", 
+                context.getSshUser(), context.getHostIp(), context.getSshPort(), remoteFilePath);
+        
+        try {
+            if (poolManager == null) {
+                log.error("【SSH连接服务】连接池管理器未初始化");
+                return false;
+            }
+            
+            return poolManager.executeWithConnection(
+                context.getHostIp(), context.getSshPort(), 
+                context.getSshUser(), context.getSshPassword(),
+                sshClient -> {
+                    try (var sftpClient = sshClient.newSFTPClient()) {
+                        // 检查文件是否存在
+                        if (!checkRemotePathExists(sftpClient, remoteFilePath)) {
+                            log.warn("【SSH连接服务】文件不存在，无法删除: {}:{}", context.getHostIp(), remoteFilePath);
+                            return false;
+                        }
+                        
+                        // 删除文件
+                        sftpClient.rm(remoteFilePath);
+                        
+                        log.info("【SSH连接服务】文件删除成功: {}:{}", context.getHostIp(), remoteFilePath);
+                        return true;
+                    }
+                }
+            );
+            
+        } catch (Exception e) {
+            log.error("【SSH连接服务】文件删除失败: {}@{}:{} -> {}, 错误: {}", 
+                    context.getSshUser(), context.getHostIp(), context.getSshPort(), 
+                    remoteFilePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean checkPathExists(HostCheckContext context, String remotePath) {
+        if (context == null || remotePath == null) {
+            log.error("【SSH连接服务】路径检查参数不能为空");
+            return false;
+        }
+        
+        log.debug("【SSH连接服务】检查路径存在: {}@{}:{} -> {}", 
+                context.getSshUser(), context.getHostIp(), context.getSshPort(), remotePath);
+        
+        try {
+            if (poolManager == null) {
+                log.error("【SSH连接服务】连接池管理器未初始化");
+                return false;
+            }
+            
+            return poolManager.executeWithConnection(
+                context.getHostIp(), context.getSshPort(), 
+                context.getSshUser(), context.getSshPassword(),
+                sshClient -> {
+                    try (var sftpClient = sshClient.newSFTPClient()) {
+                        boolean exists = checkRemotePathExists(sftpClient, remotePath);
+                        
+                        log.debug("【SSH连接服务】路径检查: {}:{} -> {}", context.getHostIp(), remotePath, exists);
+                        return exists;
+                    }
+                }
+            );
+            
+        } catch (Exception e) {
+            log.error("【SSH连接服务】路径检查失败: {}@{}:{} -> {}, 错误: {}", 
+                    context.getSshUser(), context.getHostIp(), context.getSshPort(), 
+                    remotePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+        @Override
+    public boolean createFile(HostCheckContext context, String remoteFilePath) {
+        if (context == null || remoteFilePath == null) {
+            log.error("【SSH连接服务】创建文件参数不能为空");
+            return false;
+        }
+        
+        log.info("【SSH连接服务】创建文件: {}@{}:{} -> {}", 
+                context.getSshUser(), context.getHostIp(), context.getSshPort(), remoteFilePath);
+        
+        try {
+            if (poolManager == null) {
+                log.error("【SSH连接服务】连接池管理器未初始化");
+                return false;
+            }
+            
+            return poolManager.executeWithConnection(
+                context.getHostIp(), context.getSshPort(), 
+                context.getSshUser(), context.getSshPassword(),
+                sshClient -> {
+                    try (var sftpClient = sshClient.newSFTPClient()) {
+                        // 确保远程目录存在
+                        ensureRemoteDirectoryExists(sftpClient, getParentPath(remoteFilePath));
+                        
+                        // 创建空文件
+                        try (var remoteFile = sftpClient.open(remoteFilePath, 
+                                java.util.EnumSet.of(net.schmizz.sshj.sftp.OpenMode.WRITE, 
+                                                   net.schmizz.sshj.sftp.OpenMode.CREAT, 
+                                                   net.schmizz.sshj.sftp.OpenMode.TRUNC))) {
+                            // 不写入任何内容，创建空文件
+                        }
+                        
+                        log.info("【SSH连接服务】空文件创建成功: {}:{}", context.getHostIp(), remoteFilePath);
+                        return true;
+                    }
+                }
+            );
+            
+            } catch (Exception e) {
+            log.error("【SSH连接服务】文件创建失败: {}@{}:{} -> {}, 错误: {}", 
+                    context.getSshUser(), context.getHostIp(), context.getSshPort(), 
+                    remoteFilePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    // ==================== 私有辅助方法 ====================
+    
+    /**
+     * 确保远程目录存在
+     */
+    private void ensureRemoteDirectoryExists(net.schmizz.sshj.sftp.SFTPClient sftpClient, String remoteDirPath) throws java.io.IOException {
+        if (remoteDirPath == null || remoteDirPath.trim().isEmpty() || "/".equals(remoteDirPath)) {
+            return;
+        }
+        
+        try {
+            if (!checkRemotePathExists(sftpClient, remoteDirPath)) {
+                // 递归创建父目录
+                ensureRemoteDirectoryExists(sftpClient, getParentPath(remoteDirPath));
+                
+                // 创建当前目录
+                sftpClient.mkdir(remoteDirPath);
+                log.debug("【SSH连接服务】创建远程目录: {}", remoteDirPath);
+            }
+        } catch (Exception e) {
+            log.error("【SSH连接服务】创建远程目录失败: {}", remoteDirPath, e);
+            throw new java.io.IOException("创建远程目录失败: " + remoteDirPath, e);
+        }
+    }
+    
+    /**
+     * 检查远程路径是否存在
+     */
+    private boolean checkRemotePathExists(net.schmizz.sshj.sftp.SFTPClient sftpClient, String remotePath) {
+        try {
+            sftpClient.statExistence(remotePath);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+    
+    /**
+     * 获取路径的父目录
+     */
+    private String getParentPath(String path) {
+        if (path == null || path.trim().isEmpty()) {
+            return "/";
+        }
+        
+        path = path.replace("\\", "/");
+        int lastSlash = path.lastIndexOf('/');
+        
+        if (lastSlash <= 0) {
+            return "/";
+        }
+        
+        return path.substring(0, lastSlash);
+    }
 }

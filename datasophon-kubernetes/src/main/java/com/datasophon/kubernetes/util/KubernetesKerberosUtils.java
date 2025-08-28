@@ -11,7 +11,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URI;
 
-import static com.datasophon.kubernetes.util.KubernetesMinaUtils.uploadFile;
+
 
 @Slf4j
 public class KubernetesKerberosUtils {
@@ -32,7 +32,7 @@ public class KubernetesKerberosUtils {
                 System.out.println("File downloaded successfully.");
 
                 // Step 2: Upload the file from InputStream
-                boolean uploadSuccess = uploadFile(hostname, dest, fileStream, keytabName);
+                boolean uploadSuccess = KubernetesMinaUtils.uploadFile(hostname, dest, fileStream, keytabName);
                 if (uploadSuccess) {
                     System.out.println("File uploaded successfully.");
                 } else {

@@ -25,6 +25,13 @@
             <artifactId>datasophon-common</artifactId>
             <version>${project.version}</version>
         </dependency>
+        
+        <!-- 依赖插件API模块，直接使用SSH插件管理器 -->
+        <dependency>
+            <groupId>com.datasophon</groupId>
+            <artifactId>datasophon-plugin-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>io.fabric8</groupId>
             <artifactId>kubernetes-client</artifactId>

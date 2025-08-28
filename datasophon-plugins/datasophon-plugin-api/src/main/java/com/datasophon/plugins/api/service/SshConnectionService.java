@@ -85,4 +85,72 @@ public interface SshConnectionService {
      * @return 全局统计信息
      */
     Map<String, Object> getGlobalPoolStats();
+    
+    // ==================== 文件传输接口 ====================
+    
+    /**
+     * 上传文件到远程主机
+     * 
+     * @param context 主机检查上下文
+     * @param localFilePath 本地文件路径
+     * @param remoteFilePath 远程文件路径
+     * @return 上传是否成功
+     */
+    boolean uploadFile(HostCheckContext context, String localFilePath, String remoteFilePath);
+    
+    /**
+     * 上传文件流到远程主机
+     * 
+     * @param context 主机检查上下文
+     * @param inputStream 输入流
+     * @param remoteFilePath 远程文件路径
+     * @return 上传是否成功
+     */
+    boolean uploadFileFromStream(HostCheckContext context, java.io.InputStream inputStream, String remoteFilePath);
+    
+    /**
+     * 从远程主机下载文件
+     * 
+     * @param context 主机检查上下文
+     * @param remoteFilePath 远程文件路径
+     * @param localFilePath 本地文件路径
+     * @return 下载是否成功
+     */
+    boolean downloadFile(HostCheckContext context, String remoteFilePath, String localFilePath);
+    
+    /**
+     * 创建远程目录
+     * 
+     * @param context 主机检查上下文
+     * @param remotePath 远程目录路径
+     * @return 创建是否成功
+     */
+    boolean createDirectory(HostCheckContext context, String remotePath);
+    
+    /**
+     * 删除远程文件
+     * 
+     * @param context 主机检查上下文
+     * @param remoteFilePath 远程文件路径
+     * @return 删除是否成功
+     */
+    boolean deleteFile(HostCheckContext context, String remoteFilePath);
+    
+    /**
+     * 检查远程路径是否存在
+     * 
+     * @param context 主机检查上下文
+     * @param remotePath 远程路径
+     * @return 路径是否存在
+     */
+    boolean checkPathExists(HostCheckContext context, String remotePath);
+    
+    /**
+     * 创建空文件
+     * 
+     * @param context 主机检查上下文
+     * @param remoteFilePath 远程文件路径
+     * @return 创建是否成功
+     */
+    boolean createFile(HostCheckContext context, String remoteFilePath);
 }

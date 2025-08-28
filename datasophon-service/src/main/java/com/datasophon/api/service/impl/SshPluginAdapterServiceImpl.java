@@ -121,10 +121,69 @@ public class SshPluginAdapterServiceImpl implements SshPluginAdapterService {
         log.info("【SSH适配器】上传文件: {}@{}:{} {} -> {}", 
                 hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), localFilePath, remoteFilePath);
         
-        // TODO: 实现通过SSH插件上传文件的逻辑
-        // 目前返回模拟结果，后续需要扩展SSH插件支持文件传输
-        log.warn("【SSH适配器】文件上传功能暂未实现，需要扩展SSH插件");
-        return false;
+        try {
+            // 通过SSH插件执行文件上传
+            HostCheckerPlugin sshPlugin = getSshPlugin();
+            if (sshPlugin == null) {
+                throw new RuntimeException("SSH插件不可用");
+            }
+            
+            // 使用反射调用SSH插件的文件上传方法
+            java.lang.reflect.Method method = sshPlugin.getClass().getMethod("uploadFile", 
+                    String.class, int.class, String.class, String.class, String.class, String.class);
+            
+            Boolean result = (Boolean) method.invoke(sshPlugin, 
+                    hostInfo.getIp(),
+                    hostInfo.getSshPort(), 
+                    hostInfo.getSshUser(),
+                    hostInfo.getSshPassword(),
+                    localFilePath,
+                    remoteFilePath);
+            
+            log.info("【SSH适配器】文件上传{}：{} -> {}", 
+                    result ? "成功" : "失败", localFilePath, remoteFilePath);
+            return result != null && result;
+            
+        } catch (Exception e) {
+            log.error("【SSH适配器】文件上传失败: {} -> {}, 错误: {}", 
+                    localFilePath, remoteFilePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean uploadFile(HostInfo hostInfo, java.io.InputStream inputStream, String remoteFilePath) {
+        log.info("【SSH适配器】上传文件流: {}@{}:{} -> {}", 
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), remoteFilePath);
+        
+        try {
+            // 通过SSH插件执行文件流上传
+            HostCheckerPlugin sshPlugin = getSshPlugin();
+            if (sshPlugin == null) {
+                throw new RuntimeException("SSH插件不可用");
+            }
+            
+            // 使用反射调用SSH插件的文件流上传方法
+            java.lang.reflect.Method method = sshPlugin.getClass().getMethod("uploadFileFromStream", 
+                    String.class, int.class, String.class, String.class, java.io.InputStream.class, String.class);
+            
+            Boolean result = (Boolean) method.invoke(sshPlugin, 
+                    hostInfo.getIp(),
+                    hostInfo.getSshPort(), 
+                    hostInfo.getSshUser(),
+                    hostInfo.getSshPassword(),
+                    inputStream,
+                    remoteFilePath);
+            
+            log.info("【SSH适配器】文件流上传{}：{}", 
+                    result ? "成功" : "失败", remoteFilePath);
+            return result != null && result;
+            
+        } catch (Exception e) {
+            log.error("【SSH适配器】文件流上传失败: {}, 错误: {}", 
+                    remoteFilePath, e.getMessage(), e);
+            return false;
+        }
     }
     
     @Override
@@ -132,9 +191,169 @@ public class SshPluginAdapterServiceImpl implements SshPluginAdapterService {
         log.info("【SSH适配器】下载文件: {}@{}:{} {} -> {}", 
                 hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), remoteFilePath, localFilePath);
         
-        // TODO: 实现通过SSH插件下载文件的逻辑
-        log.warn("【SSH适配器】文件下载功能暂未实现，需要扩展SSH插件");
-        return false;
+        try {
+            // 通过SSH插件执行文件下载
+            HostCheckerPlugin sshPlugin = getSshPlugin();
+            if (sshPlugin == null) {
+                throw new RuntimeException("SSH插件不可用");
+            }
+            
+            // 使用反射调用SSH插件的文件下载方法
+            java.lang.reflect.Method method = sshPlugin.getClass().getMethod("downloadFile", 
+                    String.class, int.class, String.class, String.class, String.class, String.class);
+            
+            Boolean result = (Boolean) method.invoke(sshPlugin, 
+                    hostInfo.getIp(),
+                    hostInfo.getSshPort(), 
+                    hostInfo.getSshUser(),
+                    hostInfo.getSshPassword(),
+                    remoteFilePath,
+                    localFilePath);
+            
+            log.info("【SSH适配器】文件下载{}：{} -> {}", 
+                    result ? "成功" : "失败", remoteFilePath, localFilePath);
+            return result != null && result;
+            
+        } catch (Exception e) {
+            log.error("【SSH适配器】文件下载失败: {} -> {}, 错误: {}", 
+                    remoteFilePath, localFilePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean createDirectory(HostInfo hostInfo, String remotePath) {
+        log.info("【SSH适配器】创建目录: {}@{}:{} -> {}", 
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), remotePath);
+        
+        try {
+            // 通过SSH插件执行目录创建
+            HostCheckerPlugin sshPlugin = getSshPlugin();
+            if (sshPlugin == null) {
+                throw new RuntimeException("SSH插件不可用");
+            }
+            
+            // 使用反射调用SSH插件的目录创建方法
+            java.lang.reflect.Method method = sshPlugin.getClass().getMethod("createDirectory", 
+                    String.class, int.class, String.class, String.class, String.class);
+            
+            Boolean result = (Boolean) method.invoke(sshPlugin, 
+                    hostInfo.getIp(),
+                    hostInfo.getSshPort(), 
+                    hostInfo.getSshUser(),
+                    hostInfo.getSshPassword(),
+                    remotePath);
+            
+            log.info("【SSH适配器】目录创建{}：{}", 
+                    result ? "成功" : "失败", remotePath);
+            return result != null && result;
+            
+        } catch (Exception e) {
+            log.error("【SSH适配器】目录创建失败: {}, 错误: {}", 
+                    remotePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean deleteFile(HostInfo hostInfo, String remoteFilePath) {
+        log.info("【SSH适配器】删除文件: {}@{}:{} -> {}", 
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), remoteFilePath);
+        
+        try {
+            // 通过SSH插件执行文件删除
+            HostCheckerPlugin sshPlugin = getSshPlugin();
+            if (sshPlugin == null) {
+                throw new RuntimeException("SSH插件不可用");
+            }
+            
+            // 使用反射调用SSH插件的文件删除方法
+            java.lang.reflect.Method method = sshPlugin.getClass().getMethod("deleteFile", 
+                    String.class, int.class, String.class, String.class, String.class);
+            
+            Boolean result = (Boolean) method.invoke(sshPlugin, 
+                    hostInfo.getIp(),
+                    hostInfo.getSshPort(), 
+                    hostInfo.getSshUser(),
+                    hostInfo.getSshPassword(),
+                    remoteFilePath);
+            
+            log.info("【SSH适配器】文件删除{}：{}", 
+                    result ? "成功" : "失败", remoteFilePath);
+            return result != null && result;
+            
+        } catch (Exception e) {
+            log.error("【SSH适配器】文件删除失败: {}, 错误: {}", 
+                    remoteFilePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean checkPathExists(HostInfo hostInfo, String remotePath) {
+        log.debug("【SSH适配器】检查路径存在: {}@{}:{} -> {}", 
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), remotePath);
+        
+        try {
+            // 通过SSH插件执行路径检查
+            HostCheckerPlugin sshPlugin = getSshPlugin();
+            if (sshPlugin == null) {
+                throw new RuntimeException("SSH插件不可用");
+            }
+            
+            // 使用反射调用SSH插件的路径检查方法
+            java.lang.reflect.Method method = sshPlugin.getClass().getMethod("checkPathExists", 
+                    String.class, int.class, String.class, String.class, String.class);
+            
+            Boolean result = (Boolean) method.invoke(sshPlugin, 
+                    hostInfo.getIp(),
+                    hostInfo.getSshPort(), 
+                    hostInfo.getSshUser(),
+                    hostInfo.getSshPassword(),
+                    remotePath);
+            
+            log.debug("【SSH适配器】路径{}存在：{}", remotePath, result);
+            return result != null && result;
+            
+        } catch (Exception e) {
+            log.error("【SSH适配器】路径检查失败: {}, 错误: {}", 
+                    remotePath, e.getMessage(), e);
+            return false;
+        }
+    }
+    
+    @Override
+    public boolean createFile(HostInfo hostInfo, String remoteFilePath) {
+        log.info("【SSH适配器】创建文件: {}@{}:{} -> {}", 
+                hostInfo.getSshUser(), hostInfo.getIp(), hostInfo.getSshPort(), remoteFilePath);
+        
+        try {
+            // 通过SSH插件执行文件创建
+            HostCheckerPlugin sshPlugin = getSshPlugin();
+            if (sshPlugin == null) {
+                throw new RuntimeException("SSH插件不可用");
+            }
+            
+            // 使用反射调用SSH插件的文件创建方法
+            java.lang.reflect.Method method = sshPlugin.getClass().getMethod("createFile", 
+                    String.class, int.class, String.class, String.class, String.class);
+            
+            Boolean result = (Boolean) method.invoke(sshPlugin, 
+                    hostInfo.getIp(),
+                    hostInfo.getSshPort(), 
+                    hostInfo.getSshUser(),
+                    hostInfo.getSshPassword(),
+                    remoteFilePath);
+            
+            log.info("【SSH适配器】文件创建{}：{}", 
+                    result ? "成功" : "失败", remoteFilePath);
+            return result != null && result;
+            
+        } catch (Exception e) {
+            log.error("【SSH适配器】文件创建失败: {}, 错误: {}", 
+                    remoteFilePath, e.getMessage(), e);
+            return false;
+        }
     }
     
     @Override

@@ -220,4 +220,33 @@ public class SshConnectionPoolManager {
     private String buildHostKey(String hostIp, int port, String user) {
         return String.format("%s@%s:%d", user, hostIp, port);
     }
+    
+    // ================== 连接操作模板接口 ==================
+    
+    /**
+     * SSH操作接口
+     */
+    @FunctionalInterface
+    public interface SshOperation<T> {
+        T execute(SSHClient sshClient) throws Exception;
+    }
+    
+    /**
+     * 执行SSH操作（模板方法）
+     * 自动管理连接的借用和归还
+     */
+    public <T> T executeWithConnection(String hostIp, int port, String user, String password, 
+                                     SshOperation<T> operation) throws Exception {
+        SSHClient client = null;
+        try {
+            client = borrowConnection(hostIp, port, user, password);
+            return operation.execute(client);
+        } finally {
+            if (client != null) {
+                returnConnection(hostIp, port, user, client);
+            }
+        }
+    }
+
+
 }

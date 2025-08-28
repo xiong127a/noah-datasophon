@@ -87,6 +87,17 @@ public interface SshPluginAdapterService {
     boolean uploadFile(HostInfo hostInfo, String localFilePath, String remoteFilePath);
     
     /**
+     * 上传文件流到远程主机
+     * 新增功能，支持从InputStream上传
+     * 
+     * @param hostInfo 主机信息
+     * @param inputStream 输入流
+     * @param remoteFilePath 远程文件路径
+     * @return 上传是否成功
+     */
+    boolean uploadFile(HostInfo hostInfo, java.io.InputStream inputStream, String remoteFilePath);
+    
+    /**
      * 从远程主机下载文件
      * 新增功能
      * 
@@ -96,6 +107,46 @@ public interface SshPluginAdapterService {
      * @return 下载是否成功
      */
     boolean downloadFile(HostInfo hostInfo, String remoteFilePath, String localFilePath);
+    
+    /**
+     * 创建远程目录
+     * 新增功能
+     * 
+     * @param hostInfo 主机信息
+     * @param remotePath 远程目录路径
+     * @return 创建是否成功
+     */
+    boolean createDirectory(HostInfo hostInfo, String remotePath);
+    
+    /**
+     * 删除远程文件
+     * 新增功能
+     * 
+     * @param hostInfo 主机信息
+     * @param remoteFilePath 远程文件路径
+     * @return 删除是否成功
+     */
+    boolean deleteFile(HostInfo hostInfo, String remoteFilePath);
+    
+    /**
+     * 检查远程路径是否存在
+     * 新增功能
+     * 
+     * @param hostInfo 主机信息
+     * @param remotePath 远程路径
+     * @return 路径是否存在
+     */
+    boolean checkPathExists(HostInfo hostInfo, String remotePath);
+    
+    /**
+     * 创建空文件
+     * 新增功能
+     * 
+     * @param hostInfo 主机信息
+     * @param remoteFilePath 远程文件路径
+     * @return 创建是否成功
+     */
+    boolean createFile(HostInfo hostInfo, String remoteFilePath);
     
     /**
      * 检测Linux发行版
