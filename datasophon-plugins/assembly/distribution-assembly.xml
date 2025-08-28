@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  DataSophon主应用分发打包配置
+  包含所有插件和应用程序
+-->
+<assembly xmlns="http://maven.apache.org/SCHEMA/ASSEMBLY/2.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SCHEMA/ASSEMBLY/2.0.0 
+          http://maven.apache.org/xsd/assembly-2.0.0.xsd">
+
+    <id>distribution</id>
+    <formats>
+        <format>tar.gz</format>
+        <format>zip</format>
+    </formats>
+
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>datasophon-${project.version}</baseDirectory>
+
+    <!-- 应用程序JAR -->
+    <fileSets>
+        <fileSet>
+            <directory>${project.build.directory}</directory>
+            <outputDirectory>lib</outputDirectory>
+            <includes>
+                <include>datasophon-api-*.jar</include>
+            </includes>
+        </fileSet>
+
+        <!-- 配置文件 -->
+        <fileSet>
+            <directory>${project.basedir}/conf</directory>
+            <outputDirectory>conf</outputDirectory>
+            <includes>
+                <include>**/*.yml</include>
+                <include>**/*.yaml</include>
+                <include>**/*.properties</include>
+                <include>**/*.conf</include>
+            </includes>
+        </fileSet>
+
+        <!-- 启动脚本 -->
+        <fileSet>
+            <directory>${project.basedir}/bin</directory>
+            <outputDirectory>bin</outputDirectory>
+            <includes>
+                <include>**/*.sh</include>
+                <include>**/*.bat</include>
+                <include>**/*.cmd</include>
+            </includes>
+            <fileMode>0755</fileMode>
+        </fileSet>
+
+        <!-- 日志和其他目录 -->
+        <fileSet>
+            <directory>${project.basedir}</directory>
+            <outputDirectory>logs</outputDirectory>
+            <excludes>
+                <exclude>**/*</exclude>
+            </excludes>
+            <fileMode>0755</fileMode>
+        </fileSet>
+    </fileSets>
+
+    <!-- 插件目录结构 -->
+    <moduleSets>
+        <moduleSet>
+            <!-- 收集所有插件模块 -->
+            <includes>
+                <include>com.datasophon:*-plugin</include>
+            </includes>
+            <binaries>
+                <outputDirectory>plugins</outputDirectory>
+                <includeDependencies>false</includeDependencies>
+                <outputFileNameMapping>${module.artifactId}-${module.version}.jar</outputFileNameMapping>
+                <attachmentClassifier>plugin</attachmentClassifier>
+            </binaries>
+        </moduleSet>
+    </moduleSets>
+
+</assembly>

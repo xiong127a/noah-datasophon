@@ -14,7 +14,8 @@ spring:
 #   plugins:
 #     development:
 #       enabled: false  # 生产环境关闭开发模式
-#     directory: /opt/datasophon/plugins
+#     directory: ${user.dir}/plugins  # 生产环境插件目录
+#     scan-paths: []
 
 # 数据库配置（如需覆盖默认配置）
 # datasource:

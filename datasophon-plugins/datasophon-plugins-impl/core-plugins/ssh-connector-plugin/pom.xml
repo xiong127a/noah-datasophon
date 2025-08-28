@@ -57,21 +57,43 @@
 
     <build>
         <plugins>
-            <!-- 插件打包插件 -->
+            <!-- 标准JAR打包（开发时使用） -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <finalName>${plugin.id}-${plugin.version}</finalName>
+                </configuration>
+            </plugin>
+            
+            <!-- 插件打包（生产时使用） -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.6.0</version>
                 <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
+                    <descriptors>
+                        <descriptor>../../../assembly/plugin-assembly.xml</descriptor>
+                    </descriptors>
                     <finalName>${plugin.id}-${plugin.version}</finalName>
-                    <appendAssemblyId>false</appendAssemblyId>
+                    <appendAssemblyId>true</appendAssemblyId>
                 </configuration>
                 <executions>
+                    <!-- 编译后生成开发用JAR -->
                     <execution>
-                        <id>make-assembly</id>
+                        <id>make-development-plugin</id>
+                        <phase>process-classes</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.basedir}/target/dev-plugins</outputDirectory>
+                        </configuration>
+                    </execution>
+                    <!-- 打包阶段生成生产用JAR -->
+                    <execution>
+                        <id>make-production-plugin</id>
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>

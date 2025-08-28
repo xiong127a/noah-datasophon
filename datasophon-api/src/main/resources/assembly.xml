@@ -207,5 +207,27 @@
             <directoryMode>0755</directoryMode>
             <fileMode>0644</fileMode>
         </fileSet>
+        
+        <!-- 插件目录 - 开发和生产环境插件JAR -->
+        <fileSet>
+            <directory>${basedir}/../datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target</directory>
+            <includes>
+                <include>ssh-connector-*-plugin.jar</include>
+                <include>ssh-connector-*.jar</include>
+            </includes>
+            <outputDirectory>plugins</outputDirectory>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0755</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>${basedir}/../datasophon-plugins/datasophon-plugins-impl/core-plugins/cpu-checker-plugin/target</directory>
+            <includes>
+                <include>cpu-checker-*-plugin.jar</include>
+                <include>cpu-checker-*.jar</include>
+            </includes>
+            <outputDirectory>plugins</outputDirectory>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0755</fileMode>
+        </fileSet>
     </fileSets>
 </assembly>
