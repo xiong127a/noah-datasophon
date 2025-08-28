@@ -24,11 +24,11 @@ import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.command.PingCommand;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.api.master.ActorUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.actor.ActorSystem;
 import org.apache.pekko.pattern.Patterns;
 import org.apache.pekko.util.Timeout;
 import scala.concurrent.Await;
@@ -41,15 +41,15 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * db-scheduler Worker调度服务
- * 
+ * <p>
  * 这个服务使用现代化的db-scheduler调度框架来管理Worker节点：
- * 
+ * <p>
  * 🎯 核心功能：
  * 1. Worker节点自动发现和注册
  * 2. Worker节点健康状态监控
  * 3. 关键服务实时监控
  * 4. 系统清理和维护
- * 
+ * <p>
  * 🚀 技术优势：
  * - 比Quartz更现代化的API设计
  * - 内置集群支持和故障恢复
@@ -69,9 +69,6 @@ public class WorkerScheduleService {
     
     @Autowired
     private ClusterHostService clusterHostService;
-    
-    @Autowired
-    private ActorSystem actorSystem;
 
     // ================== 定时任务业务方法 ==================
 
@@ -340,7 +337,7 @@ public class WorkerScheduleService {
      */
     private boolean checkWorkerConnection(String hostname) {
         try {
-            ActorSelection workerActor = actorSystem.actorSelection(
+            ActorSelection workerActor = ActorUtils.actorSystem.actorSelection(
                 "akka://datasophon@" + hostname + ":2552/user/worker");
             
             PingCommand pingCommand = new PingCommand();
@@ -363,7 +360,7 @@ public class WorkerScheduleService {
      */
     private boolean quickHealthCheck(String hostname) {
         try {
-            ActorSelection pingActor = actorSystem.actorSelection(
+            ActorSelection pingActor = ActorUtils.actorSystem.actorSelection(
                 "akka://datasophon@" + hostname + ":2552/user/worker/pingActor");
             
             PingCommand pingCommand = new PingCommand();
@@ -446,7 +443,7 @@ public class WorkerScheduleService {
      */
     private void collectWorkerSystemInfo(String hostname) {
         try {
-            ActorSelection systemInfoActor = actorSystem.actorSelection(
+            ActorSelection systemInfoActor = ActorUtils.actorSystem.actorSelection(
                 "akka://datasophon@" + hostname + ":2552/user/worker/systemInfoActor");
             
             // 系统信息收集命令

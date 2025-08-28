@@ -54,7 +54,7 @@ public class DbSchedulerConfig {
      */
     @Bean
     public Task<Void> workerDiscoveryTask() {
-        return Tasks.recurring("worker-discovery", Schedules.cron("*/5 * * * *"))
+        return Tasks.recurring("worker-discovery", Schedules.cron("0 */5 * * * *"))
                 .execute((instance, ctx) -> {
                     log.info("执行db-scheduler Worker节点发现任务: {}", instance.getTaskName());
                     try {
@@ -73,7 +73,7 @@ public class DbSchedulerConfig {
      */
     @Bean
     public Task<Void> workerHealthCheckTask() {
-        return Tasks.recurring("worker-health-check", Schedules.cron("*/1 * * * *"))
+        return Tasks.recurring("worker-health-check", Schedules.cron("0 */1 * * * *"))
                 .execute((instance, ctx) -> {
                     log.debug("执行db-scheduler Worker健康检查任务: {}", instance.getTaskName());
                     try {
