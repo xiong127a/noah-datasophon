@@ -1,15 +1,31 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.datasophon.plugins.impl.cpu;
 
 import com.datasophon.common.enums.OsType;
-import com.datasophon.common.model.OsInfo;
 import com.datasophon.plugins.api.HostCheckerPlugin;
-import com.datasophon.plugins.api.model.*;
+import com.datasophon.plugins.api.model.CheckResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.model.PluginMetadata;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
@@ -17,7 +33,9 @@ import java.util.concurrent.CompletableFuture;
  * CPU检查器插件
  * 检查主机CPU使用率和负载
  * 
- * @author DataSophon Team
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-28
  */
 @Slf4j
 @Extension
@@ -36,7 +54,15 @@ public class CpuCheckerPlugin implements HostCheckerPlugin {
     
     @Override
     public Set<OsType> getSupportedOperatingSystems() {
-        return Set.of(OsType.LINUX); // 支持所有Linux系统
+        // 支持所有Linux系统
+        return Set.of(
+            OsType.CENTOS,
+            OsType.RHEL,
+            OsType.UBUNTU,
+            OsType.DEBIAN,
+            OsType.KYLIN_V10,
+            OsType.KYLIN_V4
+        );
     }
     
     @Override
@@ -47,41 +73,41 @@ public class CpuCheckerPlugin implements HostCheckerPlugin {
     @Override
     public CompletableFuture<CheckResult> executeCheck(HostCheckContext context) {
         return CompletableFuture.supplyAsync(() -> {
+            LocalDateTime startTime = LocalDateTime.now();
+            
             try {
-                log.info("开始执行CPU检查，主机: {}", context.getHostInfo().getIp());
+                log.info("【CPU插件】开始执行CPU检查，主机: {}", context.getHostIp());
                 
-                long startTime = System.currentTimeMillis();
-                
-                // 执行CPU检查 (使用SSH连接池)
+                // 执行CPU检查 
                 CpuMetrics metrics = collectCpuMetrics(context);
                 
                 // 分析结果
-                CheckResult result = analyzeCpuMetrics(metrics);
-                result.setHostIp(context.getHostInfo().getIp());
-                result.setExecutionTimeMs(System.currentTimeMillis() - startTime);
+                CheckResult result = analyzeCpuMetrics(metrics, startTime);
                 
-                log.info("CPU检查完成，主机: {}, 状态: {}, 耗时: {}ms", 
-                        context.getHostInfo().getIp(), result.getStatus(), result.getExecutionTimeMs());
+                log.info("【CPU插件】CPU检查完成，主机: {}, 成功: {}", 
+                        context.getHostIp(), result.isSuccess());
                 
                 return result;
                 
             } catch (Exception e) {
-                log.error("CPU检查执行失败，主机: {}", context.getHostInfo().getIp(), e);
-                return CheckResult.error(PLUGIN_ID, "CPU检查执行异常: " + e.getMessage(), e);
+                log.error("【CPU插件】CPU检查执行失败，主机: {}", context.getHostIp(), e);
+                
+                return CheckResult.builder()
+                        .checkType("cpu-check")
+                        .success(false)
+                        .message("CPU检查执行异常: " + e.getMessage())
+                        .error(e.getMessage())
+                        .checkTime(LocalDateTime.now())
+                        .build();
             }
         });
     }
     
     @Override
     public boolean canExecute(HostCheckContext context) {
-        // 检查操作系统支持
-        OsInfo osInfo = context.getOsInfo();
-        if (osInfo != null && !getSupportedOperatingSystems().contains(osInfo.getOsType())) {
-            return false;
-        }
-        
-        // 检查SSH连接
-        return context.getSshSession() != null && context.getSshSession().isOpen();
+        // 检查SSH连接信息
+        return context.getSshConnectionInfo() != null && 
+               context.getSshConnectionInfo().hasAuthenticationInfo();
     }
     
     @Override
@@ -91,9 +117,9 @@ public class CpuCheckerPlugin implements HostCheckerPlugin {
                 .name("CPU检查器")
                 .version(PLUGIN_VERSION)
                 .description("检查主机CPU使用率、负载平均值等指标")
-                .author("DataSophon Team")
+                .author("任相鹏")
                 .category("system")
-                .supportedOs(Set.of("linux"))
+                .supportedOs(Set.of("centos", "rhel", "ubuntu", "debian", "kylin-v10", "kylin-v4"))
                 .tags(Set.of("cpu", "performance", "system"))
                 .corePlugin(true)
                 .build();
@@ -110,35 +136,36 @@ public class CpuCheckerPlugin implements HostCheckerPlugin {
     }
     
     /**
-     * 收集CPU指标 (使用SSH连接池)
+     * 收集CPU指标 (模拟实现)
      */
     private CpuMetrics collectCpuMetrics(HostCheckContext context) {
         try {
-            // 执行CPU使用率检查命令
-            String cpuCommand = "top -bn1 | grep \"Cpu(s)\" | awk '{print $2}' | cut -d'%' -f1";
-            String cpuResult = executeCommand(context, cpuCommand);
+            log.debug("【CPU插件】开始收集CPU指标: {}", context.getHostIp());
             
-            // 执行负载平均值检查命令
-            String loadCommand = "uptime | awk -F'load average:' '{print $2}' | awk '{print $1,$2,$3}' | tr -d ','";
-            String loadResult = executeCommand(context, loadCommand);
+            // TODO: 这里应该通过SSH连接池执行实际的系统命令
+            // 暂时使用模拟数据进行演示
             
-            // 执行CPU核心数检查
-            String coreCommand = "nproc";
-            String coreResult = executeCommand(context, coreCommand);
+            String hostIp = context.getHostIp();
             
-            // 执行CPU信息检查
-            String cpuInfoCommand = "lscpu | grep 'Model name' | awk -F':' '{print $2}' | xargs";
-            String cpuInfoResult = executeCommand(context, cpuInfoCommand);
+            // 模拟不同主机的CPU指标
+            double cpuUsage = 15.0 + (hostIp.hashCode() % 30); // 15-45% 范围
+            double[] loadAverage = {
+                0.5 + (hostIp.hashCode() % 100) / 100.0,  // 1分钟负载
+                1.0 + (hostIp.hashCode() % 150) / 100.0,  // 5分钟负载
+                1.5 + (hostIp.hashCode() % 200) / 100.0   // 15分钟负载
+            };
+            int cpuCores = 4 + (hostIp.hashCode() % 8); // 4-12核心
+            String cpuModel = "Intel(R) Xeon(R) CPU E5-2686 v4 @ 2.30GHz";
             
             return CpuMetrics.builder()
-                    .cpuUsage(parseCpuUsage(cpuResult))
-                    .loadAverage(parseLoadAverage(loadResult))
-                    .cpuCores(parseInteger(coreResult.trim(), 1))
-                    .cpuModel(cpuInfoResult.trim())
+                    .cpuUsage(cpuUsage)
+                    .loadAverage(loadAverage)
+                    .cpuCores(cpuCores)
+                    .cpuModel(cpuModel)
                     .build();
                     
         } catch (Exception e) {
-            log.error("收集CPU指标失败", e);
+            log.error("【CPU插件】收集CPU指标失败", e);
             throw new RuntimeException("收集CPU指标失败", e);
         }
     }
@@ -146,127 +173,48 @@ public class CpuCheckerPlugin implements HostCheckerPlugin {
     /**
      * 分析CPU指标
      */
-    private CheckResult analyzeCpuMetrics(CpuMetrics metrics) {
-        CheckResult.CheckResultBuilder resultBuilder = CheckResult.builder()
-                .pluginId(PLUGIN_ID)
-                .pluginVersion(PLUGIN_VERSION)
-                .itemCode("CPU");
+    private CheckResult analyzeCpuMetrics(CpuMetrics metrics, LocalDateTime startTime) {
+        LocalDateTime endTime = LocalDateTime.now();
+        long duration = java.time.Duration.between(startTime, endTime).toMillis();
         
-        // 准备详细信息
-        Map<String, Object> details = new HashMap<>();
-        details.put("cpuUsage", metrics.getCpuUsage());
-        details.put("loadAverage", metrics.getLoadAverage());
-        details.put("cpuCores", metrics.getCpuCores());
-        details.put("cpuModel", metrics.getCpuModel());
+        CheckResult.CheckResultBuilder resultBuilder = CheckResult.builder()
+                .checkType("cpu-check")
+                .checkTime(endTime);
+        
+        CheckResult result;
         
         // 分析CPU使用率
         if (metrics.getCpuUsage() >= CPU_CRITICAL_THRESHOLD) {
-            return resultBuilder
-                    .status(CheckStatus.FAILED)
-                    .severity(Severity.CRITICAL)
-                    .message(String.format("CPU使用率过高: %.1f%% (阈值: %.1f%%)", 
+            result = resultBuilder
+                    .success(false)
+                    .message(String.format("CPU使用率过高: %.1f%% (临界阈值: %.1f%%)", 
                             metrics.getCpuUsage(), CPU_CRITICAL_THRESHOLD))
-                    .details(details)
-                    .recommendations(List.of(
-                            CheckRecommendation.builder()
-                                    .type(RecommendationType.SYSTEM_OPTIMIZATION)
-                                    .description("检查并终止占用CPU较高的进程")
-                                    .actionCommand("ps aux --sort=-%cpu | head -10")
-                                    .priority(Priority.URGENT)
-                                    .build()
-                    ))
+                    .error("CPU使用率超过临界阈值")
                     .build();
+                    
         } else if (metrics.getCpuUsage() >= CPU_WARNING_THRESHOLD) {
-            return resultBuilder
-                    .status(CheckStatus.SUCCESS)
-                    .severity(Severity.WARNING)
+            result = resultBuilder
+                    .success(true)
                     .message(String.format("CPU使用率较高: %.1f%% (警告阈值: %.1f%%)", 
                             metrics.getCpuUsage(), CPU_WARNING_THRESHOLD))
-                    .details(details)
-                    .recommendations(List.of(
-                            CheckRecommendation.builder()
-                                    .type(RecommendationType.MONITORING_ALERT)
-                                    .description("监控CPU使用率变化趋势")
-                                    .priority(Priority.MEDIUM)
-                                    .build()
-                    ))
                     .build();
+                    
         } else {
-            return resultBuilder
-                    .status(CheckStatus.SUCCESS)
-                    .severity(Severity.INFO)
+            result = resultBuilder
+                    .success(true)
                     .message(String.format("CPU使用率正常: %.1f%%", metrics.getCpuUsage()))
-                    .details(details)
                     .build();
         }
-    }
-    
-    /**
-     * 执行SSH命令 (使用SSH连接池)
-     */
-    private String executeCommand(HostCheckContext context, String command) {
-        // 使用SSH连接服务执行命令
-        try {
-            // 这里应该注入SshConnectionService
-            // 暂时返回模拟数据，演示如何使用连接池
-            log.debug("通过SSH连接池执行命令: {}", command);
-            
-            if (command.contains("Cpu(s)")) {
-                return "15.2"; // 模拟CPU使用率
-            } else if (command.contains("uptime")) {
-                return "0.5 1.2 1.8"; // 模拟负载平均值
-            } else if (command.contains("nproc")) {
-                return "4"; // 模拟CPU核心数
-            } else if (command.contains("lscpu")) {
-                return "Intel(R) Core(TM) i7-9700K CPU @ 3.60GHz"; // 模拟CPU型号
-            }
-            
-            return "";
-            
-        } catch (Exception e) {
-            log.error("通过SSH连接池执行命令失败: {}", command, e);
-            throw new RuntimeException("SSH命令执行失败", e);
-        }
-    }
-    
-    /**
-     * 解析CPU使用率
-     */
-    private double parseCpuUsage(String result) {
-        try {
-            return Double.parseDouble(result.trim());
-        } catch (Exception e) {
-            log.warn("解析CPU使用率失败: {}", result, e);
-            return 0.0;
-        }
-    }
-    
-    /**
-     * 解析负载平均值
-     */
-    private double[] parseLoadAverage(String result) {
-        try {
-            String[] parts = result.trim().split("\\s+");
-            return new double[]{
-                    Double.parseDouble(parts[0]), // 1分钟
-                    Double.parseDouble(parts[1]), // 5分钟
-                    Double.parseDouble(parts[2])  // 15分钟
-            };
-        } catch (Exception e) {
-            log.warn("解析负载平均值失败: {}", result, e);
-            return new double[]{0.0, 0.0, 0.0};
-        }
-    }
-    
-    /**
-     * 解析整数
-     */
-    private int parseInteger(String result, int defaultValue) {
-        try {
-            return Integer.parseInt(result);
-        } catch (Exception e) {
-            log.warn("解析整数失败: {}", result, e);
-            return defaultValue;
-        }
+        
+        // 添加详细信息
+        result.data("cpuUsage", String.valueOf(metrics.getCpuUsage()))
+              .data("load1Min", String.valueOf(metrics.getLoad1Min()))
+              .data("load5Min", String.valueOf(metrics.getLoad5Min()))
+              .data("load15Min", String.valueOf(metrics.getLoad15Min()))
+              .data("cpuCores", String.valueOf(metrics.getCpuCores()))
+              .data("cpuModel", metrics.getCpuModel())
+              .data("duration_ms", String.valueOf(duration));
+        
+        return result;
     }
 }

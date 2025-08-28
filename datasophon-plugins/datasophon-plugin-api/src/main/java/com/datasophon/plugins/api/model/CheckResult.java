@@ -1,46 +1,53 @@
+/*
+ *  Licensed to the Apache Software Foundation (ASF) under one or more
+ *  contributor license agreements.  See the NOTICE file distributed with
+ *  this work for additional information regarding copyright ownership.
+ *  The ASF licenses this file to You under the Apache License, Version 2.0
+ *  (the "License"); you may not use this file except in compliance with
+ *  the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ */
+
 package com.datasophon.plugins.api.model;
 
 import lombok.Builder;
 import lombok.Data;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
  * 检查结果模型
- * 统一的插件执行结果封装
+ * 用于表示插件检查的执行结果
  * 
- * @author DataSophon Team
+ * @author 任相鹏
+ * @email 635887935@qq.com
+ * @date 2025-08-28
  */
 @Data
 @Builder
-public class CheckResult {
+public class CheckResult implements Serializable {
+    
+    private static final long serialVersionUID = 1L;
     
     /**
-     * 插件ID
+     * 检查是否成功
      */
-    private String pluginId;
+    private boolean success;
     
     /**
-     * 插件版本
+     * 检查类型/名称
      */
-    private String pluginVersion;
-    
-    /**
-     * 主机IP
-     */
-    private String hostIp;
-    
-    /**
-     * 检查状态
-     */
-    private CheckStatus status;
-    
-    /**
-     * 严重程度
-     */
-    private Severity severity;
+    private String checkType;
     
     /**
      * 检查消息
@@ -48,98 +55,119 @@ public class CheckResult {
     private String message;
     
     /**
-     * 详细信息
+     * 错误信息（检查失败时）
      */
-    private Map<String, Object> details;
+    private String error;
     
     /**
-     * 检查建议
+     * 检查开始时间
      */
-    private List<CheckRecommendation> recommendations;
+    private LocalDateTime checkTime;
     
     /**
-     * 执行时间（毫秒）
+     * 检查耗时（毫秒）
      */
-    private long executionTimeMs;
+    private Long duration;
     
     /**
-     * 异常信息
-     */
-    private String exceptionMessage;
-    
-    /**
-     * 检查时间
+     * 检查结果数据
      */
     @Builder.Default
-    private LocalDateTime checkTime = LocalDateTime.now();
+    private Map<String, Object> data = new HashMap<>();
     
     /**
-     * 检查项代码
+     * 添加结果数据
      */
-    private String itemCode;
-    
-    /**
-     * 是否成功
-     */
-    public boolean isSuccess() {
-        return status == CheckStatus.SUCCESS;
+    public CheckResult data(String key, Object value) {
+        if (this.data == null) {
+            this.data = new HashMap<>();
+        }
+        this.data.put(key, value);
+        return this;
     }
     
     /**
-     * 是否失败
+     * 添加多个结果数据
      */
-    public boolean isFailed() {
-        return status == CheckStatus.FAILED;
+    public CheckResult data(Map<String, Object> additionalData) {
+        if (this.data == null) {
+            this.data = new HashMap<>();
+        }
+        if (additionalData != null) {
+            this.data.putAll(additionalData);
+        }
+        return this;
     }
     
     /**
-     * 是否有错误
+     * 获取结果数据
      */
-    public boolean hasError() {
-        return status == CheckStatus.ERROR;
+    @SuppressWarnings("unchecked")
+    public <T> T getData(String key, Class<T> type) {
+        if (data == null) {
+            return null;
+        }
+        Object value = data.get(key);
+        if (value != null && type.isAssignableFrom(value.getClass())) {
+            return (T) value;
+        }
+        return null;
     }
     
     /**
-     * 是否是致命问题
+     * 获取结果数据（带默认值）
      */
-    public boolean isCritical() {
-        return severity == Severity.CRITICAL;
+    public <T> T getData(String key, Class<T> type, T defaultValue) {
+        T value = getData(key, type);
+        return value != null ? value : defaultValue;
     }
     
     /**
-     * 创建成功结果
+     * 检查是否有指定的数据键
      */
-    public static CheckResult success(String pluginId, String message) {
+    public boolean hasData(String key) {
+        return data != null && data.containsKey(key);
+    }
+    
+    /**
+     * 创建成功的检查结果
+     */
+    public static CheckResult success(String checkType, String message) {
         return CheckResult.builder()
-                .pluginId(pluginId)
-                .status(CheckStatus.SUCCESS)
-                .severity(Severity.INFO)
+                .success(true)
+                .checkType(checkType)
                 .message(message)
+                .checkTime(LocalDateTime.now())
                 .build();
     }
     
     /**
-     * 创建失败结果
+     * 创建失败的检查结果
      */
-    public static CheckResult failed(String pluginId, String message, Severity severity) {
+    public static CheckResult failure(String checkType, String message, String error) {
         return CheckResult.builder()
-                .pluginId(pluginId)
-                .status(CheckStatus.FAILED)
-                .severity(severity)
+                .success(false)
+                .checkType(checkType)
                 .message(message)
+                .error(error)
+                .checkTime(LocalDateTime.now())
                 .build();
     }
     
     /**
-     * 创建错误结果
+     * 创建失败的检查结果（简化版）
      */
-    public static CheckResult error(String pluginId, String message, Exception e) {
-        return CheckResult.builder()
-                .pluginId(pluginId)
-                .status(CheckStatus.ERROR)
-                .severity(Severity.CRITICAL)
-                .message(message)
-                .exceptionMessage(e.getMessage())
-                .build();
+    public static CheckResult failure(String checkType, String error) {
+        return failure(checkType, "检查失败", error);
+    }
+    
+    /**
+     * 获取简短的结果摘要
+     */
+    public String getSummary() {
+        return String.format("[%s] %s: %s", 
+                checkType != null ? checkType : "unknown",
+                success ? "SUCCESS" : "FAILED",
+                message != null ? message : (success ? "检查通过" : "检查失败"));
     }
 }

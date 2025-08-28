@@ -30,6 +30,10 @@ import com.datasophon.api.converter.InstallStepConverter;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.api.service.OsInfoService;
+import com.datasophon.api.service.HostValidationService;
+import com.datasophon.api.model.HostValidationTaskData;
+import com.datasophon.common.enums.InstallState;
+import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.dto.InstallStepDTO;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostEntity;
@@ -101,6 +105,8 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     private  ClusterInfoService clusterInfoService;
     @Autowired
     private  ClusterHostService hostService;
+    @Autowired
+    private  HostValidationService hostValidationService;
 
     private  OsInfoService osInfoService;
     @Autowired
@@ -280,7 +286,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     /**
-     * 传统集群模式的主机列表解析
+     * 传统集群模式的主机列表解析 (重构为插件化架构)
      */
     private PageResult<HostInfo> analysisHostListForTraditional(Long clusterId, String ips, String sshUser,
             Integer sshPort,
@@ -291,9 +297,15 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 throw new ServiceException("主机列表不能为空");
             }
 
-            // 修改：每次调用都应该触发saveHostInfo，但用标记控制是否重新收集
-            Map<String, HostInfo> hostMap = saveHostInfo(clusterId, ips, sshUser, sshPort, sshPassword, page,
-                    pageSize);
+            log.info("使用插件化架构进行主机验证: 集群ID={}, 主机数量={}, 用户={}, 端口={}", 
+                    clusterId, ips.split("[,\\n]").length, sshUser, sshPort);
+
+            // 解析主机列表
+            List<String> hostIpList = parseHostList(ips);
+            
+            // 使用新的插件化验证架构
+            Map<String, HostInfo> hostMap = startPluginBasedValidation(
+                    clusterId.toString(), hostIpList, sshUser, sshPort, sshPassword);
 
             // 如果没有获取到主机信息,返回错误提示
             List<HostInfo> hostList = new ArrayList<>(hostMap.values());
@@ -1739,5 +1751,154 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             log.error("获取主机日志失败", e);
             throw new ServiceException("获取主机日志失败: " + e.getMessage());
         }
+    }
+    
+    // ==================== 插件化主机验证新方法 ====================
+    
+    /**
+     * 解析主机列表字符串为IP列表
+     */
+    private List<String> parseHostList(String hostInput) {
+        List<String> hostIpList = new ArrayList<>();
+        
+        if (StringUtils.isBlank(hostInput)) {
+            return hostIpList;
+        }
+        
+        // 支持换行符和逗号分隔
+        String[] lines = hostInput.split("[\\r\\n]+");
+        for (String line : lines) {
+            if (StringUtils.isNotBlank(line)) {
+                // 支持逗号分隔的多个IP
+                String[] ips = line.trim().split("[,\\s]+");
+                for (String ip : ips) {
+                    if (StringUtils.isNotBlank(ip)) {
+                        hostIpList.add(ip.trim());
+                    }
+                }
+            }
+        }
+        
+        return hostIpList;
+    }
+    
+    /**
+     * 启动基于插件的主机验证
+     */
+    private Map<String, HostInfo> startPluginBasedValidation(String clusterId, List<String> hostIpList, 
+                                                           String sshUser, Integer sshPort, String sshPassword) {
+        Map<String, HostInfo> hostMap = new HashMap<>();
+        
+        try {
+            log.info("启动插件化主机验证: 集群={}, 主机数量={}", clusterId, hostIpList.size());
+            
+            // 创建SSH连接信息
+            HostValidationTaskData.SshConnectionInfo sshInfo = HostValidationTaskData.SshConnectionInfo.builder()
+                    .sshUser(sshUser)
+                    .sshPort(sshPort)
+                    .sshPassword(sshPassword)
+                    .connectionTimeout(30000)
+                    .commandTimeout(60000)
+                    .build();
+            
+            // 为每个主机创建HostInfo并启动验证
+            for (String hostIp : hostIpList) {
+                try {
+                    // 创建初始的HostInfo
+                    HostInfo hostInfo = createInitialHostInfo(clusterId, hostIp, sshUser, sshPort, sshPassword);
+                    hostMap.put(hostIp, hostInfo);
+                    
+                    // 启动插件化验证流程
+                    hostValidationService.startHostValidation(clusterId, hostIp, sshInfo);
+                    
+                    log.debug("已启动主机验证: 主机={}", hostIp);
+                    
+                } catch (Exception e) {
+                    log.error("启动主机验证失败: 主机={}, 错误={}", hostIp, e.getMessage(), e);
+                    
+                    // 创建失败的HostInfo
+                    HostInfo failedHostInfo = createFailedHostInfo(clusterId, hostIp, sshUser, sshPort, sshPassword, e.getMessage());
+                    hostMap.put(hostIp, failedHostInfo);
+                }
+            }
+            
+            log.info("插件化主机验证启动完成: 集群={}, 成功启动={}, 失败={}", 
+                    clusterId, hostMap.size(), hostIpList.size() - hostMap.size());
+            
+        } catch (Exception e) {
+            log.error("插件化主机验证启动失败: 集群={}, 错误={}", clusterId, e.getMessage(), e);
+            throw new ServiceException("主机验证启动失败: " + e.getMessage());
+        }
+        
+        return hostMap;
+    }
+    
+    /**
+     * 创建初始的HostInfo对象
+     */
+    private HostInfo createInitialHostInfo(String clusterId, String hostIp, String sshUser, Integer sshPort, String sshPassword) {
+        HostInfo hostInfo = new HostInfo();
+        
+        // 基本信息
+        hostInfo.setClusterId(Long.parseLong(clusterId));
+        hostInfo.setIp(hostIp);
+        hostInfo.setHostname(hostIp); // 初始使用IP作为主机名
+        hostInfo.setSshUser(sshUser);
+        hostInfo.setSshPort(sshPort);
+        hostInfo.setSshPassword(sshPassword);
+        hostInfo.setCreateTime(LocalDateTime.now());
+        
+        // 初始状态设置
+        hostInfo.setInstallState(InstallState.RUNNING);
+        hostInfo.setInstallStateCode(1);
+        hostInfo.setManaged(false);
+        hostInfo.setProgress(0);
+        hostInfo.setStatus(CheckItem.Status.WAITING);
+        
+        // 检查结果初始化
+        CheckResult checkResult = new CheckResult();
+        checkResult.setCode(9999);
+        checkResult.setMsg("等待主机校验");
+        hostInfo.setCheckResult(checkResult);
+        
+        // 各状态初始化为loading
+        hostInfo.setSshConnectStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
+        hostInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
+        
+        // 错误信息初始化
+        hostInfo.setSshErrorMsg("");
+        hostInfo.setOsErrorMsg("");
+        hostInfo.setErrorMessage("");
+        
+        return hostInfo;
+    }
+    
+    /**
+     * 创建失败的HostInfo对象
+     */
+    private HostInfo createFailedHostInfo(String clusterId, String hostIp, String sshUser, Integer sshPort, String sshPassword, String errorMessage) {
+        HostInfo hostInfo = createInitialHostInfo(clusterId, hostIp, sshUser, sshPort, sshPassword);
+        
+        // 设置失败状态
+        hostInfo.setInstallState(InstallState.FAILED);
+        hostInfo.setInstallStateCode(-1);
+        hostInfo.setStatus(CheckItem.Status.FAILED);
+        hostInfo.setErrorMessage(errorMessage);
+        hostInfo.setSshErrorMsg(errorMessage);
+        hostInfo.setErrMsg(errorMessage);
+        
+        // 检查结果设置为失败
+        CheckResult checkResult = new CheckResult();
+        checkResult.setCode(500);
+        checkResult.setMsg("主机验证启动失败: " + errorMessage);
+        hostInfo.setCheckResult(checkResult);
+        
+        // 所有状态设置为failed
+        hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
+        hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
+        hostInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
+        
+        return hostInfo;
     }
 }

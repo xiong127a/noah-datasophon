@@ -11,19 +11,9 @@ import lombok.Getter;
 public enum OsType {
     
     /**
-     * Linux操作系统
-     */
-    LINUX("linux", "Linux"),
-    
-    /**
      * CentOS
      */
     CENTOS("centos", "CentOS"),
-    
-    /**
-     * Ubuntu
-     */
-    UBUNTU("ubuntu", "Ubuntu"),
     
     /**
      * Red Hat Enterprise Linux
@@ -31,19 +21,9 @@ public enum OsType {
     RHEL("rhel", "Red Hat Enterprise Linux"),
     
     /**
-     * Rocky Linux
+     * Ubuntu
      */
-    ROCKY("rocky", "Rocky Linux"),
-    
-    /**
-     * Alma Linux
-     */
-    ALMA("alma", "Alma Linux"),
-    
-    /**
-     * SUSE Linux
-     */
-    SUSE("suse", "SUSE Linux"),
+    UBUNTU("ubuntu", "Ubuntu"),
     
     /**
      * Debian
@@ -51,14 +31,14 @@ public enum OsType {
     DEBIAN("debian", "Debian"),
     
     /**
-     * Windows
+     * 麒麟操作系统 V10
      */
-    WINDOWS("windows", "Windows"),
+    KYLIN_V10("kylin-v10", "银河麒麟 V10"),
     
     /**
-     * macOS
+     * 麒麟操作系统 V4
      */
-    MACOS("macos", "macOS"),
+    KYLIN_V4("kylin-v4", "中标麒麟 V4"),
     
     /**
      * 其他/未知操作系统
@@ -111,16 +91,14 @@ public enum OsType {
      * 判断是否为Linux系列
      */
     public boolean isLinuxFamily() {
-        return this == LINUX || this == CENTOS || this == UBUNTU || 
-               this == RHEL || this == ROCKY || this == ALMA || 
-               this == SUSE || this == DEBIAN;
+        return this != OTHER; // 除了OTHER，其他都是Linux系列
     }
     
     /**
      * 判断是否为Red Hat系列
      */
     public boolean isRedHatFamily() {
-        return this == CENTOS || this == RHEL || this == ROCKY || this == ALMA;
+        return this == CENTOS || this == RHEL;
     }
     
     /**
@@ -128,5 +106,24 @@ public enum OsType {
      */
     public boolean isDebianFamily() {
         return this == UBUNTU || this == DEBIAN;
+    }
+    
+    /**
+     * 判断是否为麒麟系列
+     */
+    public boolean isKylinFamily() {
+        return this == KYLIN_V10 || this == KYLIN_V4;
+    }
+    
+    /**
+     * 获取包管理器类型
+     */
+    public String getPackageManager() {
+        if (isRedHatFamily() || isKylinFamily()) {
+            return "yum/rpm";
+        } else if (isDebianFamily()) {
+            return "apt/dpkg";
+        }
+        return "unknown";
     }
 }

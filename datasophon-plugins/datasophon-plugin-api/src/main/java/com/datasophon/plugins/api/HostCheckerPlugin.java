@@ -13,6 +13,12 @@ import java.util.concurrent.CompletableFuture;
  * 主机检查器插件基础接口
  * 所有检查器插件都需要实现此接口
  * 
+ * 重要原则：
+ * 1. 插件内部完全管理SSH连接，主程序不直接操作SSH
+ * 2. 使用Apache SSHJ + Commons Pool2实现高性能连接池
+ * 3. 插件负责连接的建立、维护、释放和错误处理
+ * 4. 主程序仅通过此接口与插件交互，实现完全解耦
+ * 
  * @author DataSophon Team
  */
 public interface HostCheckerPlugin extends ExtensionPoint {
