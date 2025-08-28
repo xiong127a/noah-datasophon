@@ -31,8 +31,8 @@ datasophon:
       enabled: true
       # 开发模式下的插件路径（编译后的JAR位置）
       plugin-paths:
-        - datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target
-        - datasophon-plugins/datasophon-plugins-impl/core-plugins/cpu-checker-plugin/target
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target/dev-plugins
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/cpu-checker-plugin/target/dev-plugins
     
     # 额外的插件扫描路径（可选）
     scan-paths: []
