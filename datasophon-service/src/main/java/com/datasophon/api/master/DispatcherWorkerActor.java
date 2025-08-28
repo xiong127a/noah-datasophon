@@ -21,22 +21,23 @@ package com.datasophon.api.master;
 
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
-import cn.hutool.core.util.ObjectUtil;
+
 import com.datasophon.api.master.handler.host.CheckWorkerMd5Handler;
 import com.datasophon.api.master.handler.host.DecompressWorkerHandler;
 import com.datasophon.api.master.handler.host.DispatcherWorkerHandlerChain;
 import com.datasophon.api.master.handler.host.StartWorkerHandler;
 import com.datasophon.api.master.handler.host.UploadWorkerHandler;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.utils.MinaUtils;
+import com.datasophon.api.service.SshPluginAdapterService;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.model.HostInfo;
-import org.apache.sshd.client.session.ClientSession;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Optional;
 
-import java.util.Objects;
+
 
 public class DispatcherWorkerActor extends AbstractActor {
 
@@ -53,20 +54,39 @@ public class DispatcherWorkerActor extends AbstractActor {
         return ReceiveBuilder.create()
                 .match(DispatcherHostAgentCommand.class, command -> {
                     HostInfo hostInfo = command.getHostInfo();
-                    logger.info("start dispatcher host agent :{}", hostInfo.getIp());
+                    logger.info("【分发Worker Actor】开始分发主机代理: {}", hostInfo.getIp());
+                    
                     hostInfo.setMessage(
                             MessageResolverUtils.getMessage(
                                     "distributed.host.management.agent.installation.package"));
-                    ClientSession session = MinaUtils.openConnectionWithPassword(hostInfo);
-                    DispatcherWorkerHandlerChain handlerChain = new DispatcherWorkerHandlerChain();
-                    handlerChain.addHandler(new UploadWorkerHandler());
-                    handlerChain.addHandler(new CheckWorkerMd5Handler());
-                    handlerChain.addHandler(new DecompressWorkerHandler());
-                    handlerChain.addHandler(
-                            new StartWorkerHandler(command.getClusterId(), command.getClusterFrame()));
-                    handlerChain.handle(session, hostInfo);
-                    if (ObjectUtil.isNotEmpty(session)) {
-                        Objects.requireNonNull(session).close();
+                    
+                    try {
+                        // 通过SSH插件适配器验证连接
+                        SshPluginAdapterService sshAdapter = SpringUtil.getBean(SshPluginAdapterService.class);
+                        boolean connectionValid = sshAdapter.isConnectionValid(hostInfo);
+                        
+                        if (!connectionValid) {
+                            logger.error("【分发Worker Actor】SSH连接验证失败，无法分发代理: {}", hostInfo.getIp());
+                            hostInfo.setErrorMessage("SSH连接失败，无法分发代理");
+                            return;
+                        }
+                        
+                        // 创建处理链，SSH连接由各个Handler内部通过插件适配器管理
+                        DispatcherWorkerHandlerChain handlerChain = new DispatcherWorkerHandlerChain();
+                        handlerChain.addHandler(new UploadWorkerHandler());
+                        handlerChain.addHandler(new CheckWorkerMd5Handler());
+                        handlerChain.addHandler(new DecompressWorkerHandler());
+                        handlerChain.addHandler(
+                                new StartWorkerHandler(command.getClusterId(), command.getClusterFrame()));
+                        
+                        // 执行处理链，SSH连接由插件适配器统一管理
+                        handlerChain.handle(hostInfo);
+                        
+                        logger.info("【分发Worker Actor】主机代理分发完成: {}", hostInfo.getIp());
+                        
+                    } catch (Exception e) {
+                        logger.error("【分发Worker Actor】主机代理分发异常: {} -> {}", hostInfo.getIp(), e.getMessage(), e);
+                        hostInfo.setErrorMessage("代理分发异常: " + e.getMessage());
                     }
                 })
                 .matchAny(this::unhandled)

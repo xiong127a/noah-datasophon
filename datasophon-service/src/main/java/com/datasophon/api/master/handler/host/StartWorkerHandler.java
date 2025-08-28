@@ -21,19 +21,19 @@ import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.ConfigBean;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.utils.MinaUtils;
+
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.HostInfo;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.sshd.client.session.ClientSession;
+import com.datasophon.api.service.SshPluginAdapterService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.time.LocalDateTime;
-import java.util.Date;
+
 
 public class StartWorkerHandler implements DispatcherWorkerHandler {
 
@@ -51,19 +51,23 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
     }
 
     @Override
-    public boolean handle(ClientSession session, HostInfo hostInfo) throws UnknownHostException {
-        ConfigBean configBean = SpringUtil.getBean(ConfigBean.class);
-        String installPath = Constants.INSTALL_PATH;
-        String localHostName = InetAddress.getLocalHost().getHostName();
+    public boolean handle(HostInfo hostInfo) throws UnknownHostException {
+        try {
+            ConfigBean configBean = SpringUtil.getBean(ConfigBean.class);
+            SshPluginAdapterService sshAdapter = SpringUtil.getBean(SshPluginAdapterService.class);
+            String installPath = Constants.INSTALL_PATH;
+            String localHostName = InetAddress.getLocalHost().getHostName();
 
-        // 检测Linux发行版
-        String distroInfo = MinaUtils.detectLinuxDistro(session);
-        logger.info("主机 {} 的Linux发行版: {}", hostInfo.getIp(), distroInfo);
+            logger.info("【StartWorker处理器】开始启动Worker: {}", hostInfo.getIp());
 
-        // 获取系统ID
-        String osId = MinaUtils
-                .execCmdWithResult(session, "cat /etc/os-release | grep -E '^ID=' | cut -d'=' -f2 | tr -d '\"'").trim();
-        logger.info("系统ID: {}", osId);
+            // 检测Linux发行版
+            String distroInfo = sshAdapter.detectLinuxDistro(hostInfo);
+            logger.info("【StartWorker处理器】主机 {} 的Linux发行版: {}", hostInfo.getIp(), distroInfo);
+
+            // 获取系统ID
+            String osId = sshAdapter.executeCommand(hostInfo, 
+                    "cat /etc/os-release | grep -E '^ID=' | cut -d'=' -f2 | tr -d '\"'").trim();
+            logger.info("【StartWorker处理器】系统ID: {}", osId);
 
         // 确定服务脚本路径
         String serviceDir = "/etc/rc.d/init.d";
@@ -78,19 +82,20 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
         }
         logger.info("使用服务目录: {}, 使用systemd: {}", serviceDir, useSystemd);
 
-        String updateCommonPropertiesResult = MinaUtils.execCmdWithResult(session,
-                Constants.UPDATE_COMMON_CMD +
-                        localHostName +
-                        Constants.SPACE +
-                        configBean.getServerPort() +
-                        Constants.SPACE +
-                        this.clusterFrame +
-                        Constants.SPACE +
-                        this.clusterId +
-                        Constants.SPACE +
-                        Constants.INSTALL_PATH +
-                        Constants.SPACE +
-                        hostInfo.getIp());
+            String updateCommand = Constants.UPDATE_COMMON_CMD +
+                    localHostName +
+                    Constants.SPACE +
+                    configBean.getServerPort() +
+                    Constants.SPACE +
+                    this.clusterFrame +
+                    Constants.SPACE +
+                    this.clusterId +
+                    Constants.SPACE +
+                    Constants.INSTALL_PATH +
+                    Constants.SPACE +
+                    hostInfo.getIp();
+            
+            String updateCommonPropertiesResult = sshAdapter.executeCommand(hostInfo, updateCommand);
         if (StringUtils.isBlank(updateCommonPropertiesResult) || "failed".equals(updateCommonPropertiesResult)) {
             logger.error("common.properties update failed");
             hostInfo.setErrMsg("common.properties update failed");
@@ -99,102 +104,106 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
         } else {
             logger.info("准备安装和启动Worker服务: {}", hostInfo.getIp());
 
-            // Initialize environment
-            // MinaUtils.safeExecCommand(session, "ulimit -n 102400");
-            MinaUtils.safeExecCommand(session, "ulimit -n 65535");
-            MinaUtils.safeExecCommand(session, "sysctl -w vm.max_map_count=2000000");
+            // 初始化环境
+            logger.info("【StartWorker处理器】初始化系统环境");
+            sshAdapter.safeExecuteCommand(hostInfo, "ulimit -n 65535");
+            sshAdapter.safeExecuteCommand(hostInfo, "sysctl -w vm.max_map_count=2000000");
 
-            // 设置文件数量限制
-
-            // Set startup and self start
-            logger.info("配置Worker服务自启动");
+            // 配置Worker服务自启动
+            logger.info("【StartWorker处理器】配置Worker服务自启动");
 
             // 使用安全的命令执行方法，自动适应不同的Linux发行版
             boolean success = true;
             String result;
 
             // 1. 检查并创建服务目录（如果需要）
-            MinaUtils.safeExecCommand(session, "sudo mkdir -p " + serviceDir);
+            sshAdapter.safeExecuteCommand(hostInfo, "sudo mkdir -p " + serviceDir);
 
             // 2. 复制服务脚本
-            result = MinaUtils.safeExecCommand(session,
+            result = sshAdapter.safeExecuteCommand(hostInfo,
                     "\\cp " + installPath + "/datasophon-worker/script/datasophon-worker " + serviceDir + "/");
             success &= (result != null && !result.startsWith("ERROR:"));
 
             // 3. 设置执行权限
-            result = MinaUtils.safeExecCommand(session, "chmod +x " + serviceDir + "/datasophon-worker");
+            result = sshAdapter.safeExecuteCommand(hostInfo, "chmod +x " + serviceDir + "/datasophon-worker");
             success &= (result != null && !result.startsWith("ERROR:"));
 
             // 4. 根据系统类型配置服务
             if (useSystemd) {
-                logger.info("使用systemd配置服务");
-                boolean createResult = MinaUtils.createSystemdServiceForDebian(session,
+                logger.info("【StartWorker处理器】使用systemd配置服务");
+                boolean createResult = sshAdapter.createSystemdServiceForDebian(hostInfo,
                         serviceDir + "/datasophon-worker", installPath);
-                logger.info("systemd服务文件创建结果: {}", createResult ? "成功" : "失败");
+                logger.info("【StartWorker处理器】systemd服务文件创建结果: {}", createResult ? "成功" : "失败");
 
                 if (createResult) {
                     // 如果创建成功，使用systemctl管理服务
-                    MinaUtils.safeExecCommand(session, "systemctl daemon-reload");
-                    result = MinaUtils.safeExecCommand(session, "systemctl enable datasophon-worker");
+                    sshAdapter.safeExecuteCommand(hostInfo, "systemctl daemon-reload");
+                    result = sshAdapter.safeExecuteCommand(hostInfo, "systemctl enable datasophon-worker");
                 } else {
                     // 回退到传统方式
                     if ("kylin".equals(osId)) {
-                        result = MinaUtils.safeExecCommand(session, "chkconfig --add datasophon-worker");
+                        result = sshAdapter.safeExecuteCommand(hostInfo, "chkconfig --add datasophon-worker");
                     } else {
-                        result = MinaUtils.safeExecCommand(session, "update-rc.d datasophon-worker defaults");
+                        result = sshAdapter.safeExecuteCommand(hostInfo, "update-rc.d datasophon-worker defaults");
                     }
                 }
             } else {
                 // CentOS使用chkconfig
-                result = MinaUtils.safeExecCommand(session, "chkconfig --add datasophon-worker");
+                result = sshAdapter.safeExecuteCommand(hostInfo, "chkconfig --add datasophon-worker");
             }
             success &= (result != null && !result.startsWith("ERROR:"));
 
             // 6. 安装环境变量脚本
-            result = MinaUtils.safeExecCommand(session,
+            result = sshAdapter.safeExecuteCommand(hostInfo,
                     "\\cp " + installPath + "/datasophon-worker/script/datasophon-env.sh /etc/profile.d/");
             success &= (result != null && !result.startsWith("ERROR:"));
 
             // 7. 加载环境变量
-            result = MinaUtils.safeExecCommand(session, "source /etc/profile.d/datasophon-env.sh");
+            result = sshAdapter.safeExecuteCommand(hostInfo, "source /etc/profile.d/datasophon-env.sh");
             success &= (result != null && !result.startsWith("ERROR:"));
 
             hostInfo.setMessage(MessageResolverUtils.getMessage("start.host.management.agent"));
 
             // 8. 启动服务
-            logger.info("启动Worker服务: {}", hostInfo.getIp());
+            logger.info("【StartWorker处理器】启动Worker服务: {}", hostInfo.getIp());
             if (useSystemd) {
-                MinaUtils.safeExecCommand(session, "systemctl daemon-reload");
+                sshAdapter.safeExecuteCommand(hostInfo, "systemctl daemon-reload");
                 // 使用restart替代start命令启动
-                result = MinaUtils.safeExecCommand(session,
+                result = sshAdapter.safeExecuteCommand(hostInfo,
                         installPath + "/datasophon-worker/bin/datasophon-worker.sh restart worker");
                 // 如果直接调用成功，再通过systemd重启确保服务被正确管理
                 if (result != null && !result.startsWith("ERROR:")) {
-                    result = MinaUtils.safeExecCommand(session, "systemctl restart datasophon-worker");
+                    result = sshAdapter.safeExecuteCommand(hostInfo, "systemctl restart datasophon-worker");
                 }
             } else {
-                result = MinaUtils.safeExecCommand(session, "service datasophon-worker restart");
+                result = sshAdapter.safeExecuteCommand(hostInfo, "service datasophon-worker restart");
             }
             success &= (result != null && !result.startsWith("ERROR:"));
 
             if (!success) {
-                logger.warn("Worker服务安装或启动过程中出现警告，但将继续处理");
+                logger.warn("【StartWorker处理器】Worker服务安装或启动过程中出现警告，但将继续处理");
             }
 
             // 9. 验证服务状态
-            logger.info("验证服务状态...");
+            logger.info("【StartWorker处理器】验证服务状态...");
             if (useSystemd) {
-                result = MinaUtils.safeExecCommand(session, "systemctl status datasophon-worker");
+                result = sshAdapter.safeExecuteCommand(hostInfo, "systemctl status datasophon-worker");
             } else {
-                result = MinaUtils.safeExecCommand(session, "service datasophon-worker status");
+                result = sshAdapter.safeExecuteCommand(hostInfo, "service datasophon-worker status");
             }
-            logger.info("服务状态: {}", result);
+            logger.info("【StartWorker处理器】服务状态: {}", result);
 
             hostInfo.setProgress(75);
             hostInfo.setCreateTime(LocalDateTime.now());
-        }
+            }
 
-        logger.info("end dispatcher host agent :{}", hostInfo.getIp());
-        return true;
+            logger.info("【StartWorker处理器】完成主机代理分发: {}", hostInfo.getIp());
+            return true;
+            
+        } catch (Exception e) {
+            logger.error("【StartWorker处理器】处理异常: {} -> {}", hostInfo.getIp(), e.getMessage(), e);
+            hostInfo.setErrorMessage("StartWorker处理异常: " + e.getMessage());
+            return false;
+        }
     }
 }

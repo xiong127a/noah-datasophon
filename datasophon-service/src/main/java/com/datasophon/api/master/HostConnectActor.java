@@ -19,11 +19,11 @@
 
 package com.datasophon.api.master;
 
-import cn.hutool.core.util.ObjectUtil;
+
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.utils.MinaUtils;
+import com.datasophon.api.service.SshPluginAdapterService;
 import com.datasophon.common.command.HostCheckCommand;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
@@ -32,7 +32,7 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.mybatisflex.core.query.QueryChain;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
-import org.apache.sshd.client.session.ClientSession;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import java.util.Optional;
@@ -113,20 +113,33 @@ public class HostConnectActor extends AbstractActor {
                 }
             } else {
                 // PVM模式：进行SSH连接测试
-                logger.info("PVM mode detected for host: {}, performing SSH check", hostInfo.getHostname());
-                ClientSession session = MinaUtils.openConnection(hostInfo);
-                if (ObjectUtil.isNotNull(session)) {
-                    hostInfo.setCheckResult(
-                            new CheckResult(
-                                    Status.CHECK_HOST_SUCCESS.getCode(),
-                                    Status.CHECK_HOST_SUCCESS.getMsg()));
-                } else {
+                logger.info("PVM模式检测到主机: {}, 执行SSH检查", hostInfo.getHostname());
+                
+                try {
+                    // 通过SSH插件适配器测试连接
+                    SshPluginAdapterService sshAdapter = SpringUtil.getBean(SshPluginAdapterService.class);
+                    boolean connectionSuccess = sshAdapter.isConnectionValid(hostInfo);
+                    
+                    if (connectionSuccess) {
+                        hostInfo.setCheckResult(
+                                new CheckResult(
+                                        Status.CHECK_HOST_SUCCESS.getCode(),
+                                        Status.CHECK_HOST_SUCCESS.getMsg()));
+                        logger.info("【主机连接Actor】SSH连接测试成功: {}", hostInfo.getHostname());
+                    } else {
+                        hostInfo.setCheckResult(
+                                new CheckResult(
+                                        Status.CONNECTION_FAILED.getCode(),
+                                        Status.CONNECTION_FAILED.getMsg()));
+                        logger.warn("【主机连接Actor】SSH连接测试失败: {}", hostInfo.getHostname());
+                    }
+                } catch (Exception e) {
+                    logger.error("【主机连接Actor】SSH连接测试异常: {} -> {}", hostInfo.getHostname(), e.getMessage(), e);
                     hostInfo.setCheckResult(
                             new CheckResult(
                                     Status.CONNECTION_FAILED.getCode(),
-                                    Status.CONNECTION_FAILED.getMsg()));
+                                    "SSH连接异常: " + e.getMessage()));
                 }
-                MinaUtils.closeConnection(session);
             }
 
             logger.info("end host check: {}", hostInfo.getHostname());

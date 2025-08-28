@@ -18,7 +18,7 @@
 package com.datasophon.api.master.handler.host;
 
 import com.datasophon.common.model.HostInfo;
-import org.apache.sshd.client.session.ClientSession;
+
 
 import java.net.UnknownHostException;
 import java.util.ArrayList;
@@ -33,9 +33,16 @@ public class DispatcherWorkerHandlerChain {
         this.handlers.add(handler);
     }
 
-    public void handle(ClientSession session, HostInfo hostInfo) throws UnknownHostException {
+    /**
+     * 执行处理链
+     * SSH连接通过HostInfo中的连接信息和SSH插件适配器来管理
+     * 
+     * @param hostInfo 主机信息（包含SSH连接配置）
+     * @throws UnknownHostException 主机解析异常
+     */
+    public void handle(HostInfo hostInfo) throws UnknownHostException {
         for (DispatcherWorkerHandler handler : handlers) {
-            boolean handled = handler.handle(session, hostInfo);
+            boolean handled = handler.handle(hostInfo);
             if (!handled) {
                 break;
             }

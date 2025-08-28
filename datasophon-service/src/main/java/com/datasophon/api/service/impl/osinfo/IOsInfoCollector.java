@@ -2,7 +2,7 @@ package com.datasophon.api.service.impl.osinfo;
 
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.OsInfo;
-import org.apache.sshd.client.session.ClientSession;
+
 
 /**
  * 操作系统信息收集器接口
@@ -20,21 +20,20 @@ public interface IOsInfoCollector {
     /**
      * 收集操作系统信息
      *
-     * @param hostInfo     主机信息
-     * @param session      SSH会话
+     * @param hostInfo     主机信息（包含SSH连接信息）
      * @param osInfo       操作系统信息对象（输出参数）
      * @param cacheUpdater 缓存更新函数
      */
-    void collectOsInfo(HostInfo hostInfo, ClientSession session, OsInfo osInfo, CacheUpdater cacheUpdater);
+    void collectOsInfo(HostInfo hostInfo, OsInfo osInfo, CacheUpdater cacheUpdater);
 
     /**
      * 收集硬件信息（CPU、内存、存储等）
      * 
+     * @param hostInfo     主机信息（包含SSH连接信息）
      * @param osInfo       操作系统信息对象（将被更新）
-     * @param session      SSH会话
      * @param cacheUpdater 缓存更新函数
      */
-    void collectHardwareInfo(OsInfo osInfo, ClientSession session, CacheUpdater cacheUpdater);
+    void collectHardwareInfo(HostInfo hostInfo, OsInfo osInfo, CacheUpdater cacheUpdater);
 
     /**
      * 收集CPU信息
