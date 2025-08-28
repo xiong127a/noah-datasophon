@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.DefaultPluginManager;
 import org.pf4j.PluginWrapper;
+
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -38,16 +39,91 @@ public class PluginManager {
     /**
      * 插件管理器是否已初始化
      */
+    @Getter
     private volatile boolean initialized = false;
+    
+    /**
+     * 检查插件管理器是否已初始化
+     */
+
     
     /**
      * 延迟加载配置，通过构造函数或setter注入
      */
     private boolean lazyLoading = false;
     
+    /**
+     * 插件路径列表（可通过配置注入）
+     */
+    private List<String> pluginScanPaths;
+    
     public PluginManager() {
-        // 初始化PF4J插件管理器
-        this.pf4jManager = new DefaultPluginManager();
+        // 使用默认配置初始化
+        this.pluginScanPaths = getDefaultPluginScanPaths();
+        this.pf4jManager = createConfiguredPluginManager();
+    }
+    
+    /**
+     * 创建配置好的插件管理器
+     */
+    private DefaultPluginManager createConfiguredPluginManager() {
+        // 创建插件管理器实例
+        DefaultPluginManager manager = new DefaultPluginManager();
+        
+        // 添加插件扫描路径
+        List<String> pluginPaths = getPluginScanPaths();
+        for (String pluginPath : pluginPaths) {
+            Path path = Paths.get(pluginPath);
+            if (path.toFile().exists()) {
+                log.info("添加插件扫描路径: {}", pluginPath);
+                // 对于目录，添加到插件路径
+                if (path.toFile().isDirectory()) {
+                    manager.getPluginsRoots().add(path);
+                }
+            } else {
+                log.debug("插件路径不存在，跳过: {}", pluginPath);
+            }
+        }
+        
+        return manager;
+    }
+    
+    /**
+     * 获取插件扫描路径列表
+     */
+    private List<String> getPluginScanPaths() {
+        return pluginScanPaths != null ? pluginScanPaths : getDefaultPluginScanPaths();
+    }
+    
+    /**
+     * 获取默认插件扫描路径列表
+     */
+    private List<String> getDefaultPluginScanPaths() {
+        List<String> paths = new ArrayList<>();
+        
+        // 开发模式：扫描编译后的插件JAR
+        paths.add("datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target");
+        paths.add("datasophon-plugins/datasophon-plugins-impl/core-plugins/cpu-checker-plugin/target");
+        
+        // 生产模式：扫描plugins目录
+        paths.add("plugins");
+        paths.add("plugins/core");
+        paths.add("plugins/custom");
+        
+        // 环境变量配置的路径
+        String customPluginPath = System.getProperty("datasophon.plugins.path");
+        if (customPluginPath != null && !customPluginPath.trim().isEmpty()) {
+            paths.add(customPluginPath.trim());
+        }
+        
+        return paths;
+    }
+    
+    /**
+     * 设置插件扫描路径（用于配置注入）
+     */
+    public void setPluginScanPaths(List<String> pluginScanPaths) {
+        this.pluginScanPaths = pluginScanPaths;
     }
     
     /**
@@ -372,9 +448,7 @@ public class PluginManager {
     /**
      * 检查插件管理器是否已初始化
      */
-    public boolean isInitialized() {
-        return initialized;
-    }
+
     
     /**
      * 检查是否启用延迟加载

@@ -4,6 +4,9 @@ import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * 插件配置属性类
  * 映射application.yml中的datasophon.plugins配置
@@ -21,6 +24,16 @@ public class PluginProperties {
     private String directory = "plugins";
     
     /**
+     * 插件扫描路径列表
+     */
+    private List<String> scanPaths = new ArrayList<>();
+    
+    /**
+     * 开发模式配置
+     */
+    private Development development = new Development();
+    
+    /**
      * 插件加载配置
      */
     private Loading loading = new Loading();
@@ -29,6 +42,26 @@ public class PluginProperties {
      * SSH连接池配置
      */
     private SshConnectionPool sshConnectionPool = new SshConnectionPool();
+    
+    /**
+     * 开发模式配置
+     */
+    @Data
+    public static class Development {
+        
+        /**
+         * 是否启用开发模式
+         */
+        private boolean enabled = true;
+        
+        /**
+         * 开发模式下的插件路径
+         */
+        private List<String> pluginPaths = List.of(
+                "datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target",
+                "datasophon-plugins/datasophon-plugins-impl/core-plugins/cpu-checker-plugin/target"
+        );
+    }
     
     /**
      * 插件加载配置

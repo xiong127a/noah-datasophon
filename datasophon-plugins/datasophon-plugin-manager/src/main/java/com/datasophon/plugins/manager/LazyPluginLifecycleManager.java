@@ -18,6 +18,7 @@
 package com.datasophon.plugins.manager;
 
 import com.datasophon.plugins.api.HostCheckerPlugin;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
@@ -99,12 +100,15 @@ public class LazyPluginLifecycleManager {
             // 记录使用
             recordPluginUsage(pluginId);
             
-            // 尝试从已加载插件中获取
+            // 确保插件管理器已初始化
+            ensurePluginManagerInitialized();
+            
+            // 从PluginManager的活跃插件中获取
             HostCheckerPlugin plugin = pluginManager.getActivePlugins().get(pluginId);
             
             if (plugin == null) {
-                // 插件未加载，进行延迟加载
-                plugin = loadPluginOnDemand(pluginId);
+                log.warn("插件未找到或未加载: pluginId={}，可用插件: {}", 
+                        pluginId, pluginManager.getActivePlugins().keySet());
             }
             
             return plugin;
@@ -189,58 +193,16 @@ public class LazyPluginLifecycleManager {
     // ================== 私有方法 ==================
     
     /**
-     * 按需加载插件
+     * 确保插件管理器已初始化
      */
-    private HostCheckerPlugin loadPluginOnDemand(String pluginId) {
-        try {
-            log.info("按需加载插件: {}", pluginId);
-            
-            // 这里需要根据pluginId动态加载对应的插件
-            // 实际实现会根据插件配置和类路径进行加载
-            HostCheckerPlugin plugin = createPluginInstance(pluginId);
-            
-            if (plugin != null) {
-                plugin.initialize();
-                pluginManager.getActivePlugins().put(pluginId, plugin);
-                
-                log.info("插件加载成功: {}", pluginId);
-            }
-            
-            return plugin;
-            
-        } catch (Exception e) {
-            log.error("按需加载插件失败: pluginId={}, 错误={}", pluginId, e.getMessage(), e);
-            return null;
+    private void ensurePluginManagerInitialized() {
+        if (!pluginManager.isInitialized()) {
+            log.info("插件管理器尚未初始化，开始初始化...");
+            pluginManager.initializePlugins();
         }
     }
     
-    /**
-     * 创建插件实例（简化实现）
-     */
-    private HostCheckerPlugin createPluginInstance(String pluginId) {
-        // 这里应该根据插件ID动态创建对应的插件实例
-        // 实际项目中会使用反射、Spring容器或插件框架来创建
-        
-        try {
-            switch (pluginId) {
-                case "ssh-connectivity-check":
-                    return (HostCheckerPlugin) Class.forName(
-                            "com.datasophon.plugins.ssh.SshConnectivityCheckPlugin").getDeclaredConstructor().newInstance();
-                case "os-info-collection":
-                    return (HostCheckerPlugin) Class.forName(
-                            "com.datasophon.plugins.os.OsInfoCollectionPlugin").getDeclaredConstructor().newInstance();
-                case "hardware-info-collection":
-                    return (HostCheckerPlugin) Class.forName(
-                            "com.datasophon.plugins.hardware.HardwareInfoCollectionPlugin").getDeclaredConstructor().newInstance();
-                default:
-                    log.warn("未知的插件ID: {}", pluginId);
-                    return null;
-            }
-        } catch (Exception e) {
-            log.error("创建插件实例失败: pluginId={}, 错误={}", pluginId, e.getMessage(), e);
-            return null;
-        }
-    }
+
     
     /**
      * 记录插件使用
@@ -321,6 +283,7 @@ public class LazyPluginLifecycleManager {
     /**
      * 插件使用记录
      */
+    @Getter
     private static class PluginUsageRecord {
         private volatile long lastUsedTime;
         private volatile int usageCount;
@@ -334,15 +297,7 @@ public class LazyPluginLifecycleManager {
             this.lastUsedTime = System.currentTimeMillis();
             this.usageCount++;
         }
-        
-        public long getLastUsedTime() {
-            return lastUsedTime;
-        }
-        
-        public int getUsageCount() {
-            return usageCount;
-        }
-        
+
         public LocalDateTime getLastUsed() {
             return LocalDateTime.ofInstant(
                     java.time.Instant.ofEpochMilli(lastUsedTime),
