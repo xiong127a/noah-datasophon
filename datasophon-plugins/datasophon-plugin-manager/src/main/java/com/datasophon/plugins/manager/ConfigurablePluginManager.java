@@ -38,6 +38,25 @@ public class ConfigurablePluginManager extends DefaultPluginManager {
     private List<Path> customPluginRoots;
     
     /**
+     * 无参构造函数
+     */
+    public ConfigurablePluginManager() {
+        super();
+        log.debug("ConfigurablePluginManager 使用默认构造函数初始化");
+    }
+    
+    /**
+     * 带路径参数的构造函数
+     * 使用此构造函数可以避免PF4J内部路径缓存问题
+     */
+    public ConfigurablePluginManager(List<Path> pluginRoots) {
+        super(pluginRoots);
+        log.info("ConfigurablePluginManager 使用指定路径初始化: {}", pluginRoots);
+        // 复制一份路径作为自定义根目录
+        this.customPluginRoots = new ArrayList<>(pluginRoots);
+    }
+    
+    /**
      * 确保customPluginRoots已初始化
      */
     private void ensureCustomPluginRootsInitialized() {
@@ -110,5 +129,25 @@ public class ConfigurablePluginManager extends DefaultPluginManager {
         ensureCustomPluginRootsInitialized();
         customPluginRoots.clear();
         log.debug("已清理所有自定义插件根目录");
+    }
+    
+    /**
+     * 强制刷新插件根目录缓存
+     * 在动态添加插件根目录后调用此方法，确保PF4J使用最新的根目录列表
+     */
+    public void refreshPluginRoots() {
+        ensureCustomPluginRootsInitialized();
+        log.info("刷新插件根目录缓存，当前自定义根目录数量: {}", customPluginRoots.size());
+        
+        // 强制重新获取插件根目录
+        List<Path> allRoots = getPluginsRoots();
+        log.info("刷新后的插件根目录: {}", allRoots);
+        
+        // 清空已加载的插件，强制重新扫描
+        // 注意：这会停止并卸载所有已加载的插件
+        stopPlugins();
+        unloadPlugins();
+        
+        log.info("插件根目录缓存已刷新，准备重新加载插件");
     }
 }

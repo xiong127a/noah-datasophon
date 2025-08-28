@@ -58,8 +58,8 @@ public class PluginManager {
     private List<String> pluginScanPaths;
     
     public PluginManager() {
-        // 创建可配置的插件管理器
-        this.pf4jManager = new ConfigurablePluginManager();
+        // 延迟初始化PF4J管理器，等收集完所有路径后再创建
+        this.pf4jManager = null;
         this.pluginScanPaths = new ArrayList<>();
     }
     
@@ -79,8 +79,8 @@ public class PluginManager {
     }
     
     private void configurePF4JManager() {
-        // 添加插件扫描路径
-        ConfigurablePluginManager configurableManager = (ConfigurablePluginManager) pf4jManager;
+        // 收集所有有效的插件路径
+        List<Path> allPluginPaths = new ArrayList<>();
         
         for (String pluginPath : pluginScanPaths) {
             Path path = Paths.get(pluginPath);
@@ -88,15 +88,22 @@ public class PluginManager {
                 log.info("添加插件扫描路径: {}", pluginPath);
                 // 对于目录，添加到插件路径
                 if (path.toFile().isDirectory()) {
-                    configurableManager.addPluginRoot(path);
+                    allPluginPaths.add(path);
                 }
             } else {
                 log.debug("插件路径不存在，跳过: {}", pluginPath);
             }
         }
         
-        log.info("PF4J插件管理器配置完成，扫描路径数量: {}, 自定义根目录数量: {}", 
-                pluginScanPaths.size(), configurableManager.getCustomPluginRootsCount());
+        // 使用收集到的路径创建PF4J管理器
+        if (this.pf4jManager == null) {
+            log.info("创建ConfigurablePluginManager，插件路径: {}", allPluginPaths);
+            this.pf4jManager = new ConfigurablePluginManager(allPluginPaths);
+        } else {
+            log.warn("PF4J管理器已存在，跳过重新创建");
+        }
+        
+        log.info("PF4J插件管理器配置完成，扫描路径数量: {}", pluginScanPaths.size());
     }
     
 
@@ -141,6 +148,17 @@ public class PluginManager {
         }
         
         log.info("开始初始化插件管理器...");
+        
+        // 确保PF4J管理器已创建
+        if (pf4jManager == null) {
+            log.info("PF4J管理器未初始化，先进行配置...");
+            configurePF4JManager();
+        }
+        
+        if (pf4jManager == null) {
+            log.error("无法创建PF4J管理器，初始化失败");
+            return;
+        }
         
         try {
             // 加载插件

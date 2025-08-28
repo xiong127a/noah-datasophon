@@ -2,6 +2,9 @@
 <!--
   DataSophon插件统一打包配置
   用于生成PF4J兼容的插件JAR包
+  
+  修改记录：
+  - 2025-08-28: 改为Fat JAR方式，解决插件类加载器依赖问题
 -->
 <assembly xmlns="http://maven.apache.org/SCHEMA/ASSEMBLY/2.0.0"
           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
@@ -30,18 +33,30 @@
         </fileSet>
     </fileSets>
 
-    <!-- 包含依赖JAR（排除provided和test范围） -->
+    <!-- 将依赖直接解压到插件JAR根目录（Fat JAR方式） -->
     <dependencySets>
         <dependencySet>
-            <outputDirectory>lib</outputDirectory>
+            <outputDirectory>/</outputDirectory>
             <useProjectArtifact>false</useProjectArtifact>
             <scope>runtime</scope>
+            <unpack>true</unpack>
             <excludes>
                 <exclude>com.datasophon:datasophon-plugin-api</exclude>
                 <exclude>org.pf4j:pf4j</exclude>
                 <exclude>org.slf4j:slf4j-api</exclude>
                 <exclude>org.projectlombok:lombok</exclude>
             </excludes>
+            <unpackOptions>
+                <excludes>
+                    <exclude>META-INF/MANIFEST.MF</exclude>
+                    <exclude>META-INF/*.SF</exclude>
+                    <exclude>META-INF/*.DSA</exclude>
+                    <exclude>META-INF/*.RSA</exclude>
+                    <exclude>META-INF/LICENSE*</exclude>
+                    <exclude>META-INF/NOTICE*</exclude>
+                    <exclude>META-INF/DEPENDENCIES*</exclude>
+                </excludes>
+            </unpackOptions>
         </dependencySet>
     </dependencySets>
 
