@@ -25,6 +25,18 @@ datasophon:
     # 插件目录
     directory: ${user.dir}/plugins
     
+    # 开发模式配置
+    development:
+      # 是否启用开发模式（开发时设为true，生产时设为false）
+      enabled: true
+      # 开发模式下的插件路径（编译后的JAR位置）
+      plugin-paths:
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/cpu-checker-plugin/target
+    
+    # 额外的插件扫描路径（可选）
+    scan-paths: []
+    
     # 插件加载配置
     loading:
       enabled: true

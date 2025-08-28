@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 public class PluginManager {
     
     @Getter
-    private final org.pf4j.PluginManager pf4jManager;
+    private org.pf4j.PluginManager pf4jManager;
     
     @Getter
     private final Map<String, HostCheckerPlugin> activePlugins = new ConcurrentHashMap<>();
@@ -53,71 +53,51 @@ public class PluginManager {
     private boolean lazyLoading = false;
     
     /**
-     * 插件路径列表（可通过配置注入）
+     * 插件路径列表（通过配置注入）
      */
     private List<String> pluginScanPaths;
     
     public PluginManager() {
-        // 使用默认配置初始化
-        this.pluginScanPaths = getDefaultPluginScanPaths();
-        this.pf4jManager = createConfiguredPluginManager();
+        // 默认构造函数，插件路径将通过setter注入
+        this.pluginScanPaths = new ArrayList<>();
     }
     
     /**
-     * 创建配置好的插件管理器
+     * 初始化PF4J插件管理器（在配置注入后调用）
      */
-    private DefaultPluginManager createConfiguredPluginManager() {
-        // 创建插件管理器实例
-        DefaultPluginManager manager = new DefaultPluginManager();
-        
+    public void initializePF4J() {
+        if (this.pf4jManager == null) {
+            throw new IllegalStateException("PF4J插件管理器尚未初始化，请先调用createConfiguredPluginManager");
+        }
+    }
+    
+    /**
+     * 创建和配置PF4J插件管理器（由配置类调用）
+     */
+    public void createConfiguredPluginManager() {
+        this.pf4jManager = new DefaultPluginManager();
+        configurePF4JManager();
+    }
+    
+    private void configurePF4JManager() {
         // 添加插件扫描路径
-        List<String> pluginPaths = getPluginScanPaths();
-        for (String pluginPath : pluginPaths) {
+        for (String pluginPath : pluginScanPaths) {
             Path path = Paths.get(pluginPath);
             if (path.toFile().exists()) {
                 log.info("添加插件扫描路径: {}", pluginPath);
                 // 对于目录，添加到插件路径
                 if (path.toFile().isDirectory()) {
-                    manager.getPluginsRoots().add(path);
+                    ((DefaultPluginManager) pf4jManager).getPluginsRoots().add(path);
                 }
             } else {
                 log.debug("插件路径不存在，跳过: {}", pluginPath);
             }
         }
         
-        return manager;
+        log.info("PF4J插件管理器配置完成，扫描路径数量: {}", pluginScanPaths.size());
     }
     
-    /**
-     * 获取插件扫描路径列表
-     */
-    private List<String> getPluginScanPaths() {
-        return pluginScanPaths != null ? pluginScanPaths : getDefaultPluginScanPaths();
-    }
-    
-    /**
-     * 获取默认插件扫描路径列表
-     */
-    private List<String> getDefaultPluginScanPaths() {
-        List<String> paths = new ArrayList<>();
-        
-        // 开发模式：扫描编译后的插件JAR
-        paths.add("datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target");
-        paths.add("datasophon-plugins/datasophon-plugins-impl/core-plugins/cpu-checker-plugin/target");
-        
-        // 生产模式：扫描plugins目录
-        paths.add("plugins");
-        paths.add("plugins/core");
-        paths.add("plugins/custom");
-        
-        // 环境变量配置的路径
-        String customPluginPath = System.getProperty("datasophon.plugins.path");
-        if (customPluginPath != null && !customPluginPath.trim().isEmpty()) {
-            paths.add(customPluginPath.trim());
-        }
-        
-        return paths;
-    }
+
     
     /**
      * 设置插件扫描路径（用于配置注入）

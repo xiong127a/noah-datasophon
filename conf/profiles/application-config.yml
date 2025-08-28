@@ -9,6 +9,13 @@ spring:
 # 可在此添加环境特定的配置
 # 例如：开发、测试、生产环境的差异化配置
 
+# 生产环境插件配置示例
+# datasophon:
+#   plugins:
+#     development:
+#       enabled: false  # 生产环境关闭开发模式
+#     directory: /opt/datasophon/plugins
+
 # 数据库配置（如需覆盖默认配置）
 # datasource:
 #   url: jdbc:mysql://localhost:3306/datasophon2
