@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1;
 
+import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.impl.HostValidationServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -37,7 +38,7 @@ import java.util.Map;
  * @date 2025-08-28
  */
 @RestController
-@RequestMapping("/ddh/api/v1/host-validation/monitor")
+@ApiVersion(path = "host-validation/monitor")
 @Slf4j
 public class HostValidationMonitorController {
     

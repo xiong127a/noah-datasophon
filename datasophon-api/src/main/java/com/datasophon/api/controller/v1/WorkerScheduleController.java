@@ -17,6 +17,7 @@
 
 package com.datasophon.api.controller.v1;
 
+import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.dto.Result;
 import com.datasophon.api.scheduler.WorkerScheduleService;
 import lombok.extern.slf4j.Slf4j;
@@ -48,7 +49,7 @@ import java.util.Map;
  * @date 2024-01-20
  */
 @RestController
-@RequestMapping("/ddh/api/v1/worker-schedule")
+@ApiVersion(path = "worker-schedule")
 @Slf4j
 public class WorkerScheduleController {
 
