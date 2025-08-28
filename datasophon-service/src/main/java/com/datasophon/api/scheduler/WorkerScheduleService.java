@@ -87,13 +87,27 @@ public class WorkerScheduleService {
                 return;
             }
             
+            // 只处理PVM模式的集群，Kubernetes集群不需要Worker检测
+            List<ClusterInfoEntity> pvmClusters = clusters.stream()
+                .filter(cluster -> cluster.getDepType() != null && cluster.getDepType().isPvm())
+                .toList();
+            
+            if (pvmClusters.isEmpty()) {
+                log.info("没有找到PVM集群，跳过Worker发现（共{}个Kubernetes集群）", 
+                        clusters.size());
+                return;
+            }
+            
+            log.info("开始处理{}个PVM集群的Worker发现任务（跳过{}个Kubernetes集群）", 
+                    pvmClusters.size(), clusters.size() - pvmClusters.size());
+            
             // 现代化并行处理 - 利用CompletableFuture提升性能
-            List<CompletableFuture<Void>> futures = clusters.stream()
+            List<CompletableFuture<Void>> futures = pvmClusters.stream()
                 .map(cluster -> CompletableFuture.runAsync(() -> {
                     try {
                         discoverClusterWorkers(cluster.getId());
                     } catch (Exception e) {
-                        log.error("集群{}Worker发现失败: {}", cluster.getClusterName(), e.getMessage());
+                        log.error("PVM集群{}Worker发现失败: {}", cluster.getClusterName(), e.getMessage());
                         // 单个集群失败不影响其他集群
                     }
                 }))
@@ -122,12 +136,31 @@ public class WorkerScheduleService {
         try {
             List<ClusterInfoEntity> clusters = clusterInfoService.list();
             
+            if (clusters.isEmpty()) {
+                log.debug("没有找到集群，跳过健康检查");
+                return;
+            }
+            
+            // 只对PVM模式的集群进行健康检查，Kubernetes集群不需要
+            List<ClusterInfoEntity> pvmClusters = clusters.stream()
+                .filter(cluster -> cluster.getDepType() != null && cluster.getDepType().isPvm())
+                .toList();
+            
+            if (pvmClusters.isEmpty()) {
+                log.debug("没有找到PVM集群，跳过Worker健康检查（共{}个Kubernetes集群）", 
+                        clusters.size());
+                return;
+            }
+            
+            log.debug("开始对{}个PVM集群执行Worker健康检查（跳过{}个Kubernetes集群）",
+                    pvmClusters.size(), clusters.size() - pvmClusters.size());
+            
             // 并行健康检查，提升效率
-            clusters.parallelStream().forEach(cluster -> {
+            pvmClusters.parallelStream().forEach(cluster -> {
                 try {
                     performClusterHealthCheck(cluster.getId());
                 } catch (Exception e) {
-                    log.warn("集群{}健康检查失败: {}", cluster.getClusterName(), e.getMessage());
+                    log.warn("PVM集群{}健康检查失败: {}", cluster.getClusterName(), e.getMessage());
                     // 健康检查失败不中断其他集群
                 }
             });
@@ -150,7 +183,18 @@ public class WorkerScheduleService {
         try {
             List<ClusterInfoEntity> clusters = clusterInfoService.list();
             
-            for (ClusterInfoEntity cluster : clusters) {
+            // 只监控PVM集群的关键服务，Kubernetes集群不需要
+            List<ClusterInfoEntity> pvmClusters = clusters.stream()
+                .filter(cluster -> cluster.getDepType() != null && cluster.getDepType().isPvm())
+                .toList();
+            
+            if (pvmClusters.isEmpty()) {
+                log.debug("没有找到PVM集群，跳过关键服务监控（共{}个Kubernetes集群）", 
+                        clusters.size());
+                return;
+            }
+            
+            for (ClusterInfoEntity cluster : pvmClusters) {
                 List<ClusterHostEntity> managedHosts = clusterHostService
                     .getHostListByClusterIdAndManaged(cluster.getId())
                     .stream()
@@ -211,6 +255,17 @@ public class WorkerScheduleService {
     public void triggerWorkerDiscovery(Long clusterId) {
         log.info("手动触发集群{}的Worker发现", clusterId);
         
+        // 检查集群类型，只允许PVM集群
+        ClusterInfoEntity cluster = clusterInfoService.getById(clusterId);
+        if (cluster == null) {
+            throw new RuntimeException("集群不存在: " + clusterId);
+        }
+        
+        if (cluster.getDepType() == null || !cluster.getDepType().isPvm()) {
+            log.warn("集群{}为Kubernetes模式，跳过Worker发现", cluster.getClusterName());
+            throw new RuntimeException("Kubernetes集群不支持Worker发现功能");
+        }
+        
         try {
             // 直接异步执行，不使用db-scheduler的一次性任务
             CompletableFuture.runAsync(() -> {
@@ -232,6 +287,17 @@ public class WorkerScheduleService {
      */
     public void triggerHealthCheck(Long clusterId) {
         log.info("手动触发集群{}的健康检查", clusterId);
+        
+        // 检查集群类型，只允许PVM集群
+        ClusterInfoEntity cluster = clusterInfoService.getById(clusterId);
+        if (cluster == null) {
+            throw new RuntimeException("集群不存在: " + clusterId);
+        }
+        
+        if (cluster.getDepType() == null || !cluster.getDepType().isPvm()) {
+            log.warn("集群{}为Kubernetes模式，跳过健康检查", cluster.getClusterName());
+            throw new RuntimeException("Kubernetes集群不支持Worker健康检查功能");
+        }
         
         try {
             // 直接异步执行健康检查
@@ -261,7 +327,13 @@ public class WorkerScheduleService {
             return;
         }
         
-        log.info("发现集群{}的Worker节点", cluster.getClusterName());
+        // 检查集群类型，只处理PVM集群
+        if (cluster.getDepType() == null || !cluster.getDepType().isPvm()) {
+            log.info("集群{}为Kubernetes模式，跳过Worker发现", cluster.getClusterName());
+            return;
+        }
+        
+        log.info("发现PVM集群{}的Worker节点", cluster.getClusterName());
         
         List<ClusterHostEntity> hosts = clusterHostService.getHostListByClusterIdAndManaged(clusterId);
         
