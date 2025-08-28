@@ -106,7 +106,7 @@ public class HostInfo implements Serializable {
     /**
      * 是否受管
      */
-    private Boolean managed;
+    private boolean managed;
     
     /**
      * 主机整体验证状态

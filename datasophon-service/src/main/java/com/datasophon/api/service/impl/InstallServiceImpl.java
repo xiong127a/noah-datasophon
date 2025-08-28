@@ -29,7 +29,6 @@ import com.datasophon.api.master.WorkerStartActor;
 import com.datasophon.api.converter.InstallStepConverter;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.InstallService;
-import com.datasophon.api.service.OsInfoService;
 import com.datasophon.api.service.HostValidationService;
 import com.datasophon.api.model.HostValidationTaskData;
 import com.datasophon.common.enums.InstallState;
@@ -54,8 +53,6 @@ import com.datasophon.common.exception.BusinessException;
 import com.datasophon.common.model.CheckResult;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.WorkerServiceMessage;
-import com.datasophon.common.model.hardware.GpuInfo;
-import com.datasophon.common.model.hardware.NetworkInfo;
 import com.datasophon.common.utils.HostUtils;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.PropertyUtils;
@@ -75,8 +72,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -93,10 +88,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallStepEntity> implements InstallService {
 
-    // 添加一个原子计数器，用于控制日志打印频率
-    private static final AtomicInteger logCounter = new AtomicInteger(0);
-    private static final int LOG_PRINT_INTERVAL = 10;
-
     // 依赖注入 - 使用构造器注入
     @Autowired
     private  ClusterInfoService clusterInfoService;
@@ -107,7 +98,6 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     @Autowired
     private  SshPluginAdapterService sshPluginAdapter;
 
-    private  OsInfoService osInfoService;
     @Autowired
     private  K8sToClusterHostConverter k8sToClusterHostConverter;
     @Autowired
@@ -353,498 +343,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
      * @param hostInfo 主机信息对象
      */
     private void processHostInfo(HostInfo hostInfo) {
-        // 确保错误信息字段不为null
-        if (hostInfo.getSshErrorMsg() == null) {
-            hostInfo.setSshErrorMsg("");
-        }
 
-        if (hostInfo.getErrorMessage() == null) {
-            hostInfo.setErrorMessage("");
-        }
-
-        if (hostInfo.getOsErrorMsg() == null) {
-            hostInfo.setOsErrorMsg("");
-        }
-
-        // 确保主机名状态字段初始化，使用与OS状态相同的加载逻辑
-        if (hostInfo.getHostnameStatus() == null) {
-            // 如果SSH连接是成功的，但主机名尚未收集，设置为LOADING
-            if (StringUtils.isBlank(hostInfo.getHostname())) {
-                hostInfo.setHostnameStatus(OsInfoStatusEnum.LOADING);
-            } else {
-                hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
-            }
-        } else if (OsInfoStatusEnum.ERROR.equals(hostInfo.getHostnameStatus())) {
-            // 如果已经获取到主机名，但状态仍为ERROR，修正为SUCCESS
-            if (StringUtils.isNotBlank(hostInfo.getHostname()) && !hostInfo.getHostname().equals(hostInfo.getIp())) {
-                hostInfo.setHostnameStatus(OsInfoStatusEnum.SUCCESS);
-            }
-        }
-
-        // 确保操作系统信息可用于前端
-        if (hostInfo.getOsInfo() != null) {
-            // 确保distribution字段有值
-            if (hostInfo.getOsInfo().getDistribution() == null || hostInfo.getOsInfo().getDistribution().isEmpty()) {
-                // 如果fullName有值，从fullName中提取distribution
-                String fullName = hostInfo.getOsInfo().getFullName();
-                if (fullName != null && !fullName.isEmpty()) {
-                    String lowerFullName = fullName.toLowerCase();
-                    if (lowerFullName.contains("centos")) {
-                        hostInfo.getOsInfo().setDistribution("CentOS");
-                    } else if (lowerFullName.contains("ubuntu")) {
-                        hostInfo.getOsInfo().setDistribution("Ubuntu");
-                    } else if (lowerFullName.contains("debian")) {
-                        hostInfo.getOsInfo().setDistribution("Debian");
-                    } else if (lowerFullName.contains("red hat") || lowerFullName.contains("redhat")) {
-                        hostInfo.getOsInfo().setDistribution("RedHat");
-                    } else if (lowerFullName.contains("kylin")) {
-                        hostInfo.getOsInfo().setDistribution("Kylin");
-                    } else if (lowerFullName.contains("alpine")) {
-                        hostInfo.getOsInfo().setDistribution("Alpine");
-                    } else {
-                        hostInfo.getOsInfo().setDistribution("Linux");
-                    }
-                } else {
-                    hostInfo.getOsInfo().setDistribution(""); // 避免前端收到null
-                }
-            }
-
-            // 确保osDistribution字段正确设置
-            if (hostInfo.getOsInfo().getDistribution() != null && !hostInfo.getOsInfo().getDistribution().isEmpty()) {
-                // 更新操作系统发行版枚举
-                hostInfo.getOsInfo().updateOsDistribution();
-                // 如果更新后仍为其他类型，则强制使用distribution字段设置
-                if ("linux".equals(hostInfo.getOsInfo().getDistributionId())) {
-                    hostInfo.getOsInfo().forceUpdateDistribution();
-                }
-            }
-
-            // 确保网络信息不为null
-            if (hostInfo.getOsInfo().getNetworkInfo() == null) {
-                hostInfo.getOsInfo().setNetworkInfo(new NetworkInfo());
-            }
-
-            // 确保GPU信息不为null
-            if (hostInfo.getOsInfo().getGpuInfo() == null) {
-                GpuInfo gpuInfo = new GpuInfo();
-                gpuInfo.setInfo("未检测到GPU设备");
-                gpuInfo.setTotalMemory(0.0);
-                gpuInfo.setUsedMemory(0.0);
-                hostInfo.getOsInfo().setGpuInfo(gpuInfo);
-            }
-        }
-
-        // 确保SSH连接状态信息可用于前端
-        if (hostInfo.getSshConnectStatus() == null) {
-            // 检查是否有主机名或系统信息（如果有任何一个，说明SSH连接是成功的）
-            boolean hasSshSuccess = StringUtils.isNotBlank(hostInfo.getHostname()) &&
-                    !hostInfo.getHostname().equals(hostInfo.getIp());
-
-            // 如果已经获取到主机名（非空且不等于IP），则SSH连接成功
-
-            // 如果已经获取到操作系统信息，则SSH连接成功
-            if (hostInfo.getOsInfo() != null &&
-                    hostInfo.getOsInfo().isValid() &&
-                    OsInfoStatusEnum.SUCCESS.equals(hostInfo.getOsInfoStatus())) {
-                hasSshSuccess = true;
-            }
-
-            if (hasSshSuccess) {
-                // 如果有任何成功的SSH交互，则SSH连接是成功的
-                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
-                // 清除可能存在的错误信息
-                if (StringUtils.isNotBlank(hostInfo.getSshErrorMsg())) {
-                    hostInfo.setSshErrorMsg("");
-                }
-            } else if (OsInfoStatusEnum.ERROR.equals(hostInfo.getOsInfoStatus())) {
-                // 只有在没有成功的SSH交互且操作系统信息获取失败时，才可能是SSH连接失败
-                hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-
-                // 设置SSH错误信息（如果尚未设置）
-                if (StringUtils.isBlank(hostInfo.getSshErrorMsg())) {
-                    hostInfo.setSshErrorMsg("SSH连接失败，无法获取主机信息");
-                }
-            } else {
-                // 默认设为LOADING，让前端显示加载中
-                hostInfo.setSshConnectStatus(OsInfoStatusEnum.LOADING);
-            }
-        } else if (OsInfoStatusEnum.ERROR.equals(hostInfo.getSshConnectStatus())) {
-            // 即使状态被设置为ERROR，但如果有主机名或系统信息，仍应该纠正为SUCCESS
-            boolean hasSshSuccess = StringUtils.isNotBlank(hostInfo.getHostname()) &&
-                    !hostInfo.getHostname().equals(hostInfo.getIp());
-
-            // 如果已经获取到主机名（非空且不等于IP），则SSH连接成功
-
-            // 如果已经获取到操作系统信息，则SSH连接成功
-            if (hostInfo.getOsInfo() != null &&
-                    hostInfo.getOsInfo().isValid() &&
-                    OsInfoStatusEnum.SUCCESS.equals(hostInfo.getOsInfoStatus())) {
-                hasSshSuccess = true;
-            }
-
-            if (hasSshSuccess) {
-                // 纠正错误的SSH连接状态
-                hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
-                // 清除错误信息
-                hostInfo.setSshErrorMsg("");
-                log.info("主机[{}]的SSH连接状态被纠正为SUCCESS，因为已成功获取主机信息", hostInfo.getIp());
-            }
-        }
-    }
-
-    /**
-     * 保存主机信息到缓存
-     *
-     * @param clusterId   集群ID
-     * @param hosts       主机列表字符串
-     * @param sshUser     SSH用户名
-     * @param sshPort     SSH端口
-     * @param sshPassword SSH密码
-     * @param page        当前页码
-     * @param pageSize    每页大小
-     */
-    private Map<String, HostInfo> saveHostInfo(Long clusterId, String hosts, String sshUser, Integer sshPort,
-            String sshPassword, Integer page, Integer pageSize) {
-        // 定义已收集主机集合的缓存键
-        String collectedHostsKey = clusterId + "_COLLECTED_HOSTS";
-        // 定义正在收集中的主机集合的缓存键（防止并发重复收集）
-        String collectingHostsKey = clusterId + "_COLLECTING_HOSTS";
-        Map<String, HostInfo> hostMap;
-        Set<String> collectedHosts;
-        Set<String> collectingHosts;
-
-        // 1. 检查缓存中是否存在有效的主机列表
-        if (isCacheValid(clusterId)) {
-            log.debug("从缓存获取主机列表");
-            hostMap = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
-
-            // 获取已收集主机集合，如果不存在则创建新的
-            if (CacheUtils.constainsKey(collectedHostsKey)) {
-                @SuppressWarnings("unchecked")
-                Set<String> cachedCollectedHosts = (Set<String>) CacheUtils.get(collectedHostsKey);
-                collectedHosts = Collections.synchronizedSet(cachedCollectedHosts);
-                log.debug("从缓存获取已收集主机列表，已收集{}台主机", collectedHosts.size());
-            } else {
-                collectedHosts = Collections.synchronizedSet(new HashSet<>());
-                CacheUtils.put(collectedHostsKey, collectedHosts);
-                log.debug("创建新的已收集主机列表缓存");
-            }
-
-            // 获取正在收集的主机集合，如果不存在则创建新的
-            if (CacheUtils.constainsKey(collectingHostsKey)) {
-                @SuppressWarnings("unchecked")
-                Set<String> cachedCollectingHosts = (Set<String>) CacheUtils.get(collectingHostsKey);
-                collectingHosts = Collections.synchronizedSet(cachedCollectingHosts);
-                log.debug("从缓存获取正在收集的主机列表，共{}台主机", collectingHosts.size());
-            } else {
-                collectingHosts = Collections.synchronizedSet(new HashSet<>());
-                CacheUtils.put(collectingHostsKey, collectingHosts);
-                log.debug("创建新的正在收集主机列表缓存");
-            }
-        } else {
-            log.info("处理主机列表: 集群ID={}, 主机数量={}, 用户={}, 端口={}",
-                    clusterId, hosts.split(Constants.COMMA).length, sshUser, sshPort);
-
-            hostMap = processHostList(clusterId, hosts, sshPort, sshUser, sshPassword);
-
-            // 将结果存入缓存
-            CacheUtils.put(clusterId + Constants.HOST_MAP, hostMap);
-            log.info("主机列表已存入缓存，共{}台主机", hostMap.size());
-
-            // 创建新的已收集主机集合 - 使用线程安全集合
-            collectedHosts = Collections.synchronizedSet(new HashSet<>());
-            CacheUtils.put(collectedHostsKey, collectedHosts);
-            log.debug("创建新的已收集主机列表缓存");
-
-            // 创建新的正在收集主机集合 - 使用线程安全集合
-            collectingHosts = Collections.synchronizedSet(new HashSet<>());
-            CacheUtils.put(collectingHostsKey, collectingHosts);
-            log.debug("创建新的正在收集主机列表缓存");
-        }
-
-        // 如果需要，触发当前分页主机的操作系统信息收集
-        // 每10次请求只打印一次日志
-        int currentCount = logCounter.incrementAndGet();
-        if (currentCount % LOG_PRINT_INTERVAL == 1) {
-            log.info("开始异步触发当前分页未收集主机的SSH验证和操作系统信息收集");
-        }
-        // 临时改为直接执行，避免依赖executor
-        // TODO: 后续需要重新设计线程池配置
-        CompletableFuture.runAsync(() -> {
-            try {
-                // 使用与返回给前端相同的排序逻辑，确保一致性
-                List<HostInfo> tempList = new ArrayList<>(hostMap.values());
-
-                // 使用完全相同的排序代码，确保与前端展示的顺序完全一致
-                List<String> sortedIps = HostUtils.sortIpAddresses(tempList.stream()
-                        .map(HostInfo::getIp)
-                        .collect(Collectors.toList()));
-
-                List<HostInfo> allSortedHosts = new ArrayList<>();
-                for (String ip : sortedIps) {
-                    tempList.stream()
-                            .filter(host -> ip.equals(host.getIp()))
-                            .findFirst()
-                            .ifPresent(allSortedHosts::add);
-                }
-
-                // 只处理当前页的主机
-                List<HostInfo> sortedHosts;
-                if (page != null && pageSize != null) {
-                    int offset = (page - 1) * pageSize;
-                    int end = Math.min(offset + pageSize, allSortedHosts.size());
-                    // 确保参数有效
-                    if (offset >= 0 && offset < allSortedHosts.size()) {
-                        sortedHosts = allSortedHosts.subList(offset, end);
-                        // 每10次请求只打印一次日志
-                        if (currentCount % LOG_PRINT_INTERVAL == 1) {
-                            log.info("检查当前页({}/{})的主机信息，范围: {}-{}, 共{}台主机",
-                                    page, (int) Math.ceil(allSortedHosts.size() / (double) pageSize),
-                                    offset + 1,
-                                    end,
-                                    sortedHosts.size());
-                        }
-                    } else {
-                        // 参数无效，使用所有主机
-                        sortedHosts = allSortedHosts;
-                        log.warn("分页参数无效(offset={}, size={}), 将收集所有主机信息", offset, allSortedHosts.size());
-                    }
-                } else {
-                    // 未提供分页参数，使用所有主机
-                    sortedHosts = allSortedHosts;
-                    log.info("未提供分页参数，将收集所有{}台主机的信息", sortedHosts.size());
-                }
-
-                // 过滤出未收集且当前不在收集过程中的主机
-                List<HostInfo> pendingHosts = sortedHosts.stream()
-                        .filter(host -> {
-                            synchronized (collectedHosts) {
-                                synchronized (collectingHosts) {
-                                    return !collectedHosts.contains(host.getIp())
-                                            && !collectingHosts.contains(host.getIp());
-                                }
-                            }
-                        })
-                        .toList();
-
-                if (pendingHosts.isEmpty()) {
-                    // 每10次请求只打印一次日志
-                    if (currentCount % LOG_PRINT_INTERVAL == 1) {
-                        log.info("当前页所有主机均已收集过信息或正在收集中，无需再次收集");
-                    }
-                    return;
-                }
-
-                log.info("当前页有{}台主机等待收集信息，开始收集: {}",
-                        pendingHosts.size(),
-                        pendingHosts.stream().map(HostInfo::getIp).collect(Collectors.joining(", ")));
-
-                // 将所有待收集主机标记为"正在收集"状态
-                synchronized (collectingHosts) {
-                    for (HostInfo hostInfo : pendingHosts) {
-                        collectingHosts.add(hostInfo.getIp());
-                    }
-                    // 更新缓存
-                    CacheUtils.put(collectingHostsKey, collectingHosts);
-                }
-
-                // ==================== 第一阶段：并行收集所有主机的基本信息 ====================
-                log.info("【第一阶段开始】首先为所有{}台主机并行收集基本信息（主机名和操作系统类型）", pendingHosts.size());
-
-                // 用于跟踪第一阶段成功的主机
-                List<HostInfo> firstPhaseSuccessHosts = Collections.synchronizedList(new ArrayList<>());
-
-                // 创建一个并行任务列表，为每台主机创建一个独立的任务
-                List<CompletableFuture<Void>> firstPhaseFutures = new ArrayList<>();
-
-                // 并行为所有主机执行SSH验证和基本信息收集
-                for (HostInfo hostInfo : pendingHosts) {
-                    CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                        // 设置更有意义的线程名，包含主机IP
-                        Thread thread = Thread.currentThread();
-                        String threadOriginalName = thread.getName();
-                        thread.setName("os-info-executor-" + hostInfo.getIp());
-
-                        try {
-                            log.info("开始为主机[{}]收集基本信息", hostInfo.getIp());
-                            boolean sshSuccess = validateSshConnection(hostInfo);
-
-                            // 如果SSH连接失败，设置相关错误状态并跳过后续操作
-                            if (!sshSuccess) {
-                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                                hostInfo.setErrorMessage("SSH连接失败，无法获取主机信息");
-                                hostInfo.setOsErrorMsg("由于SSH连接失败，无法获取操作系统信息");
-                                hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
-                                hostInfo.setMessage("SSH连接失败：" + hostInfo.getSshErrorMsg());
-
-                                // 即使失败也标记为已收集，避免反复尝试失败的主机
-                                synchronized (collectedHosts) {
-                                    collectedHosts.add(hostInfo.getIp());
-                                    // 更新缓存
-                                    CacheUtils.put(collectedHostsKey, collectedHosts);
-                                }
-
-                                // 从正在收集的列表中移除
-                                synchronized (collectingHosts) {
-                                    collectingHosts.remove(hostInfo.getIp());
-                                    CacheUtils.put(collectingHostsKey, collectingHosts);
-                                }
-
-                                log.warn("主机[{}]SSH连接失败，标记为已处理", hostInfo.getIp());
-                                return;
-                            }
-
-                            // SSH连接成功，开始收集操作系统信息第一阶段
-                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
-                            hostInfo.setMessage("正在收集主机信息...");
-
-                            try {
-                                // 使用第一阶段收集方法
-                                osInfoService.collectPhaseOneInfo(hostInfo);
-                                log.info("主机[{}]的基本信息收集完成", hostInfo.getIp());
-
-                                // 将成功的主机添加到列表，用于第二阶段处理
-                                firstPhaseSuccessHosts.add(hostInfo);
-                            } catch (Exception e) {
-                                log.error("收集主机[{}]基本信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
-                                // 异常情况仍然标记为已收集，避免重复尝试
-                                hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                                hostInfo.setOsErrorMsg("收集基本信息异常: " + e.getMessage());
-
-                                // 即使失败也标记为已收集，避免反复尝试
-                                synchronized (collectedHosts) {
-                                    collectedHosts.add(hostInfo.getIp());
-                                    // 更新缓存
-                                    CacheUtils.put(collectedHostsKey, collectedHosts);
-                                }
-
-                                // 从正在收集的列表中移除
-                                synchronized (collectingHosts) {
-                                    collectingHosts.remove(hostInfo.getIp());
-                                    CacheUtils.put(collectingHostsKey, collectingHosts);
-                                }
-                            }
-                        } catch (Exception e) {
-                            log.error("为主机[{}]执行基本信息收集失败: {}", hostInfo.getIp(), e.getMessage(), e);
-                            // 设置错误状态和详细信息
-                            hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-                            hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-                            hostInfo.setSshErrorMsg("SSH连接异常: " + formatSshErrorMessage(e));
-                            hostInfo.setErrorMessage("连接主机时发生异常");
-                            hostInfo.setOsErrorMsg("由于连接异常，无法获取操作系统信息");
-                            hostInfo.setHostnameStatus(OsInfoStatusEnum.ERROR);
-                            hostInfo.setMessage("SSH连接失败：" + formatSshErrorMessage(e));
-
-                            // 即使失败也标记为已收集，避免反复尝试
-                            synchronized (collectedHosts) {
-                                collectedHosts.add(hostInfo.getIp());
-                                // 更新缓存
-                                CacheUtils.put(collectedHostsKey, collectedHosts);
-                            }
-
-                            // 从正在收集的列表中移除
-                            synchronized (collectingHosts) {
-                                collectingHosts.remove(hostInfo.getIp());
-                                CacheUtils.put(collectingHostsKey, collectingHosts);
-                            }
-                        } finally {
-                            // 恢复线程原始名称
-                            thread.setName(threadOriginalName);
-                        }
-                    });
-
-                    firstPhaseFutures.add(future);
-                }
-
-                // 等待所有第一阶段任务完成
-                try {
-                    CompletableFuture.allOf(firstPhaseFutures.toArray(new CompletableFuture[0])).get();
-                } catch (Exception e) {
-                    log.error("等待第一阶段任务完成时发生异常: {}", e.getMessage(), e);
-                }
-
-                log.info("【第一阶段完成】所有主机基本信息收集完毕，成功收集{}台主机的基本信息", firstPhaseSuccessHosts.size());
-
-                // ==================== 第二阶段：并行收集详细信息 ====================
-                if (!firstPhaseSuccessHosts.isEmpty()) {
-                    log.info("【第二阶段开始】开始并行收集{}台主机的详细硬件信息", firstPhaseSuccessHosts.size());
-
-                    // 创建第二阶段任务列表
-                    List<CompletableFuture<Void>> secondPhaseFutures = new ArrayList<>();
-
-                    // 并行为第一阶段成功的主机收集详细信息
-                    for (HostInfo hostInfo : firstPhaseSuccessHosts) {
-                        CompletableFuture<Void> future = CompletableFuture.runAsync(() -> {
-                            // 设置更有意义的线程名，包含主机IP
-                            Thread thread = Thread.currentThread();
-                            String threadOriginalName = thread.getName();
-                            thread.setName("hardware-info-executor-" + hostInfo.getIp());
-
-                            try {
-                                log.info("开始为主机[{}]收集详细硬件信息", hostInfo.getIp());
-
-                                // 使用第二阶段收集方法
-                                osInfoService.collectPhaseTwoInfo(hostInfo);
-                                log.info("主机[{}]的详细信息收集完成", hostInfo.getIp());
-
-                                // 标记为已完全收集
-                                synchronized (collectedHosts) {
-                                    collectedHosts.add(hostInfo.getIp());
-                                    // 更新缓存
-                                    CacheUtils.put(collectedHostsKey, collectedHosts);
-                                }
-
-                                // 从正在收集的列表中移除
-                                synchronized (collectingHosts) {
-                                    collectingHosts.remove(hostInfo.getIp());
-                                    CacheUtils.put(collectingHostsKey, collectingHosts);
-                                }
-
-                                log.info("主机[{}]所有信息收集完成，已更新收集状态", hostInfo.getIp());
-                            } catch (Exception e) {
-                                log.error("收集主机[{}]详细信息时发生异常: {}", hostInfo.getIp(), e.getMessage());
-                                // 即使第二阶段失败，也标记为已收集，因为基本信息已经收集完成
-                                synchronized (collectedHosts) {
-                                    collectedHosts.add(hostInfo.getIp());
-                                    // 更新缓存
-                                    CacheUtils.put(collectedHostsKey, collectedHosts);
-                                }
-
-                                // 从正在收集的列表中移除
-                                synchronized (collectingHosts) {
-                                    collectingHosts.remove(hostInfo.getIp());
-                                    CacheUtils.put(collectingHostsKey, collectingHosts);
-                                }
-
-                                log.warn("主机[{}]详细信息收集失败，但基本信息已收集完成", hostInfo.getIp());
-                            } finally {
-                                // 恢复线程原始名称
-                                thread.setName(threadOriginalName);
-                            }
-                        });
-
-                        secondPhaseFutures.add(future);
-                    }
-
-                    // 等待所有第二阶段任务完成
-                    try {
-                        CompletableFuture.allOf(secondPhaseFutures.toArray(new CompletableFuture[0])).get();
-                    } catch (Exception e) {
-                        log.error("等待第二阶段任务完成时发生异常: {}", e.getMessage(), e);
-                    }
-
-                    log.info("【第二阶段完成】所有主机详细信息收集完毕");
-                } else {
-                    log.info("【第二阶段跳过】没有主机成功通过第一阶段，跳过详细信息收集");
-                }
-
-                log.info("当前页所有主机的信息收集任务已全部完成，共处理{}台主机", pendingHosts.size());
-            } catch (Exception e) {
-                log.error("主机信息收集线程异常: {}", e.getMessage(), e);
-            }
-        });
-
-        return hostMap;
     }
 
     /**
@@ -1074,13 +573,6 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     /**
-     * 检查缓存是否有效
-     */
-    private boolean isCacheValid(Long clusterId) {
-        return CacheUtils.constainsKey(clusterId + Constants.HOST_MAP);
-    }
-
-    /**
      * 创建主机信息对象
      *
      * @param host        主机地址
@@ -1106,7 +598,6 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         // 初始化错误信息字段
         hostInfo.setSshErrorMsg("");
         hostInfo.setErrorMessage("");
-        hostInfo.setOsErrorMsg("");
 
         // 2. 检查主机是否已受管
         ClusterHostEntity hostEntity = hostService.getClusterHostByHostname(hostInfo.getHostname());
@@ -1832,12 +1323,10 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         
         // 各状态初始化为loading
         hostInfo.setSshConnectStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setOsInfoStatus(OsInfoStatusEnum.LOADING);
-        hostInfo.setHardwareCollectionStatus(OsInfoStatusEnum.LOADING);
         
         // 错误信息初始化
         hostInfo.setSshErrorMsg("");
-        hostInfo.setOsErrorMsg("");
+
         hostInfo.setErrorMessage("");
         
         return hostInfo;
@@ -1865,8 +1354,6 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         
         // 所有状态设置为failed
         hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
-        hostInfo.setOsInfoStatus(OsInfoStatusEnum.ERROR);
-        hostInfo.setHardwareCollectionStatus(OsInfoStatusEnum.ERROR);
         
         return hostInfo;
     }
