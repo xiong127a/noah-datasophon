@@ -44,6 +44,10 @@ import KubernetesDashboard from '@/components/kubernetes-dashboard'
 
 // 导入对话框组件
 import ServiceSelectionDialog from '@/components/cluster/common/service-selection-dialog'
+import MasterRoleAssignDialog from '@/components/cluster/common/master-role-assign-dialog'
+import WorkerRoleAssignDialog from '@/components/cluster/common/worker-role-assign-dialog'
+import ServiceConfigDialog from '@/components/cluster/common/service-config-dialog'
+import ServiceInstallDialog from '@/components/cluster/common/service-install-dialog'
 import DeleteServiceDialog from '@/components/service/delete-service-dialog'
 
 // 导入工具函数
@@ -241,6 +245,18 @@ export default function ServiceLayout() {
   
   // 添加服务向导状态
   const [showAddServiceWizard, setShowAddServiceWizard] = useState(false)
+  
+  // 添加服务流程状态
+  const [addServiceStep3Data, setAddServiceStep3Data] = useState<any>(null)
+  const [addServiceStep5Data, setAddServiceStep5Data] = useState<any>(null)
+  const [addServiceStep6Data, setAddServiceStep6Data] = useState<any>(null)
+  const [addServiceStep7Data, setAddServiceStep7Data] = useState<any>(null)
+  
+  // 添加服务流程对话框状态
+  const [addServiceMasterRoleDialogOpen, setAddServiceMasterRoleDialogOpen] = useState(false)
+  const [addServiceWorkerRoleDialogOpen, setAddServiceWorkerRoleDialogOpen] = useState(false)
+  const [addServiceConfigDialogOpen, setAddServiceConfigDialogOpen] = useState(false)
+  const [addServiceInstallDialogOpen, setAddServiceInstallDialogOpen] = useState(false)
   
   // 删除服务对话框状态
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -507,6 +523,47 @@ export default function ServiceLayout() {
   const handleCancelDeleteService = () => {
     setShowDeleteDialog(false)
     setServiceToDelete(null)
+  }
+
+  // 添加服务流程处理函数
+  const handleAddServiceComplete = (step3Data: any) => {
+    setAddServiceStep3Data(step3Data)
+    setShowAddServiceWizard(false)
+    // 进入Master角色分配
+    setAddServiceMasterRoleDialogOpen(true)
+  }
+
+  const handleAddServiceMasterRoleComplete = (step5Data: any) => {
+    setAddServiceStep5Data(step5Data)
+    setAddServiceMasterRoleDialogOpen(false)
+    // 进入Worker角色分配
+    setAddServiceWorkerRoleDialogOpen(true)
+  }
+
+  const handleAddServiceWorkerRoleComplete = (step6Data: any) => {
+    setAddServiceStep6Data(step6Data)
+    setAddServiceWorkerRoleDialogOpen(false)
+    // 进入服务配置
+    setAddServiceConfigDialogOpen(true)
+  }
+
+  const handleAddServiceConfigComplete = (step7Data: any) => {
+    setAddServiceStep7Data(step7Data)
+    setAddServiceConfigDialogOpen(false)
+    // 进入服务安装
+    setAddServiceInstallDialogOpen(true)
+  }
+
+  const handleAddServiceInstallComplete = () => {
+    setAddServiceInstallDialogOpen(false)
+    // 重置所有添加服务流程状态
+    setAddServiceStep3Data(null)
+    setAddServiceStep5Data(null)
+    setAddServiceStep6Data(null)
+    setAddServiceStep7Data(null)
+    // 刷新服务列表
+    fetchServices()
+    appleToast.success('服务添加完成！')
   }
 
   // 处理总服务操作
@@ -1084,11 +1141,98 @@ export default function ServiceLayout() {
           }}
           clusterType={currentCluster.depType || 'PVM'}
           isAddServiceMode={true}
-          onComplete={(step3Data) => {
+          onComplete={handleAddServiceComplete}
+        />
+      )}
 
-            setShowAddServiceWizard(false)
-            // 服务选择完成后刷新服务列表
-            fetchServices()
+      {/* 添加服务Master角色分配对话框 */}
+      {addServiceStep3Data && currentCluster && (
+        <MasterRoleAssignDialog
+          open={addServiceMasterRoleDialogOpen}
+          onClose={() => setAddServiceMasterRoleDialogOpen(false)}
+          cluster={{
+            id: currentCluster.id.toString(),
+            name: currentCluster.clusterName,
+            clusterName: currentCluster.clusterName,
+            depType: currentCluster.depType || ''
+          }}
+          step4Data={{
+            serviceIds: addServiceStep3Data.serviceIds || [],
+            selectedServices: addServiceStep3Data.serviceNames?.map((service: { serviceId: string; serviceName: string }) => ({
+              id: service.serviceId,
+              name: service.serviceName
+            })) || []
+          }}
+          onComplete={handleAddServiceMasterRoleComplete}
+          onPrevious={() => {
+            setAddServiceMasterRoleDialogOpen(false)
+            setShowAddServiceWizard(true)
+          }}
+        />
+      )}
+
+      {/* 添加服务Worker角色分配对话框 */}
+      {addServiceStep3Data && addServiceStep5Data && currentCluster && (
+        <WorkerRoleAssignDialog
+          open={addServiceWorkerRoleDialogOpen}
+          onOpenChange={setAddServiceWorkerRoleDialogOpen}
+          cluster={{
+            id: currentCluster.id.toString(),
+            clusterName: currentCluster.clusterName,
+            depType: currentCluster.depType || ''
+          }}
+          clusterType={currentCluster.depType || ''}
+          step4Data={{
+            serviceIds: addServiceStep3Data.serviceIds || [],
+            serviceNames: addServiceStep3Data.serviceNames || [],
+            serviceType: addServiceStep3Data.serviceType || ''
+          }}
+          onComplete={handleAddServiceWorkerRoleComplete}
+          onPrevious={() => {
+            setAddServiceWorkerRoleDialogOpen(false)
+            setAddServiceMasterRoleDialogOpen(true)
+          }}
+        />
+      )}
+
+      {/* 添加服务配置对话框 */}
+      {addServiceStep6Data && currentCluster && addServiceStep3Data && (
+        <ServiceConfigDialog
+          open={addServiceConfigDialogOpen}
+          onOpenChange={setAddServiceConfigDialogOpen}
+          cluster={{
+            id: currentCluster.id.toString(),
+            clusterName: currentCluster.clusterName,
+            depType: currentCluster.depType || '',
+            clusterCode: currentCluster.id.toString()
+          }}
+          clusterType={currentCluster.depType || ''}
+          step6Data={addServiceStep6Data}
+          onComplete={handleAddServiceConfigComplete}
+          onPrevious={() => {
+            setAddServiceConfigDialogOpen(false)
+            setAddServiceWorkerRoleDialogOpen(true)
+          }}
+        />
+      )}
+
+      {/* 添加服务安装对话框 */}
+      {addServiceStep7Data && currentCluster && (
+        <ServiceInstallDialog
+          open={addServiceInstallDialogOpen}
+          onOpenChange={setAddServiceInstallDialogOpen}
+          cluster={{
+            id: currentCluster.id.toString(),
+            clusterName: currentCluster.clusterName,
+            depType: currentCluster.depType || '',
+            clusterCode: currentCluster.id.toString()
+          }}
+          clusterType={currentCluster.depType || ''}
+          step7Data={addServiceStep7Data}
+          onComplete={handleAddServiceInstallComplete}
+          onPrevious={() => {
+            setAddServiceInstallDialogOpen(false)
+            setAddServiceConfigDialogOpen(true)
           }}
         />
       )}

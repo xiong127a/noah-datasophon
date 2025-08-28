@@ -85,7 +85,7 @@ export const useServiceSelection = ({
 
   // 状态检查
   const canProceed = selectedServiceIds.length > 0
-  const hasRequiredServices = requiredServices.every(service => 
+  const hasRequiredServices = isAddServiceMode ? true : requiredServices.every(service => 
     selectedServiceIds.includes(service.id)
   )
 
@@ -232,9 +232,15 @@ export const useServiceSelection = ({
 
   // 清空选择
   const clearSelection = useCallback(() => {
-    const requiredIds = requiredServices.map(service => service.id)
-    setSelectedServiceIds(requiredIds) // 保留必需服务
-  }, [requiredServices])
+    if (isAddServiceMode) {
+      // 添加服务模式：完全清空选择
+      setSelectedServiceIds([])
+    } else {
+      // 配置集群模式：保留必需服务
+      const requiredIds = requiredServices.map(service => service.id)
+      setSelectedServiceIds(requiredIds)
+    }
+  }, [requiredServices, isAddServiceMode])
 
   // 判断服务是否应该被禁用
   const isServiceDisabled = useCallback((service: Service) => {
@@ -254,7 +260,8 @@ export const useServiceSelection = ({
       return
     }
 
-    if (!hasRequiredServices) {
+    // 添加服务模式下不需要检查必需服务
+    if (!isAddServiceMode && !hasRequiredServices) {
       toast.error('请确保已选择所有必需服务')
       return
     }
@@ -275,7 +282,7 @@ export const useServiceSelection = ({
       console.error('处理服务选择失败:', error)
       toast.error('处理服务选择失败，请重试')
     }
-  }, [canProceed, hasRequiredServices, selectedServiceIds, selectedServices, serviceTypeFilter, onComplete])
+  }, [canProceed, hasRequiredServices, selectedServiceIds, selectedServices, serviceTypeFilter, onComplete, isAddServiceMode])
 
   // 优化的服务类型切换处理
   const handleServiceTypeChange = useCallback((newType: ServiceType) => {
@@ -295,8 +302,8 @@ export const useServiceSelection = ({
 
   // 监控选中状态变化和数据一致性检查
   useEffect(() => {
-    if (services.length > 0 && process.env.NODE_ENV === 'development') {
-      // 仅在开发环境进行数据一致性检查
+    if (services.length > 0 && process.env.NODE_ENV === 'development' && !isAddServiceMode) {
+      // 仅在开发环境且非添加服务模式下进行数据一致性检查
       const missingRequiredServices = requiredServices.filter(s => !selectedServiceIds.includes(s.id))
       const selectedServices = selectedServiceIds.map(id => services.find(s => s.id === id)).filter(Boolean)
       const extraSelectedServices = selectedServices.filter(s => s && !s.isRequired)
@@ -309,7 +316,7 @@ export const useServiceSelection = ({
         console.warn('数据不一致：有非必需服务被选中:', extraSelectedServices.map(s => s?.serviceName).filter(Boolean))
       }
     }
-  }, [selectedServiceIds, services, requiredServices, serviceTypeFilter])
+  }, [selectedServiceIds, services, requiredServices, serviceTypeFilter, isAddServiceMode])
 
   // 初始化加载 - 移除对fetchServices函数的依赖，避免重复调用
   useEffect(() => {

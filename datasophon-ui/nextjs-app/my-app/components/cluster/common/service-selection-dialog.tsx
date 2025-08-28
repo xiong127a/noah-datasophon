@@ -169,7 +169,8 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
         {
           text: "下一步",
           onClick: () => {
-            if (!hasRequiredServices) {
+            // 添加服务模式下不需要检查必需服务
+            if (!isAddServiceMode && !hasRequiredServices) {
               toast.error('请确保已选择所有必需服务')
               return
             }
