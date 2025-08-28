@@ -35,24 +35,6 @@
             <artifactId>jackson-annotations</artifactId>
         </dependency>
         
-        <!-- Apache SSHJ - 最佳SSH客户端 -->
-        <dependency>
-            <groupId>com.hierynomus</groupId>
-            <artifactId>sshj</artifactId>
-        </dependency>
-        
-        <!-- Apache Commons Pool2 - 连接池 -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-pool2</artifactId>
-        </dependency>
-        
-        <!-- Apache Commons IO - IO工具 -->
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-        </dependency>
-        
         <!-- Spring Boot Core (插件中需要注解支持) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
