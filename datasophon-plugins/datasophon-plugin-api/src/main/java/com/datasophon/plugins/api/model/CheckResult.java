@@ -17,6 +17,8 @@
 
 package com.datasophon.plugins.api.model;
 
+import com.datasophon.common.enums.CheckType;
+import com.datasophon.common.enums.ValidationStatus;
 import lombok.Builder;
 import lombok.Data;
 
@@ -45,9 +47,14 @@ public class CheckResult implements Serializable {
     private boolean success;
     
     /**
-     * 检查类型/名称
+     * 检查状态
      */
-    private String checkType;
+    private ValidationStatus status;
+    
+    /**
+     * 检查类型
+     */
+    private CheckType checkType;
     
     /**
      * 检查消息
@@ -65,9 +72,20 @@ public class CheckResult implements Serializable {
     private LocalDateTime checkTime;
     
     /**
+     * 更新时间
+     */
+    private LocalDateTime updateTime;
+    
+    /**
      * 检查耗时（毫秒）
      */
     private Long duration;
+    
+    /**
+     * 是否可修复
+     */
+    @Builder.Default
+    private boolean repairAvailable = false;
     
     /**
      * 检查结果数据
@@ -132,7 +150,7 @@ public class CheckResult implements Serializable {
     /**
      * 创建成功的检查结果
      */
-    public static CheckResult success(String checkType, String message) {
+    public static CheckResult success(CheckType checkType, String message) {
         return CheckResult.builder()
                 .success(true)
                 .checkType(checkType)
@@ -144,7 +162,7 @@ public class CheckResult implements Serializable {
     /**
      * 创建失败的检查结果
      */
-    public static CheckResult failure(String checkType, String message, String error) {
+    public static CheckResult failure(CheckType checkType, String message, String error) {
         return CheckResult.builder()
                 .success(false)
                 .checkType(checkType)
@@ -157,8 +175,18 @@ public class CheckResult implements Serializable {
     /**
      * 创建失败的检查结果（简化版）
      */
-    public static CheckResult failure(String checkType, String error) {
+    public static CheckResult failure(CheckType checkType, String error) {
         return failure(checkType, "检查失败", error);
+    }
+    
+    /**
+     * 获取检查状态
+     */
+    public ValidationStatus getStatus() {
+        if (status != null) {
+            return status;
+        }
+        return success ? ValidationStatus.SUCCESS : ValidationStatus.FAILED;
     }
     
     /**
@@ -166,7 +194,7 @@ public class CheckResult implements Serializable {
      */
     public String getSummary() {
         return String.format("[%s] %s: %s", 
-                checkType != null ? checkType : "unknown",
+                checkType != null ? checkType.getDisplayName() : "unknown",
                 success ? "SUCCESS" : "FAILED",
                 message != null ? message : (success ? "检查通过" : "检查失败"));
     }

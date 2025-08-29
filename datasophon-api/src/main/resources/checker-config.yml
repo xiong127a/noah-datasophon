@@ -81,3 +81,196 @@ datasophon:
       max-pool-size: 10
       # 健康检查的命令
       health-check-command: "echo connection_test"
+
+    # SSH免密检查配置
+    ssh-passwordless:
+      enabled: true                       # 是否启用SSH免密检查
+      priority: 1                         # 检查优先级（数字越小优先级越高）
+      timeout-seconds: 30                 # 检查超时时间
+      public-key-paths:                   # 公钥文件路径列表
+        - ~/.ssh/id_rsa.pub
+        - ~/.ssh/id_ecdsa.pub
+        - ~/.ssh/id_ed25519.pub
+      private-key-paths:                  # 私钥文件路径列表
+        - ~/.ssh/id_rsa
+        - ~/.ssh/id_ecdsa
+        - ~/.ssh/id_ed25519
+
+    # 系统信息收集配置
+    system-info:
+      enabled: true                       # 是否启用系统信息收集
+      priority: 2                         # 检查优先级
+      timeout-seconds: 60                 # 收集超时时间
+      collect-items:                      # 收集项配置
+        os-info: true                     # 操作系统信息
+        hardware-info: true               # 硬件信息
+        network-info: true                # 网络信息
+        mount-info: true                  # 挂载信息
+        process-info: false               # 进程信息（可选）
+        service-info: true                # 系统服务信息
+
+    # 防火墙检查配置
+    firewall:
+      enabled: true                       # 是否启用防火墙检查
+      priority: 8                         # 检查优先级
+      timeout-seconds: 30                 # 检查超时时间
+      auto-disable: false                 # 是否自动禁用防火墙（建议关闭）
+      check-services:                     # 需要检查的防火墙服务
+        - firewalld
+        - iptables
+        - ufw
+
+    # SELinux检查配置
+    selinux:
+      enabled: true                       # 是否启用SELinux检查
+      priority: 9                         # 检查优先级
+      timeout-seconds: 30                 # 检查超时时间
+      auto-disable: false                 # 是否自动禁用SELinux（建议关闭）
+      allowed-modes:                      # 允许的SELinux模式
+        - disabled
+        - permissive
+
+    # 系统服务检查配置
+    services:
+      enabled: true                       # 是否启用系统服务检查
+      priority: 10                        # 检查优先级
+      timeout-seconds: 45                 # 检查超时时间
+      required-services:                  # 必需的系统服务
+        - sshd
+        - chronyd
+      blocked-services:                   # 不允许运行的服务
+        - postfix
+        - sendmail
+
+    # Hosts文件检查配置
+    hosts-file:
+      enabled: true                       # 是否启用hosts文件检查
+      priority: 11                        # 检查优先级
+      timeout-seconds: 30                 # 检查超时时间
+      auto-sync: false                    # 是否自动同步hosts文件
+      backup-before-modify: true          # 修改前是否备份
+
+    # 主机校验流程控制配置
+    validation-flow:
+      # 并发控制
+      max-concurrent-hosts: 20            # 最大并发主机数
+      max-concurrent-items: 5             # 单主机最大并发检查项数
+      
+      # 超时配置
+      global-timeout-minutes: 30          # 全局校验超时（分钟）
+      item-timeout-seconds: 300           # 单项检查超时（秒）
+      
+      # 重试配置
+      max-retry-attempts: 3               # 最大重试次数
+      retry-delay-seconds: 5              # 重试延迟（秒）
+      
+      # 依赖关系配置
+      respect-dependencies: true          # 是否遵循检查项依赖关系
+      fail-fast: false                    # 是否快速失败（有失败项时立即停止）
+      
+      # 跳过配置
+      allow-skip: true                    # 是否允许跳过检查项
+      auto-skip-on-failure: false         # 失败时是否自动跳过后续检查项
+
+    # 修复功能配置
+    repair:
+      enabled: true                       # 是否启用修复功能
+      auto-repair: false                  # 是否自动修复（建议关闭）
+      confirmation-required: true         # 是否需要确认才能修复
+      backup-before-repair: true          # 修复前是否备份
+      max-repair-attempts: 3              # 最大修复尝试次数
+      repair-timeout-seconds: 180         # 修复超时时间（秒）
+      
+      # 支持修复的检查项
+      supported-items:
+        ssh-passwordless: true
+        java-env: true
+        firewall: true
+        selinux: true
+        file-handle-limit: true
+        hosts-file: true
+        services: true
+
+    # 日志记录配置
+    logging:
+      # 基础配置
+      enabled: true                       # 是否启用日志记录
+      verbose: false                      # 是否启用详细日志
+      max-entries-per-host: 1000          # 单主机最大日志条数
+      retention-hours: 24                 # 日志保留时间（小时）
+      
+      # 日志级别配置
+      levels:
+        ssh-connection: INFO
+        ssh-passwordless: INFO
+        system-info: DEBUG
+        checks: INFO
+        repairs: WARN
+        errors: ERROR
+      
+      # 输出配置
+      output:
+        console: true                     # 是否输出到控制台
+        file: false                       # 是否输出到文件
+        sse: true                         # 是否通过SSE推送
+
+    # 调度器配置（基于现有db-scheduler）
+    scheduler:
+      enabled: true                       # 是否启用调度器
+      threads: 10                         # 调度器线程数
+      polling-interval-seconds: 10        # 任务轮询间隔（秒）
+      heartbeat-interval-minutes: 5       # 心跳间隔（分钟）
+      
+      # 任务配置
+      tasks:
+        validation:
+          max-execution-time-minutes: 60  # 校验任务最大执行时间
+          retry-on-failure: true          # 失败时是否重试
+        repair:
+          max-execution-time-minutes: 30  # 修复任务最大执行时间
+          retry-on-failure: false         # 失败时是否重试
+        cleanup:
+          execution-time-minutes: 30      # 清理任务延迟执行时间
+
+    # 实时通信配置（SSE）
+    realtime:
+      sse:
+        enabled: true                     # 是否启用SSE
+        timeout-seconds: 300              # SSE连接超时时间
+        heartbeat-interval-seconds: 30    # 心跳间隔
+        max-connections-per-cluster: 50   # 单集群最大连接数
+        buffer-size: 1000                 # 消息缓冲区大小
+      
+      # 状态推送配置
+      push:
+        status-updates: true              # 是否推送状态更新
+        log-messages: true                # 是否推送日志消息
+        progress-updates: true            # 是否推送进度更新
+        batch-size: 10                    # 批量推送大小
+        flush-interval-ms: 100            # 推送刷新间隔
+
+    # 缓存配置
+    cache:
+      enabled: true                       # 是否启用缓存
+      validation-sessions:
+        max-size: 100                     # 校验会话最大缓存数量
+        expire-after-write-minutes: 60    # 写入后过期时间
+        expire-after-access-minutes: 30   # 访问后过期时间
+      
+      system-info:
+        max-size: 200                     # 系统信息最大缓存数量
+        expire-after-write-minutes: 180   # 写入后过期时间（系统信息变化较慢）
+
+    # 通知配置
+    notifications:
+      enabled: false                      # 是否启用通知（可选功能）
+      channels:                           # 通知渠道
+        email: false
+        webhook: false
+        sms: false
+      
+      # 通知事件
+      events:
+        validation-completed: true        # 校验完成通知
+        validation-failed: true           # 校验失败通知
+        repair-completed: false           # 修复完成通知（可选）

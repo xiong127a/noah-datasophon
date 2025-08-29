@@ -41,6 +41,11 @@ public enum OsType {
     KYLIN_V4("kylin-v4", "中标麒麟 V4"),
     
     /**
+     * 麒麟操作系统（通用）
+     */
+    KYLIN("kylin", "麒麟操作系统"),
+    
+    /**
      * 其他/未知操作系统
      */
     OTHER("other", "Other");
@@ -112,7 +117,7 @@ public enum OsType {
      * 判断是否为麒麟系列
      */
     public boolean isKylinFamily() {
-        return this == KYLIN_V10 || this == KYLIN_V4;
+        return this == KYLIN_V10 || this == KYLIN_V4 || this == KYLIN;
     }
     
     /**

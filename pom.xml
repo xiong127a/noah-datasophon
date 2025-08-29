@@ -621,6 +621,9 @@
                         <arg>-J-Duser.language=zh</arg>
                         <arg>-J-Duser.country=CN</arg>
                         <arg>-J-Dconsole.encoding=UTF-8</arg>
+                        <arg>-J-Dstdout.encoding=UTF-8</arg>
+                        <arg>-J-Dstderr.encoding=UTF-8</arg>
+                        <arg>-J-Dsun.jnu.encoding=UTF-8</arg>
                         <arg>-J-Xmx8g</arg>
                         <arg>-J-Xms2g</arg>
                         <arg>-J-XX:+UseG1GC</arg>

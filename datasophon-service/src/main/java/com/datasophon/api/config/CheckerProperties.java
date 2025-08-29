@@ -59,6 +59,71 @@ public class CheckerProperties {
     private UserGroupConfig userGroup = new UserGroupConfig();
 
     /**
+     * SSH免密检查配置
+     */
+    private SshPasswordlessConfig sshPasswordless = new SshPasswordlessConfig();
+
+    /**
+     * 系统信息收集配置
+     */
+    private SystemInfoConfig systemInfo = new SystemInfoConfig();
+
+    /**
+     * 防火墙检查配置
+     */
+    private FirewallConfig firewall = new FirewallConfig();
+
+    /**
+     * SELinux检查配置
+     */
+    private SelinuxConfig selinux = new SelinuxConfig();
+
+    /**
+     * 系统服务检查配置
+     */
+    private ServicesConfig services = new ServicesConfig();
+
+    /**
+     * Hosts文件检查配置
+     */
+    private HostsFileConfig hostsFile = new HostsFileConfig();
+
+    /**
+     * 主机校验流程控制配置
+     */
+    private ValidationFlowConfig validationFlow = new ValidationFlowConfig();
+
+    /**
+     * 修复功能配置
+     */
+    private RepairConfig repair = new RepairConfig();
+
+    /**
+     * 日志记录配置
+     */
+    private LoggingConfig logging = new LoggingConfig();
+
+    /**
+     * 调度器配置
+     */
+    private SchedulerConfig scheduler = new SchedulerConfig();
+
+    /**
+     * 实时通信配置
+     */
+    private RealtimeConfig realtime = new RealtimeConfig();
+
+    /**
+     * 缓存配置
+     */
+    private CacheConfig cache = new CacheConfig();
+
+    /**
+     * 通知配置
+     */
+    private NotificationsConfig notifications = new NotificationsConfig();
+
+    /**
      * 元数据配置类
      */
     @Data
@@ -205,5 +270,262 @@ public class CheckerProperties {
          * 默认用户组映射，当用户不存在时根据此映射创建
          */
         private Map<String, String> defaultGroupMappings = new HashMap<>();
+    }
+
+    /**
+     * SSH免密检查配置类
+     */
+    @Data
+    public static class SshPasswordlessConfig {
+        private boolean enabled = true;
+        private int priority = 1;
+        private int timeoutSeconds = 30;
+        private List<String> publicKeyPaths = List.of("~/.ssh/id_rsa.pub", "~/.ssh/id_ecdsa.pub", "~/.ssh/id_ed25519.pub");
+        private List<String> privateKeyPaths = List.of("~/.ssh/id_rsa", "~/.ssh/id_ecdsa", "~/.ssh/id_ed25519");
+    }
+
+    /**
+     * 系统信息收集配置类
+     */
+    @Data
+    public static class SystemInfoConfig {
+        private boolean enabled = true;
+        private int priority = 2;
+        private int timeoutSeconds = 60;
+        private CollectItemsConfig collectItems = new CollectItemsConfig();
+
+        @Data
+        public static class CollectItemsConfig {
+            private boolean osInfo = true;
+            private boolean hardwareInfo = true;
+            private boolean networkInfo = true;
+            private boolean mountInfo = true;
+            private boolean processInfo = false;
+            private boolean serviceInfo = true;
+        }
+    }
+
+    /**
+     * 防火墙检查配置类
+     */
+    @Data
+    public static class FirewallConfig {
+        private boolean enabled = true;
+        private int priority = 8;
+        private int timeoutSeconds = 30;
+        private boolean autoDisable = false;
+        private List<String> checkServices = List.of("firewalld", "iptables", "ufw");
+    }
+
+    /**
+     * SELinux检查配置类
+     */
+    @Data
+    public static class SelinuxConfig {
+        private boolean enabled = true;
+        private int priority = 9;
+        private int timeoutSeconds = 30;
+        private boolean autoDisable = false;
+        private List<String> allowedModes = List.of("disabled", "permissive");
+    }
+
+    /**
+     * 系统服务检查配置类
+     */
+    @Data
+    public static class ServicesConfig {
+        private boolean enabled = true;
+        private int priority = 10;
+        private int timeoutSeconds = 45;
+        private List<String> requiredServices = List.of("sshd", "chronyd");
+        private List<String> blockedServices = List.of("postfix", "sendmail");
+    }
+
+    /**
+     * Hosts文件检查配置类
+     */
+    @Data
+    public static class HostsFileConfig {
+        private boolean enabled = true;
+        private int priority = 11;
+        private int timeoutSeconds = 30;
+        private boolean autoSync = false;
+        private boolean backupBeforeModify = true;
+    }
+
+    /**
+     * 主机校验流程控制配置类
+     */
+    @Data
+    public static class ValidationFlowConfig {
+        private int maxConcurrentHosts = 20;
+        private int maxConcurrentItems = 5;
+        private int globalTimeoutMinutes = 30;
+        private int itemTimeoutSeconds = 300;
+        private int maxRetryAttempts = 3;
+        private int retryDelaySeconds = 5;
+        private boolean respectDependencies = true;
+        private boolean failFast = false;
+        private boolean allowSkip = true;
+        private boolean autoSkipOnFailure = false;
+    }
+
+    /**
+     * 修复功能配置类
+     */
+    @Data
+    public static class RepairConfig {
+        private boolean enabled = true;
+        private boolean autoRepair = false;
+        private boolean confirmationRequired = true;
+        private boolean backupBeforeRepair = true;
+        private int maxRepairAttempts = 3;
+        private int repairTimeoutSeconds = 180;
+        private Map<String, Boolean> supportedItems = Map.of(
+            "ssh-passwordless", true,
+            "java-env", true,
+            "firewall", true,
+            "selinux", true,
+            "file-handle-limit", true,
+            "hosts-file", true,
+            "services", true
+        );
+    }
+
+    /**
+     * 日志记录配置类
+     */
+    @Data
+    public static class LoggingConfig {
+        private boolean enabled = true;
+        private boolean verbose = false;
+        private int maxEntriesPerHost = 1000;
+        private int retentionHours = 24;
+        private Map<String, String> levels = Map.of(
+            "ssh-connection", "INFO",
+            "ssh-passwordless", "INFO",
+            "system-info", "DEBUG",
+            "checks", "INFO",
+            "repairs", "WARN",
+            "errors", "ERROR"
+        );
+        private OutputConfig output = new OutputConfig();
+
+        @Data
+        public static class OutputConfig {
+            private boolean console = true;
+            private boolean file = false;
+            private boolean sse = true;
+        }
+    }
+
+    /**
+     * 调度器配置类
+     */
+    @Data
+    public static class SchedulerConfig {
+        private boolean enabled = true;
+        private int threads = 10;
+        private int pollingIntervalSeconds = 10;
+        private int heartbeatIntervalMinutes = 5;
+        private TasksConfig tasks = new TasksConfig();
+
+        @Data
+        public static class TasksConfig {
+            private ValidationTaskConfig validation = new ValidationTaskConfig();
+            private RepairTaskConfig repair = new RepairTaskConfig();
+            private CleanupTaskConfig cleanup = new CleanupTaskConfig();
+
+            @Data
+            public static class ValidationTaskConfig {
+                private int maxExecutionTimeMinutes = 60;
+                private boolean retryOnFailure = true;
+            }
+
+            @Data
+            public static class RepairTaskConfig {
+                private int maxExecutionTimeMinutes = 30;
+                private boolean retryOnFailure = false;
+            }
+
+            @Data
+            public static class CleanupTaskConfig {
+                private int executionTimeMinutes = 30;
+            }
+        }
+    }
+
+    /**
+     * 实时通信配置类
+     */
+    @Data
+    public static class RealtimeConfig {
+        private SseConfig sse = new SseConfig();
+        private PushConfig push = new PushConfig();
+
+        @Data
+        public static class SseConfig {
+            private boolean enabled = true;
+            private int timeoutSeconds = 300;
+            private int heartbeatIntervalSeconds = 30;
+            private int maxConnectionsPerCluster = 50;
+            private int bufferSize = 1000;
+        }
+
+        @Data
+        public static class PushConfig {
+            private boolean statusUpdates = true;
+            private boolean logMessages = true;
+            private boolean progressUpdates = true;
+            private int batchSize = 10;
+            private int flushIntervalMs = 100;
+        }
+    }
+
+    /**
+     * 缓存配置类
+     */
+    @Data
+    public static class CacheConfig {
+        private boolean enabled = true;
+        private ValidationSessionsConfig validationSessions = new ValidationSessionsConfig();
+        private SystemInfoCacheConfig systemInfo = new SystemInfoCacheConfig();
+
+        @Data
+        public static class ValidationSessionsConfig {
+            private int maxSize = 100;
+            private int expireAfterWriteMinutes = 60;
+            private int expireAfterAccessMinutes = 30;
+        }
+
+        @Data
+        public static class SystemInfoCacheConfig {
+            private int maxSize = 200;
+            private int expireAfterWriteMinutes = 180;
+        }
+    }
+
+    /**
+     * 通知配置类
+     */
+    @Data
+    public static class NotificationsConfig {
+        private boolean enabled = false;
+        private ChannelsConfig channels = new ChannelsConfig();
+        private EventsConfig events = new EventsConfig();
+
+        @Data
+        public static class ChannelsConfig {
+            private boolean email = false;
+            private boolean webhook = false;
+            private boolean sms = false;
+        }
+
+        @Data
+        public static class EventsConfig {
+            private boolean validationCompleted = true;
+            private boolean validationFailed = true;
+            private boolean repairCompleted = false;
+        }
     }
 }
