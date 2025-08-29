@@ -79,4 +79,24 @@ public interface HostValidationService {
      * @param checkType 检查类型
      */
     void startRepair(Long clusterId, String hostIp, CheckType checkType);
+    
+    // ==================== 调度器专用方法 ====================
+    
+    /**
+     * 执行主机校验 - 供调度器调用
+     * 此方法由db-scheduler调度执行，不直接暴露给外部API
+     * 
+     * @param request 校验请求
+     */
+    void executeValidation(HostValidationRequestDTO request);
+    
+    /**
+     * 执行主机修复 - 供调度器调用 
+     * 此方法由db-scheduler调度执行，不直接暴露给外部API
+     *
+     * @param clusterId 集群ID
+     * @param hostIp 主机IP
+     * @param checkType 检查类型
+     */
+    void executeRepair(Long clusterId, String hostIp, CheckType checkType);
 }

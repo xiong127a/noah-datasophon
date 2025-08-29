@@ -13,8 +13,7 @@ import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.pf4j.PluginManager;
-import org.springframework.beans.factory.annotation.Value;
+import com.datasophon.plugins.manager.PluginManager;
 import org.springframework.stereotype.Service;
 
 import java.util.Comparator;
@@ -22,8 +21,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
  * 主机校验服务实现
@@ -45,19 +42,10 @@ public class HostValidationServiceImpl implements HostValidationService {
     
     private final HostValidationStateManager stateManager;
     private final PluginManager pluginManager;
+    private final HostValidationSchedulerService schedulerService;
     
-    // 简化：使用虚拟线程池处理并发
-    private final ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-    
-    // 主机校验调度服务（可选）
-    private HostValidationSchedulerService schedulerService;
-    
-    // 是否启用调度器
-    @Value("${datasophon.host-validation.scheduler.enabled:false}")
-    private boolean schedulerEnabled;
-    
-    // 活跃的校验任务
-    private final Map<Long, CompletableFuture<Void>> activeValidations = new ConcurrentHashMap<>();
+    // 活跃的校验任务跟踪
+    private final Map<Long, String> activeValidationTasks = new ConcurrentHashMap<>();
     
     @Override
     public void startValidation(HostValidationRequestDTO request) {
@@ -68,16 +56,11 @@ public class HostValidationServiceImpl implements HostValidationService {
         // 1. 创建校验会话
         stateManager.createValidationSession(clusterId, request);
         
-        // 2. 异步执行校验 - 纯插件化处理
-        CompletableFuture.runAsync(() -> executeValidation(request), executor)
-            .whenComplete((result, throwable) -> {
-                stateManager.completeValidationSession(clusterId);
-                if (throwable != null) {
-                    log.error("主机校验异常: clusterId={}, error={}", clusterId, throwable.getMessage(), throwable);
-                } else {
-                    log.info("主机校验完成: clusterId={}", clusterId);
-                }
-            });
+        // 2. 通过db-scheduler调度执行校验任务
+        String taskId = schedulerService.scheduleHostValidationNow(request);
+        activeValidationTasks.put(clusterId, taskId);
+        
+        log.info("主机校验任务已调度: clusterId={}, taskId={}", clusterId, taskId);
     }
     
     @Override
@@ -91,37 +74,53 @@ public class HostValidationServiceImpl implements HostValidationService {
     public void repairFailedChecks(Long clusterId, List<String> hostIps) {
         log.info("启动主机修复: clusterId={}, 主机数量={}", clusterId, hostIps.size());
         
-        // 异步执行修复任务
-        CompletableFuture.runAsync(() -> executeRepair(clusterId, hostIps), executor);
+        // 通过db-scheduler调度修复任务
+        for (String hostIp : hostIps) {
+            List<CheckType> failedCheckTypes = stateManager.getFailedCheckTypes(clusterId, hostIp);
+            for (CheckType checkType : failedCheckTypes) {
+                schedulerService.scheduleHostRepairNow(clusterId, hostIp, checkType);
+            }
+        }
     }
     
     @Override
     public void stopValidation(Long clusterId) {
-        CompletableFuture<Void> task = activeValidations.get(clusterId);
-        if (task != null) {
-            task.cancel(true);
-            activeValidations.remove(clusterId);
-            log.info("停止主机校验任务: clusterId={}", clusterId);
+        String taskId = activeValidationTasks.get(clusterId);
+        if (taskId != null) {
+            // 通过db-scheduler取消任务
+            schedulerService.cancelTask(taskId);
+            activeValidationTasks.remove(clusterId);
+            log.info("停止主机校验任务: clusterId={}, taskId={}", clusterId, taskId);
         }
     }
     
-    /**
-     * 执行主机校验 - 纯插件化处理
-     */
-    private void executeValidation(HostValidationRequestDTO request) {
+    @Override
+    public void executeValidation(HostValidationRequestDTO request) {
         Long clusterId = request.clusterId();
         
-        // 1. 获取校验插件
-        List<HostValidationPlugin> plugins = getAvailableValidationPlugins();
-        if (plugins.isEmpty()) {
-            log.warn("未找到校验插件: clusterId={}", clusterId);
-            return;
+        try {
+            log.info("开始执行主机校验: clusterId={}, 主机数量={}", clusterId, request.hostIps().size());
+            
+            // 1. 获取校验插件
+            List<HostValidationPlugin> plugins = getAvailableValidationPlugins();
+            if (plugins.isEmpty()) {
+                log.warn("未找到校验插件: clusterId={}", clusterId);
+                stateManager.completeValidationSession(clusterId);
+                return;
+            }
+            
+            // 2. 并发校验所有主机
+            request.hostIps().parallelStream().forEach(hostIp -> 
+                validateSingleHost(request, hostIp, plugins)
+            );
+            
+            log.info("主机校验执行完成: clusterId={}", clusterId);
+            stateManager.completeValidationSession(clusterId);
+            
+        } catch (Exception e) {
+            log.error("主机校验执行异常: clusterId={}, error={}", clusterId, e.getMessage(), e);
+            stateManager.completeValidationSession(clusterId);
         }
-        
-        // 2. 并发校验所有主机
-        request.hostIps().parallelStream().forEach(hostIp -> 
-            validateSingleHost(request, hostIp, plugins)
-        );
     }
     
     /**
@@ -242,40 +241,49 @@ public class HostValidationServiceImpl implements HostValidationService {
                 clusterId, hostIp, checkType, result.isSuccess(), message);
     }
     
-    /**
-     * 执行修复
-     */
-    private void executeRepair(Long clusterId, List<String> hostIps) {
-        log.info("开始执行修复: clusterId={}, hostIps={}", clusterId, hostIps);
+    @Override
+    public void executeRepair(Long clusterId, String hostIp, CheckType checkType) {
+        log.info("开始执行修复: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
         
         try {
-            // 获取可用的修复插件
-            List<HostRepairPlugin> repairPlugins = getAvailableRepairPlugins();
-            
-            if (repairPlugins.isEmpty()) {
-                log.warn("没有找到可用的主机修复插件: clusterId={}", clusterId);
-                return;
-            }
+            // 更新状态为修复中
+            stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                ValidationStatus.REPAIRING, "开始修复...", Map.of());
             
             // 获取校验请求信息
             HostValidationRequestDTO request = getValidationRequest(clusterId);
             if (request == null) {
-                log.error("无法获取校验请求信息: clusterId={}", clusterId);
+                stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                    ValidationStatus.FAILED, "无法获取校验请求信息", Map.of());
                 return;
             }
             
-            // 对每个主机执行修复
-            for (String hostIp : hostIps) {
-                if (Thread.currentThread().isInterrupted()) {
-                    log.info("修复任务被中断: clusterId={}", clusterId);
-                    return;
-                }
-                
-                repairSingleHost(clusterId, hostIp, request, repairPlugins);
+            HostCheckContext context = createHostCheckContext(request, hostIp);
+            
+            // 获取修复插件
+            List<HostRepairPlugin> repairPlugins = getAvailableRepairPlugins();
+            HostRepairPlugin repairPlugin = repairPlugins.stream()
+                .filter(plugin -> plugin.canRepair(context, checkType))
+                .findFirst()
+                .orElse(null);
+            
+            if (repairPlugin == null) {
+                stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                    ValidationStatus.FAILED, "没有可用的修复插件", Map.of());
+                return;
             }
             
+            // 执行修复
+            CompletableFuture<CheckResult> repairFuture = repairPlugin.executeRepair(context, checkType, Map.of());
+            CheckResult result = repairFuture.get(); // 同步等待结果
+            
+            handleRepairResult(clusterId, hostIp, checkType, result);
+            
         } catch (Exception e) {
-            log.error("修复执行异常: clusterId={}, error={}", clusterId, e.getMessage(), e);
+            log.error("修复执行异常: clusterId={}, hostIp={}, checkType={}, error={}", 
+                    clusterId, hostIp, checkType, e.getMessage(), e);
+            stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                ValidationStatus.FAILED, "修复执行异常: " + e.getMessage(), Map.of());
         }
     }
     
@@ -285,7 +293,12 @@ public class HostValidationServiceImpl implements HostValidationService {
      * 获取所有可用的校验插件
      */
     private List<HostValidationPlugin> getAvailableValidationPlugins() {
-        List<HostValidationPlugin> plugins = pluginManager.getExtensions(HostValidationPlugin.class);
+        // 确保插件管理器已初始化
+        if (!pluginManager.isInitialized()) {
+            pluginManager.initializePlugins();
+        }
+        
+        List<HostValidationPlugin> plugins = pluginManager.getPf4jManager().getExtensions(HostValidationPlugin.class);
         
         // 按优先级排序（数字越小优先级越高）
         plugins.sort(Comparator.comparing(HostValidationPlugin::getPriority));
@@ -370,184 +383,66 @@ public class HostValidationServiceImpl implements HostValidationService {
 
     @Override
     public void recheckItem(Long clusterId, String hostIp, CheckType checkType) {
-        executor.submit(() -> {
-            try {
-                log.info("重新检查: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
-                
-                // 获取校验请求信息
-                HostValidationRequestDTO request = getValidationRequest(clusterId);
-                if (request == null) {
-                    log.error("无法获取校验请求信息: clusterId={}", clusterId);
-                    return;
-                }
-                
-                HostCheckContext context = createHostCheckContext(request, hostIp);
-                
-                // 获取校验插件
-                List<HostValidationPlugin> validationPlugins = getAvailableValidationPlugins();
-                HostValidationPlugin validationPlugin = validationPlugins.stream()
-                    .filter(plugin -> plugin.getSupportedCheckTypes().contains(checkType))
-                    .filter(plugin -> plugin.canExecute(context, checkType))
-                    .findFirst()
-                    .orElse(null);
-                
-                if (validationPlugin == null) {
-                    stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                        ValidationStatus.FAILED, "没有可用的校验插件", Map.of());
-                    return;
-                }
-                
-                // 执行检查
-                executePluginCheck(clusterId, hostIp, context, validationPlugin, checkType);
-                
-            } catch (Exception e) {
-                log.error("重新检查失败: clusterId={}, hostIp={}, checkType={}, error={}", 
-                        clusterId, hostIp, checkType, e.getMessage(), e);
+        try {
+            log.info("重新检查: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
+            
+            // 更新状态为检查中
+            stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                ValidationStatus.CHECKING, "重新检查中...", Map.of());
+            
+            // 获取校验请求信息
+            HostValidationRequestDTO request = getValidationRequest(clusterId);
+            if (request == null) {
+                log.error("无法获取校验请求信息: clusterId={}", clusterId);
                 stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                    ValidationStatus.FAILED, "重新检查失败: " + e.getMessage(), Map.of());
+                    ValidationStatus.FAILED, "无法获取校验请求信息", Map.of());
+                return;
             }
-        });
+            
+            HostCheckContext context = createHostCheckContext(request, hostIp);
+            
+            // 获取校验插件
+            List<HostValidationPlugin> validationPlugins = getAvailableValidationPlugins();
+            HostValidationPlugin validationPlugin = validationPlugins.stream()
+                .filter(plugin -> plugin.getSupportedCheckTypes().contains(checkType))
+                .filter(plugin -> plugin.canExecute(context, checkType))
+                .findFirst()
+                .orElse(null);
+            
+            if (validationPlugin == null) {
+                stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                    ValidationStatus.FAILED, "没有可用的校验插件", Map.of());
+                return;
+            }
+            
+            // 执行检查
+            executePluginCheck(clusterId, hostIp, context, validationPlugin, checkType);
+            
+        } catch (Exception e) {
+            log.error("重新检查失败: clusterId={}, hostIp={}, checkType={}, error={}", 
+                    clusterId, hostIp, checkType, e.getMessage(), e);
+            stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                ValidationStatus.FAILED, "重新检查失败: " + e.getMessage(), Map.of());
+        }
     }
 
     @Override
     public void startRepair(Long clusterId, String hostIp, CheckType checkType) {
-        // 如果启用了调度器，使用调度器执行修复任务
-        if (schedulerEnabled) {
-            try {
-                String taskId = schedulerService.scheduleHostRepairNow(clusterId, hostIp, checkType);
-                log.info("通过调度器启动修复任务: clusterId={}, hostIp={}, checkType={}, taskId={}", 
-                        clusterId, hostIp, checkType, taskId);
-                return;
-            } catch (Exception e) {
-                log.warn("调度器修复任务失败，使用线程池执行: clusterId={}, hostIp={}, checkType={}, error={}", 
-                        clusterId, hostIp, checkType, e.getMessage());
-            }
-        }
-        
-        // 回退到线程池执行
-        executor.submit(() -> {
-            try {
-                log.info("开始修复: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
-                
-                // 更新状态为修复中
-                stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                    ValidationStatus.REPAIRING, "开始修复...", Map.of());
-                
-                // 获取校验请求信息
-                HostValidationRequestDTO request = getValidationRequest(clusterId);
-                if (request == null) {
-                    stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                        ValidationStatus.FAILED, "无法获取校验请求信息", Map.of());
-                    return;
-                }
-                
-                HostCheckContext context = createHostCheckContext(request, hostIp);
-                
-                // 获取修复插件
-                List<HostRepairPlugin> repairPlugins = getAvailableRepairPlugins();
-                HostRepairPlugin repairPlugin = repairPlugins.stream()
-                    .filter(plugin -> plugin.canRepair(context, checkType))
-                    .findFirst()
-                    .orElse(null);
-                
-                if (repairPlugin == null) {
-                    stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                        ValidationStatus.FAILED, "没有可用的修复插件", Map.of());
-                    return;
-                }
-                
-                // 执行修复
-                CompletableFuture<CheckResult> repairFuture = repairPlugin.executeRepair(context, checkType, Map.of());
-                repairFuture.whenComplete((result, throwable) -> {
-                    if (throwable != null) {
-                        log.error("修复插件执行异常: clusterId={}, hostIp={}, checkType={}, error={}", 
-                                clusterId, hostIp, checkType, throwable.getMessage(), throwable);
-                        stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                            ValidationStatus.FAILED, "修复插件执行异常: " + throwable.getMessage(), Map.of());
-                    } else if (result != null) {
-                        handleRepairResult(clusterId, hostIp, checkType, result);
-                    }
-                });
-                
-            } catch (Exception e) {
-                log.error("修复执行失败: clusterId={}, hostIp={}, checkType={}, error={}", 
-                        clusterId, hostIp, checkType, e.getMessage(), e);
-                stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                    ValidationStatus.FAILED, "修复执行失败: " + e.getMessage(), Map.of());
-            }
-        });
-    }
-
-    /**
-     * 修复单个主机
-     */
-    private void repairSingleHost(Long clusterId, String hostIp, HostValidationRequestDTO request, 
-                                 List<HostRepairPlugin> repairPlugins) {
         try {
-            log.info("开始修复主机: clusterId={}, hostIp={}", clusterId, hostIp);
-            
-            HostCheckContext context = createHostCheckContext(request, hostIp);
-            
-            // 获取该主机的失败检查项
-            List<CheckType> failedCheckTypes = stateManager.getFailedCheckTypes(clusterId, hostIp);
-            
-            for (CheckType checkType : failedCheckTypes) {
-                if (Thread.currentThread().isInterrupted()) {
-                    return;
-                }
-                
-                // 找到支持修复此检查项的插件
-                HostRepairPlugin repairPlugin = repairPlugins.stream()
-                    .filter(plugin -> plugin.canRepair(context, checkType))
-                    .findFirst()
-                    .orElse(null);
-                
-                if (repairPlugin != null) {
-                    executePluginRepair(clusterId, hostIp, context, repairPlugin, checkType);
-                } else {
-                    log.warn("没有找到支持修复的插件: clusterId={}, hostIp={}, checkType={}", 
-                            clusterId, hostIp, checkType);
-                }
-            }
-            
+            String taskId = schedulerService.scheduleHostRepairNow(clusterId, hostIp, checkType);
+            log.info("启动修复任务: clusterId={}, hostIp={}, checkType={}, taskId={}", 
+                    clusterId, hostIp, checkType, taskId);
         } catch (Exception e) {
-            log.error("单主机修复异常: clusterId={}, hostIp={}, error={}", 
-                    clusterId, hostIp, e.getMessage(), e);
-        }
-    }
-
-    /**
-     * 执行插件修复
-     */
-    private void executePluginRepair(Long clusterId, String hostIp, HostCheckContext context, 
-                                   HostRepairPlugin plugin, CheckType checkType) {
-        try {
-            // 更新状态为修复中
-            stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                ValidationStatus.REPAIRING, "正在修复...", Map.of());
-            
-            // 调用插件执行修复
-            CompletableFuture<CheckResult> repairFuture = plugin.executeRepair(context, checkType, Map.of());
-            
-            // 处理修复结果
-            repairFuture.whenComplete((result, throwable) -> {
-                if (throwable != null) {
-                    log.error("插件修复异常: clusterId={}, hostIp={}, checkType={}, error={}", 
-                            clusterId, hostIp, checkType, throwable.getMessage(), throwable);
-                    stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                        ValidationStatus.FAILED, "修复异常: " + throwable.getMessage(), Map.of());
-                } else if (result != null) {
-                    handleRepairResult(clusterId, hostIp, checkType, result);
-                }
-            });
-            
-        } catch (Exception e) {
-            log.error("插件修复调用异常: clusterId={}, hostIp={}, checkType={}, error={}", 
+            log.error("启动修复任务失败: clusterId={}, hostIp={}, checkType={}, error={}", 
                     clusterId, hostIp, checkType, e.getMessage(), e);
+            
+            // 更新状态为修复失败
             stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                ValidationStatus.FAILED, "修复调用异常: " + e.getMessage(), Map.of());
+                ValidationStatus.FAILED, "启动修复任务失败: " + e.getMessage(), Map.of());
         }
     }
+
+
 
     /**
      * 处理修复结果
@@ -574,7 +469,12 @@ public class HostValidationServiceImpl implements HostValidationService {
      * 获取可用的修复插件
      */
     private List<HostRepairPlugin> getAvailableRepairPlugins() {
-        List<HostRepairPlugin> plugins = pluginManager.getExtensions(HostRepairPlugin.class);
+        // 确保插件管理器已初始化
+        if (!pluginManager.isInitialized()) {
+            pluginManager.initializePlugins();
+        }
+        
+        List<HostRepairPlugin> plugins = pluginManager.getPf4jManager().getExtensions(HostRepairPlugin.class);
         
         // 过滤健康的插件
         List<HostRepairPlugin> healthyPlugins = plugins.stream()
@@ -600,7 +500,7 @@ public class HostValidationServiceImpl implements HostValidationService {
      */
     private HostValidationRequestDTO getValidationRequest(Long clusterId) {
         return stateManager.getValidationSession(clusterId)
-                .map(session -> session.getRequest())
+                .map(HostValidationStateManager.HostValidationSession::getRequest)
                 .orElse(null);
     }
 }

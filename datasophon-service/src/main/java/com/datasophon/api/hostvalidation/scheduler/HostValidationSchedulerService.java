@@ -19,6 +19,7 @@ package com.datasophon.api.hostvalidation.scheduler;
 
 import com.datasophon.api.hostvalidation.manager.HostValidationStateManager;
 import com.datasophon.api.hostvalidation.service.HostValidationService;
+import com.datasophon.api.hostvalidation.service.impl.HostValidationServiceImpl;
 import com.datasophon.common.dto.HostValidationRequestDTO;
 import com.datasophon.common.enums.CheckType;
 
@@ -73,7 +74,8 @@ public class HostValidationSchedulerService {
                         instance.getId(), data.clusterId());
                 
                 try {
-                    hostValidationService.startValidation(data);
+                    // 调用接口方法，优雅地执行校验
+                    hostValidationService.executeValidation(data);
                     log.info("主机校验任务执行成功: taskId={}, clusterId={}", 
                             instance.getId(), data.clusterId());
                 } catch (Exception e) {
@@ -102,7 +104,8 @@ public class HostValidationSchedulerService {
                     if (clusterId != null && hostIp != null && checkTypeCode != null) {
                         CheckType checkType = CheckType.fromCode(checkTypeCode);
                         if (checkType != null) {
-                            hostValidationService.startRepair(clusterId, hostIp, checkType);
+                            // 调用接口方法，优雅地执行修复
+                            hostValidationService.executeRepair(clusterId, hostIp, checkType);
                             log.info("主机修复任务执行成功: taskId={}, clusterId={}, hostIp={}, checkType={}", 
                                     instance.getId(), clusterId, hostIp, checkType);
                         } else {
@@ -248,6 +251,28 @@ public class HostValidationSchedulerService {
             log.error("取消任务失败: taskId={}, taskType={}, error={}", taskId, taskType, e.getMessage(), e);
             return false;
         }
+    }
+    
+    /**
+     * 取消任务（仅通过taskId，自动检测任务类型）
+     */
+    public boolean cancelTask(String taskId) {
+        // 尝试从不同的任务类型中取消
+        String[] taskTypes = {TASK_HOST_VALIDATION, TASK_HOST_REPAIR, TASK_HOST_CLEANUP};
+        
+        for (String taskType : taskTypes) {
+            try {
+                if (cancelTask(taskId, taskType)) {
+                    return true;
+                }
+            } catch (Exception e) {
+                // 继续尝试下一个任务类型
+                log.debug("尝试取消任务失败: taskId={}, taskType={}", taskId, taskType);
+            }
+        }
+        
+        log.warn("无法取消任务，未找到匹配的任务类型: taskId={}", taskId);
+        return false;
     }
     
     /**

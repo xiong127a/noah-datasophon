@@ -217,7 +217,8 @@ datasophon:
     # 调度器配置（基于现有db-scheduler）
     scheduler:
       enabled: true                       # 是否启用调度器
-      threads: 10                         # 调度器线程数
+      virtual-threads: true               # 是否使用虚拟线程（JDK21特性）
+      threads: 10                         # 调度器线程数（virtual-threads=false时生效）
       polling-interval-seconds: 10        # 任务轮询间隔（秒）
       heartbeat-interval-minutes: 5       # 心跳间隔（分钟）
       

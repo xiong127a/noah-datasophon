@@ -3,8 +3,8 @@ package com.datasophon.plugins.manager;
 import com.datasophon.plugins.api.HostCheckerPlugin;
 import com.datasophon.plugins.api.model.PluginMetadata;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
-import org.pf4j.DefaultPluginManager;
 import org.pf4j.PluginWrapper;
 
 import org.springframework.stereotype.Component;
@@ -49,12 +49,24 @@ public class PluginManager {
     
     /**
      * 延迟加载配置，通过构造函数或setter注入
+     * -- SETTER --
+     *  设置延迟加载配置
+     * -- GETTER --
+     *  检查是否启用延迟加载
+
+
      */
+    @Getter
+    @Setter
     private boolean lazyLoading = false;
     
     /**
      * 插件路径列表（通过配置注入）
+     * -- SETTER --
+     *  设置插件扫描路径（用于配置注入）
+
      */
+    @Setter
     private List<String> pluginScanPaths;
     
     public PluginManager() {
@@ -105,23 +117,8 @@ public class PluginManager {
         
         log.info("PF4J插件管理器配置完成，扫描路径数量: {}", pluginScanPaths.size());
     }
-    
 
-    
-    /**
-     * 设置插件扫描路径（用于配置注入）
-     */
-    public void setPluginScanPaths(List<String> pluginScanPaths) {
-        this.pluginScanPaths = pluginScanPaths;
-    }
-    
-    /**
-     * 设置延迟加载配置
-     */
-    public void setLazyLoading(boolean lazyLoading) {
-        this.lazyLoading = lazyLoading;
-    }
-    
+
     @PostConstruct
     public void init() {
         if (!lazyLoading) {
@@ -454,14 +451,7 @@ public class PluginManager {
      * 检查插件管理器是否已初始化
      */
 
-    
-    /**
-     * 检查是否启用延迟加载
-     */
-    public boolean isLazyLoading() {
-        return lazyLoading;
-    }
-    
+
     /**
      * 确保插件管理器已初始化
      * 在延迟加载模式下自动初始化
