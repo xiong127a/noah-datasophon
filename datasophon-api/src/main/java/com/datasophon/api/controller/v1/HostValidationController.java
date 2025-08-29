@@ -17,15 +17,14 @@
 
 package com.datasophon.api.controller.v1;
 
+import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.dto.Result;
 import com.datasophon.api.hostvalidation.manager.HostValidationStateManager;
 import com.datasophon.api.hostvalidation.service.HostValidationService;
 import com.datasophon.common.dto.HostValidationRequestDTO;
-import com.datasophon.common.utils.Result;
+import com.datasophon.common.enums.CheckType;
 import com.datasophon.common.vo.HostValidationStatusVO;
-import com.datasophon.common.annotation.ApiVersion;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -43,7 +42,6 @@ import java.util.List;
 @Slf4j
 @ApiVersion(path = "host-validation")
 @RequiredArgsConstructor
-@Tag(name = "主机校验操作", description = "主机校验与修复操作接口")
 public class HostValidationController {
     
     private final HostValidationService hostValidationService;
@@ -53,7 +51,6 @@ public class HostValidationController {
      * 启动主机校验
      */
     @PostMapping("/start")
-    @Operation(summary = "启动主机校验", description = "启动主机校验任务，包括SSH连接、信息收集和环境检查")
     public Result<String> startValidation(@RequestBody HostValidationRequestDTO request) {
         
         log.info("启动主机校验: clusterId={}, 主机数量={}", 
@@ -61,7 +58,7 @@ public class HostValidationController {
         
         try {
             // 参数校验
-            if (request.clusterId() == null || request.hostIps() == null || request.hostIps().isEmpty()) {
+            if (request.clusterId() == null || request.hostIps().isEmpty()) {
                 return Result.error("集群ID和主机IP列表不能为空");
             }
             
@@ -81,9 +78,7 @@ public class HostValidationController {
      * 获取当前校验状态（快照）
      */
     @GetMapping("/status/{clusterId}")
-    @Operation(summary = "获取校验状态", description = "获取指定集群的当前主机校验状态快照")
-    public Result<List<HostValidationStatusVO>> getValidationStatus(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId) {
+    public Result<List<HostValidationStatusVO>> getValidationStatus(@PathVariable Long clusterId) {
         
         try {
             List<HostValidationStatusVO> statuses = hostValidationService.getValidationStatus(clusterId);
@@ -99,10 +94,9 @@ public class HostValidationController {
      * 暂停主机校验
      */
     @PostMapping("/pause/{clusterId}")
-    @Operation(summary = "暂停主机校验", description = "暂停指定主机或所有主机的校验任务")
     public Result<String> pauseValidation(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId,
-            @Parameter(description = "主机IP，为空则暂停所有主机") @RequestParam(required = false) String hostIp) {
+            @PathVariable Long clusterId,
+            @RequestParam(required = false) String hostIp) {
         
         log.info("暂停主机校验: clusterId={}, hostIp={}", clusterId, hostIp);
         
@@ -124,10 +118,9 @@ public class HostValidationController {
      * 继续主机校验
      */
     @PostMapping("/resume/{clusterId}")
-    @Operation(summary = "继续主机校验", description = "继续指定主机或所有主机的校验任务")
     public Result<String> resumeValidation(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId,
-            @Parameter(description = "主机IP，为空则继续所有主机") @RequestParam(required = false) String hostIp) {
+            @PathVariable Long clusterId,
+            @RequestParam(required = false) String hostIp) {
         
         log.info("继续主机校验: clusterId={}, hostIp={}", clusterId, hostIp);
         
@@ -149,10 +142,9 @@ public class HostValidationController {
      * 停止校验任务
      */
     @PostMapping("/stop/{clusterId}")
-    @Operation(summary = "停止校验任务", description = "停止正在进行的主机校验任务")
     public Result<String> stopValidation(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId,
-            @Parameter(description = "主机IP，为空则停止所有主机") @RequestParam(required = false) String hostIp) {
+            @PathVariable Long clusterId,
+            @RequestParam(required = false) String hostIp) {
         
         log.info("停止主机校验: clusterId={}, hostIp={}", clusterId, hostIp);
         
@@ -178,11 +170,10 @@ public class HostValidationController {
      * 重新检查指定项目
      */
     @PostMapping("/recheck/{clusterId}")
-    @Operation(summary = "重新检查", description = "重新检查指定主机的特定检查项")
     public Result<String> recheckItem(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId,
-            @Parameter(description = "主机IP") @RequestParam String hostIp,
-            @Parameter(description = "检查类型") @RequestParam String checkType) {
+            @PathVariable Long clusterId,
+            @RequestParam String hostIp,
+            @RequestParam CheckType checkType) {
         
         log.info("重新检查: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
         
@@ -201,11 +192,10 @@ public class HostValidationController {
      * 修复指定项目
      */
     @PostMapping("/repair/{clusterId}")
-    @Operation(summary = "修复指定项目", description = "修复指定主机的特定检查项")
     public Result<String> repairItem(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId,
-            @Parameter(description = "主机IP") @RequestParam String hostIp,
-            @Parameter(description = "检查类型") @RequestParam String checkType) {
+            @PathVariable Long clusterId,
+            @RequestParam String hostIp,
+            @RequestParam CheckType checkType) {
         
         log.info("修复指定项目: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
         
@@ -224,10 +214,9 @@ public class HostValidationController {
      * 批量修复失败的检查项
      */
     @PostMapping("/repair-batch/{clusterId}")
-    @Operation(summary = "批量修复失败检查项", description = "对指定主机的失败检查项执行批量修复")
     public Result<String> repairFailedChecks(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId,
-            @Parameter(description = "主机IP列表") @RequestBody List<String> hostIps) {
+            @PathVariable Long clusterId,
+            @RequestBody List<String> hostIps) {
         
         log.info("启动批量主机修复: clusterId={}, 主机数量={}", clusterId, hostIps.size());
         
@@ -247,9 +236,7 @@ public class HostValidationController {
      * 清理校验会话
      */
     @DeleteMapping("/cleanup/{clusterId}")
-    @Operation(summary = "清理校验会话", description = "清理指定集群的校验会话数据，释放内存")
-    public Result<String> cleanupValidation(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId) {
+    public Result<String> cleanupValidation(@PathVariable Long clusterId) {
         
         log.info("清理主机校验会话: clusterId={}", clusterId);
         
@@ -267,7 +254,6 @@ public class HostValidationController {
      * 获取活跃的校验会话
      */
     @GetMapping("/sessions")
-    @Operation(summary = "获取活跃会话", description = "获取所有活跃的主机校验会话")
     public Result<List<Long>> getActiveSessions() {
         try {
             List<Long> activeSessions = stateManager.getActiveValidationSessions();

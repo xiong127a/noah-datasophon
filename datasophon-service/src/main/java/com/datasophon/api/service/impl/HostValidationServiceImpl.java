@@ -20,6 +20,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.model.HostValidationTaskData;
 import com.datasophon.api.service.HostValidationService;
 import com.datasophon.api.scheduler.HostValidationScheduler;
+import com.datasophon.common.enums.CheckType;
 import com.datasophon.plugins.api.HostCheckerPlugin;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
@@ -133,7 +134,7 @@ public class HostValidationServiceImpl implements HostValidationService {
             
             CheckResult failedResult = CheckResult.builder()
                     .success(false)
-                    .checkType("ssh-connectivity")
+                    .checkType(CheckType.SSH_CONNECTIVITY)
                     .message("SSH连接检查失败: " + e.getMessage())
                     .error(e.getMessage())
                     .checkTime(LocalDateTime.now())
@@ -181,7 +182,7 @@ public class HostValidationServiceImpl implements HostValidationService {
             
             CheckResult failedResult = CheckResult.builder()
                     .success(false)
-                    .checkType("os-info-collection")
+                    .checkType(CheckType.OS_INFO)
                     .message("操作系统信息收集失败: " + e.getMessage())
                     .error(e.getMessage())
                     .checkTime(LocalDateTime.now())
@@ -229,7 +230,7 @@ public class HostValidationServiceImpl implements HostValidationService {
             
             CheckResult failedResult = CheckResult.builder()
                     .success(false)
-                    .checkType("hardware-info-collection")
+                    .checkType(CheckType.HARDWARE_INFO)
                     .message("硬件信息收集失败: " + e.getMessage())
                     .error(e.getMessage())
                     .checkTime(LocalDateTime.now())
@@ -249,7 +250,7 @@ public class HostValidationServiceImpl implements HostValidationService {
             // 创建一个简单的网络检查结果
             CheckResult result = CheckResult.builder()
                     .success(true)
-                    .checkType("hostname-network-check")
+                    .checkType(CheckType.NETWORK_CONNECTIVITY)
                     .message("主机名和网络检查成功")
                     .checkTime(LocalDateTime.now())
                     .build();
@@ -273,7 +274,7 @@ public class HostValidationServiceImpl implements HostValidationService {
             
             CheckResult failedResult = CheckResult.builder()
                     .success(false)
-                    .checkType("hostname-network-check")
+                    .checkType(CheckType.NETWORK_CONNECTIVITY)
                     .message("主机名和网络检查失败: " + e.getMessage())
                     .error(e.getMessage())
                     .checkTime(LocalDateTime.now())
@@ -298,7 +299,7 @@ public class HostValidationServiceImpl implements HostValidationService {
             // 创建失败结果
             CheckResult failedResult = CheckResult.builder()
                     .success(false)
-                    .checkType(checkType)
+                    .checkType(CheckType.fromCode(checkType))
                     .message("检查失败: " + errorMessage)
                     .error(errorMessage)
                     .checkTime(LocalDateTime.now())

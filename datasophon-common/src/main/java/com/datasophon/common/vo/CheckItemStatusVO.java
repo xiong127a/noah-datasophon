@@ -18,6 +18,9 @@
 package com.datasophon.common.vo;
 
 import com.datasophon.common.enums.ValidationStatus;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.Map;

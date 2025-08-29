@@ -1,21 +1,14 @@
 package com.datasophon.api.controller.v1;
 
+import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.hostvalidation.manager.HostValidationStateManager;
 import com.datasophon.api.hostvalidation.service.HostValidationService;
-import com.datasophon.common.dto.HostValidationRequestDTO;
-import com.datasophon.common.utils.Result;
-import com.datasophon.common.vo.HostValidationStatusVO;
-import com.datasophon.common.annotation.ApiVersion;
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -30,7 +23,6 @@ import java.util.Map;
 @RestController
 @ApiVersion(path = "host-validation/stream")
 @RequiredArgsConstructor
-@Tag(name = "主机校验实时数据", description = "主机校验实时状态和日志推送")
 public class HostValidationSSEController {
     
     private final HostValidationService hostValidationService;
@@ -40,9 +32,7 @@ public class HostValidationSSEController {
      * 建立SSE连接，接收实时状态更新
      */
     @GetMapping(value = "/status/{clusterId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "建立SSE连接", description = "建立Server-Sent Events连接，实时接收主机校验状态和日志")
-    public SseEmitter stream(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId) {
+    public SseEmitter stream(@PathVariable Long clusterId) {
         
         log.info("建立主机校验SSE连接: clusterId={}", clusterId);
         
@@ -77,10 +67,9 @@ public class HostValidationSSEController {
      * 获取实时日志
      */
     @GetMapping(value = "/logs/{clusterId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @Operation(summary = "获取实时日志", description = "建立SSE连接接收实时日志信息")
     public SseEmitter streamLogs(
-            @Parameter(description = "集群ID") @PathVariable Long clusterId,
-            @Parameter(description = "主机IP，为空则获取所有主机日志") @RequestParam(required = false) String hostIp) {
+            @PathVariable Long clusterId,
+            @RequestParam(required = false) String hostIp) {
         
         log.info("建立日志SSE连接: clusterId={}, hostIp={}", clusterId, hostIp);
         

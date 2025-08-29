@@ -38,10 +38,13 @@ public enum CheckType {
     HOSTS_FILE("hosts-file", "Hosts文件检查", 8, true),
     FILE_HANDLE_LIMIT("file-handle-limit", "文件句柄限制检查", 9, true),
     TIME_SYNC("time-sync", "时间同步检查", 10, true),
+    NETWORK_CONNECTIVITY("network-connectivity", "网络连通性检查", 11, true),
     
     // 兼容旧名称
     SSH_CONNECTIVITY("ssh-connectivity", "SSH连接检查", 2, true),
+    OS_INFO("os-info", "操作系统信息", 3, false),
     OS_INFO_COLLECTION("os-info-collection", "操作系统信息收集", 3, false),
+    HARDWARE_INFO("hardware-info", "硬件信息", 3, false),
     HARDWARE_INFO_COLLECTION("hardware-info-collection", "硬件信息收集", 3, false),
     CPU_CHECK("cpu-check", "CPU检查", 3, false),
     MEMORY_CHECK("memory-check", "内存检查", 3, false),
@@ -64,23 +67,6 @@ public enum CheckType {
         this.displayName = displayName;
         this.priority = priority;
         this.canRepair = canRepair;
-    }
-    
-    /**
-     * 根据代码获取检查类型
-     */
-    public static CheckType fromCode(String code) {
-        if (code == null || code.trim().isEmpty()) {
-            return null;
-        }
-        
-        for (CheckType type : values()) {
-            if (type.code.equalsIgnoreCase(code.trim())) {
-                return type;
-            }
-        }
-        
-        return null;
     }
     
     /**
@@ -110,4 +96,29 @@ public enum CheckType {
     public boolean isSystemConfigCheck() {
         return priority >= 12;
     }
+    
+    /**
+     * 根据代码获取枚举值
+     */
+    public static CheckType fromCode(String code) {
+        if (code == null || code.trim().isEmpty()) {
+            return null;
+        }
+        
+        for (CheckType checkType : values()) {
+            if (checkType.getCode().equals(code)) {
+                return checkType;
+            }
+        }
+        
+        throw new IllegalArgumentException("未知的检查类型代码: " + code);
+    }
+    
+    /**
+     * 是否支持修复
+     */
+    public boolean isRepairAvailable() {
+        return canRepair;
+    }
 }
+

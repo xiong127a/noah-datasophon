@@ -21,12 +21,12 @@ import com.datasophon.api.hostvalidation.manager.HostValidationStateManager;
 import com.datasophon.api.hostvalidation.service.HostValidationService;
 import com.datasophon.common.dto.HostValidationRequestDTO;
 import com.datasophon.common.enums.CheckType;
-import com.github.kagkarlsson.scheduler.SchedulerName;
+
 import com.github.kagkarlsson.scheduler.task.helper.OneTimeTask;
 import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import com.github.kagkarlsson.scheduler.task.Task;
 import com.github.kagkarlsson.scheduler.Scheduler;
-import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -43,50 +43,61 @@ import java.util.Map;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class HostValidationSchedulerService {
     
     private final HostValidationService hostValidationService;
     private final HostValidationStateManager stateManager;
     private final Scheduler scheduler;
     
-    // 任务类型定义
-    public static final String TASK_HOST_VALIDATION = "host-validation";
-    public static final String TASK_HOST_REPAIR = "host-repair";
-    public static final String TASK_HOST_CLEANUP = "host-cleanup";
+    public HostValidationSchedulerService(HostValidationService hostValidationService,
+                                         HostValidationStateManager stateManager,
+                                         Scheduler scheduler) {
+        this.hostValidationService = hostValidationService;
+        this.stateManager = stateManager;
+        this.scheduler = scheduler;
+        
+        // 初始化任务
+        this.hostValidationTask = createHostValidationTask();
+        this.hostRepairTask = createHostRepairTask();
+        this.hostCleanupTask = createHostCleanupTask();
+    }
     
     /**
-     * 主机校验任务
+     * 创建主机校验任务
      */
-    public final OneTimeTask<HostValidationRequestDTO> hostValidationTask = 
-        Tasks.oneTime(TASK_HOST_VALIDATION, HostValidationRequestDTO.class)
+    private OneTimeTask<HostValidationRequestDTO> createHostValidationTask() {
+        return Tasks.oneTime(TASK_HOST_VALIDATION, HostValidationRequestDTO.class)
             .execute((instance, context) -> {
+                HostValidationRequestDTO data = instance.getData();
                 log.info("执行主机校验任务: taskId={}, clusterId={}", 
-                        instance.getId(), context.clusterId());
+                        instance.getId(), data.clusterId());
                 
                 try {
-                    hostValidationService.startValidation(context);
+                    hostValidationService.startValidation(data);
                     log.info("主机校验任务执行成功: taskId={}, clusterId={}", 
-                            instance.getId(), context.clusterId());
+                            instance.getId(), data.clusterId());
                 } catch (Exception e) {
                     log.error("主机校验任务执行失败: taskId={}, clusterId={}, error={}", 
-                            instance.getId(), context.clusterId(), e.getMessage(), e);
+                            instance.getId(), data.clusterId(), e.getMessage(), e);
                     throw e; // 重新抛出异常，让调度器处理重试
                 }
             });
+    }
     
     /**
-     * 主机修复任务
+     * 创建主机修复任务
      */
-    public final OneTimeTask<Map<String, Object>> hostRepairTask = 
-        Tasks.oneTime(TASK_HOST_REPAIR, Map.class)
+    private OneTimeTask<Map<String, Object>> createHostRepairTask() {
+        // 使用原始的Map类型来避免泛型转换问题
+        OneTimeTask<Map> rawTask = Tasks.oneTime(TASK_HOST_REPAIR, Map.class)
             .execute((instance, context) -> {
+                Map<String, Object> data = (Map<String, Object>) instance.getData();
                 log.info("执行主机修复任务: taskId={}", instance.getId());
                 
                 try {
-                    Long clusterId = (Long) context.get("clusterId");
-                    String hostIp = (String) context.get("hostIp");
-                    String checkTypeCode = (String) context.get("checkType");
+                    Long clusterId = (Long) data.get("clusterId");
+                    String hostIp = (String) data.get("hostIp");
+                    String checkTypeCode = (String) data.get("checkType");
                     
                     if (clusterId != null && hostIp != null && checkTypeCode != null) {
                         CheckType checkType = CheckType.fromCode(checkTypeCode);
@@ -98,36 +109,51 @@ public class HostValidationSchedulerService {
                             log.error("无效的检查类型: taskId={}, checkTypeCode={}", instance.getId(), checkTypeCode);
                         }
                     } else {
-                        log.error("主机修复任务参数不完整: taskId={}, context={}", instance.getId(), context);
+                        log.error("主机修复任务参数不完整: taskId={}, data={}", instance.getId(), data);
                     }
                 } catch (Exception e) {
                     log.error("主机修复任务执行失败: taskId={}, error={}", instance.getId(), e.getMessage(), e);
                     throw e;
                 }
             });
+        // 安全的返回，因为我们知道运行时类型是兼容的
+        return (OneTimeTask<Map<String, Object>>) (Object) rawTask;
+    }
     
     /**
-     * 主机清理任务
+     * 创建主机清理任务
      */
-    public final OneTimeTask<Long> hostCleanupTask = 
-        Tasks.oneTime(TASK_HOST_CLEANUP, Long.class)
+    private OneTimeTask<Long> createHostCleanupTask() {
+        return Tasks.oneTime(TASK_HOST_CLEANUP, Long.class)
             .execute((instance, context) -> {
-                log.info("执行主机清理任务: taskId={}, clusterId={}", instance.getId(), context);
+                Long clusterId = instance.getData();
+                log.info("执行主机清理任务: taskId={}, clusterId={}", instance.getId(), clusterId);
                 
                 try {
                     // 清理过期的校验会话
-                    boolean cleaned = stateManager.cleanupValidationSession(context);
+                    boolean cleaned = stateManager.cleanupValidationSession(clusterId);
                     if (cleaned) {
-                        log.info("主机清理任务执行成功: taskId={}, clusterId={}, 会话已清理", instance.getId(), context);
+                        log.info("主机清理任务执行成功: taskId={}, clusterId={}, 会话已清理", instance.getId(), clusterId);
                     } else {
-                        log.info("主机清理任务执行成功: taskId={}, clusterId={}, 无需清理", instance.getId(), context);
+                        log.info("主机清理任务执行成功: taskId={}, clusterId={}, 无需清理", instance.getId(), clusterId);
                     }
                 } catch (Exception e) {
                     log.error("主机清理任务执行失败: taskId={}, clusterId={}, error={}", 
-                            instance.getId(), context, e.getMessage(), e);
+                            instance.getId(), clusterId, e.getMessage(), e);
                     throw e;
                 }
             });
+    }
+    
+    // 任务类型定义
+    public static final String TASK_HOST_VALIDATION = "host-validation";
+    public static final String TASK_HOST_REPAIR = "host-repair";
+    public static final String TASK_HOST_CLEANUP = "host-cleanup";
+    
+    // 任务实例
+    public final OneTimeTask<HostValidationRequestDTO> hostValidationTask;
+    public final OneTimeTask<Map<String, Object>> hostRepairTask;
+    public final OneTimeTask<Long> hostCleanupTask;
     
     /**
      * 调度主机校验任务

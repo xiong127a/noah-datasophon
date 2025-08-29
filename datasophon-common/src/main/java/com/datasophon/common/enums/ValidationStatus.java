@@ -81,4 +81,11 @@ public enum ValidationStatus {
     public boolean isInProgress() {
         return this == CHECKING || this == REPAIRING;
     }
+    
+    /**
+     * 获取状态描述
+     */
+    public String getDescription() {
+        return displayName;
+    }
 }

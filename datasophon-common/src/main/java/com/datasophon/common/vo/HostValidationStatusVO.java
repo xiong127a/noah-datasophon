@@ -18,10 +18,10 @@
 package com.datasophon.common.vo;
 
 import com.datasophon.common.enums.ValidationStatus;
-import lombok.Data;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -31,30 +31,25 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * @email 635887935@qq.com
  * @date 2025-01-28
  */
-@Data
-public class HostValidationStatusVO {
-    private String hostIp;
-    private String hostname;
-    private ValidationStatus overallStatus;
-    private List<CheckItemStatusVO> checkItems;
-    private List<String> logs;                    // 实时日志
-    private LocalDateTime lastUpdateTime;
-    private boolean canRepair;                    // 是否可修复
-    private boolean paused;                       // 是否暂停
-    private boolean cancelled;                    // 是否取消
-
-    public HostValidationStatusVO() {
-        this.checkItems = new CopyOnWriteArrayList<>();
-        this.logs = new CopyOnWriteArrayList<>();
-        this.lastUpdateTime = LocalDateTime.now();
-        this.paused = false;
-        this.cancelled = false;
-    }
-
-    public HostValidationStatusVO(String hostIp, String hostname, ValidationStatus overallStatus) {
-        this();
+public record HostValidationStatusVO(
+    String hostIp,
+    String hostname,
+    ValidationStatus overallStatus,
+    List<CheckItemStatusVO> checkItems,
+    List<String> logs,                    // 实时日志
+    LocalDateTime lastUpdateTime,
+    boolean canRepair                     // 是否可修复
+) {
+    // 便利构造器
+    public HostValidationStatusVO(String hostIp, String hostname, ValidationStatus overallStatus,
+                                 List<CheckItemStatusVO> checkItems, List<String> logs,
+                                 LocalDateTime lastUpdateTime, boolean canRepair) {
         this.hostIp = hostIp;
         this.hostname = hostname;
         this.overallStatus = overallStatus;
+        this.checkItems = checkItems != null ? checkItems : new ArrayList<>();
+        this.logs = logs != null ? logs : new ArrayList<>();
+        this.lastUpdateTime = lastUpdateTime != null ? lastUpdateTime : LocalDateTime.now();
+        this.canRepair = canRepair;
     }
 }

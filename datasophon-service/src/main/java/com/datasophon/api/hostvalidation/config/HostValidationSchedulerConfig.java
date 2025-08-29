@@ -19,8 +19,8 @@ package com.datasophon.api.hostvalidation.config;
 
 import com.datasophon.api.hostvalidation.scheduler.HostValidationSchedulerService;
 import com.github.kagkarlsson.scheduler.Scheduler;
-import com.github.kagkarlsson.scheduler.SchedulerName;
-import com.github.kagkarlsson.scheduler.serializer.jackson.JacksonSerializer;
+
+import com.github.kagkarlsson.scheduler.serializer.JacksonSerializer;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -52,20 +52,13 @@ public class HostValidationSchedulerConfig {
     @Bean
     public Scheduler hostValidationScheduler(HostValidationSchedulerService schedulerService) {
         
-        // 获取应用实例名称
-        String instanceId = environment.getProperty("spring.application.name", "datasophon-api");
-        String nodeId = environment.getProperty("server.port", "8081");
-        SchedulerName schedulerName = SchedulerName.of(instanceId + "-" + nodeId);
-        
         return Scheduler
             .create(dataSource, schedulerService.hostValidationTask, schedulerService.hostRepairTask, schedulerService.hostCleanupTask)
-            .schedulerName(schedulerName)
             .serializer(new JacksonSerializer()) // 使用Jackson序列化
             .threads(getThreadCount()) // 线程数配置
             .pollingInterval(getPollingInterval()) // 轮询间隔
             .heartbeatInterval(getHeartbeatInterval()) // 心跳间隔
             .enableImmediateExecution() // 启用立即执行
-            .failureLogging(true) // 启用失败日志
             .build();
     }
     

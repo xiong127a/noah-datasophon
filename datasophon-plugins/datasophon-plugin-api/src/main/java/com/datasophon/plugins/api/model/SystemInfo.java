@@ -1,8 +1,10 @@
 package com.datasophon.plugins.api.model;
 
 import com.datasophon.common.enums.OsType;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -17,6 +19,8 @@ import java.util.List;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class SystemInfo {
 
     // Getters and Setters
@@ -45,8 +49,6 @@ public class SystemInfo {
     private UserGroupInfo userGroupInfo;
     private FirewallInfo firewallInfo;
     private SelinuxInfo selinuxInfo;
-    
-    public SystemInfo() {}
 
     /**
      * CPU信息
