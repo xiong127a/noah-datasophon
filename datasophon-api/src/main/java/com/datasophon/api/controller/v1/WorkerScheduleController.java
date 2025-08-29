@@ -332,7 +332,7 @@ public class WorkerScheduleController {
         // 基础信息
         uiInfo.put("enabled", true);
         uiInfo.put("path", "/db-scheduler");
-        uiInfo.put("fullUrl", "http://localhost:8080/datasophon/db-scheduler");
+        uiInfo.put("fullUrl", "http://localhost:8081/ddh/db-scheduler");
         uiInfo.put("refreshInterval", "5s");
         
         // 功能特性
@@ -356,8 +356,8 @@ public class WorkerScheduleController {
         
         // 数据库表信息
         Map<String, String> tables = new HashMap<>();
-        tables.put("tasks", "datasophon_scheduled_tasks");
-        tables.put("executionLogs", "datasophon_scheduled_execution_logs");
+        tables.put("tasks", "scheduled_tasks");
+        tables.put("executionLogs", "scheduled_execution_logs");
         
         uiInfo.put("databaseTables", tables);
         

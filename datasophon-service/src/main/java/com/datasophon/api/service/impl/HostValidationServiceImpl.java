@@ -76,6 +76,8 @@ public class HostValidationServiceImpl implements HostValidationService {
             // 初始化结果缓存
             validationResultsCache.put(hostKey, new ConcurrentHashMap<>());
             
+
+            
             // 预热相关插件
             warmupRequiredPlugins();
             
@@ -436,6 +438,7 @@ public class HostValidationServiceImpl implements HostValidationService {
         return validationResultsCache.getOrDefault(hostKey, Map.of());
     }
     
+
     /**
      * 预热必需的插件
      */
