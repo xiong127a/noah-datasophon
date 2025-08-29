@@ -17,6 +17,7 @@
 
 package com.datasophon.plugins.ssh;
 
+import com.datasophon.common.enums.CheckType;
 import com.datasophon.common.enums.OsType;
 import com.datasophon.plugins.api.HostCheckerPlugin;
 import com.datasophon.plugins.api.model.CheckResult;
@@ -129,7 +130,7 @@ public class SshConnectivityCheckPlugin implements HostCheckerPlugin {
                         context.getHostIp(), e.getMessage(), e);
                 
                 CheckResult result = CheckResult.builder()
-                        .checkType("ssh-connectivity")
+                        .checkType(CheckType.SSH_CONNECTIVITY)
                         .success(false)
                         .message("SSH连接检查失败: " + e.getMessage())
                         .error(e.getMessage())
@@ -269,7 +270,7 @@ public class SshConnectivityCheckPlugin implements HostCheckerPlugin {
             
             if (success) {
                 result = CheckResult.builder()
-                        .checkType("ssh-connectivity")
+                        .checkType(CheckType.SSH_CONNECTIVITY)
                         .success(true)
                         .message("SSH连接检查成功，连接正常")
                         .checkTime(endTime)
@@ -278,7 +279,7 @@ public class SshConnectivityCheckPlugin implements HostCheckerPlugin {
                         username, hostIp, port, durationMs);
             } else {
                 result = CheckResult.builder()
-                        .checkType("ssh-connectivity")
+                        .checkType(CheckType.SSH_CONNECTIVITY)
                         .success(false)
                         .message("SSH连接检查失败，测试命令执行异常")
                         .error("期望输出包含'ssh_test_ok'，实际输出: " + testResult)
@@ -302,7 +303,7 @@ public class SshConnectivityCheckPlugin implements HostCheckerPlugin {
                     username, hostIp, port, durationMs, e.getMessage());
             
             CheckResult result = CheckResult.builder()
-                    .checkType("ssh-connectivity")
+                    .checkType(CheckType.SSH_CONNECTIVITY)
                     .success(false)
                     .message("SSH连接测试异常: " + e.getMessage())
                     .error(e.getMessage())
