@@ -17,7 +17,9 @@
 
     <modules>
         <module>ssh-connector-plugin</module>
-        <module>cpu-checker-plugin</module>
+        <module>system-info-collector-plugin</module>
+        <module>host-validation-plugin</module>
+        <module>host-repair-plugin</module>
     </modules>
 
 </project>
