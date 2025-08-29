@@ -29,8 +29,8 @@ import com.datasophon.api.master.WorkerStartActor;
 import com.datasophon.api.converter.InstallStepConverter;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.InstallService;
-import com.datasophon.api.service.HostValidationService;
-import com.datasophon.api.model.HostValidationTaskData;
+import com.datasophon.api.hostvalidation.service.HostValidationService;
+import com.datasophon.common.dto.HostValidationRequestDTO;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.CheckItem;
 import com.datasophon.common.dto.InstallStepDTO;
@@ -1252,29 +1252,30 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         try {
             log.info("启动插件化主机验证: 集群={}, 主机数量={}", clusterId, hostIpList.size());
             
-            // 创建SSH连接信息
-            HostValidationTaskData.SshConnectionInfo sshInfo = HostValidationTaskData.SshConnectionInfo.builder()
-                    .sshUser(sshUser)
-                    .sshPort(sshPort)
-                    .sshPassword(sshPassword)
-                    .connectionTimeout(30000)
-                    .commandTimeout(60000)
-                    .build();
+            // 创建主机校验请求
+            HostValidationRequestDTO request = new HostValidationRequestDTO(
+                    Long.parseLong(clusterId),
+                    hostIpList,
+                    sshUser,
+                    sshPassword,
+                    sshPort,
+                    null // privateKeyPath 暂时为空
+            );
             
-            // 为每个主机创建HostInfo并启动验证
+            // 启动新架构的主机校验
+            hostValidationService.startValidation(request);
+            
+            // 为每个主机创建初始的HostInfo
             for (String hostIp : hostIpList) {
                 try {
                     // 创建初始的HostInfo
                     HostInfo hostInfo = createInitialHostInfo(clusterId, hostIp, sshUser, sshPort, sshPassword);
                     hostMap.put(hostIp, hostInfo);
                     
-                    // 启动插件化验证流程
-                    hostValidationService.startHostValidation(clusterId, hostIp, sshInfo);
-                    
-                    log.debug("已启动主机验证: 主机={}", hostIp);
+                    log.debug("已为主机创建HostInfo: 主机={}", hostIp);
                     
                 } catch (Exception e) {
-                    log.error("启动主机验证失败: 主机={}, 错误={}", hostIp, e.getMessage(), e);
+                    log.error("创建主机信息失败: 主机={}, 错误={}", hostIp, e.getMessage(), e);
                     
                     // 创建失败的HostInfo
                     HostInfo failedHostInfo = createFailedHostInfo(clusterId, hostIp, sshUser, sshPort, sshPassword, e.getMessage());
