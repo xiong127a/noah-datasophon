@@ -10,12 +10,12 @@ Instructions:
     - Blank line<br />
     - Detailed explanation (if necessary), wrapped at 72 characters
     - Blank line<br />
-    - Footer, optional. If needed, you can add a link to an issue address or other documentation, or close an issue. It is not mandatory and can be left empty.
+    - Footer, optional. If needed, you can add additional documentation links. It is not mandatory and can be left empty.
 3. The commit message should:
     - Be clear and descriptive
     - Use the imperative mood in the subject line (e.g., "Add feature" not "Added feature")
     - Explain what and why, not how
-    - Reference relevant issue numbers if applicable
+
 4. Avoid:
     - Generic messages like "Bug fix" or "Update file.txt"
     - Mentioning obvious details that can be seen in the diff
@@ -26,39 +26,56 @@ Output:
 Output Structure:
 
     ```text
-    <type>(<OptionalScope>): <Gitmoji> <Description>
+    <Gitmoji> <type>(<OptionalScope>): <Description>
 
     <Body>
 
     <OptionalFooter>
     ```
 
-Example:
+Examples:
 
-    :sparkles: feat(api): add endpoint for user authentication
-
+    ✨ feat(api): add endpoint for user authentication
+    
     Added a new API endpoint for user authentication. This allows users to register, log in, and access their profile securely.
 
-    Resolves: #123
+    🐛 fix(ui): resolve button alignment issue in mobile view
+    
+    Fixed button positioning that was causing layout problems on mobile devices.
+
+    📝 docs(readme): update installation instructions
+    
+    Updated setup guide with new dependency requirements and simplified installation steps.
 
 Possible scopes (examples, infer from diff context):
-- api: app API-related code
-- ui: user interface changes
+- api: backend API-related code
+- ui: user interface changes  
 - db: database-related changes
+- service: business logic services
+- dao: data access layer
+- config: configuration files
+- security: authentication/authorization
+- worker: background job processing
+- cluster: cluster management
+- kubernetes: k8s deployment configs
+- common: shared utilities/components
+- test: testing related changes
+- build: build system changes
+- docker: containerization
 - etc.
 
-Possible types:
-- **feat**: Introduce new features or functionalities
-- **fix**: Bug fixes
-- **docs**: Documentation changes (adding or updating documentation)
-- **style**: Formatting changes that do not affect code logic (e.g., whitespace, formatting, missing semicolons)
-- **refactor**: Code changes that are neither bug fixes nor feature additions (e.g., restructuring code)
-- **perf**: Performance improvements (modifications made to optimize performance)
-- **test**: Add or update tests
-- **build**: Dependency changes or modifications to build systems or external dependencies (e.g., gulp, npm, broccoli)
-- **ci**: Changes to continuous integration configuration files or scripts (e.g., Travis, CircleCI, BrowserStack, SauceLabs)
-- **chore**: Miscellaneous changes that do not modify source or test files (e.g., maintenance tasks)
-- **revert**: Revert to a previous version or commit
+Possible types with recommended Gitmoji:
+- **feat** ✨: Introduce new features or functionalities
+- **fix** 🐛: Bug fixes (use 🚑️ for critical hotfixes)
+- **docs** 📝: Documentation changes (adding or updating documentation)
+- **style** 🎨: Formatting changes that do not affect code logic (e.g., whitespace, formatting, missing semicolons)
+- **refactor** ♻️: Code changes that are neither bug fixes nor feature additions (e.g., restructuring code)
+- **perf** ⚡️: Performance improvements (modifications made to optimize performance)
+- **test** ✅: Add or update tests
+- **build** 📦️: Dependency changes or modifications to build systems or external dependencies (e.g., gulp, npm, broccoli)
+- **ci** 👷: Changes to continuous integration configuration files or scripts (e.g., Travis, CircleCI, BrowserStack, SauceLabs)
+- **chore** 🔧: Miscellaneous changes that do not modify source or test files (e.g., maintenance tasks)
+- **revert** ⏪️: Revert to a previous version or commit
 
 Gitmoji:
 Add a Gitmoji icon after the commit type to visually indicate the nature of the change. Below are common Gitmoji options:
@@ -138,10 +155,16 @@ Add a Gitmoji icon after the commit type to visually indicate the nature of the 
 
 IMPORTANT RULES THAT MUST BE FOLLOWED:
 
-1. EXCEPT FOR THE `TYPE` AND `SCOPES` SECTIONS, THE WHOLE RESULT SHOULD BE GIVEN IN {language};
+1. LANGUAGE SETTING: EXCEPT FOR THE `TYPE` AND `SCOPES` SECTIONS, THE WHOLE RESULT SHOULD BE GIVEN IN Chinese;
 
-2. THE `TYPE` SECTION CANNOT BE WRITTEN ARBITRARILY; IT MUST BE SELECTED FROM THE POSSIBLE TYPES PROVIDED;
+2. TYPE RESTRICTION: THE `TYPE` SECTION CANNOT BE WRITTEN ARBITRARILY; IT MUST BE SELECTED FROM THE POSSIBLE TYPES PROVIDED;
 
-3. THE FINAL RESULT MUST ADD NECESSARY LINE BREAKS AND BLANK LINES ACCORDING TO THE RULES;
+3. FORMAT COMPLIANCE: THE FINAL RESULT MUST ADD NECESSARY LINE BREAKS AND BLANK LINES ACCORDING TO THE RULES;
 
-4. THE FINAL RESULT REQUIRES REMOVING THE FIRST AND LAST '```'!!!!!
+4. OUTPUT CLEANUP: THE FINAL RESULT REQUIRES REMOVING THE FIRST AND LAST '```'!!!!!
+
+5. SPECIAL CASES:
+   - For merge commits: Use 🔀 merge: description
+   - For breaking changes: Add 💥 and mention BREAKING CHANGE in body
+   - For security fixes: Use 🔒️ fix(security): description
+   - For hotfixes: Use 🚑️ fix: description

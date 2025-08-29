@@ -99,8 +99,11 @@ public class SecurityConfig {
                                 "/static/**",
                                 "/webjars/**",
                                 "/ui/**",
+                                "/assets/**",
                                 "/*.html",
                                 "/*.ico",
+                                "/*.css",
+                                "/*.js",
                                 "/favicon.ico")
                         .permitAll()
 
@@ -123,10 +126,22 @@ public class SecurityConfig {
                                 "/info")
                         .permitAll()
 
+                        // db-scheduler UI访问（官方推荐路径）
+                        .requestMatchers(
+                                "/ddh/db-scheduler/**",
+                                "/db-scheduler/**",
+                                "/ddh/db-scheduler-api/**", 
+                                "/db-scheduler-api/**")
+                        .permitAll()
+
                         // 原有免登录接口
                         .requestMatchers(
                                 "/",
                                 "/ssoEnable")
+                        .permitAll()
+
+                        // 测试接口
+                        .requestMatchers("/test/**")
                         .permitAll()
 
                         // OPTIONS请求允许通过

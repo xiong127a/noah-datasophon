@@ -221,6 +221,20 @@ jwt:
   # Token有效期（毫秒）- 默认24小时
   expiration: 86400000
 
+# db-scheduler UI配置（官方标准配置）
+db-scheduler-ui:
+  enabled: true                          # 启用Web UI界面
+  read-only: false                       # 只读模式：false=可操作，true=只读
+  task-data: true                        # 显示任务数据
+  history: true                          # 显示执行历史
+  log-limit: 1000                        # 日志显示限制
+  context-path: ddh                      # 设置UI前缀路径
+
+# db-scheduler执行历史配置
+db-scheduler-log:
+  enabled: true                         # 启用执行历史
+  table-name: scheduled_execution_logs  # 执行日志表名
+
 # 应用自定义配置
 app:
   headers:
