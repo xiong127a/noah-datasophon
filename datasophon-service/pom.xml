@@ -216,10 +216,31 @@
                     <source>${maven.compiler.source}</source>
                     <target>${maven.compiler.target}</target>
                     <encoding>UTF-8</encoding>
-                    <!-- 启用参数名保留，支持Spring参数名反射 -->
+                    <!-- Windows乱码修复：强制设置文件编码 -->
+                    <fork>true</fork>
+                    <meminitial>2048m</meminitial>
+                    <maxmem>8192m</maxmem>
+                    <!-- 启用参数名保留、并行编译和UTF-8编码 -->
                     <compilerArgs>
                         <arg>-parameters</arg>
+                        <arg>-J-Dfile.encoding=UTF-8</arg>
+                        <arg>-J-Duser.language=zh</arg>
+                        <arg>-J-Duser.country=CN</arg>
+                        <arg>-J-Dconsole.encoding=UTF-8</arg>
+                        <arg>-J-Dstdout.encoding=UTF-8</arg>
+                        <arg>-J-Dstderr.encoding=UTF-8</arg>
+                        <arg>-J-Dsun.jnu.encoding=UTF-8</arg>
+                        <arg>-J-Xmx8g</arg>
+                        <arg>-J-Xms2g</arg>
+                        <arg>-J-XX:+UseG1GC</arg>
+                        <arg>-J-XX:+ParallelRefProcEnabled</arg>
                     </compilerArgs>
+                    <!-- 强制重新编译，避免增量编译问题 -->
+                    <useIncrementalCompilation>false</useIncrementalCompilation>
+                    <!-- 显示详细的编译信息 -->
+                    <verbose>false</verbose>
+                    <showWarnings>true</showWarnings>
+                    <showDeprecation>false</showDeprecation>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.mapstruct</groupId>
@@ -238,6 +259,20 @@
                             <version>0.2.0</version>
                         </path>
                     </annotationProcessorPaths>
+                </configuration>
+            </plugin>
+            
+            <!-- 资源文件编码配置 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <!-- 明确指定资源文件处理编码 -->
+                    <propertiesEncoding>UTF-8</propertiesEncoding>
+                    <!-- 非Latin1字符不转义，保持UTF-8 -->
+                    <useDefaultDelimiters>true</useDefaultDelimiters>
                 </configuration>
             </plugin>
         </plugins>
