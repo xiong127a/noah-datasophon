@@ -19,7 +19,6 @@ package com.datasophon.api.hostvalidation.scheduler;
 
 import com.datasophon.api.hostvalidation.manager.HostValidationStateManager;
 import com.datasophon.api.hostvalidation.service.HostValidationService;
-import com.datasophon.api.hostvalidation.service.impl.HostValidationServiceImpl;
 import com.datasophon.common.dto.HostValidationRequestDTO;
 import com.datasophon.common.enums.CheckType;
 
