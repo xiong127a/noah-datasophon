@@ -17,8 +17,8 @@
 
 package com.datasophon.api.hostvalidation.scheduler;
 
+import com.datasophon.api.hostvalidation.executor.HostValidationExecutor;
 import com.datasophon.api.hostvalidation.manager.HostValidationStateManager;
-import com.datasophon.api.hostvalidation.service.HostValidationService;
 import com.datasophon.common.dto.HostValidationRequestDTO;
 import com.datasophon.common.enums.CheckType;
 
@@ -45,14 +45,14 @@ import java.util.Map;
 @Service
 public class HostValidationSchedulerService {
     
-    private final HostValidationService hostValidationService;
+    private final HostValidationExecutor hostValidationExecutor;
     private final HostValidationStateManager stateManager;
     private final Scheduler scheduler;
     
-    public HostValidationSchedulerService(HostValidationService hostValidationService,
+    public HostValidationSchedulerService(HostValidationExecutor hostValidationExecutor,
                                          HostValidationStateManager stateManager,
                                          Scheduler scheduler) {
-        this.hostValidationService = hostValidationService;
+        this.hostValidationExecutor = hostValidationExecutor;
         this.stateManager = stateManager;
         this.scheduler = scheduler;
         
@@ -73,8 +73,8 @@ public class HostValidationSchedulerService {
                         instance.getId(), data.clusterId());
                 
                 try {
-                    // 调用接口方法，优雅地执行校验
-                    hostValidationService.executeValidation(data);
+                    // 调用执行器执行校验
+                    hostValidationExecutor.executeValidation(data);
                     log.info("主机校验任务执行成功: taskId={}, clusterId={}", 
                             instance.getId(), data.clusterId());
                 } catch (Exception e) {
@@ -103,8 +103,8 @@ public class HostValidationSchedulerService {
                     if (clusterId != null && hostIp != null && checkTypeCode != null) {
                         CheckType checkType = CheckType.fromCode(checkTypeCode);
                         if (checkType != null) {
-                            // 调用接口方法，优雅地执行修复
-                            hostValidationService.executeRepair(clusterId, hostIp, checkType);
+                            // 调用执行器执行修复
+                            hostValidationExecutor.executeRepair(clusterId, hostIp, checkType);
                             log.info("主机修复任务执行成功: taskId={}, clusterId={}, hostIp={}, checkType={}", 
                                     instance.getId(), clusterId, hostIp, checkType);
                         } else {
