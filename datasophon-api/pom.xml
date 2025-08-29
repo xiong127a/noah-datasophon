@@ -163,8 +163,8 @@
                     <encoding>UTF-8</encoding>
                     <!-- Windows乱码修复：强制设置文件编码 -->
                     <fork>true</fork>
-                    <meminitial>2048m</meminitial>
-                    <maxmem>8192m</maxmem>
+                    <meminitial>512m</meminitial>
+                    <maxmem>2048m</maxmem>
                     <!-- 启用参数名保留、并行编译和UTF-8编码 -->
                     <compilerArgs>
                         <arg>-parameters</arg>
@@ -175,8 +175,8 @@
                         <arg>-J-Dstdout.encoding=UTF-8</arg>
                         <arg>-J-Dstderr.encoding=UTF-8</arg>
                         <arg>-J-Dsun.jnu.encoding=UTF-8</arg>
-                        <arg>-J-Xmx8g</arg>
-                        <arg>-J-Xms2g</arg>
+                        <arg>-J-Xmx2g</arg>
+                        <arg>-J-Xms512m</arg>
                         <arg>-J-XX:+UseG1GC</arg>
                         <arg>-J-XX:+ParallelRefProcEnabled</arg>
                     </compilerArgs>
