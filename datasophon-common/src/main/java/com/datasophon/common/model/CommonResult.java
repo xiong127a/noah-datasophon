@@ -25,7 +25,7 @@ import java.io.Serializable;
 
 @Data
 @NoArgsConstructor
-public class CheckResult implements Serializable {
+public class CommonResult implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -34,7 +34,7 @@ public class CheckResult implements Serializable {
 
     private String msg;
 
-    public CheckResult(Integer code, String msg) {
+    public CommonResult(Integer code, String msg) {
         this.code = code;
         this.msg = msg;
     }

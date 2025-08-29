@@ -116,7 +116,7 @@ public class HostInfo implements Serializable {
     /**
      * 验证检查结果摘要
      */
-    private CheckResult checkResult;
+    private CommonResult commonResult;
 
     /**
      * 检查项列表
@@ -319,7 +319,7 @@ public class HostInfo implements Serializable {
 
         if (checkItems == null || checkItems.isEmpty()) {
             this.status = CheckItem.Status.WAITING;
-            this.checkResult = new CheckResult(9999, "等待主机校验");
+            this.commonResult = new CommonResult(9999, "等待主机校验");
             return;
         }
 
@@ -341,31 +341,31 @@ public class HostInfo implements Serializable {
         // 根据优先级计算状态
         if (fixingCount > 0) {
             this.status = CheckItem.Status.FIXING;
-            this.checkResult = new CheckResult(10046, 
+            this.commonResult = new CommonResult(10046,
                     String.format("修复进行中：正在修复%d个检查项", fixingCount));
         } else if (checkingCount > 0) {
             this.status = CheckItem.Status.CHECKING;
-            this.checkResult = new CheckResult(10000,
+            this.commonResult = new CommonResult(10000,
                     String.format("主机校验进行中：%d/%d项检查中", checkingCount, total));
         } else if (failedCount > 0) {
             this.status = CheckItem.Status.FAILED;
-            this.checkResult = new CheckResult(10043,
+            this.commonResult = new CommonResult(10043,
                     String.format("主机校验失败：%d项未通过，%d项通过", failedCount, successCount));
         } else if (waitingCount > 0) {
             this.status = CheckItem.Status.WAITING;
-            this.checkResult = new CheckResult(9999,
+            this.commonResult = new CommonResult(9999,
                     String.format("等待主机校验：%d项待检查", waitingCount));
         } else if (successCount == total) {
             this.status = CheckItem.Status.SUCCESS;
-            this.checkResult = new CheckResult(10001,
+            this.commonResult = new CommonResult(10001,
                     String.format("主机校验成功：全部%d项检查通过", total));
         } else if (skippedCount == total) {
             this.status = CheckItem.Status.SKIPPED;
-            this.checkResult = new CheckResult(10044, "主机校验已跳过：所有检查项已跳过");
+            this.commonResult = new CommonResult(10044, "主机校验已跳过：所有检查项已跳过");
         } else {
             // 混合状态
             this.status = CheckItem.Status.SUCCESS;
-            this.checkResult = new CheckResult(10001,
+            this.commonResult = new CommonResult(10001,
                     String.format("主机校验完成：%d项通过，%d项跳过", successCount, skippedCount));
         }
     }
@@ -375,9 +375,9 @@ public class HostInfo implements Serializable {
      */
     private void updateCheckResultForFixingStatus() {
         if (this.status == CheckItem.Status.WAITING_FIX) {
-            this.checkResult = new CheckResult(10045, "等待修复：等待修复失败的检查项");
+            this.commonResult = new CommonResult(10045, "等待修复：等待修复失败的检查项");
         } else {
-            this.checkResult = new CheckResult(10046, "修复进行中：正在修复失败的检查项");
+            this.commonResult = new CommonResult(10046, "修复进行中：正在修复失败的检查项");
         }
     }
 

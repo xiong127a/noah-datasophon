@@ -25,7 +25,7 @@ import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.SshPluginAdapterService;
 import com.datasophon.common.command.HostCheckCommand;
-import com.datasophon.common.model.CheckResult;
+import com.datasophon.common.model.CommonResult;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -71,8 +71,8 @@ public class HostConnectActor extends AbstractActor {
 
             if (clusterInfo == null) {
                 logger.error("Cluster not found for clusterCode: {}", clusterCode);
-                hostInfo.setCheckResult(
-                        new CheckResult(
+                hostInfo.setCommonResult(
+                        new CommonResult(
                                 Status.CONNECTION_FAILED.getCode(),
                                 "集群信息未找到"));
                 return;
@@ -89,24 +89,24 @@ public class HostConnectActor extends AbstractActor {
 
                 if (existingHost != null && existingHost.getClusterId().equals(clusterInfo.getId())) {
                     // 主机已在当前集群中受管 - 重复添加
-                    hostInfo.setCheckResult(
-                            new CheckResult(
+                    hostInfo.setCommonResult(
+                            new CommonResult(
                                     Status.CONNECTION_FAILED.getCode(),
                                     "主机已在当前集群中受管，请勿重复添加"));
                     logger.info("Host {} is already managed in current Kubernetes cluster {}",
                             hostInfo.getHostname(), clusterInfo.getId());
                 } else if (existingHost != null) {
                     // 主机已在其他集群中受管
-                    hostInfo.setCheckResult(
-                            new CheckResult(
+                    hostInfo.setCommonResult(
+                            new CommonResult(
                                     Status.CONNECTION_FAILED.getCode(),
                                     "主机已在其他集群中受管"));
                     logger.info("Host {} is already managed in another cluster {}",
                             hostInfo.getHostname(), existingHost.getClusterId());
                 } else {
                     // 主机未受管，可以添加
-                    hostInfo.setCheckResult(
-                            new CheckResult(
+                    hostInfo.setCommonResult(
+                            new CommonResult(
                                     Status.CHECK_HOST_SUCCESS.getCode(),
                                     Status.CHECK_HOST_SUCCESS.getMsg()));
                     logger.info("Host {} is not managed in Kubernetes mode, can be added", hostInfo.getHostname());
@@ -121,22 +121,22 @@ public class HostConnectActor extends AbstractActor {
                     boolean connectionSuccess = sshAdapter.isConnectionValid(hostInfo);
                     
                     if (connectionSuccess) {
-                        hostInfo.setCheckResult(
-                                new CheckResult(
+                        hostInfo.setCommonResult(
+                                new CommonResult(
                                         Status.CHECK_HOST_SUCCESS.getCode(),
                                         Status.CHECK_HOST_SUCCESS.getMsg()));
                         logger.info("【主机连接Actor】SSH连接测试成功: {}", hostInfo.getHostname());
                     } else {
-                        hostInfo.setCheckResult(
-                                new CheckResult(
+                        hostInfo.setCommonResult(
+                                new CommonResult(
                                         Status.CONNECTION_FAILED.getCode(),
                                         Status.CONNECTION_FAILED.getMsg()));
                         logger.warn("【主机连接Actor】SSH连接测试失败: {}", hostInfo.getHostname());
                     }
                 } catch (Exception e) {
                     logger.error("【主机连接Actor】SSH连接测试异常: {} -> {}", hostInfo.getHostname(), e.getMessage(), e);
-                    hostInfo.setCheckResult(
-                            new CheckResult(
+                    hostInfo.setCommonResult(
+                            new CommonResult(
                                     Status.CONNECTION_FAILED.getCode(),
                                     "SSH连接异常: " + e.getMessage()));
                 }

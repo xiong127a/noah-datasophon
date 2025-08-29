@@ -50,7 +50,7 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.OsInfoStatusEnum;
 import com.datasophon.common.exception.ServiceException;
 import com.datasophon.common.exception.BusinessException;
-import com.datasophon.common.model.CheckResult;
+import com.datasophon.common.model.CommonResult;
 import com.datasophon.common.model.HostInfo;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.utils.HostUtils;
@@ -620,8 +620,8 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         hostInfo.setInstallState(InstallState.SUCCESS);
         hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
         hostInfo.setProgress(Constants.ONE_HUNDRRD);
-        hostInfo.setCheckResult(
-                new CheckResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
+        hostInfo.setCommonResult(
+                new CommonResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
     }
 
     /**
@@ -632,7 +632,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         hostInfo.setInstallState(InstallState.RUNNING);
         hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
         hostInfo.setProgress(0);
-        hostInfo.setCheckResult(new CheckResult(Status.START_CHECK_HOST.getCode(), Status.START_CHECK_HOST.getMsg()));
+        hostInfo.setCommonResult(new CommonResult(Status.START_CHECK_HOST.getCode(), Status.START_CHECK_HOST.getMsg()));
     }
 
     @Override
@@ -691,7 +691,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             List<HostInfo> list = map.entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
                     .map(Map.Entry::getValue)
-                    .filter(e -> e.getCheckResult().getCode() == 10001)
+                    .filter(e -> e.getCommonResult().getCode() == 10001)
                     .toList();
 
             for (HostInfo hostInfo : list) {
@@ -799,13 +799,13 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             HostInfo hostInfo = hostInfoEntry.getValue();
 
             // 检查主机整体状态
-            CheckResult checkResult = hostInfo.getCheckResult();
-            if (checkResult == null) {
+            CommonResult commonResult = hostInfo.getCommonResult();
+            if (commonResult == null) {
                 Map<String, Object> failInfo = new HashMap<>();
                 failInfo.put("hostname", hostInfo.getIp());
                 failInfo.put("reason", "主机整体检查状态未完成");
                 failInfo.put("code",
-                        Objects.nonNull(hostInfo.getCheckResult()) ? hostInfo.getCheckResult().getCode() : "未知");
+                        Objects.nonNull(hostInfo.getCommonResult()) ? hostInfo.getCommonResult().getCode() : "未知");
                 failedHosts.add(failInfo);
 
                 // 添加到错误映射
@@ -1055,8 +1055,8 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                     hostInfo.setInstallState(InstallState.FAILED);
                     hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
-                    hostInfo.setCheckResult(
-                            new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在当前集群中受管，请勿重复添加"));
+                    hostInfo.setCommonResult(
+                            new CommonResult(Status.CONNECTION_FAILED.getCode(), "主机已在当前集群中受管，请勿重复添加"));
                     hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
                     hostInfo.setMessage("主机已受管");
                     log.info("Host {} is already managed in current Kubernetes cluster {}",
@@ -1067,8 +1067,8 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                     hostInfo.setInstallState(InstallState.FAILED);
                     hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
-                    hostInfo.setCheckResult(
-                            new CheckResult(Status.CONNECTION_FAILED.getCode(), "主机已在其他集群中受管"));
+                    hostInfo.setCommonResult(
+                            new CommonResult(Status.CONNECTION_FAILED.getCode(), "主机已在其他集群中受管"));
                     hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
                     hostInfo.setMessage("主机已在其他集群受管");
                     log.info("Host {} is already managed in another cluster {}",
@@ -1079,8 +1079,8 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                     hostInfo.setInstallState(InstallState.SUCCESS);
                     hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
-                    hostInfo.setCheckResult(
-                            new CheckResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
+                    hostInfo.setCommonResult(
+                            new CommonResult(Status.CHECK_HOST_SUCCESS.getCode(), Status.CHECK_HOST_SUCCESS.getMsg()));
                     hostInfo.setSshConnectStatus(OsInfoStatusEnum.SUCCESS);
                     hostInfo.setMessage("K8S节点验证成功，可以添加");
                     log.info("Host {} is not managed in Kubernetes mode, can be added",
@@ -1317,10 +1317,10 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         hostInfo.setStatus(CheckItem.Status.WAITING);
         
         // 检查结果初始化
-        CheckResult checkResult = new CheckResult();
-        checkResult.setCode(9999);
-        checkResult.setMsg("等待主机校验");
-        hostInfo.setCheckResult(checkResult);
+        CommonResult commonResult = new CommonResult();
+        commonResult.setCode(9999);
+        commonResult.setMsg("等待主机校验");
+        hostInfo.setCommonResult(commonResult);
         
         // 各状态初始化为loading
         hostInfo.setSshConnectStatus(OsInfoStatusEnum.LOADING);
@@ -1348,10 +1348,10 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         hostInfo.setErrMsg(errorMessage);
         
         // 检查结果设置为失败
-        CheckResult checkResult = new CheckResult();
-        checkResult.setCode(500);
-        checkResult.setMsg("主机验证启动失败: " + errorMessage);
-        hostInfo.setCheckResult(checkResult);
+        CommonResult commonResult = new CommonResult();
+        commonResult.setCode(500);
+        commonResult.setMsg("主机验证启动失败: " + errorMessage);
+        hostInfo.setCommonResult(commonResult);
         
         // 所有状态设置为failed
         hostInfo.setSshConnectStatus(OsInfoStatusEnum.ERROR);
