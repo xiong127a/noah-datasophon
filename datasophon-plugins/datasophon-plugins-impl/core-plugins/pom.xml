@@ -22,4 +22,39 @@
         <module>host-repair-plugin</module>
     </modules>
 
+    <build>
+        <pluginManagement>
+            <plugins>
+                <!-- 为所有核心插件配置Maven资源插件 -->
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-resources-plugin</artifactId>
+                    <version>3.3.1</version>
+                    <executions>
+                        <!-- PF4J开发模式需要plugin.properties在根目录 -->
+                        <execution>
+                            <id>copy-plugin-properties-to-root</id>
+                            <phase>process-resources</phase>
+                            <goals>
+                                <goal>copy-resources</goal>
+                            </goals>
+                            <configuration>
+                                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
+                                <resources>
+                                    <resource>
+                                        <directory>src/main/resources/META-INF</directory>
+                                        <includes>
+                                            <include>plugin.properties</include>
+                                        </includes>
+                                        <filtering>true</filtering>
+                                    </resource>
+                                </resources>
+                            </configuration>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
 </project>

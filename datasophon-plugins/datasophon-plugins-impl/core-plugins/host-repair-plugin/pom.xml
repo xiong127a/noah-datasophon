@@ -114,6 +114,12 @@
                     </archive>
                 </configuration>
             </plugin>
+
+            <!-- 使用父pom.xml中的Maven资源插件配置 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+            </plugin>
         </plugins>
     </build>
 </project>

@@ -154,6 +154,50 @@ public class ConfigurablePluginManager extends DefaultPluginManager {
     }
     
     /**
+     * 创建开发模式专用的插件仓库
+     * 该仓库不会扫描子目录，直接将指定路径作为插件目录
+     */
+    @Override
+    protected PluginRepository createPluginRepository() {
+        if (isDevelopment()) {
+            log.debug("开发模式：使用简化的插件仓库，避免子目录扫描");
+            
+            return new PluginRepository() {
+                @Override
+                public List<Path> getPluginPaths() {
+                    List<Path> pluginPaths = new ArrayList<>();
+                    
+                    // 直接返回配置的插件根目录，不进行子目录扫描
+                    for (Path pluginRoot : getPluginsRoots()) {
+                        // 检查是否为有效的插件目录（包含plugin.properties）
+                        Path metaInfProperties = pluginRoot.resolve("META-INF").resolve("plugin.properties");
+                        Path rootProperties = pluginRoot.resolve("plugin.properties");
+                        
+                        if (metaInfProperties.toFile().exists() || rootProperties.toFile().exists()) {
+                            log.debug("发现开发模式插件: {}", pluginRoot);
+                            pluginPaths.add(pluginRoot);
+                        } else {
+                            log.debug("跳过非插件目录: {}", pluginRoot);
+                        }
+                    }
+                    
+                    log.debug("开发模式插件发现完成，找到 {} 个插件", pluginPaths.size());
+                    return pluginPaths;
+                }
+                
+                @Override
+                public boolean deletePluginPath(Path pluginPath) {
+                    log.debug("开发模式不支持删除插件路径: {}", pluginPath);
+                    return false;
+                }
+            };
+        } else {
+            log.debug("生产模式：使用默认插件仓库");
+            return super.createPluginRepository();
+        }
+    }
+
+    /**
      * 重写插件加载器创建方法
      * 使用Parent First策略解决类加载器约束违规问题
      * <p>
