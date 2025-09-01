@@ -76,16 +76,22 @@ public class PluginConfiguration {
         // 2. 根据开发模式添加路径
         if (pluginProperties.getDevelopment().isEnabled()) {
             log.info("开发模式已启用，添加开发模式插件路径");
-            paths.addAll(pluginProperties.getDevelopment().getPluginPaths());
+            List<String> devPaths = pluginProperties.getDevelopment().getPluginPaths();
+            if (!devPaths.isEmpty()) {
+                paths.addAll(devPaths);
+                log.info("添加了 {} 个开发模式插件路径", devPaths.size());
+            }
+        } else {
+            // 3. 生产模式：添加基础插件目录（JAR文件）
+            paths.add(pluginProperties.getDirectory());
+            log.info("生产模式：添加插件目录 {}", pluginProperties.getDirectory());
         }
-        
-        // 3. 添加生产模式的基础路径
-        paths.add(pluginProperties.getDirectory());
         
         // 4. 环境变量配置的路径
         String customPluginPath = System.getProperty("datasophon.plugins.path");
         if (customPluginPath != null && !customPluginPath.trim().isEmpty()) {
             paths.add(customPluginPath.trim());
+            log.info("添加自定义插件路径: {}", customPluginPath.trim());
         }
         
         // 去重并返回

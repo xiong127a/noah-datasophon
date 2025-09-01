@@ -178,9 +178,12 @@ datasophon:
     development:
       # 是否启用开发模式（开发时设为true，生产时设为false）
       enabled: true
-      # 开发模式下的插件路径（根目录统一插件目录）
+      # 开发模式下的插件路径（指向编译后的classes目录）
       plugin-paths:
-        - plugins
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/ssh-connector-plugin/target/classes
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/host-repair-plugin/target/classes
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/host-validation-plugin/target/classes
+        - datasophon-plugins/datasophon-plugins-impl/core-plugins/system-info-collector-plugin/target/classes
     
     # 额外的插件扫描路径（可选）
     scan-paths: []
@@ -188,7 +191,7 @@ datasophon:
     # 插件加载配置
     loading:
       enabled: true                           # 插件功能总开关
-      lazy: true                              # 启用延迟加载 - 显著减少启动时间
+      lazy: false                             # 禁用延迟加载 - 启动时立即加载插件
       hot-reload: true                        # 支持热重载
       
     # SSH连接池配置
