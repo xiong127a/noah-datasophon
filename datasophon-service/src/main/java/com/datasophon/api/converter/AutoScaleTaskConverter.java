@@ -19,84 +19,24 @@ import org.mapstruct.Named;
 @Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface AutoScaleTaskConverter extends BaseConverter<AutoScaleTaskEntity, AutoScaleTaskDTO, AutoScaleTaskVO> {
 
-    @Override
-    @Mapping(target = "id", source = "id")
-    @Mapping(target = "taskName", source = "taskName")
-    @Mapping(target = "clusterId", source = "clusterId")
-    @Mapping(target = "serviceId", source = "serviceId")
-    @Mapping(target = "serviceName", source = "serviceName")
-    @Mapping(target = "scaleType", source = "scaleType")
-    @Mapping(target = "scalePolicy", source = "scalePolicy")
-    @Mapping(target = "minReplicas", source = "minReplicas")
-    @Mapping(target = "maxReplicas", source = "maxReplicas")
-    @Mapping(target = "cronExpression", source = "cronExpression")
-    @Mapping(target = "enabled", source = "enabled")
-    @Mapping(target = "description", source = "description")
-    @Mapping(target = "createTime", source = "createTime")
-    @Mapping(target = "updateTime", source = "updateTime")
-    AutoScaleTaskDTO entityToDto(AutoScaleTaskEntity entity);
+    // 使用BaseConverter默认实现，无需显式重写entityToDto和dtoToEntity
 
     @Override
-    @Mapping(target = "id", source = "id")
-    @Mapping(target = "taskName", source = "taskName")
-    @Mapping(target = "clusterId", source = "clusterId")
-    @Mapping(target = "serviceId", source = "serviceId")
-    @Mapping(target = "serviceName", source = "serviceName")
-    @Mapping(target = "scaleType", source = "scaleType")
-    @Mapping(target = "scalePolicy", source = "scalePolicy")
-    @Mapping(target = "minReplicas", source = "minReplicas")
-    @Mapping(target = "maxReplicas", source = "maxReplicas")
-    @Mapping(target = "cronExpression", source = "cronExpression")
-    @Mapping(target = "enabled", source = "enabled")
-    @Mapping(target = "description", source = "description")
-    @Mapping(target = "createTime", source = "createTime")
-    @Mapping(target = "updateTime", source = "updateTime")
-    AutoScaleTaskEntity dtoToEntity(AutoScaleTaskDTO dto);
-
-    @Override
-    @Mapping(target = "id", source = "id")
-    @Mapping(target = "taskName", source = "taskName")
-    @Mapping(target = "clusterId", source = "clusterId")
     @Mapping(target = "clusterName", ignore = true) // 需要在Service层设置
-    @Mapping(target = "serviceId", source = "serviceId")
-    @Mapping(target = "serviceName", source = "serviceName")
-    @Mapping(target = "scaleType", source = "scaleType")
     @Mapping(target = "scaleTypeDesc", source = "scaleType", qualifiedByName = "formatScaleType")
-    @Mapping(target = "scalePolicy", source = "scalePolicy")
     @Mapping(target = "scalePolicyDesc", source = "scalePolicy", qualifiedByName = "formatScalePolicy")
-    @Mapping(target = "minReplicas", source = "minReplicas")
-    @Mapping(target = "maxReplicas", source = "maxReplicas")
-    @Mapping(target = "cronExpression", source = "cronExpression")
     @Mapping(target = "cronExpressionDesc", source = "cronExpression", qualifiedByName = "formatCronExpression")
-    @Mapping(target = "enabled", source = "enabled")
     @Mapping(target = "enabledDesc", source = "enabled", qualifiedByName = "formatEnabledStatus")
-    @Mapping(target = "description", source = "description")
-    @Mapping(target = "createTime", source = "createTime")
-    @Mapping(target = "updateTime", source = "updateTime")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     AutoScaleTaskVO entityToVo(AutoScaleTaskEntity entity);
 
     @Override
-    @Mapping(target = "id", source = "id")
-    @Mapping(target = "taskName", source = "taskName")
-    @Mapping(target = "clusterId", source = "clusterId")
     @Mapping(target = "clusterName", ignore = true) // 需要在Service层设置
-    @Mapping(target = "serviceId", source = "serviceId")
-    @Mapping(target = "serviceName", source = "serviceName")
-    @Mapping(target = "scaleType", source = "scaleType")
     @Mapping(target = "scaleTypeDesc", source = "scaleType", qualifiedByName = "formatScaleType")
-    @Mapping(target = "scalePolicy", source = "scalePolicy")
     @Mapping(target = "scalePolicyDesc", source = "scalePolicy", qualifiedByName = "formatScalePolicy")
-    @Mapping(target = "minReplicas", source = "minReplicas")
-    @Mapping(target = "maxReplicas", source = "maxReplicas")
-    @Mapping(target = "cronExpression", source = "cronExpression")
     @Mapping(target = "cronExpressionDesc", source = "cronExpression", qualifiedByName = "formatCronExpression")
-    @Mapping(target = "enabled", source = "enabled")
     @Mapping(target = "enabledDesc", source = "enabled", qualifiedByName = "formatEnabledStatus")
-    @Mapping(target = "description", source = "description")
-    @Mapping(target = "createTime", source = "createTime")
-    @Mapping(target = "updateTime", source = "updateTime")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     AutoScaleTaskVO dtoToVo(AutoScaleTaskDTO dto);
@@ -140,5 +80,13 @@ public interface AutoScaleTaskConverter extends BaseConverter<AutoScaleTaskEntit
         } else {
             return cronExpression;
         }
+    }
+
+    @Named("formatEnabledStatus")
+    default String formatEnabledStatus(Boolean enabled) {
+        if (enabled == null) {
+            return "未知";
+        }
+        return enabled ? "启用" : "禁用";
     }
 }

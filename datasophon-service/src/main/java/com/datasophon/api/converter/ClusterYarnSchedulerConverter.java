@@ -25,7 +25,6 @@ import com.datasophon.dao.entity.ClusterYarnSchedulerEntity;
 import org.mapstruct.IterableMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 
 /**
@@ -46,10 +45,6 @@ public interface ClusterYarnSchedulerConverter
 
     @Override
     @Named("dtoToEntity")
-    @Mapping(target = "createTime", ignore = true)
-    @Mapping(target = "updateTime", ignore = true)
-    @Mapping(target = "createBy", ignore = true)
-    @Mapping(target = "updateBy", ignore = true)
     ClusterYarnSchedulerEntity dtoToEntity(ClusterYarnSchedulerDTO dto);
 
     @Override
@@ -69,17 +64,6 @@ public interface ClusterYarnSchedulerConverter
     @Override
     @IterableMapping(qualifiedByName = "dtoToVo")
     java.util.List<ClusterYarnSchedulerVO> dtoListToVoList(java.util.List<ClusterYarnSchedulerDTO> dtoList);
-
-    @Override
-    @IterableMapping(qualifiedByName = "dtoToEntity")
-    java.util.List<ClusterYarnSchedulerEntity> dtoListToEntityList(java.util.List<ClusterYarnSchedulerDTO> dtoList);
-
-    @Override
-    @Mapping(target = "createTime", ignore = true)
-    @Mapping(target = "updateTime", ignore = true)
-    @Mapping(target = "createBy", ignore = true)
-    @Mapping(target = "updateBy", ignore = true)
-    void updateEntityFromDto(ClusterYarnSchedulerDTO dto, @MappingTarget ClusterYarnSchedulerEntity entity);
 
     /**
      * 格式化使用状态文本

@@ -17,6 +17,7 @@
 
 package com.datasophon.common.converter;
 
+import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 
 import java.util.List;
@@ -42,7 +43,12 @@ public interface BaseConverter<E, D, V> {
 
     /**
      * DTO 转换为 Entity
+     * 默认忽略审计字段，由框架自动管理
      */
+    @Mapping(target = "createTime", ignore = true)
+    @Mapping(target = "updateTime", ignore = true)
+    @Mapping(target = "createBy", ignore = true)
+    @Mapping(target = "updateBy", ignore = true)
     E dtoToEntity(D dto);
 
     /**
@@ -72,11 +78,17 @@ public interface BaseConverter<E, D, V> {
 
     /**
      * DTO 列表转换为 Entity 列表
+     * 默认忽略审计字段，由框架自动管理
      */
     List<E> dtoListToEntityList(List<D> dtoList);
 
     /**
      * 更新Entity对象（用于部分字段更新）
+     * 默认忽略审计字段，由框架自动管理
      */
+    @Mapping(target = "createTime", ignore = true)
+    @Mapping(target = "updateTime", ignore = true)
+    @Mapping(target = "createBy", ignore = true)
+    @Mapping(target = "updateBy", ignore = true)
     void updateEntityFromDto(D dto, @MappingTarget E entity);
 }
