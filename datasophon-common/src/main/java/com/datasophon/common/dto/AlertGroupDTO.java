@@ -32,19 +32,26 @@ public record AlertGroupDTO(
         String alertGroupCategory,
         Long clusterId,
         Integer alertQuotaNum,
-        LocalDateTime createTime) {
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
+        String createBy,
+        String updateBy) {
 
     /**
      * 创建新的AlertGroupDTO
      */
     public static AlertGroupDTO create(String alertGroupName, String alertGroupCategory, Long clusterId) {
+        var now = LocalDateTime.now();
         return new AlertGroupDTO(
                 null,
                 alertGroupName,
                 alertGroupCategory,
                 clusterId,
                 0,
-                LocalDateTime.now());
+                now,
+                now,
+                null,
+                null);
     }
 
 }

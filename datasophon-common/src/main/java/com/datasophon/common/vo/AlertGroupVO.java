@@ -38,7 +38,11 @@ public record AlertGroupVO(
         Integer alertQuotaNum,
         String alertQuotaNumFormatted,
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime createTime,
-        String createTimeFormatted) {
+        String createTimeFormatted,
+        LocalDateTime updateTime,
+        String updateTimeFormatted,
+        String createBy,
+        String updateBy) {
 
     /**
      * 创建简单的AlertGroupVO
@@ -52,6 +56,10 @@ public record AlertGroupVO(
                 null,
                 0,
                 "0个指标",
+                null,
+                null,
+                null,
+                null,
                 null,
                 null);
     }
