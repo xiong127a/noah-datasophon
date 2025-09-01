@@ -163,8 +163,8 @@
                     <encoding>UTF-8</encoding>
                     <!-- Windows乱码修复：强制设置文件编码 -->
                     <fork>true</fork>
-                    <meminitial>512m</meminitial>
-                    <maxmem>2048m</maxmem>
+                    <meminitial>1024m</meminitial>
+                    <maxmem>4096m</maxmem>
                     <!-- 启用参数名保留、并行编译和UTF-8编码 -->
                     <compilerArgs>
                         <arg>-parameters</arg>
@@ -175,17 +175,24 @@
                         <arg>-J-Dstdout.encoding=UTF-8</arg>
                         <arg>-J-Dstderr.encoding=UTF-8</arg>
                         <arg>-J-Dsun.jnu.encoding=UTF-8</arg>
-                        <arg>-J-Xmx2g</arg>
-                        <arg>-J-Xms512m</arg>
+                        <arg>-J-Xmx4g</arg>
+                        <arg>-J-Xms1g</arg>
                         <arg>-J-XX:+UseG1GC</arg>
                         <arg>-J-XX:+ParallelRefProcEnabled</arg>
+                        <arg>-J-XX:MaxMetaspaceSize=512m</arg>
                     </compilerArgs>
-                    <!-- 强制重新编译，避免增量编译问题 -->
+                    <!-- 禁用增量编译，确保完整重建 -->
                     <useIncrementalCompilation>false</useIncrementalCompilation>
+                    <!-- 强制重新编译所有源文件 -->
+                    <staleMillis>0</staleMillis>
+                    <!-- 确保编译过程的确定性 -->
+                    <forceJavacCompilerUse>true</forceJavacCompilerUse>
                     <!-- 显示详细的编译信息 -->
                     <verbose>false</verbose>
                     <showWarnings>true</showWarnings>
                     <showDeprecation>false</showDeprecation>
+                    <!-- 确保依赖的类路径正确 -->
+                    <failOnError>true</failOnError>
                     <annotationProcessorPaths>
                         <path>
                             <groupId>org.mapstruct</groupId>
@@ -205,6 +212,41 @@
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
+            </plugin>
+            
+            <!-- 确保依赖模块先编译 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <!-- 确保依赖模块的jar存在 -->
+                    <execution>
+                        <id>verify-dependencies</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>resolve</goal>
+                        </goals>
+                        <configuration>
+                            <silent>false</silent>
+                            <failOnMissingClassifierArtifact>true</failOnMissingClassifierArtifact>
+                        </configuration>
+                    </execution>
+                    <!-- 复制依赖jar到lib目录 -->
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/lib</outputDirectory>
+                            <includeGroupIds>com.datasophon</includeGroupIds>
+                            <overWriteReleases>true</overWriteReleases>
+                            <overWriteSnapshots>true</overWriteSnapshots>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             
             <!-- 资源文件编码配置 -->

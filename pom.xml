@@ -617,18 +617,26 @@
                     <encoding>UTF-8</encoding>
                     <!-- Windows乱码修复：强制设置文件编码 -->
                     <fork>true</fork>
-                    <!-- 内存配置已迁移到 .mvn/jvm.config 中统一管理 -->
+                    <meminitial>1024m</meminitial>
+                    <maxmem>4096m</maxmem>
                     <!-- 启用参数名保留和并行编译 -->
                     <compilerArgs>
                         <arg>-parameters</arg>
-                        <arg>-J-Djava.util.concurrent.ForkJoinPool.common.parallelism=16</arg>
+                        <arg>-J-Djava.util.concurrent.ForkJoinPool.common.parallelism=8</arg>
+                        <arg>-J-Dfile.encoding=UTF-8</arg>
+                        <arg>-J-Duser.language=zh</arg>
+                        <arg>-J-Duser.country=CN</arg>
                     </compilerArgs>
-                    <!-- 强制重新编译，避免增量编译问题 -->
+                    <!-- 禁用增量编译，确保完整重建 -->
                     <useIncrementalCompilation>false</useIncrementalCompilation>
+                    <!-- 强制重新编译所有源文件 -->
+                    <staleMillis>0</staleMillis>
                     <!-- 显示详细的编译信息 -->
                     <verbose>false</verbose>
                     <showWarnings>true</showWarnings>
                     <showDeprecation>false</showDeprecation>
+                    <!-- 确保编译过程的确定性 -->
+                    <forceJavacCompilerUse>true</forceJavacCompilerUse>
                 </configuration>
             </plugin>
 
@@ -672,6 +680,26 @@
                                 </requireJavaVersion>
                                 <!-- 确保依赖收敛 - 不忽略任何冲突 -->
                                 <dependencyConvergence/>
+                                <!-- 确保模块构建顺序 -->
+                                <reactorModuleConvergence/>
+                            </rules>
+                        </configuration>
+                    </execution>
+                    <!-- 在编译阶段强制检查 -->
+                    <execution>
+                        <id>enforce-compile</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <requireFilesDontExist>
+                                    <message>清理不完整的编译文件</message>
+                                    <files>
+                                        <file>${project.build.directory}/classes/.gitkeep</file>
+                                    </files>
+                                </requireFilesDontExist>
                             </rules>
                         </configuration>
                     </execution>
@@ -684,14 +712,53 @@
                 <artifactId>maven-dependency-plugin</artifactId>
                 <version>3.6.1</version>
                 <executions>
+                    <!-- 强制解析所有依赖 -->
+                    <execution>
+                        <id>resolve-dependencies</id>
+                        <phase>initialize</phase>
+                        <goals>
+                            <goal>resolve</goal>
+                        </goals>
+                        <configuration>
+                            <silent>true</silent>
+                        </configuration>
+                    </execution>
+                    <!-- 分析依赖关系 -->
                     <execution>
                         <id>analyze-deps</id>
+                        <phase>test-compile</phase>
                         <goals>
                             <goal>analyze-only</goal>
                         </goals>
                         <configuration>
                             <failOnWarning>false</failOnWarning>
                             <ignoreNonCompile>true</ignoreNonCompile>
+                            <!-- 忽略一些常见的未使用依赖警告 -->
+                            <ignoredUnusedDeclaredDependencies>
+                                <ignoredUnusedDeclaredDependency>org.springframework.boot:spring-boot-starter</ignoredUnusedDeclaredDependency>
+                                <ignoredUnusedDeclaredDependency>org.projectlombok:lombok</ignoredUnusedDeclaredDependency>
+                            </ignoredUnusedDeclaredDependencies>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- Build Helper插件：确保构建顺序和附加源目录 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.4.0</version>
+                <executions>
+                    <!-- 设置构建时间戳 -->
+                    <execution>
+                        <id>timestamp-property</id>
+                        <goals>
+                            <goal>timestamp-property</goal>
+                        </goals>
+                        <configuration>
+                            <name>build.timestamp</name>
+                            <pattern>yyyy-MM-dd HH:mm:ss</pattern>
+                            <locale>zh_CN</locale>
                         </configuration>
                     </execution>
                 </executions>
