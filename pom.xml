@@ -30,11 +30,12 @@
         <!-- 核心模块：最简化架构 -->
         <module>datasophon-common</module>         <!-- 所有公共内容：工具类、常量、DTO、实体类等 -->
         <module>datasophon-dao</module>
-        <module>datasophon-service</module>
-        <module>datasophon-api</module>
         
-        <!-- 插件化模块 -->
+        <!-- 插件化模块：必须在service和api之前构建 -->
         <module>datasophon-plugins</module>        <!-- 插件生态系统 -->
+        
+        <module>datasophon-service</module>
+        <module>datasophon-api</module>            <!-- 最后构建，包含所有插件 -->
         
         <!-- 独立模块 -->
         <module>datasophon-worker</module>
