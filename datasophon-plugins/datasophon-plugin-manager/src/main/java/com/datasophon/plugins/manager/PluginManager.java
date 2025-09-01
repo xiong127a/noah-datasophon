@@ -225,14 +225,36 @@ public class PluginManager {
      */
     private void startAllPlugins() {
         log.info("开始启动插件...");
+        
+        List<PluginWrapper> allPlugins = pf4jManager.getPlugins();
+        List<String> failedPlugins = new ArrayList<>();
+        
+        // 尝试启动所有插件
         pf4jManager.startPlugins();
         
-        List<PluginWrapper> startedPlugins = pf4jManager.getStartedPlugins();
-        log.info("成功启动 {} 个插件", startedPlugins.size());
-        
-        for (PluginWrapper plugin : startedPlugins) {
-            pluginStatus.put(plugin.getPluginId(), PluginStatus.STARTED);
+        // 检查启动状态
+        for (PluginWrapper plugin : allPlugins) {
+            org.pf4j.PluginState state = plugin.getPluginState();
+            if (state != org.pf4j.PluginState.STARTED) {
+                String error = String.format("插件 %s 启动失败，状态: %s", plugin.getPluginId(), state);
+                log.error(error);
+                failedPlugins.add(plugin.getPluginId());
+                pluginStatus.put(plugin.getPluginId(), PluginStatus.ERROR);
+            } else {
+                pluginStatus.put(plugin.getPluginId(), PluginStatus.STARTED);
+                log.info("插件启动成功: {} v{}", plugin.getPluginId(), plugin.getDescriptor().getVersion());
+            }
         }
+        
+        // 如果有插件启动失败，抛出异常阻止主程序启动
+        if (!failedPlugins.isEmpty()) {
+            String errorMessage = String.format("以下插件启动失败: %s，这将导致系统功能不完整，请检查插件配置或联系管理员", 
+                String.join(", ", failedPlugins));
+            throw new RuntimeException(errorMessage);
+        }
+        
+        List<PluginWrapper> startedPlugins = pf4jManager.getStartedPlugins();
+        log.info("所有插件启动成功！共启动 {} 个插件", startedPlugins.size());
     }
     
     /**
