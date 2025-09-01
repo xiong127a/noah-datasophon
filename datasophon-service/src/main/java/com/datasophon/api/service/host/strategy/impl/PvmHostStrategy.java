@@ -23,6 +23,9 @@ import com.datasophon.api.service.host.strategy.model.*;
 import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostEntity;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -34,6 +37,9 @@ import java.util.regex.Pattern;
 import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.StringUtils;
+import com.datasophon.api.service.SshPluginAdapterService;
+import com.datasophon.common.model.HostInfo;
+import com.datasophon.plugins.api.model.CommandResult;
 
 /**
  * PVM（传统虚拟机）主机管理策略实现
@@ -45,6 +51,9 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
 
     @Autowired
     private ClusterHostService clusterHostService;
+    
+    @Autowired
+    private SshPluginAdapterService sshPluginAdapterService;
 
     @Override
     public StrategyType getStrategyType() {
@@ -267,28 +276,127 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         try {
             log.info("前端触发PVM主机检查，集群ID: {}, 主机数量: {}", clusterId, hostnames.size());
             
-            // PVM模式的主机检查逻辑
-            // TODO: 实现SSH连接和系统信息检查
-            // 1. 获取SSH连接参数
-            // 2. 对每个主机执行SSH连接测试
-            // 3. 收集主机硬件信息（CPU、内存、磁盘）
-            // 4. 更新主机状态到数据库
+            // 解析连接参数
+            PvmConnectionParams params = extractPvmConnectionParams(connectionParams);
+            
+            List<Map<String, Object>> hostResults = new ArrayList<>();
+            int successCount = 0;
+            int failedCount = 0;
+            
+            // 并发检查主机（限制并发数）
+            int maxConcurrency = Math.min(hostnames.size(), 5);
+            for (int i = 0; i < hostnames.size(); i += maxConcurrency) {
+                List<String> batch = hostnames.subList(i, Math.min(i + maxConcurrency, hostnames.size()));
+                
+                List<HostSystemInfo> batchResults = batch.parallelStream()
+                    .map(hostname -> {
+                        try {
+                            log.info("开始检查主机: {}", hostname);
+                            HostSystemInfo systemInfo = collectHostSystemInfo(hostname, params);
+                            
+                            // 更新数据库中的主机信息
+                            updateHostEntityWithSystemInfo(clusterId, hostname, systemInfo);
+                            
+                            return systemInfo;
+                        } catch (Exception e) {
+                            log.error("检查主机{}失败", hostname, e);
+                            HostSystemInfo errorInfo = new HostSystemInfo();
+                            errorInfo.setIp(hostname);
+                            errorInfo.setConnectionStatus("ERROR");
+                            errorInfo.setErrorMessage("检查异常: " + e.getMessage());
+                            return errorInfo;
+                        }
+                    })
+                    .toList();
+                
+                // 统计结果
+                for (HostSystemInfo systemInfo : batchResults) {
+                    Map<String, Object> hostResult = new HashMap<>();
+                    hostResult.put("ip", systemInfo.getIp());
+                    hostResult.put("hostname", systemInfo.getHostname());
+                    hostResult.put("status", systemInfo.getConnectionStatus());
+                    
+                    if ("SUCCESS".equals(systemInfo.getConnectionStatus())) {
+                        successCount++;
+                        hostResult.put("coreNum", systemInfo.getCoreNum());
+                        hostResult.put("totalMem", systemInfo.getTotalMem());
+                        hostResult.put("totalDisk", systemInfo.getTotalDisk());
+                        hostResult.put("cpuArchitecture", systemInfo.getCpuArchitecture());
+                        hostResult.put("averageLoad", systemInfo.getAverageLoad());
+                    } else {
+                        failedCount++;
+                        hostResult.put("error", systemInfo.getErrorMessage());
+                    }
+                    
+                    hostResults.add(hostResult);
+                }
+                
+                log.info("完成批次检查，批次大小: {}, 累计成功: {}, 累计失败: {}", 
+                        batch.size(), successCount, failedCount);
+            }
             
             result.put("started", true);
-            result.put("checkedHosts", hostnames.size());
-            result.put("message", "主机环境检查已启动");
+            result.put("completed", true);
+            result.put("totalHosts", hostnames.size());
+            result.put("successHosts", successCount);
+            result.put("failedHosts", failedCount);
+            result.put("hostResults", hostResults);
+            result.put("message", String.format("主机检查完成，成功: %d, 失败: %d", successCount, failedCount));
             
-            log.info("PVM主机环境检查启动成功，集群ID: {}, 主机数量: {}", clusterId, hostnames.size());
+            log.info("PVM主机环境检查完成，集群ID: {}, 总数: {}, 成功: {}, 失败: {}", 
+                    clusterId, hostnames.size(), successCount, failedCount);
             
         } catch (Exception e) {
             result.put("started", false);
+            result.put("completed", false);
             result.put("error", e.getMessage());
-            result.put("message", "启动主机环境检查失败: " + e.getMessage());
+            result.put("message", "主机环境检查失败: " + e.getMessage());
             
             log.error("PVM主机环境检查失败", e);
         }
         
         return result;
+    }
+
+    /**
+     * 更新数据库中的主机实体信息
+     */
+    private void updateHostEntityWithSystemInfo(Long clusterId, String ip, HostSystemInfo systemInfo) {
+        try {
+            // 查找现有主机实体
+            List<ClusterHostEntity> existingHosts = clusterHostService.getHostListByClusterId(clusterId)
+                    .stream()
+                    .filter(host -> ip.equals(host.getIp()))
+                    .toList();
+            
+            if (!existingHosts.isEmpty()) {
+                ClusterHostEntity hostEntity = existingHosts.getFirst();
+                
+                // 更新系统信息
+                if ("SUCCESS".equals(systemInfo.getConnectionStatus())) {
+                    hostEntity.setHostname(systemInfo.getHostname());
+                    hostEntity.setCoreNum(systemInfo.getCoreNum());
+                    hostEntity.setTotalMem(systemInfo.getTotalMem());
+                    hostEntity.setTotalDisk(systemInfo.getTotalDisk());
+                    hostEntity.setAverageLoad(systemInfo.getAverageLoad());
+                    hostEntity.setCpuArchitecture(systemInfo.getCpuArchitecture());
+                    hostEntity.setCheckTime(LocalDateTime.now());
+                    hostEntity.setUpdateTime(LocalDateTime.now());
+                    
+                    log.info("更新主机{}系统信息成功", ip);
+                } else {
+                    log.warn("主机{}连接失败，跳过信息更新: {}", ip, systemInfo.getErrorMessage());
+                }
+                
+                // 保存更新
+                clusterHostService.updateById(hostEntity);
+            } else {
+                log.warn("未找到集群{}中IP为{}的主机实体", clusterId, ip);
+            }
+            
+        } catch (Exception e) {
+            log.error("更新主机{}的系统信息到数据库失败", ip, e);
+        }
     }
 
     @Override
@@ -536,14 +644,187 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     }
 
     /**
-     * 创建主机实体 - 仅用于展示，待前端触发检查后更新详细信息
+     * 通过SSH连接获取主机名
+     */
+    private String getHostnameByIP(String ip, PvmConnectionParams connectionParams) {
+        try {
+            log.debug("尝试通过SSH获取主机{}的真实主机名", ip);
+            
+            // 构建HostInfo对象用于SSH连接
+            HostInfo hostInfo = new HostInfo();
+            hostInfo.setIp(ip);
+            hostInfo.setSshUser(connectionParams.getSshUser());
+            hostInfo.setSshPassword(connectionParams.getSshPassword());
+            hostInfo.setSshPort(connectionParams.getSshPort());
+            
+            // 使用SSH插件适配器获取主机名
+            
+            // 先测试连接
+            CommandResult connectionTest = sshPluginAdapterService.testConnection(hostInfo);
+            if (connectionTest.exitCode() != 0) {
+                log.warn("主机{}SSH连接测试失败: {}", ip, connectionTest.error());
+                return ip; // 连接失败，返回IP
+            }
+            
+            // 获取主机名
+            String hostname = sshPluginAdapterService.executeCommand(hostInfo, "hostname").trim();
+            if (!hostname.isEmpty() && !hostname.equals("localhost")) {
+                log.debug("成功获取主机{}的主机名: {}", ip, hostname);
+                return hostname;
+            } else {
+                log.debug("主机{}返回的主机名无效({}), 使用IP作为主机名", ip, hostname);
+                return ip;
+            }
+            
+        } catch (Exception e) {
+            log.warn("获取主机{}的主机名失败，使用IP作为主机名: {}", ip, e.getMessage());
+            return ip;
+        }
+    }
+
+    /**
+     * 收集主机的完整系统信息
+     */
+    public HostSystemInfo collectHostSystemInfo(String ip, PvmConnectionParams connectionParams) {
+        HostSystemInfo systemInfo = new HostSystemInfo();
+        systemInfo.setIp(ip);
+        
+        try {
+            // 构建HostInfo对象
+            HostInfo hostInfo = new HostInfo();
+            hostInfo.setIp(ip);
+            hostInfo.setSshUser(connectionParams.getSshUser());
+            hostInfo.setSshPassword(connectionParams.getSshPassword());
+            hostInfo.setSshPort(connectionParams.getSshPort());
+            
+            // 测试连接
+            CommandResult connectionTest = sshPluginAdapterService.testConnection(hostInfo);
+            if (connectionTest.exitCode() != 0) {
+                systemInfo.setConnectionStatus("FAILED");
+                systemInfo.setErrorMessage(connectionTest.error());
+                return systemInfo;
+            }
+            
+            systemInfo.setConnectionStatus("SUCCESS");
+            
+            // 收集系统信息
+            collectBasicInfo(hostInfo, systemInfo);
+            collectResourceInfo(hostInfo, systemInfo);
+            collectOsInfo(hostInfo, systemInfo);
+            
+            log.info("成功收集主机{}的系统信息: {}", ip, systemInfo);
+            
+        } catch (Exception e) {
+            log.error("收集主机{}系统信息失败", ip, e);
+            systemInfo.setConnectionStatus("ERROR");
+            systemInfo.setErrorMessage("收集系统信息异常: " + e.getMessage());
+        }
+        
+        return systemInfo;
+    }
+
+    /**
+     * 收集基本信息（主机名等）
+     */
+    private void collectBasicInfo(HostInfo hostInfo, HostSystemInfo systemInfo) {
+        try {
+            // 主机名
+            String hostname = sshPluginAdapterService.executeCommand(hostInfo, "hostname").trim();
+            if (!hostname.isEmpty() && !hostname.equals("localhost")) {
+                systemInfo.setHostname(hostname);
+            } else {
+                systemInfo.setHostname(hostInfo.getIp());
+            }
+            
+            // 系统负载
+            String loadAvg = sshPluginAdapterService.executeCommand(hostInfo, "cat /proc/loadavg | awk '{print $2}'").trim();
+            systemInfo.setAverageLoad(loadAvg.isEmpty() ? "0.0" : loadAvg);
+            
+        } catch (Exception e) {
+            log.warn("收集主机{}基本信息失败: {}", hostInfo.getIp(), e.getMessage());
+            systemInfo.setHostname(hostInfo.getIp());
+            systemInfo.setAverageLoad("0.0");
+        }
+    }
+
+    /**
+     * 收集资源信息（CPU、内存、磁盘）
+     */
+    private void collectResourceInfo(HostInfo hostInfo, HostSystemInfo systemInfo) {
+        try {
+            // CPU核数
+            String cpuCores = sshPluginAdapterService.executeCommand(hostInfo, "nproc").trim();
+            systemInfo.setCoreNum(cpuCores.isEmpty() ? 0 : Integer.parseInt(cpuCores));
+            
+            // 内存总量（KB转换为GB）
+            String memKb = sshPluginAdapterService.executeCommand(hostInfo, "grep MemTotal /proc/meminfo | awk '{print $2}'").trim();
+            if (!memKb.isEmpty()) {
+                int memGb = (int) (Long.parseLong(memKb) / 1024 / 1024);
+                systemInfo.setTotalMem(memGb);
+            }
+            
+            // 磁盘总量（获取根分区大小，GB）
+            String diskOutput = sshPluginAdapterService.executeCommand(hostInfo, "df -BG / | awk 'NR==2 {print $2}' | sed 's/G//'").trim();
+            if (!diskOutput.isEmpty()) {
+                systemInfo.setTotalDisk(Integer.parseInt(diskOutput));
+            }
+            
+        } catch (Exception e) {
+            log.warn("收集主机{}资源信息失败: {}", hostInfo.getIp(), e.getMessage());
+            systemInfo.setCoreNum(0);
+            systemInfo.setTotalMem(0);
+            systemInfo.setTotalDisk(0);
+        }
+    }
+
+    /**
+     * 收集操作系统信息
+     */
+    private void collectOsInfo(HostInfo hostInfo, HostSystemInfo systemInfo) {
+        try {
+            // CPU架构
+            String arch = sshPluginAdapterService.executeCommand(hostInfo, "uname -m").trim();
+            systemInfo.setCpuArchitecture(arch.isEmpty() ? "unknown" : arch);
+            
+        } catch (Exception e) {
+            log.warn("收集主机{}操作系统信息失败: {}", hostInfo.getIp(), e.getMessage());
+            systemInfo.setCpuArchitecture("unknown");
+        }
+    }
+
+    /**
+     * 主机系统信息数据结构
+     */
+    @Data
+    public static class HostSystemInfo {
+        // Getters and Setters
+        private String ip;
+        private String hostname;
+        private String connectionStatus; // SUCCESS, FAILED, ERROR
+        private String errorMessage;
+        private int coreNum;
+        private int totalMem; // GB
+        private int totalDisk; // GB
+        private String averageLoad;
+        private String cpuArchitecture;
+
+        @Override
+        public String toString() {
+            return String.format("HostSystemInfo{ip='%s', hostname='%s', status='%s', cores=%d, mem=%dGB, disk=%dGB, arch='%s'}", 
+                    ip, hostname, connectionStatus, coreNum, totalMem, totalDisk, cpuArchitecture);
+        }
+    }
+    
+
+    /**
+     * 创建主机实体 - 尝试获取真实主机名，失败则使用IP
      */
     private ClusterHostEntity createHostEntity(String ip, PvmConnectionParams connectionParams, Long clusterId) {
         ClusterHostEntity hostEntity = new ClusterHostEntity();
         
         // 基本信息
         hostEntity.setIp(ip);
-        hostEntity.setHostname(ip); // 默认使用IP作为主机名，检查后可能更新为实际主机名
+        hostEntity.setHostname(getHostnameByIP(ip, connectionParams)); // 尝试获取真实主机名
         hostEntity.setClusterId(clusterId);
         hostEntity.setCreateTime(LocalDateTime.now());
         hostEntity.setUpdateTime(LocalDateTime.now());
