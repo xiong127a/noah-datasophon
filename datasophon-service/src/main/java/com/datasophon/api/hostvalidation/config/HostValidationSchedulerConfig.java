@@ -17,9 +17,7 @@
 
 package com.datasophon.api.hostvalidation.config;
 
-import com.datasophon.api.hostvalidation.scheduler.HostValidationSchedulerService;
 import com.github.kagkarlsson.scheduler.Scheduler;
-
 import com.github.kagkarlsson.scheduler.serializer.JacksonSerializer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -56,10 +54,10 @@ public class HostValidationSchedulerConfig {
     private final Environment environment;
     
     @Bean
-    public Scheduler hostValidationScheduler(HostValidationSchedulerService schedulerService) {
+    public Scheduler hostValidationScheduler() {
         
         return Scheduler
-            .create(dataSource, schedulerService.hostValidationTask, schedulerService.hostRepairTask, schedulerService.hostCleanupTask)
+            .create(dataSource) // 只创建基础Scheduler，Task稍后注册
             .serializer(new JacksonSerializer()) // 使用Jackson序列化
             .executorService(createExecutorService()) // 使用虚拟线程执行器
             .pollingInterval(getPollingInterval()) // 轮询间隔

@@ -46,13 +46,6 @@ public interface InstallService extends IService<InstallStepEntity> {
      */
     List<InstallStepDTO> getInstallStepsByType(Integer installType);
 
-    /**
-     * 根据ID获取安装步骤DTO
-     * 
-     * @param id 安装步骤ID
-     * @return 安装步骤DTO
-     */
-    InstallStepDTO getInstallStepById(Long id);
 
     /**
      * 根据安装类型获取安装步骤
@@ -61,46 +54,6 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @return 安装步骤DTO
      */
     InstallStepDTO getInstallStep(Integer type);
-
-    /**
-     * 保存安装步骤
-     * 
-     * @param installStepDTO 安装步骤DTO
-     * @return 保存后的安装步骤DTO
-     */
-    InstallStepDTO saveInstallStep(InstallStepDTO installStepDTO);
-
-    /**
-     * 更新安装步骤
-     * 
-     * @param installStepDTO 安装步骤DTO
-     * @return 更新后的安装步骤DTO
-     */
-    InstallStepDTO updateInstallStep(InstallStepDTO installStepDTO);
-
-    /**
-     * 根据ID列表批量删除安装步骤
-     * 
-     * @param ids ID列表
-     * @return 是否删除成功
-     */
-    boolean removeInstallStepByIds(List<Integer> ids);
-
-    /**
-     * 解析主机列表
-     * 
-     * @param clusterId         集群ID
-     * @param ips               主机IP列表
-     * @param sshUser           SSH用户
-     * @param sshPort           SSH端口
-     * @param sshPassword       SSH密码
-     * @param kubeConfigContent K8s配置内容
-     * @param page              页码
-     * @param pageSize          每页大小
-     * @return 解析后的主机列表分页结果
-     */
-    PageResult<HostInfo> analysisHostList(Long clusterId, String ips, String sshUser, Integer sshPort,
-                                          String sshPassword, String kubeConfigContent, Integer page, Integer pageSize);
 
     /**
      * 获取主机检查状态
@@ -132,14 +85,6 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @return 操作是否成功
      */
     boolean reStartDispatcherHostAgent(Long clusterId, String ips);
-
-    /**
-     * 检查主机检查是否完成
-     * 
-     * @param clusterId 集群ID
-     * @return 是否完成
-     */
-    boolean hostCheckCompleted(Long clusterId);
 
     /**
      * 清理主机检查资源

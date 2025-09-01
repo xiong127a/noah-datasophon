@@ -72,39 +72,7 @@ public class HostInstallController {
         }
     }
 
-    /**
-     * 解析主机列表
-     */
-    @PostMapping("/analysisHostList")
-    @UserPermission
-    public Result<PageResult<HostInfo>> analysisHostList(@ClusterId Long clusterId,
-            @RequestParam(name = "kubeConfigContent", required = false) String kubeConfigContent,
-            @RequestParam(name = "ips", required = false) String ips,
-            @RequestParam(name = "sshUser", required = false) String sshUser,
-            @RequestParam(name = "sshPort", required = false) Integer sshPort,
-            @RequestParam(name = "sshPassword", required = false) String sshPassword,
-            @RequestParam(name = "page") Integer page,
-            @RequestParam(name = "pageSize") Integer pageSize) {
-        try {
-            if (clusterId == null) {
-                return Result.error("集群ID不能为空");
-            }
-            if (page == null || page < 1) {
-                return Result.error("页码必须大于0");
-            }
-            if (pageSize == null || pageSize < 1) {
-                return Result.error("每页大小必须大于0");
-            }
 
-            log.debug("解析主机列表，集群ID: {}, 页码: {}, 每页大小: {}", clusterId, page, pageSize);
-            PageResult<HostInfo> pageResult = installService.analysisHostList(clusterId, ips, sshUser, sshPort,
-                    sshPassword, kubeConfigContent, page, pageSize);
-            return Result.success(pageResult);
-        } catch (Exception e) {
-            log.error("解析主机列表失败，集群ID: {}, 错误: {}", clusterId, e.getMessage(), e);
-            return Result.error("解析主机列表失败: " + e.getMessage());
-        }
-    }
 
     /**
      * 查询主机校验状态

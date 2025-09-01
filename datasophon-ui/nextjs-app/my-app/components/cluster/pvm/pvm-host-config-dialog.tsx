@@ -47,10 +47,10 @@ export default function PvmHostConfigDialog({
   onStep1Complete
 }: PvmHostConfigDialogProps) {
   const [step1Data, setStep1Data] = useState<PvmStep1Data>({
-    hosts: '',
+    hosts: '192.168.200.6',
     sshUser: 'root',
     sshPort: '22',
-    sshPassword: ''
+    sshPassword: 'root'
   })
   
   const [loading, setLoading] = useState(false)
@@ -64,10 +64,10 @@ export default function PvmHostConfigDialog({
   // 清空表单数据
   const clearFormData = () => {
     setStep1Data({
-      hosts: '',
+      hosts: '192.168.200.6',
       sshUser: 'root',
       sshPort: '22',
-      sshPassword: ''
+      sshPassword: 'root'
     })
     setPasswordVisible(false)
   }
