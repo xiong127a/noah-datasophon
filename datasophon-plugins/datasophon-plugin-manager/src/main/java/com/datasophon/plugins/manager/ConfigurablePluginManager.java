@@ -153,5 +153,27 @@ public class ConfigurablePluginManager extends DefaultPluginManager {
         log.info("插件根目录缓存已刷新，准备重新加载插件");
     }
     
+    /**
+     * 重写插件加载器创建方法
+     * 使用Parent First策略解决类加载器约束违规问题
+     * <p>
+     * 参考PF4J官方文档: <a href="https://pf4j.org/doc/class-loading.html">官方文档</a>
+     * Parent First策略确保插件优先使用父类加载器中的类，
+     * 避免共享类（如CheckType枚举）在不同类加载器中产生冲突
+     */
+    @Override
+    protected PluginLoader createPluginLoader() {
+        return new DefaultPluginLoader(this) {
+            @Override
+            protected PluginClassLoader createPluginClassLoader(Path pluginPath, PluginDescriptor pluginDescriptor) {
+                log.info("为插件 {} 创建Parent First类加载器", pluginDescriptor.getPluginId());
+                
+                // 按照PF4J源码，使用Parent First策略 (ClassLoadingStrategy.APD)
+                // APD = Application, Plugin, Dependencies (应用优先，即Parent First)
+                return new PluginClassLoader(pluginManager, pluginDescriptor, getClass().getClassLoader(), ClassLoadingStrategy.APD);
+            }
+        };
+    }
+    
 
 }
