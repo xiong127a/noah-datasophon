@@ -18,6 +18,7 @@
 package com.datasophon.plugins.systeminfo;
 
 import com.datasophon.common.enums.OsType;
+import com.datasophon.plugins.api.PluginId;
 import com.datasophon.plugins.api.SystemInfoCollectorPlugin;
 import com.datasophon.plugins.api.model.HostCheckContext;
 import com.datasophon.plugins.api.model.SystemInfo;
@@ -107,7 +108,7 @@ public class SystemInfoCollectorPluginImpl implements SystemInfoCollectorPlugin 
 
     @Override
     public String getPluginId() {
-        return "system-info-collector";
+        return PluginId.SYSTEM_INFO_COLLECTOR.getId();
     }
 
     /**

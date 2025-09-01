@@ -20,6 +20,7 @@ package com.datasophon.plugins.ssh;
 import com.datasophon.common.enums.CheckType;
 import com.datasophon.common.enums.OsType;
 import com.datasophon.plugins.api.HostCheckerPlugin;
+import com.datasophon.plugins.api.PluginId;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
 import com.datasophon.plugins.api.model.PluginMetadata;
@@ -54,8 +55,8 @@ public class SshConnectivityCheckPlugin implements HostCheckerPlugin {
     
     // 插件元数据
     private static final PluginMetadata METADATA = PluginMetadata.builder()
-            .pluginId("ssh-connectivity-check")
-            .name("SSH连接检查插件")
+            .pluginId(PluginId.SSH_CONNECTOR.getId())
+            .name(PluginId.SSH_CONNECTOR.getDisplayName())
             .description("验证主机SSH连接性，使用Apache SSHJ + Commons Pool2实现高性能连接池")
             .version("1.0.0")
             .author("任相鹏")
@@ -183,7 +184,7 @@ public class SshConnectivityCheckPlugin implements HostCheckerPlugin {
     
     @Override
     public String getPluginId() {
-        return "ssh-connectivity-check";
+        return PluginId.SSH_CONNECTOR.getId();
     }
     
     @Override

@@ -21,6 +21,7 @@ import com.datasophon.common.enums.CheckType;
 import com.datasophon.common.enums.OsType;
 import com.datasophon.common.enums.ValidationStatus;
 import com.datasophon.plugins.api.HostRepairPlugin;
+import com.datasophon.plugins.api.PluginId;
 import com.datasophon.plugins.api.SystemInfoCollectorPlugin;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
@@ -154,7 +155,7 @@ public class HostRepairPluginImpl implements HostRepairPlugin {
 
     @Override
     public String getPluginId() {
-        return "host-repair";
+        return PluginId.HOST_REPAIR.getId();
     }
 
     /**

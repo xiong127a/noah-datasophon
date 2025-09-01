@@ -19,6 +19,7 @@ package com.datasophon.api.service.impl;
 
 import com.datasophon.api.service.SshPluginAdapterService;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.plugins.api.PluginId;
 import com.datasophon.plugins.api.model.CommandResult;
 import com.datasophon.plugins.manager.LazyPluginLifecycleManager;
 import com.datasophon.plugins.api.HostCheckerPlugin;
@@ -50,7 +51,7 @@ public class SshPluginAdapterServiceImpl implements SshPluginAdapterService {
     private LazyPluginLifecycleManager lazyPluginManager;
     
     // SSH插件ID
-    private static final String SSH_PLUGIN_ID = "ssh-connectivity-check";
+    private static final PluginId SSH_PLUGIN_ID = PluginId.SSH_CONNECTOR;
     
     @Override
     public CommandResult testConnection(HostInfo hostInfo) {
@@ -510,7 +511,7 @@ public class SshPluginAdapterServiceImpl implements SshPluginAdapterService {
      */
     private HostCheckerPlugin getSshPlugin() {
         try {
-            return lazyPluginManager.getPlugin(SSH_PLUGIN_ID);
+            return lazyPluginManager.getPlugin(SSH_PLUGIN_ID.getId());
         } catch (Exception e) {
             log.error("【SSH适配器】获取SSH插件失败: {}", e.getMessage(), e);
             return null;

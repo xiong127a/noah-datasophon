@@ -26,6 +26,7 @@ import com.github.kagkarlsson.scheduler.task.helper.OneTimeTask;
 import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import com.github.kagkarlsson.scheduler.task.TaskInstanceId;
 import com.github.kagkarlsson.scheduler.Scheduler;
+import com.datasophon.plugins.api.PluginId;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -49,8 +50,8 @@ public class HostValidationSchedulerService {
     private final Scheduler scheduler;
     
     // 任务名称常量
-    public static final String TASK_HOST_VALIDATION = "host-validation";
-    public static final String TASK_HOST_REPAIR = "host-repair";
+    public static final String TASK_HOST_VALIDATION = PluginId.HOST_VALIDATION.getId();
+    public static final String TASK_HOST_REPAIR = PluginId.HOST_REPAIR.getId();
     public static final String TASK_HOST_CLEANUP = "host-cleanup";
     
     public HostValidationSchedulerService(HostValidationExecutor hostValidationExecutor,

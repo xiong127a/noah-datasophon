@@ -21,6 +21,7 @@ import com.datasophon.common.enums.CheckType;
 import com.datasophon.common.enums.OsType;
 import com.datasophon.common.enums.ValidationStatus;
 import com.datasophon.plugins.api.HostValidationPlugin;
+import com.datasophon.plugins.api.PluginId;
 import com.datasophon.plugins.api.SystemInfoCollectorPlugin;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
@@ -145,7 +146,7 @@ public class HostValidationPluginImpl implements HostValidationPlugin {
 
     @Override
     public String getPluginId() {
-        return "host-validation";
+        return PluginId.HOST_VALIDATION.getId();
     }
 
     /**
