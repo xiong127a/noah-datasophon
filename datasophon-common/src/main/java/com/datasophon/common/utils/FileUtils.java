@@ -246,7 +246,10 @@ public class FileUtils {
         charset = charset == null ? Charset.defaultCharset() : charset;
         List<String> lastLines = new ArrayList<>();
 
-        try (ReversedLinesFileReader reader = new ReversedLinesFileReader(new File(filename), charset)) {
+        try (ReversedLinesFileReader reader = ReversedLinesFileReader.builder()
+                .setFile(new File(filename))
+                .setCharset(charset)
+                .get()) {
             String line;
             int count = 0;
             while ((line = reader.readLine()) != null && count < rows) {
