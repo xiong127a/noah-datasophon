@@ -43,12 +43,25 @@ import java.util.List;
 public interface AlertGroupConverter extends BaseConverter<AlertGroupEntity, AlertGroupDTO, AlertGroupVO> {
 
     /**
+     * Entity转DTO - 显式定义避免冲突
+     */
+    @Override
+    AlertGroupDTO entityToDto(AlertGroupEntity entity);
+
+    /**
+     * DTO转Entity - 显式定义避免冲突
+     */
+    @Override
+    AlertGroupEntity dtoToEntity(AlertGroupDTO dto);
+
+    /**
      * DTO转VO - 添加格式化映射
      */
     @Override
     @Mapping(target = "clusterName", ignore = true)
     @Mapping(target = "alertQuotaNumFormatted", source = "alertQuotaNum", qualifiedByName = "formatAlertQuotaNum")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     AlertGroupVO dtoToVo(AlertGroupDTO dto);
 
     /**
@@ -58,6 +71,7 @@ public interface AlertGroupConverter extends BaseConverter<AlertGroupEntity, Ale
     @Mapping(target = "clusterName", ignore = true)
     @Mapping(target = "alertQuotaNumFormatted", source = "alertQuotaNum", qualifiedByName = "formatAlertQuotaNum")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     AlertGroupVO entityToVo(AlertGroupEntity entity);
 
     /**
