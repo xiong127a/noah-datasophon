@@ -171,16 +171,16 @@ datasophon:
   
   # 插件管理器配置 (延迟加载优化)  
   plugins:
-    # 插件目录
-    directory: ${user.dir}/plugins
+    # 插件目录（根目录统一插件目录）
+    directory: plugins
     
     # 开发模式配置
     development:
       # 是否启用开发模式（开发时设为true，生产时设为false）
       enabled: true
-      # 开发模式下的插件路径（统一插件目录）
+      # 开发模式下的插件路径（根目录统一插件目录）
       plugin-paths:
-        - datasophon-api/target/plugins
+        - plugins
     
     # 额外的插件扫描路径（可选）
     scan-paths: []
