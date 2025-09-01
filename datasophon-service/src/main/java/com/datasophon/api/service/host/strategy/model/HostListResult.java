@@ -52,11 +52,6 @@ public class HostListResult {
     private Integer pageSize;
     
     /**
-     * 队列状态信息（仅PVM模式）
-     */
-    private Map<String, Object> queueStatus;
-    
-    /**
      * 是否还有更多数据
      */
     private Boolean hasMore;

@@ -163,16 +163,12 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
                 request.getPageSize()
             );
             
-            // 获取队列状态（PVM模式特有）
-            Map<String, Object> queueStatus = getQueueStatus(request.getClusterId());
-            
             return HostListResult.builder()
                     .hosts(pageResult.getRecords())
                     .total(pageResult.getTotal())
                     .page(request.getPage())
                     .pageSize(request.getPageSize())
                     .hasMore(pageResult.getTotal() > (long) request.getPage() * request.getPageSize())
-                    .queueStatus(queueStatus)
                     .build();
                     
         } catch (Exception e) {
@@ -306,7 +302,6 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             
             result.put("completed", completed);
             result.put("data", Collections.emptyList());
-            result.put("queueStatus", getQueueStatus(clusterId));
             
         } catch (Exception e) {
             result.put("completed", false);
@@ -339,28 +334,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         return result;
     }
 
-    /**
-     * 获取队列状态信息（PVM模式特有）
-     */
-    private Map<String, Object> getQueueStatus(Long clusterId) {
-        Map<String, Object> queueStatus = new HashMap<>();
-        
-        try {
-            // 这里应该获取实际的队列状态
-            // 简化处理，返回默认值
-            queueStatus.put("queueSize", 0);
-            queueStatus.put("runningTasks", 0);
-            queueStatus.put("processorThreadAlive", true);
-            
-        } catch (Exception e) {
-            log.warn("获取队列状态失败", e);
-            queueStatus.put("queueSize", 0);
-            queueStatus.put("runningTasks", 0);
-            queueStatus.put("processorThreadAlive", false);
-        }
-        
-        return queueStatus;
-    }
+
 
     @Override
     protected Map<String, Object> buildDiscoveryMetadata(List<ClusterHostEntity> hosts, HostDiscoveryRequest request) {

@@ -222,7 +222,6 @@ public class KubernetesHostStrategy extends AbstractHostManagementStrategy {
                 .page(1)
                 .pageSize(filteredHosts.size())
                 .hasMore(false)
-                .queueStatus(null) // K8S模式不需要队列状态
                 .build();
     }
 
