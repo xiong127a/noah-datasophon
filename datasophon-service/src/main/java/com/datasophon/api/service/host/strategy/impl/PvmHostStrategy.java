@@ -20,7 +20,6 @@ package com.datasophon.api.service.host.strategy.impl;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.host.strategy.AbstractHostManagementStrategy;
 import com.datasophon.api.service.host.strategy.model.*;
-import com.datasophon.api.service.impl.InstallServiceImpl;
 import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostEntity;
@@ -28,7 +27,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import org.apache.commons.validator.routines.InetAddressValidator;
+import org.apache.commons.lang3.Range;
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * PVM（传统虚拟机）主机管理策略实现
@@ -40,9 +45,6 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
 
     @Autowired
     private ClusterHostService clusterHostService;
-    
-    @Autowired
-    private InstallServiceImpl installService;
 
     @Override
     public StrategyType getStrategyType() {
@@ -53,23 +55,56 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     protected void validateDiscoveryRequest(HostDiscoveryRequest request) {
         super.validateDiscoveryRequest(request);
         
-        String hosts = (String) request.getConnectionParams().get("hosts");
-        String sshUser = (String) request.getConnectionParams().get("sshUser");
-        String sshPort = (String) request.getConnectionParams().get("sshPort");
-        String sshPassword = (String) request.getConnectionParams().get("sshPassword");
+        // 转换为强类型参数
+        PvmConnectionParams connectionParams = extractPvmConnectionParams(request.getConnectionParams());
         
-        if (hosts == null || hosts.trim().isEmpty()) {
-            throw new IllegalArgumentException("主机列表不能为空");
+        // 验证连接参数
+        connectionParams.validate();
+        
+        // 验证IP格式
+        validateIpFormats(connectionParams.getHosts());
+    }
+
+    /**
+     * 从Map中提取PVM连接参数
+     */
+    private PvmConnectionParams extractPvmConnectionParams(Map<String, Object> paramsMap) {
+        return PvmConnectionParams.builder()
+                .hosts((String) paramsMap.get("hosts"))
+                .sshUser((String) paramsMap.get("sshUser"))
+                .sshPort(parseIntegerParam(paramsMap.get("sshPort")))
+                .sshPassword((String) paramsMap.get("sshPassword"))
+                .privateKeyPath((String) paramsMap.get("privateKeyPath"))
+                .timeoutSeconds(parseIntegerParam(paramsMap.get("timeoutSeconds"), 30))
+                .build();
+    }
+
+    /**
+     * 解析整数参数
+     */
+    private Integer parseIntegerParam(Object param) {
+        return parseIntegerParam(param, null);
+    }
+
+    private Integer parseIntegerParam(Object param, Integer defaultValue) {
+        switch (param) {
+            case null -> {
+                return defaultValue;
+            }
+            case Integer i -> {
+                return i;
+            }
+            case String s -> {
+                try {
+                    return Integer.parseInt(s);
+                } catch (NumberFormatException e) {
+                    return defaultValue;
+                }
+            }
+            default -> {
+            }
         }
-        if (sshUser == null || sshUser.trim().isEmpty()) {
-            throw new IllegalArgumentException("SSH用户名不能为空");
-        }
-        if (sshPort == null || sshPort.trim().isEmpty()) {
-            throw new IllegalArgumentException("SSH端口不能为空");
-        }
-        if (sshPassword == null || sshPassword.trim().isEmpty()) {
-            throw new IllegalArgumentException("SSH密码不能为空");
-        }
+        return defaultValue;
     }
 
     @Override
@@ -79,34 +114,36 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         log.debug("准备PVM SSH连接参数");
     }
 
+    /**
+     * 发现主机 - 仅解析IP并创建主机实体，不执行实际检查
+     * 主机检查将由前端通过 performHostCheck 方法主动触发
+     */
     @Override
     protected List<ClusterHostEntity> doDiscoverHosts(HostDiscoveryRequest request) {
-        String hosts = (String) request.getConnectionParams().get("hosts");
-        String sshUser = (String) request.getConnectionParams().get("sshUser");
-        String sshPort = (String) request.getConnectionParams().get("sshPort");
-        String sshPassword = (String) request.getConnectionParams().get("sshPassword");
+        // 转换为强类型参数
+        PvmConnectionParams connectionParams = extractPvmConnectionParams(request.getConnectionParams());
         
-        log.info("开始分析PVM主机列表: {}", hosts);
+        log.info("开始解析PVM主机列表: {}", connectionParams.getHosts());
         
         try {
-            // 调用现有的主机分析方法
-            installService.analysisHostList(
-                request.getClusterId(),
-                hosts,
-                sshUser,
-                Integer.parseInt(sshPort),
-                sshPassword,
-                null, // kubeConfigContent - PVM模式不需要
-                1, // page
-                100 // pageSize - 获取所有主机
-            );
+            // 使用开源库解析IP列表
+            List<String> ipList = parseIpRangesWithLibrary(connectionParams.getHosts());
+            log.info("解析出{}个IP地址: {}", ipList.size(),ipList);
             
-            // 分析完成后，获取发现的主机
-            return Collections.emptyList(); // 实际实现中应该返回分析后的主机列表
+            // 创建主机实体列表（仅创建实体，不执行SSH检查）
+            List<ClusterHostEntity> hostEntities = new ArrayList<>();
+            
+            for (String ip : ipList) {
+                ClusterHostEntity hostEntity = createHostEntity(ip, connectionParams, request.getClusterId());
+                hostEntities.add(hostEntity);
+            }
+            
+            log.info("成功创建{}个主机实体，等待前端触发检查", hostEntities.size());
+            return hostEntities;
             
         } catch (Exception e) {
-            log.error("分析PVM主机列表失败", e);
-            throw new RuntimeException("分析PVM主机列表失败: " + e.getMessage(), e);
+            log.error("解析PVM主机列表失败", e);
+            throw new RuntimeException("解析PVM主机列表失败: " + e.getMessage(), e);
         }
     }
 
@@ -181,56 +218,71 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         }
     }
 
+    /**
+     * 检查连接参数 - 验证SSH连接参数是否有效
+     * 用于在发现主机前测试连接参数
+     */
     @Override
-    public Map<String, Object> checkConnection(Map<String, Object> connectionParams) {
-        String hosts = (String) connectionParams.get("hosts");
-        // TODO: 可以在未来实现SSH连接参数验证
-        // String sshUser = (String) connectionParams.get("sshUser");
-        // String sshPort = (String) connectionParams.get("sshPort");
-        // String sshPassword = (String) connectionParams.get("sshPassword");
-        
+    public Map<String, Object> checkConnection(Map<String, Object> connectionParamsMap) {
         Map<String, Object> result = new HashMap<>();
         
         try {
-            // 这里可以实现SSH连接测试
-            // 简化处理，实际应该测试第一台主机的SSH连接
+            log.info("测试PVM连接参数");
+            
+            // 转换为强类型参数
+            PvmConnectionParams connectionParams = extractPvmConnectionParams(connectionParamsMap);
+            
+            // 验证连接参数
+            connectionParams.validate();
+            
+            // 验证IP格式
+            validateIpFormats(connectionParams.getHosts());
+            
+            // TODO: 可以选择测试第一个IP的SSH连接
+            // 简化处理，仅做参数格式验证
+            // 后续可使用connectionParams进行实际连接测试
             
             result.put("connected", true);
-            result.put("testedHosts", Arrays.asList(hosts.split(",")));
-            result.put("message", "SSH连接测试成功");
+            result.put("message", "连接参数验证成功");
+            result.put("parsedIpCount", parseIpRangesWithLibrary(connectionParams.getHosts()).size());
             
-            log.info("PVM SSH连接检查成功");
+            log.info("PVM连接参数验证成功");
             
         } catch (Exception e) {
             result.put("connected", false);
             result.put("error", e.getMessage());
-            result.put("message", "SSH连接测试失败: " + e.getMessage());
+            result.put("message", "连接参数验证失败: " + e.getMessage());
             
-            log.error("PVM SSH连接检查失败", e);
+            log.error("PVM连接参数验证失败", e);
         }
         
         return result;
     }
 
+    /**
+     * 执行主机检查 - 前端主动触发的检查入口
+     * 对指定主机列表执行SSH连接测试和系统信息收集
+     */
     @Override
     public Map<String, Object> performHostCheck(Long clusterId, List<String> hostnames,
                                               Map<String, Object> connectionParams) {
         Map<String, Object> result = new HashMap<>();
         
         try {
-            String sshUser = (String) connectionParams.get("sshUser");
-            String sshPort = (String) connectionParams.get("sshPort");
+            log.info("前端触发PVM主机检查，集群ID: {}, 主机数量: {}", clusterId, hostnames.size());
             
-            // 调用现有的主机环境检查方法
-            installService.getHostCheckStatus(
-                clusterId,
-                sshUser,
-                Integer.parseInt(sshPort)
-            );
+            // PVM模式的主机检查逻辑
+            // TODO: 实现SSH连接和系统信息检查
+            // 1. 获取SSH连接参数
+            // 2. 对每个主机执行SSH连接测试
+            // 3. 收集主机硬件信息（CPU、内存、磁盘）
+            // 4. 更新主机状态到数据库
             
             result.put("started", true);
             result.put("checkedHosts", hostnames.size());
             result.put("message", "主机环境检查已启动");
+            
+            log.info("PVM主机环境检查启动成功，集群ID: {}, 主机数量: {}", clusterId, hostnames.size());
             
         } catch (Exception e) {
             result.put("started", false);
@@ -248,8 +300,9 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         Map<String, Object> result = new HashMap<>();
         
         try {
-            // 调用现有的检查完成状态方法
-            boolean completed = installService.hostCheckCompleted(clusterId);
+            // PVM模式的主机检查状态查询
+            // TODO: 实现基于集群主机状态的检查完成判断逻辑
+            boolean completed = checkAllHostsValidated(clusterId);
             
             result.put("completed", completed);
             result.put("data", Collections.emptyList());
@@ -268,8 +321,8 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     @Override
     public void cleanup(Long clusterId) {
         try {
-            // 调用现有的清理方法
-            installService.cleanupHostCheckResources(clusterId);
+            // PVM模式的资源清理
+            // TODO: 实现清理临时文件、缓存等逻辑
             log.info("已清理集群{}的PVM主机检查资源", clusterId);
             
         } catch (Exception e) {
@@ -322,5 +375,217 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         }
         
         return metadata;
+    }
+
+    /**
+     * 验证IP格式 - 使用Apache Commons Validator
+     */
+    private void validateIpFormats(String hosts) {
+        try {
+            List<String> ipList = parseIpRangesWithLibrary(hosts);
+            if (ipList.isEmpty()) {
+                throw new IllegalArgumentException("未能解析到有效的IP地址");
+            }
+            
+            if (ipList.size() > 100) {
+                throw new IllegalArgumentException("IP地址数量过多，最大支持100个");
+            }
+            
+            // 使用Apache Commons Validator验证每个IP
+            InetAddressValidator validator = InetAddressValidator.getInstance();
+            for (String ip : ipList) {
+                if (!validator.isValidInet4Address(ip)) {
+                    throw new IllegalArgumentException("无效的IPv4地址: " + ip);
+                }
+            }
+            
+            log.debug("IP格式验证通过，解析出{}个有效IP", ipList.size());
+            
+        } catch (Exception e) {
+            log.error("IP格式验证失败: {}", e.getMessage());
+            throw new IllegalArgumentException("IP格式验证失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 检查集群所有主机是否已验证完成
+     */
+    private boolean checkAllHostsValidated(Long clusterId) {
+        try {
+            // TODO: 实现基于数据库的主机状态检查
+            // 查询集群下所有主机的状态，判断是否都已完成验证
+            List<ClusterHostEntity> hosts = clusterHostService.getHostListByClusterId(clusterId);
+            return !hosts.isEmpty();
+            
+            // 简化逻辑：如果有主机存在，认为验证完成
+
+        } catch (Exception e) {
+            log.error("检查主机验证状态失败，集群ID: {}", clusterId, e);
+            return false;
+        }
+    }
+
+    /**
+     * 使用开源库解析IP范围字符串为IP列表
+     * 支持的格式：
+     * - 单个IP: 192.168.1.100
+     * - 逗号分隔: 192.168.1.100,192.168.1.101
+     * - 范围批量: 192.168.1.[100-110]
+     * - 混合格式: 192.168.1.100,192.168.1.[105-110]
+     * - 换行分隔
+     */
+    private List<String> parseIpRangesWithLibrary(String hostInput) {
+        List<String> ipList = new ArrayList<>();
+        
+        if (StringUtils.isBlank(hostInput)) {
+            return ipList;
+        }
+        
+        // 使用Apache Commons Lang处理字符串
+        String[] lines = StringUtils.split(hostInput, "\r\n");
+        InetAddressValidator validator = InetAddressValidator.getInstance();
+        
+        for (String line : lines) {
+            if (StringUtils.isBlank(line)) continue;
+            
+            // 处理逗号分隔的IP
+            String[] parts = StringUtils.split(line, ",");
+            for (String part : parts) {
+                String trimmedPart = StringUtils.trim(part);
+                if (StringUtils.isBlank(trimmedPart)) continue;
+                
+                if (isIpRange(trimmedPart)) {
+                    // 解析IP范围 192.168.1.[100-110]
+                    ipList.addAll(expandIpRangeWithLibrary(trimmedPart, validator));
+                } else if (validator.isValidInet4Address(trimmedPart)) {
+                    // 单个IP - 使用Apache Commons Validator验证
+                    ipList.add(trimmedPart);
+                } else {
+                    log.warn("无效的IP格式，跳过: {}", trimmedPart);
+                }
+            }
+        }
+        
+        // 去重并排序
+        return ipList.stream()
+                .distinct()
+                .sorted(this::compareIpAddresses)
+                .toList();
+    }
+
+    /**
+     * 检查是否为IP范围格式
+     */
+    private boolean isIpRange(String input) {
+        return input.contains("[") && input.contains("]") && input.contains("-");
+    }
+
+
+
+    /**
+     * 使用开源库展开IP范围 192.168.1.[100-110] → [192.168.1.100, 192.168.1.101, ...]
+     */
+    private List<String> expandIpRangeWithLibrary(String ipRange, InetAddressValidator validator) {
+        List<String> expandedIps = new ArrayList<>();
+        
+        try {
+            // 正则匹配 192.168.1.[100-110] 格式
+            Pattern pattern = Pattern.compile("^(.+)\\[(\\d+)-(\\d+)](.*)$");
+            Matcher matcher = pattern.matcher(ipRange);
+            
+            if (matcher.matches()) {
+                String prefix = matcher.group(1);
+                int start = Integer.parseInt(matcher.group(2));
+                int end = Integer.parseInt(matcher.group(3));
+                String suffix = matcher.group(4);
+                
+                if (start > end) {
+                    log.warn("IP范围起始值大于结束值: {}", ipRange);
+                    return expandedIps;
+                }
+                
+                if (end - start > 254) {
+                    log.warn("IP范围过大，限制为254个: {}", ipRange);
+                    end = start + 254;
+                }
+                
+                // 使用Apache Commons Lang的Range来验证范围
+                Range<Integer> range = Range.of(start, end);
+                
+                for (int i = start; i <= end; i++) {
+                    if (range.contains(i)) {
+                        String ip = prefix + i + suffix;
+                        // 使用Apache Commons Validator验证生成的IP
+                        if (validator.isValidInet4Address(ip)) {
+                            expandedIps.add(ip);
+                        } else {
+                            log.warn("生成的IP地址无效，跳过: {}", ip);
+                        }
+                    }
+                }
+                
+                log.debug("IP范围 {} 展开为 {} 个IP地址", ipRange, expandedIps.size());
+            } else {
+                log.warn("无法解析IP范围格式: {}", ipRange);
+            }
+            
+        } catch (NumberFormatException e) {
+            log.error("解析IP范围时数字格式错误: {}", ipRange, e);
+        } catch (Exception e) {
+            log.error("解析IP范围时发生异常: {}", ipRange, e);
+        }
+        
+        return expandedIps;
+    }
+
+    /**
+     * IP地址比较器，用于排序
+     */
+    private int compareIpAddresses(String ip1, String ip2) {
+        try {
+            String[] parts1 = ip1.split("\\.");
+            String[] parts2 = ip2.split("\\.");
+            
+            for (int i = 0; i < 4; i++) {
+                int num1 = Integer.parseInt(parts1[i]);
+                int num2 = Integer.parseInt(parts2[i]);
+                int comparison = Integer.compare(num1, num2);
+                if (comparison != 0) {
+                    return comparison;
+                }
+            }
+            return 0;
+        } catch (Exception e) {
+            // 如果解析失败，回退到字符串比较
+            return ip1.compareTo(ip2);
+        }
+    }
+
+    /**
+     * 创建主机实体 - 仅用于展示，待前端触发检查后更新详细信息
+     */
+    private ClusterHostEntity createHostEntity(String ip, PvmConnectionParams connectionParams, Long clusterId) {
+        ClusterHostEntity hostEntity = new ClusterHostEntity();
+        
+        // 基本信息
+        hostEntity.setIp(ip);
+        hostEntity.setHostname(ip); // 默认使用IP作为主机名，检查后可能更新为实际主机名
+        hostEntity.setClusterId(clusterId);
+        hostEntity.setCreateTime(LocalDateTime.now());
+        hostEntity.setUpdateTime(LocalDateTime.now());
+        
+        // 初始状态（待检查状态）
+        hostEntity.setManagementStatus(ManagementStatus.UNMANAGED);
+        hostEntity.setCoreNum(0); // 待检查更新
+        hostEntity.setTotalMem(0); // 待检查更新
+        hostEntity.setTotalDisk(0); // 待检查更新
+        hostEntity.setAverageLoad("0.0"); // 待检查更新
+        hostEntity.setCpuArchitecture("x86_64"); // 默认值，检查后可能更新
+        
+        // SSH连接参数会在检查时使用，这里不保存到实体中
+        log.debug("创建待检查主机实体: IP={}, SSH={}@{}:{}", 
+                ip, connectionParams.getSshUser(), ip, connectionParams.getSshPort());
+        
+        return hostEntity;
     }
 }

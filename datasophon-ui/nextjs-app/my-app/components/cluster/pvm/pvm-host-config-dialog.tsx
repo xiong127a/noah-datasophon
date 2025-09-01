@@ -115,10 +115,16 @@ export default function PvmHostConfigDialog({
     setPasswordVisible(!passwordVisible)
   }
 
+  // IP地址格式验证
+  const isValidIP = (ip: string): boolean => {
+    const ipPattern = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/
+    return ipPattern.test(ip)
+  }
+
   // 验证Step1数据
   const validateStep1 = (): boolean => {
     if (!step1Data.hosts?.trim()) {
-      toast.error('请输入主机地址')
+      toast.error('请输入主机IP地址')
       return false
     }
     if (!step1Data.sshUser?.trim()) {
@@ -144,7 +150,21 @@ export default function PvmHostConfigDialog({
     // 验证主机列表
     const hosts = parseHostRange(step1Data.hosts)
     if (hosts.length === 0) {
-      toast.error('请输入有效的主机地址')
+      toast.error('请输入有效的IP地址')
+      return false
+    }
+
+    // 验证每个主机地址都是有效的IP
+    for (const host of hosts) {
+      if (!isValidIP(host.trim())) {
+        toast.error(`无效的IP地址格式: ${host}，请输入有效的IPv4地址`)
+        return false
+      }
+    }
+
+    // 检查IP数量限制
+    if (hosts.length > 100) {
+      toast.error('IP地址数量过多，最大支持100个')
       return false
     }
 
@@ -191,7 +211,7 @@ export default function PvmHostConfigDialog({
       clusterName={cluster?.clusterName || ''}
       clusterType="PVM"
       stepTitle="安装主机"
-      stepDescription="传统集群配置 - 配置集群主机列表和SSH连接信息，支持批量主机管理"
+      stepDescription="传统集群配置 - 配置集群IP地址列表和SSH连接信息，支持批量IP管理"
       currentStep={currentStep}
       dialogTitle={`PVM集群配置 - ${cluster?.clusterName}`}
       actionBar={actionBar}
@@ -215,7 +235,7 @@ export default function PvmHostConfigDialog({
                     </div>
                     <h3 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 bg-clip-text text-transparent mb-2">传统集群配置</h3>
                     <p className="text-gray-600 max-w-md mx-auto">
-                      配置集群主机列表和 SSH 连接信息，支持批量主机管理
+                      配置集群IP地址列表和 SSH 连接信息，支持批量IP管理
                     </p>
                   </div>
 
@@ -226,14 +246,31 @@ export default function PvmHostConfigDialog({
                       <CardHeader className={CARD_STYLES.header}>
                         <CardTitle className={`${CARD_STYLES.title} flex items-center`}>
                           <Server className="w-5 h-5 mr-2 text-indigo-600" />
-                          主机列表
+                          IP地址列表
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-6">
                         <div className="space-y-3">
-                          <Label className="text-sm font-medium">主机地址</Label>
+                          <Label className="text-sm font-medium">IP地址</Label>
                           <Textarea
-                            placeholder="输入主机 IP 或主机名，支持以下格式：&#10;&#10;• 每行一个地址：&#10;  192.168.1.100&#10;  192.168.1.101&#10;&#10;• 逗号分隔：&#10;  192.168.1.100,192.168.1.101&#10;&#10;• 范围批量（推荐）：&#10;  10.3.144.[19-23]  →  10.3.144.19 到 10.3.144.23"
+                            placeholder={`输入主机IP地址，支持以下格式：
+
+📍 单个IP：
+   192.168.1.100
+
+📍 每行一个IP：
+   192.168.1.100
+   192.168.1.101
+   192.168.1.102
+
+📍 逗号分隔：
+   192.168.1.100, 192.168.1.101, 192.168.1.102
+
+📍 范围批量（推荐）：
+   192.168.1.[100-110]   ➤   自动展开为 100-110
+   10.0.0.[1-50]        ➤   自动展开为 1-50
+
+`}
                             value={step1Data.hosts}
                             onChange={(e) => setStep1Data(prev => ({ ...prev, hosts: e.target.value }))}
                             rows={12}
@@ -241,7 +278,7 @@ export default function PvmHostConfigDialog({
                           />
                           {step1Data.hosts && (
                             <div className="text-xs text-gray-500">
-                              预计主机数量: {parseHostRange(step1Data.hosts).length} 台
+                              预计IP数量: {parseHostRange(step1Data.hosts).length} 个
                             </div>
                           )}
                         </div>
@@ -319,10 +356,11 @@ export default function PvmHostConfigDialog({
                         <div className="space-y-2">
                           <div className="font-medium text-indigo-900">配置提示</div>
                           <ul className="text-sm text-slate-700 space-y-1">
-                            <li>• 确保所有主机可通过 SSH 连接，且使用相同的用户名和密码</li>
+                            <li>• 确保所有IP地址对应的主机可通过 SSH 连接，且使用相同的用户名和密码</li>
                             <li>• 如需使用不同密码的主机，请分批添加和配置</li>
-                            <li>• 支持IP范围批量输入，如：192.168.1.[10-20] 表示 192.168.1.10 到 192.168.1.20</li>
+                            <li>• 支持IP范围批量输入，如：192.168.1.[100-110] 表示 192.168.1.100 到 192.168.1.110</li>
                             <li>• 建议使用默认SSH端口22，如需修改请确保所有主机使用相同端口</li>
+                            <li>• 只支持IPv4地址格式，不支持主机名或域名</li>
                           </ul>
                         </div>
                       </div>

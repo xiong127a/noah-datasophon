@@ -88,6 +88,7 @@
         <ant.version>1.10.12</ant.version>
 
         <commons-collections.version>3.2.2</commons-collections.version>
+        <commons-validator.version>1.10.0</commons-validator.version>
         <eddsa.version>0.3.0</eddsa.version>
         <mockito-core.version>2.23.4</mockito-core.version>
         <mockito-junit-jupiter.version>4.5.1</mockito-junit-jupiter.version>
@@ -256,7 +257,11 @@
                 <artifactId>ant</artifactId>
                 <version>${ant.version}</version>
             </dependency>
-
+            <dependency>
+                <groupId>commons-validator</groupId>
+                <artifactId>commons-validator</artifactId>
+                <version>${commons-validator.version}</version>
+            </dependency>
             <dependency>
                 <groupId>commons-collections</groupId>
                 <artifactId>commons-collections</artifactId>

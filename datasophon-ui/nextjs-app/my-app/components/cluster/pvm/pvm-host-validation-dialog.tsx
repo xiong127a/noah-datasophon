@@ -129,14 +129,14 @@ export default function PvmHostValidationDialog({
     
     while (attempts < maxAttempts) {
       try {
-        const response = await clusterApi.host.analysisHostList({
-          ips: host.ip,
-          sshUser: step1Data.sshUser,
-          sshPort: step1Data.sshPort,
-          sshPassword: step1Data.sshPassword,
-          page: 1,
-          pageSize: 1,
-          clusterId: cluster?.id
+        const response = await clusterApi.unifiedHost.discoverFromStep1({
+          clusterId: cluster?.id!,
+          connectionParams: {
+            hosts: host.ip,
+            sshUser: step1Data.sshUser,
+            sshPort: step1Data.sshPort,
+            sshPassword: step1Data.sshPassword
+          }
         })
 
         if (response.data?.success && response.data?.data?.data?.length > 0) {
@@ -211,14 +211,14 @@ export default function PvmHostValidationDialog({
   const checkSingleHost = useCallback(async (host: PvmHost): Promise<PvmHost> => {
     try {
       // 首次调用启动检查
-      const response = await clusterApi.host.analysisHostList({
-        ips: host.ip,
-        sshUser: step1Data.sshUser,
-        sshPort: step1Data.sshPort,
-        sshPassword: step1Data.sshPassword,
-        page: 1,
-        pageSize: 1,
-        clusterId: cluster?.id
+      const response = await clusterApi.unifiedHost.discoverFromStep1({
+        clusterId: cluster?.id!,
+        connectionParams: {
+          hosts: host.ip,
+          sshUser: step1Data.sshUser,
+          sshPort: step1Data.sshPort,
+          sshPassword: step1Data.sshPassword
+        }
       })
 
       if (response.data?.success && response.data?.data?.data?.length > 0) {
