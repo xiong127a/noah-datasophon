@@ -24,6 +24,7 @@ import com.datasophon.common.vo.ClusterServiceInstanceRoleGroupVO;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.Named;
 
 /**
@@ -46,6 +47,20 @@ public interface ClusterServiceInstanceRoleGroupConverter
     @Override
     @Mapping(target = "needRestartText", source = "needRestart", qualifiedByName = "formatNeedRestartFromInteger")
     ClusterServiceInstanceRoleGroupVO dtoToVo(ClusterServiceInstanceRoleGroupDTO dto);
+
+    @Override
+    @Mapping(target = "createTime", ignore = true)
+    @Mapping(target = "updateTime", ignore = true)
+    @Mapping(target = "createBy", ignore = true)
+    @Mapping(target = "updateBy", ignore = true)
+    ClusterServiceInstanceRoleGroupEntity dtoToEntity(ClusterServiceInstanceRoleGroupDTO dto);
+
+    @Override
+    @Mapping(target = "createTime", ignore = true)
+    @Mapping(target = "updateTime", ignore = true)
+    @Mapping(target = "createBy", ignore = true)
+    @Mapping(target = "updateBy", ignore = true)
+    void updateEntityFromDto(ClusterServiceInstanceRoleGroupDTO dto, @MappingTarget ClusterServiceInstanceRoleGroupEntity entity);
 
     /**
      * 格式化重启需求文本（从枚举）

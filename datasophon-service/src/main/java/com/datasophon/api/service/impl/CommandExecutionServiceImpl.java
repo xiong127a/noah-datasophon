@@ -242,7 +242,7 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
 
     @Override
     public ClusterServiceCommandHostCommandEntity generateCommandHostCommandEntity(CommandType commandType,
-                                                                                   Long commandId,
+            Long commandId,
             String serviceRoleName,
             RoleType serviceRoleType,
             ClusterServiceCommandHostEntity commandHost) {
