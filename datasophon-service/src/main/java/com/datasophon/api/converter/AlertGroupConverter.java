@@ -43,19 +43,7 @@ import java.util.List;
 public interface AlertGroupConverter extends BaseConverter<AlertGroupEntity, AlertGroupDTO, AlertGroupVO> {
 
     /**
-     * Entity转DTO
-     */
-    @Override
-    AlertGroupDTO entityToDto(AlertGroupEntity entity);
-
-    /**
-     * DTO转Entity
-     */
-    @Override
-    AlertGroupEntity dtoToEntity(AlertGroupDTO dto);
-
-    /**
-     * DTO转VO
+     * DTO转VO - 添加格式化映射
      */
     @Override
     @Mapping(target = "clusterName", ignore = true)
@@ -64,43 +52,13 @@ public interface AlertGroupConverter extends BaseConverter<AlertGroupEntity, Ale
     AlertGroupVO dtoToVo(AlertGroupDTO dto);
 
     /**
-     * Entity列表转DTO列表
-     */
-    @Override
-    List<AlertGroupDTO> entityListToDtoList(List<AlertGroupEntity> entityList);
-
-    /**
-     * DTO列表转VO列表
-     */
-    @Override
-    List<AlertGroupVO> dtoListToVoList(List<AlertGroupDTO> dtoList);
-
-    /**
-     * Entity转VO
+     * Entity转VO - 添加格式化映射
      */
     @Override
     @Mapping(target = "clusterName", ignore = true)
     @Mapping(target = "alertQuotaNumFormatted", source = "alertQuotaNum", qualifiedByName = "formatAlertQuotaNum")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     AlertGroupVO entityToVo(AlertGroupEntity entity);
-
-    /**
-     * Entity列表转VO列表
-     */
-    @Override
-    List<AlertGroupVO> entityListToVoList(List<AlertGroupEntity> entityList);
-
-    /**
-     * DTO列表转Entity列表
-     */
-    @Override
-    List<AlertGroupEntity> dtoListToEntityList(List<AlertGroupDTO> dtoList);
-
-    /**
-     * 更新Entity对象
-     */
-    @Override
-    void updateEntityFromDto(AlertGroupDTO dto, @MappingTarget AlertGroupEntity entity);
 
     /**
      * 格式化告警指标数量
