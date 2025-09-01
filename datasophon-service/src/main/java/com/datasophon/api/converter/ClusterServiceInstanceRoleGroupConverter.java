@@ -20,6 +20,7 @@ package com.datasophon.api.converter;
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.common.enums.NeedRestart;
+import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterServiceInstanceRoleGroupVO;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroupEntity;
 import org.mapstruct.Mapper;
@@ -34,17 +35,21 @@ import org.mapstruct.Named;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = FormatterUtils.class)
 public interface ClusterServiceInstanceRoleGroupConverter
         extends
         BaseConverter<ClusterServiceInstanceRoleGroupEntity, ClusterServiceInstanceRoleGroupDTO, ClusterServiceInstanceRoleGroupVO> {
 
     @Override
     @Mapping(target = "needRestartText", source = "needRestart", qualifiedByName = "formatNeedRestartFromEnum")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     ClusterServiceInstanceRoleGroupVO entityToVo(ClusterServiceInstanceRoleGroupEntity entity);
 
     @Override
     @Mapping(target = "needRestartText", source = "needRestart", qualifiedByName = "formatNeedRestartFromInteger")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     ClusterServiceInstanceRoleGroupVO dtoToVo(ClusterServiceInstanceRoleGroupDTO dto);
 
     /**

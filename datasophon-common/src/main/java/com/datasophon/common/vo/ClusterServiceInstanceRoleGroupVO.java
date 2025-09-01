@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * 集群服务实例角色组视图对象
@@ -35,6 +36,12 @@ public record ClusterServiceInstanceRoleGroupVO(
         Long clusterId,
         String roleGroupType,
         Integer needRestart,
-        String needRestartText
+        String needRestartText,
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
+        String createBy,
+        String updateBy,
+        String createTimeFormatted,
+        String updateTimeFormatted
 ) implements Serializable {
 }

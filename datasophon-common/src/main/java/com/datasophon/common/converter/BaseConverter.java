@@ -24,7 +24,7 @@ import java.util.List;
 
 /**
  * 基础转换器接口
- * 简化的核心转换方法定义，格式化方法移至 FormatterUtils 工具类
+ * 定义统一的转换方法，支持审计字段映射
  * 
  * @param <E> Entity 数据库实体类型
  * @param <D> DTO 数据传输对象类型
@@ -78,7 +78,6 @@ public interface BaseConverter<E, D, V> {
 
     /**
      * DTO 列表转换为 Entity 列表
-     * 默认忽略审计字段，由框架自动管理
      */
     List<E> dtoListToEntityList(List<D> dtoList);
 

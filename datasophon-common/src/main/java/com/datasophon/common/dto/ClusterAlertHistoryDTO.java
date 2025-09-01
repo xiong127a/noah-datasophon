@@ -41,5 +41,7 @@ public record ClusterAlertHistoryDTO(
         Long serviceInstanceId,
         LocalDateTime createTime,
         LocalDateTime updateTime,
+        String createBy,
+        String updateBy,
         Long clusterId) implements Serializable {
 }

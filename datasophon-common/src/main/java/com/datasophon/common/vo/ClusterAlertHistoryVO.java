@@ -40,11 +40,13 @@ public record ClusterAlertHistoryVO(
         String alertLevelText,
         Integer isEnabled,
         String isEnabledText,
-        Integer serviceRoleInstanceId,
+        Long serviceRoleInstanceId,
         Long serviceInstanceId,
         LocalDateTime createTime,
         String createTimeFormatted,
         LocalDateTime updateTime,
         String updateTimeFormatted,
+        String createBy,
+        String updateBy,
         Long clusterId) implements Serializable {
 }
