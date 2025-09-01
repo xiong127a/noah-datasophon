@@ -81,8 +81,6 @@ public class PluginConfiguration {
         
         // 3. 添加生产模式的基础路径
         paths.add(pluginProperties.getDirectory());
-        paths.add(pluginProperties.getDirectory() + "/core");
-        paths.add(pluginProperties.getDirectory() + "/custom");
         
         // 4. 环境变量配置的路径
         String customPluginPath = System.getProperty("datasophon.plugins.path");
