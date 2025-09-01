@@ -23,10 +23,12 @@ import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterServiceCommandHostVO;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.common.enums.CommandState;
-import com.datasophon.common.model.PageResult;
+import org.mapstruct.IterableMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+
+import java.util.List;
 
 /**
  * 集群服务命令主机转换器
@@ -41,38 +43,63 @@ public interface ClusterServiceCommandHostConverter extends
         BaseConverter<ClusterServiceCommandHostEntity, ClusterServiceCommandHostDTO, ClusterServiceCommandHostVO> {
 
     /**
-     * Entity转换为DTO时，枚举转换为Integer
-     */
-    @Mapping(target = "commandHostId", source = "id")
-    @Mapping(target = "commandState", source = "commandState", qualifiedByName = "commandStateToInteger")
-    @Override
-    ClusterServiceCommandHostDTO entityToDto(ClusterServiceCommandHostEntity entity);
-
-    /**
-     * DTO转换为Entity时，Integer转换为枚举
-     */
-    @Mapping(target = "id", source = "commandHostId")
-    @Mapping(target = "commandState", source = "commandState", qualifiedByName = "integerToCommandState")
-    @Override
-    ClusterServiceCommandHostEntity dtoToEntity(ClusterServiceCommandHostDTO dto);
-
-    /**
-     * Entity转换为VO时，添加格式化字段和枚举文本
+     * Entity转换为DTO时，处理id映射和枚举转换
      */
     @Mapping(target = "commandHostId", source = "id")
     @Mapping(target = "commandState", source = "commandState", qualifiedByName = "commandStateToInteger")
     @Mapping(target = "commandStateText", source = "commandState", qualifiedByName = "mapCommandStateText")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
+    @Named("entityToDto")
+    ClusterServiceCommandHostDTO entityToDto(ClusterServiceCommandHostEntity entity);
+
+    /**
+     * DTO转换为Entity时，处理id映射和枚举转换
+     */
+    @Mapping(target = "id", source = "commandHostId")
+    @Mapping(target = "commandState", source = "commandState", qualifiedByName = "integerToCommandState")
+    @Override
+    @Named("dtoToEntity")
+    ClusterServiceCommandHostEntity dtoToEntity(ClusterServiceCommandHostDTO dto);
+
+    /**
+     * Entity转换为VO时，处理id映射和格式化
+     */
+    @Mapping(target = "commandHostId", source = "id")
+    @Mapping(target = "commandState", source = "commandState", qualifiedByName = "commandStateToInteger")
+    @Mapping(target = "commandStateText", source = "commandState", qualifiedByName = "mapCommandStateText")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
+    @Override
+    @Named("entityToVo")
     ClusterServiceCommandHostVO entityToVo(ClusterServiceCommandHostEntity entity);
 
     /**
-     * DTO转换为VO时，添加格式化字段和枚举文本
+     * DTO转换为VO时，直接映射（DTO已包含格式化字段）
      */
-    @Mapping(target = "commandStateText", source = "commandState", qualifiedByName = "mapIntegerCommandStateText")
-    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Override
+    @Named("dtoToVo")
     ClusterServiceCommandHostVO dtoToVo(ClusterServiceCommandHostDTO dto);
+
+    /**
+     * 重写列表转换方法
+     */
+    @Override
+    @IterableMapping(qualifiedByName = "entityToDto")
+    List<ClusterServiceCommandHostDTO> entityListToDtoList(List<ClusterServiceCommandHostEntity> entityList);
+
+    @Override
+    @IterableMapping(qualifiedByName = "dtoToEntity")
+    List<ClusterServiceCommandHostEntity> dtoListToEntityList(List<ClusterServiceCommandHostDTO> dtoList);
+
+    @Override
+    @IterableMapping(qualifiedByName = "entityToVo")
+    List<ClusterServiceCommandHostVO> entityListToVoList(List<ClusterServiceCommandHostEntity> entityList);
+
+    @Override
+    @IterableMapping(qualifiedByName = "dtoToVo")
+    List<ClusterServiceCommandHostVO> dtoListToVoList(List<ClusterServiceCommandHostDTO> dtoList);
 
     /**
      * CommandState枚举转换为Integer
@@ -87,8 +114,7 @@ public interface ClusterServiceCommandHostConverter extends
      */
     @Named("integerToCommandState")
     default CommandState integerToCommandState(Integer value) {
-        if (value == null)
-            return null;
+        if (value == null) return null;
         return switch (value) {
             case 0 -> CommandState.WAIT;
             case 1 -> CommandState.RUNNING;
@@ -104,8 +130,7 @@ public interface ClusterServiceCommandHostConverter extends
      */
     @Named("mapCommandStateText")
     default String mapCommandStateText(CommandState commandState) {
-        if (commandState == null)
-            return null;
+        if (commandState == null) return null;
         return switch (commandState) {
             case WAIT -> "待运行";
             case RUNNING -> "正在运行";
@@ -113,39 +138,5 @@ public interface ClusterServiceCommandHostConverter extends
             case FAILED -> "失败";
             case CANCEL -> "取消";
         };
-    }
-
-    /**
-     * Integer类型CommandState映射为文本
-     */
-    @Named("mapIntegerCommandStateText")
-    default String mapIntegerCommandStateText(Integer commandState) {
-        if (commandState == null)
-            return null;
-        return switch (commandState) {
-            case 0 -> "待运行";
-            case 1 -> "正在运行";
-            case 2 -> "成功";
-            case 3 -> "失败";
-            case 4 -> "取消";
-            default -> "未知状态";
-        };
-    }
-
-    /**
-     * PageResult<Entity> 转换为 PageResult<VO>
-     */
-    @Named("pageResultToPageResultVO")
-    default PageResult<ClusterServiceCommandHostVO> pageResultToPageResultVO(
-            PageResult<ClusterServiceCommandHostEntity> pageResult) {
-        if (pageResult == null) {
-            return null;
-        }
-
-        return PageResult.of(
-                entityListToVoList(pageResult.getRecords()),
-                pageResult.getTotal(),
-                pageResult.getPage(),
-                pageResult.getSize());
     }
 }

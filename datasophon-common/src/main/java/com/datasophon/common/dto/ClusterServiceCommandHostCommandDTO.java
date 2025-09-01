@@ -32,6 +32,7 @@ public record ClusterServiceCommandHostCommandDTO(
         Long hostCommandId,
         String commandName,
         Integer commandState,
+        String commandStateText,
         Integer commandStateCode,
         Integer commandProgress,
         Long commandHostId,
@@ -40,10 +41,13 @@ public record ClusterServiceCommandHostCommandDTO(
         String serviceName, // 🔧 添加服务名称字段（用于显示SVG图标）
         String serviceRoleName,
         Integer serviceRoleType,
+        String serviceRoleTypeText,
         String resultMsg,
         LocalDateTime createTime,
+        String createTimeFormatted,
         Integer commandType,
         LocalDateTime updateTime,
+        String updateTimeFormatted,
         String createBy,
         String updateBy) implements Serializable {
 }

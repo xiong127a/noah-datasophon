@@ -91,8 +91,6 @@ public class ClusterServiceCommandHostCommandEntity extends BaseEntity {
 
     private String resultMsg;
 
-
-
     private Integer commandType;
 
 }

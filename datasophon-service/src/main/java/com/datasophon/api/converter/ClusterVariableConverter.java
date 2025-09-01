@@ -22,9 +22,12 @@ import com.datasophon.common.dto.ClusterVariableDTO;
 import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterVariableVO;
 import com.datasophon.dao.entity.ClusterVariableEntity;
+import org.mapstruct.IterableMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+
+import java.util.List;
 
 /**
  * 集群变量转换器
@@ -57,4 +60,15 @@ public interface ClusterVariableConverter
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     ClusterVariableVO dtoToVo(ClusterVariableDTO dto);
+
+    /**
+     * 重写列表转换方法，使用指定的映射方法
+     */
+    @Override
+    @IterableMapping(qualifiedByName = "entityToVo")
+    List<ClusterVariableVO> entityListToVoList(List<ClusterVariableEntity> entityList);
+
+    @Override
+    @IterableMapping(qualifiedByName = "dtoToVo")
+    List<ClusterVariableVO> dtoListToVoList(List<ClusterVariableDTO> dtoList);
 }

@@ -68,6 +68,4 @@ public class ClusterServiceCommandHostEntity extends BaseEntity {
      */
     private Long commandId;
 
-
-
 }

@@ -24,10 +24,12 @@ import com.datasophon.common.vo.ClusterServiceCommandHostCommandVO;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.common.enums.CommandState;
 import com.datasophon.common.enums.RoleType;
-import com.datasophon.common.model.PageResult;
+import org.mapstruct.IterableMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
+
+import java.util.List;
 
 /**
  * 集群服务命令主机命令转换器
@@ -42,25 +44,7 @@ public interface ClusterServiceCommandHostCommandConverter extends
         BaseConverter<ClusterServiceCommandHostCommandEntity, ClusterServiceCommandHostCommandDTO, ClusterServiceCommandHostCommandVO> {
 
     /**
-     * Entity转换为DTO时，枚举转换为Integer
-     */
-    @Mapping(target = "hostCommandId", source = "id")
-    @Mapping(target = "commandState", source = "commandState", qualifiedByName = "commandStateToInteger")
-    @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "roleTypeToInteger")
-    @Override
-    ClusterServiceCommandHostCommandDTO entityToDto(ClusterServiceCommandHostCommandEntity entity);
-
-    /**
-     * DTO转换为Entity时，Integer转换为枚举
-     */
-    @Mapping(target = "id", source = "hostCommandId")
-    @Mapping(target = "commandState", source = "commandState", qualifiedByName = "integerToCommandState")
-    @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "integerToRoleType")
-    @Override
-    ClusterServiceCommandHostCommandEntity dtoToEntity(ClusterServiceCommandHostCommandDTO dto);
-
-    /**
-     * Entity转换为VO时，添加格式化字段和枚举文本
+     * Entity转换为DTO时，处理id映射和枚举转换
      */
     @Mapping(target = "hostCommandId", source = "id")
     @Mapping(target = "commandState", source = "commandState", qualifiedByName = "commandStateToInteger")
@@ -70,17 +54,58 @@ public interface ClusterServiceCommandHostCommandConverter extends
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
-    ClusterServiceCommandHostCommandVO entityToVo(ClusterServiceCommandHostCommandEntity entity);
+    @Named("entityToDto")
+    ClusterServiceCommandHostCommandDTO entityToDto(ClusterServiceCommandHostCommandEntity entity);
 
     /**
-     * DTO转换为VO时，添加格式化字段和枚举文本
+     * DTO转换为Entity时，处理id映射和枚举转换
      */
-    @Mapping(target = "commandStateText", source = "commandState", qualifiedByName = "mapIntegerCommandStateText")
-    @Mapping(target = "serviceRoleTypeText", source = "serviceRoleType", qualifiedByName = "mapIntegerRoleTypeText")
+    @Mapping(target = "id", source = "hostCommandId")
+    @Mapping(target = "commandState", source = "commandState", qualifiedByName = "integerToCommandState")
+    @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "integerToRoleType")
+    @Override
+    @Named("dtoToEntity")
+    ClusterServiceCommandHostCommandEntity dtoToEntity(ClusterServiceCommandHostCommandDTO dto);
+
+    /**
+     * Entity转换为VO时，处理id映射和格式化
+     */
+    @Mapping(target = "hostCommandId", source = "id")
+    @Mapping(target = "commandState", source = "commandState", qualifiedByName = "commandStateToInteger")
+    @Mapping(target = "commandStateText", source = "commandState", qualifiedByName = "mapCommandStateText")
+    @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "roleTypeToInteger")
+    @Mapping(target = "serviceRoleTypeText", source = "serviceRoleType", qualifiedByName = "mapRoleTypeText")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
+    @Named("entityToVo")
+    ClusterServiceCommandHostCommandVO entityToVo(ClusterServiceCommandHostCommandEntity entity);
+
+    /**
+     * DTO转换为VO时，直接映射（DTO已包含格式化字段）
+     */
+    @Override
+    @Named("dtoToVo")
     ClusterServiceCommandHostCommandVO dtoToVo(ClusterServiceCommandHostCommandDTO dto);
+
+    /**
+     * 重写列表转换方法
+     */
+    @Override
+    @IterableMapping(qualifiedByName = "entityToDto")
+    List<ClusterServiceCommandHostCommandDTO> entityListToDtoList(List<ClusterServiceCommandHostCommandEntity> entityList);
+
+    @Override
+    @IterableMapping(qualifiedByName = "dtoToEntity")
+    List<ClusterServiceCommandHostCommandEntity> dtoListToEntityList(List<ClusterServiceCommandHostCommandDTO> dtoList);
+
+    @Override
+    @IterableMapping(qualifiedByName = "entityToVo")
+    List<ClusterServiceCommandHostCommandVO> entityListToVoList(List<ClusterServiceCommandHostCommandEntity> entityList);
+
+    @Override
+    @IterableMapping(qualifiedByName = "dtoToVo")
+    List<ClusterServiceCommandHostCommandVO> dtoListToVoList(List<ClusterServiceCommandHostCommandDTO> dtoList);
 
     /**
      * CommandState枚举转换为Integer
@@ -95,8 +120,7 @@ public interface ClusterServiceCommandHostCommandConverter extends
      */
     @Named("integerToCommandState")
     default CommandState integerToCommandState(Integer value) {
-        if (value == null)
-            return null;
+        if (value == null) return null;
         return switch (value) {
             case 0 -> CommandState.WAIT;
             case 1 -> CommandState.RUNNING;
@@ -120,8 +144,7 @@ public interface ClusterServiceCommandHostCommandConverter extends
      */
     @Named("integerToRoleType")
     default RoleType integerToRoleType(Integer value) {
-        if (value == null)
-            return null;
+        if (value == null) return null;
         return switch (value) {
             case 1 -> RoleType.MASTER;
             case 2 -> RoleType.WORKER;
@@ -136,8 +159,7 @@ public interface ClusterServiceCommandHostCommandConverter extends
      */
     @Named("mapCommandStateText")
     default String mapCommandStateText(CommandState commandState) {
-        if (commandState == null)
-            return null;
+        if (commandState == null) return null;
         return switch (commandState) {
             case WAIT -> "待运行";
             case RUNNING -> "正在运行";
@@ -148,67 +170,16 @@ public interface ClusterServiceCommandHostCommandConverter extends
     }
 
     /**
-     * Integer类型CommandState映射为文本
-     */
-    @Named("mapIntegerCommandStateText")
-    default String mapIntegerCommandStateText(Integer commandState) {
-        if (commandState == null)
-            return null;
-        return switch (commandState) {
-            case 0 -> "待运行";
-            case 1 -> "正在运行";
-            case 2 -> "成功";
-            case 3 -> "失败";
-            case 4 -> "取消";
-            default -> "未知状态";
-        };
-    }
-
-    /**
      * RoleType枚举映射为文本
      */
     @Named("mapRoleTypeText")
     default String mapRoleTypeText(RoleType roleType) {
-        if (roleType == null)
-            return null;
+        if (roleType == null) return null;
         return switch (roleType) {
             case MASTER -> "master";
             case WORKER -> "worker";
             case CLIENT -> "client";
             case SLAVE -> "slave";
         };
-    }
-
-    /**
-     * Integer类型RoleType映射为文本
-     */
-    @Named("mapIntegerRoleTypeText")
-    default String mapIntegerRoleTypeText(Integer roleType) {
-        if (roleType == null)
-            return null;
-        return switch (roleType) {
-            case 1 -> "master";
-            case 2 -> "worker";
-            case 3 -> "client";
-            case 4 -> "slave";
-            default -> "unknown";
-        };
-    }
-
-    /**
-     * PageResult<Entity> 转换为 PageResult<VO>
-     */
-    @Named("pageResultToPageResultVO")
-    default PageResult<ClusterServiceCommandHostCommandVO> pageResultToPageResultVO(
-            PageResult<ClusterServiceCommandHostCommandEntity> pageResult) {
-        if (pageResult == null) {
-            return null;
-        }
-
-        return PageResult.of(
-                entityListToVoList(pageResult.getRecords()),
-                pageResult.getTotal(),
-                pageResult.getPage(),
-                pageResult.getSize());
     }
 }
