@@ -23,6 +23,7 @@ import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterVariableVO;
 import com.datasophon.dao.entity.ClusterVariableEntity;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.Named;
 
 /**
@@ -47,9 +48,13 @@ public interface ClusterVariableConverter
 
     @Override
     @Named("entityToVo")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     ClusterVariableVO entityToVo(ClusterVariableEntity entity);
 
     @Override
     @Named("dtoToVo")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     ClusterVariableVO dtoToVo(ClusterVariableDTO dto);
 }

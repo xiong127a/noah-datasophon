@@ -42,5 +42,8 @@ public record ClusterServiceCommandHostCommandDTO(
         Integer serviceRoleType,
         String resultMsg,
         LocalDateTime createTime,
-        Integer commandType) implements Serializable {
+        Integer commandType,
+        LocalDateTime updateTime,
+        String createBy,
+        String updateBy) implements Serializable {
 }

@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import lombok.Getter;
+import java.io.Serializable;
 
 /**
  * 角色信息VO - 视图展示对象
@@ -32,9 +33,12 @@ public record RoleInfoVO(
     String roleName,
     String roleCode,
     String createTimeFormatted,
+    String updateTimeFormatted,
+    String createBy,
+    String updateBy,
     boolean isAdminRole,
     RoleStatus status
-) {
+) implements Serializable {
     
     /**
      * 角色状态枚举 - JDK21嵌套特性

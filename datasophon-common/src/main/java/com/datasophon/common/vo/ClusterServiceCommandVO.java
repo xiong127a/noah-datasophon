@@ -45,5 +45,8 @@ public record ClusterServiceCommandVO(
         String durationTime,
         LocalDateTime endTime,
         String endTimeFormatted,
-        Long serviceInstanceId) implements Serializable {
+        Long serviceInstanceId,
+        LocalDateTime updateTime,
+        String updateTimeFormatted,
+        String updateBy) implements Serializable {
 }

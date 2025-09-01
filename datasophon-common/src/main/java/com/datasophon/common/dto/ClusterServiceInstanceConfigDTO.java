@@ -17,6 +17,7 @@
 
 package com.datasophon.common.dto;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -37,8 +38,10 @@ public record ClusterServiceInstanceConfigDTO(
     Integer configVersion,
     Long clusterId,
     String configFileJson,
-    String configFileJsonMd5
-) {
+    String configFileJsonMd5,
+    String createBy,
+    String updateBy
+) implements Serializable {
     
     /**
      * 创建新配置DTO的静态工厂方法
@@ -52,7 +55,8 @@ public record ClusterServiceInstanceConfigDTO(
         return new ClusterServiceInstanceConfigDTO(
             null, serviceId, now, configJson, now,
             generateMd5(configJson), 1, clusterId,
-            configFileJson, generateMd5(configFileJson)
+            configFileJson, generateMd5(configFileJson),
+            null, null
         );
     }
     

@@ -82,11 +82,5 @@ public interface AutoScaleTaskConverter extends BaseConverter<AutoScaleTaskEntit
         }
     }
 
-    @Named("formatEnabledStatus")
-    default String formatEnabledStatus(Boolean enabled) {
-        if (enabled == null) {
-            return "未知";
-        }
-        return enabled ? "启用" : "禁用";
-    }
+
 }

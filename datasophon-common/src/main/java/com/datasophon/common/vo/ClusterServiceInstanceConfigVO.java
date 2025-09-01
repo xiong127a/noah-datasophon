@@ -42,7 +42,9 @@ public record ClusterServiceInstanceConfigVO(
     boolean isConfigUpdated,
     int configSize,
     String configSizeFormatted,
-    ConfigStatus status
+    ConfigStatus status,
+    String createBy,
+    String updateBy
 ) {
     
     /**
@@ -83,7 +85,9 @@ public record ClusterServiceInstanceConfigVO(
             dto.isConfigUpdated(),
             dto.getConfigSize(),
             formatSize(dto.getConfigSize()),
-            determineConfigStatus(dto)
+            determineConfigStatus(dto),
+            dto.createBy(),
+            dto.updateBy()
         );
     }
     

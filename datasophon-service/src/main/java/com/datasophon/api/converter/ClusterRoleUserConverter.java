@@ -19,6 +19,7 @@ package com.datasophon.api.converter;
 
 import com.datasophon.common.converter.BaseConverter;
 import com.datasophon.common.dto.ClusterRoleUserDTO;
+import com.datasophon.common.utils.FormatterUtils;
 import com.datasophon.common.vo.ClusterRoleUserVO;
 import com.datasophon.dao.entity.ClusterRoleUserEntity;
 import com.datasophon.common.enums.UserType;
@@ -34,7 +35,7 @@ import org.mapstruct.Named;
  * @email 635887935@qq.com
  * @date 2025-01-01
  */
-@Mapper(componentModel = "spring", uses = { UserInfoConverter.class })
+@Mapper(componentModel = "spring", uses = { UserInfoConverter.class, FormatterUtils.class })
 public interface ClusterRoleUserConverter
         extends BaseConverter<ClusterRoleUserEntity, ClusterRoleUserDTO, ClusterRoleUserVO> {
 
@@ -57,6 +58,8 @@ public interface ClusterRoleUserConverter
      */
     @Mapping(target = "userType", source = "userType", qualifiedByName = "userTypeToInteger")
     @Mapping(target = "userTypeText", source = "userType", qualifiedByName = "mapUserTypeText")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
     ClusterRoleUserVO entityToVo(ClusterRoleUserEntity entity);
 
@@ -64,6 +67,8 @@ public interface ClusterRoleUserConverter
      * DTO转换为VO时，添加用户类型文本映射
      */
     @Mapping(target = "userTypeText", source = "userType", qualifiedByName = "mapIntegerUserTypeText")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
     ClusterRoleUserVO dtoToVo(ClusterRoleUserDTO dto);
 

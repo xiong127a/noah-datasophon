@@ -42,36 +42,36 @@ public interface ClusterAlertHistoryConverter extends
     /**
      * Entity转换为DTO时，AlertLevel枚举转Integer
      */
-    @Mapping(target = "alertLevel", source = "alertLevel", qualifiedByName = "alertLevelToInteger")
     @Override
+    @Mapping(target = "alertLevel", source = "alertLevel", qualifiedByName = "alertLevelToInteger")
     ClusterAlertHistoryDTO entityToDto(ClusterAlertHistoryEntity entity);
 
     /**
      * DTO转换为Entity时，Integer转AlertLevel枚举
      */
-    @Mapping(target = "alertLevel", source = "alertLevel", qualifiedByName = "integerToAlertLevel")
     @Override
+    @Mapping(target = "alertLevel", source = "alertLevel", qualifiedByName = "integerToAlertLevel")
     ClusterAlertHistoryEntity dtoToEntity(ClusterAlertHistoryDTO dto);
 
     /**
      * Entity转换为VO时，添加格式化字段和文本字段
      */
+    @Override
     @Mapping(target = "alertLevel", source = "alertLevel", qualifiedByName = "alertLevelToInteger")
     @Mapping(target = "alertLevelText", source = "alertLevel", qualifiedByName = "mapEntityAlertLevelText")
     @Mapping(target = "isEnabledText", source = "isEnabled", qualifiedByName = "mapIsEnabledText")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
-    @Override
     ClusterAlertHistoryVO entityToVo(ClusterAlertHistoryEntity entity);
 
     /**
      * DTO转换为VO时，添加格式化字段和文本字段
      */
+    @Override
     @Mapping(target = "alertLevelText", source = "alertLevel", qualifiedByName = "mapAlertLevelText")
     @Mapping(target = "isEnabledText", source = "isEnabled", qualifiedByName = "mapIsEnabledText")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
-    @Override
     ClusterAlertHistoryVO dtoToVo(ClusterAlertHistoryDTO dto);
 
     /**

@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * 集群Yarn调度器VO
@@ -32,5 +33,11 @@ public record ClusterYarnSchedulerVO(
         Long clusterId,
         String scheduler,
         Integer inUse,
-        String inUseText) implements Serializable {
+        String inUseText,
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
+        String createBy,
+        String updateBy,
+        String createTimeFormatted,
+        String updateTimeFormatted) implements Serializable {
 }

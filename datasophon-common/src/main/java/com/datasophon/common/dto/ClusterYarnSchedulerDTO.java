@@ -18,6 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * 集群Yarn调度器DTO
@@ -31,5 +32,9 @@ public record ClusterYarnSchedulerDTO(
         Long id,
         Long clusterId,
         String scheduler,
-        Integer inUse) implements Serializable {
+        Integer inUse,
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
+        String createBy,
+        String updateBy) implements Serializable {
 }

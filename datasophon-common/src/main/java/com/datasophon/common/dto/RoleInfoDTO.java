@@ -17,6 +17,7 @@
 
 package com.datasophon.common.dto;
 
+import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
@@ -31,14 +32,18 @@ public record RoleInfoDTO(
     Long id,
     String roleName,
     String roleCode,
-    LocalDateTime createTime
-) {
+    LocalDateTime createTime,
+    LocalDateTime updateTime,
+    String createBy,
+    String updateBy
+) implements Serializable {
     
     /**
      * 创建新角色DTO的静态工厂方法
      */
     public static RoleInfoDTO create(String roleName, String roleCode) {
-        return new RoleInfoDTO(null, roleName, roleCode, LocalDateTime.now());
+        var now = LocalDateTime.now();
+        return new RoleInfoDTO(null, roleName, roleCode, now, now, null, null);
     }
     
     /**

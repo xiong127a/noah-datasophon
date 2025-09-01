@@ -63,6 +63,7 @@ public interface RoleInfoConverter extends BaseConverter<RoleInfoEntity, RoleInf
      */
     @Override
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTimeFromDate")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTimeFromDate")
     @Mapping(target = "isAdminRole", source = ".", qualifiedByName = "checkAdminRoleFromEntity")
     @Mapping(target = "status", constant = "ACTIVE")
     RoleInfoVO entityToVo(RoleInfoEntity entity);
@@ -73,6 +74,7 @@ public interface RoleInfoConverter extends BaseConverter<RoleInfoEntity, RoleInf
      */
     @Override
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Mapping(target = "isAdminRole", source = ".", qualifiedByName = "checkAdminRole")
     @Mapping(target = "status", constant = "ACTIVE")
     RoleInfoVO dtoToVo(RoleInfoDTO dto);

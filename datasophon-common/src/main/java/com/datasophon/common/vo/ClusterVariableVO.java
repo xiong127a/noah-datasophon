@@ -18,6 +18,7 @@
 package com.datasophon.common.vo;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * 集群变量VO
@@ -31,5 +32,11 @@ public record ClusterVariableVO(
         Long id,
         Long clusterId,
         String variableName,
-        String variableValue) implements Serializable {
+        String variableValue,
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
+        String createBy,
+        String updateBy,
+        String createTimeFormatted,
+        String updateTimeFormatted) implements Serializable {
 }

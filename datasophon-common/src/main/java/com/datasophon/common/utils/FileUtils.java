@@ -79,7 +79,7 @@ public class FileUtils {
                 new GzipCompressorInputStream(new FileInputStream(targz)))) {
 
             TarArchiveEntry entry;
-            while ((entry = tarIn.getNextTarEntry()) != null) {
+            while ((entry = tarIn.getNextEntry()) != null) {
                 String entryName = entry.getName();
                 if (entry.isDirectory()) {
                     // 如果是文件夹，跳过

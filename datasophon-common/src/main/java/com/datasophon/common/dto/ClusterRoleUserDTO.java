@@ -18,6 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * 集群角色用户数据传输对象
@@ -32,5 +33,9 @@ public record ClusterRoleUserDTO(
         Long clusterId,
         Integer userType,
         Integer userId,
-        UserInfoDTO userInfo) implements Serializable {
+        UserInfoDTO userInfo,
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
+        String createBy,
+        String updateBy) implements Serializable {
 }

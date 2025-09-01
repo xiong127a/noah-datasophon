@@ -46,5 +46,7 @@ public record ClusterServiceInstanceVO(
         Integer frameServiceId,
         String dashboardUrl,
         Long alertNum,
-        Integer sortNum) implements Serializable {
+        Integer sortNum,
+        String createBy,
+        String updateBy) implements Serializable {
 }

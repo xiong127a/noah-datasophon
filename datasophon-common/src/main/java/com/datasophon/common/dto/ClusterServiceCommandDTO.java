@@ -42,5 +42,7 @@ public record ClusterServiceCommandDTO(
         Integer commandType,
         String durationTime,
         LocalDateTime endTime,
-        Long serviceInstanceId) implements Serializable {
+        Long serviceInstanceId,
+        LocalDateTime updateTime,
+        String updateBy) implements Serializable {
 }

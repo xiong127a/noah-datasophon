@@ -18,6 +18,7 @@
 package com.datasophon.common.dto;
 
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * 集群变量DTO
@@ -31,5 +32,9 @@ public record ClusterVariableDTO(
         Long id,
         Long clusterId,
         String variableName,
-        String variableValue) implements Serializable {
+        String variableValue,
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
+        String createBy,
+        String updateBy) implements Serializable {
 }

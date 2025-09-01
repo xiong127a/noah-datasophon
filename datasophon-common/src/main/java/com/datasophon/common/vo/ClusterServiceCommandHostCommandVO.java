@@ -45,5 +45,9 @@ public record ClusterServiceCommandHostCommandVO(
         String resultMsg,
         LocalDateTime createTime,
         String createTimeFormatted,
-        Integer commandType) implements Serializable {
+        Integer commandType,
+        LocalDateTime updateTime,
+        String updateTimeFormatted,
+        String createBy,
+        String updateBy) implements Serializable {
 }

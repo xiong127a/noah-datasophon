@@ -50,11 +50,15 @@ public interface ClusterYarnSchedulerConverter
     @Override
     @Named("entityToVo")
     @Mapping(target = "inUseText", source = "inUse", qualifiedByName = "formatInUse")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     ClusterYarnSchedulerVO entityToVo(ClusterYarnSchedulerEntity entity);
 
     @Override
     @Named("dtoToVo")
     @Mapping(target = "inUseText", source = "inUse", qualifiedByName = "formatInUse")
+    @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     ClusterYarnSchedulerVO dtoToVo(ClusterYarnSchedulerDTO dto);
 
     @Override

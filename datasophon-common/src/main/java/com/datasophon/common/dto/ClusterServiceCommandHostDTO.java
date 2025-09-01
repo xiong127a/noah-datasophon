@@ -35,5 +35,8 @@ public record ClusterServiceCommandHostDTO(
         Integer commandStateCode,
         Long commandProgress,
         Long commandId,
-        LocalDateTime createTime) implements Serializable {
+        LocalDateTime createTime,
+        LocalDateTime updateTime,
+        String createBy,
+        String updateBy) implements Serializable {
 }

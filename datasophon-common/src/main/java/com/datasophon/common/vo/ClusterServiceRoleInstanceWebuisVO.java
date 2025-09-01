@@ -18,6 +18,8 @@
 package com.datasophon.common.vo;
 
 import lombok.Getter;
+import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * 集群服务角色实例WebUI VO - 视图展示对象
@@ -36,8 +38,14 @@ public record ClusterServiceRoleInstanceWebuisVO(
     String displayName,
     boolean isValidUrl,
     WebUIType type,
-    WebUIStatus status
-) {
+    WebUIStatus status,
+    LocalDateTime createTime,
+    LocalDateTime updateTime,
+    String createBy,
+    String updateBy,
+    String createTimeFormatted,
+    String updateTimeFormatted
+) implements Serializable {
     
     /**
      * WebUI类型枚举 - JDK21嵌套特性
@@ -89,7 +97,13 @@ public record ClusterServiceRoleInstanceWebuisVO(
             dto.getDisplayName(),
             dto.isValidUrl(),
             determineWebUIType(dto.name()),
-            WebUIStatus.UNKNOWN // 默认状态，实际应该通过健康检查确定
+            WebUIStatus.UNKNOWN, // 默认状态，实际应该通过健康检查确定
+            dto.createTime(),
+            dto.updateTime(),
+            dto.createBy(),
+            dto.updateBy(),
+            null, // createTimeFormatted - 需要格式化
+            null  // updateTimeFormatted - 需要格式化
         );
     }
     

@@ -17,6 +17,9 @@
 
 package com.datasophon.common.dto;
 
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
 /**
  * 集群服务角色实例WebUI DTO - 服务间传输对象
  * 使用JDK21 Record特性，不可变数据载体
@@ -30,8 +33,12 @@ public record ClusterServiceRoleInstanceWebuisDTO(
     Long serviceRoleInstanceId,
     String webUrl,
     Long serviceInstanceId,
-    String name
-) {
+    String name,
+    LocalDateTime createTime,
+    LocalDateTime updateTime,
+    String createBy,
+    String updateBy
+) implements Serializable {
     
     /**
      * 创建新WebUI DTO的静态工厂方法
@@ -42,7 +49,8 @@ public record ClusterServiceRoleInstanceWebuisDTO(
             Long serviceInstanceId,
             String name) {
         return new ClusterServiceRoleInstanceWebuisDTO(
-            null, serviceRoleInstanceId, webUrl, serviceInstanceId, name);
+            null, serviceRoleInstanceId, webUrl, serviceInstanceId, name,
+            null, null, null, null);
     }
     
     /**

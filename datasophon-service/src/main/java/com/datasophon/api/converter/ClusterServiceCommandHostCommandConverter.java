@@ -68,6 +68,7 @@ public interface ClusterServiceCommandHostCommandConverter extends
     @Mapping(target = "serviceRoleType", source = "serviceRoleType", qualifiedByName = "roleTypeToInteger")
     @Mapping(target = "serviceRoleTypeText", source = "serviceRoleType", qualifiedByName = "mapRoleTypeText")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
     ClusterServiceCommandHostCommandVO entityToVo(ClusterServiceCommandHostCommandEntity entity);
 
@@ -77,6 +78,7 @@ public interface ClusterServiceCommandHostCommandConverter extends
     @Mapping(target = "commandStateText", source = "commandState", qualifiedByName = "mapIntegerCommandStateText")
     @Mapping(target = "serviceRoleTypeText", source = "serviceRoleType", qualifiedByName = "mapIntegerRoleTypeText")
     @Mapping(target = "createTimeFormatted", source = "createTime", qualifiedByName = "formatDateTime")
+    @Mapping(target = "updateTimeFormatted", source = "updateTime", qualifiedByName = "formatDateTime")
     @Override
     ClusterServiceCommandHostCommandVO dtoToVo(ClusterServiceCommandHostCommandDTO dto);
 
