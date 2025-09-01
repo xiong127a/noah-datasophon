@@ -274,76 +274,6 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     }
 
     @Override
-    public boolean cleanupHostCheckResources(Long clusterId) {
-        try {
-            if (clusterId == null) {
-                log.error("集群ID为空，无法清理主机检查资源");
-                throw new BusinessException(Status.REQUEST_PARAMS_NOT_VALID_ERROR.getCode(), "集群ID不能为空");
-            }
-
-            log.info("开始清理集群[{}]的主机检查资源", clusterId);
-
-            // 1. 删除缓存中当前集群ID的所有日志
-            // 主要的日志前缀模式
-            String[] logPrefixes = {
-                    "CHECK_ITEM_LOG_" + clusterId + "_", // 检查项日志
-                    "CHECK_LOG_" + clusterId + "_", // 检查操作日志
-                    "FIX_LOG_" + clusterId + "_", // 修复操作日志
-                    "CHECK_TASK_STATUS_" + clusterId + "_" // 任务状态
-            };
-
-            // 获取所有的缓存键
-            // 由于没有直接获取所有键的方法，我们需要基于前缀前缀模式清理
-            for (String prefix : logPrefixes) {
-                log.info("清理前缀为[{}]的日志缓存", prefix);
-                // 注意：这里无法遍历所有键，所以我们只能在后续操作中处理相关键
-            }
-
-            // 通用日志缓存键
-            String logCacheKey = clusterId + "_HOST_CHECK_LOG";
-            if (CacheUtils.constainsKey(logCacheKey)) {
-                CacheUtils.removeKey(logCacheKey);
-                log.info("已清理集群[{}]的主机检查日志缓存", clusterId);
-            }
-
-            // 2. 清理其他与检查相关的缓存
-            String hostMapKey = clusterId + Constants.HOST_MAP;
-            if (CacheUtils.constainsKey(hostMapKey)) {
-                // 在清理前，获取所有主机信息，用于清理特定主机的日志
-                Map<String, HostInfo> hostMap = CacheUtils.getHostMap(hostMapKey);
-                for (Map.Entry<String, HostInfo> entry : hostMap.entrySet()) {
-                    String hostname = entry.getKey();
-                    HostInfo hostInfo = entry.getValue();
-
-                    // 清理该主机的所有检查项日志
-                    if (hostInfo.getCheckItems() != null) {
-                        for (CheckItem item : hostInfo.getCheckItems()) {
-                            // 删除该主机该检查项的所有日志
-                            for (String prefix : logPrefixes) {
-                                String itemLogKey = prefix + hostname + "_" + item.getId();
-                                if (CacheUtils.constainsKey(itemLogKey)) {
-                                    CacheUtils.removeKey(itemLogKey);
-                                    log.debug("已清理日志: {}", itemLogKey);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (BusinessException e) {
-            throw new RuntimeException(e);
-        }
-        return false;
-    }
-
-    @Override
-    public boolean cancelDispatcherHostAgent(Long clusterId, String ip, Integer installStateCode) {
-        // 此方法虽然定义但实际未使用
-        log.warn("cancelDispatcherHostAgent方法暂未实现具体逻辑");
-        return false;
-    }
-
-    @Override
     public boolean dispatcherHostAgentCompleted(Long clusterId) {
         Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
         for (Map.Entry<String, HostInfo> hostInfoEntry : map.entrySet()) {
@@ -450,19 +380,6 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             result.add(list.get(i));
         }
         return result;
-    }
-
-    @Override
-    public boolean clearHostEnvCheckCache() {
-        try {
-            log.debug("删除主机检查项缓存");
-            CacheUtils.clear();
-            log.info("主机环境校验缓存清理完成");
-            return true;
-        } catch (Exception e) {
-            log.error("清理主机环境校验缓存失败", e);
-            throw new ServiceException("清理主机环境校验缓存失败: " + e.getMessage());
-        }
     }
 
     /**

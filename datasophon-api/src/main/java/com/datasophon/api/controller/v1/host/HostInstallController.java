@@ -18,7 +18,6 @@
 package com.datasophon.api.controller.v1.host;
 
 import com.datasophon.api.security.UserPermission;
-import com.datasophon.api.service.HostCheckService;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.common.dto.HostCheckStatusDto;
 import com.datasophon.common.dto.InstallStepDTO;
@@ -52,7 +51,6 @@ import java.util.Map;
 public class HostInstallController {
 
     private final InstallService installService;
-    private HostCheckService hostCheckService;
 
     /**
      * 获取安装步骤
@@ -96,63 +94,6 @@ public class HostInstallController {
     }
 
     /**
-     * 查询主机校验是否全部完成
-     */
-    @PostMapping("/hostCheckCompleted")
-    @UserPermission
-    public Result<Boolean> hostCheckCompleted(@ClusterId Long clusterId) {
-        try {
-            boolean completed = installService.hostCheckCompleted(clusterId);
-            return Result.success(completed);
-        } catch (Exception e) {
-            return Result.error("查询主机校验完成状态失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 清理主机检查资源
-     * 在hostCheckCompleted返回成功且hostCheckCompleted为true后调用
-     * 用于释放与检查任务和修复任务相关的资源
-     *
-     * @param clusterId 集群ID
-     * @return 清理结果
-     */
-    @PostMapping("/cleanupHostCheckResources")
-    @UserPermission
-    public Result<Boolean> cleanupHostCheckResources(@ClusterId Long clusterId) {
-        try {
-            boolean success = installService.cleanupHostCheckResources(clusterId);
-            if (success) {
-                return Result.success(true);
-            } else {
-                return Result.error("主机检查资源清理失败");
-            }
-        } catch (Exception e) {
-            return Result.error("清理主机检查资源失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 清理主机环境校验缓存
-     *
-     * @return 清理结果
-     */
-    @GetMapping("/clearHostEnvCheckCache")
-    @UserPermission
-    public Result<Boolean> clearHostEnvCheckCache() {
-        try {
-            boolean success = installService.clearHostEnvCheckCache();
-            if (success) {
-                return Result.success(true);
-            } else {
-                return Result.error("主机环境校验缓存清理失败");
-            }
-        } catch (Exception e) {
-            return Result.error("清理主机环境校验缓存失败: " + e.getMessage());
-        }
-    }
-
-    /**
      * 主机管理agent分发安装进度列表
      */
     @PostMapping("/dispatcherHostAgentList")
@@ -176,24 +117,6 @@ public class HostInstallController {
             return Result.success(completed);
         } catch (Exception e) {
             return Result.error("查询主机代理分发完成状态失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 主机管理agent分发取消
-     */
-    @PostMapping("/cancelDispatcherHostAgent")
-    public Result<Boolean> cancelDispatcherHostAgent(@ClusterId Long clusterId, @RequestParam("ip") String ip,
-            @RequestParam("installStateCode") Integer installStateCode) {
-        try {
-            boolean success = installService.cancelDispatcherHostAgent(clusterId, ip, installStateCode);
-            if (success) {
-                return Result.success(true);
-            } else {
-                return Result.error("取消主机代理分发失败");
-            }
-        } catch (Exception e) {
-            return Result.error("取消主机代理分发失败: " + e.getMessage());
         }
     }
 
@@ -222,7 +145,7 @@ public class HostInstallController {
     @PostMapping("/generateHostAgentCommand")
     public Result<List<Map<String, Object>>> generateHostAgentCommand(
             @RequestParam String clusterHostIds,
-            @RequestParam String commandType) throws Exception {
+            @RequestParam String commandType) {
         try {
             List<Map<String, Object>> commands = installService.generateHostAgentCommand(clusterHostIds, commandType);
             return Result.success(commands);
@@ -244,27 +167,6 @@ public class HostInstallController {
             return Result.success(commands);
         } catch (Exception e) {
             return Result.error("生成主机服务命令失败: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 开始主机检查
-     *
-     * @param clusterId 集群ID
-     * @return 开始检查结果
-     */
-    @PostMapping("/startHostCheck")
-    @UserPermission
-    public Result<Boolean> startHostCheck(@ClusterId Long clusterId) {
-        try {
-            boolean success = hostCheckService.startHostCheck(clusterId);
-            if (success) {
-                return Result.success(true);
-            } else {
-                return Result.error("主机检查启动失败");
-            }
-        } catch (Exception e) {
-            return Result.error("启动主机检查失败: " + e.getMessage());
         }
     }
 

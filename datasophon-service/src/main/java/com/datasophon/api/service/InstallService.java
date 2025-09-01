@@ -85,34 +85,6 @@ public interface InstallService extends IService<InstallStepEntity> {
      * @return 操作是否成功
      */
     boolean reStartDispatcherHostAgent(Long clusterId, String ips);
-
-    /**
-     * 清理主机检查资源
-     * 在hostCheckCompleted返回成功且hostCheckCompleted为true后调用
-     * 用于释放与检查任务和修复任务相关的资源
-     * 
-     * @param clusterId 集群ID
-     * @return 清理是否成功
-     */
-    boolean cleanupHostCheckResources(Long clusterId);
-
-    /**
-     * 清理主机环境校验缓存
-     * 
-     * @return 清理是否成功
-     */
-    boolean clearHostEnvCheckCache();
-
-    /**
-     * 取消主机代理分发
-     * 
-     * @param clusterId        集群ID
-     * @param ip               主机IP
-     * @param installStateCode 安装状态码
-     * @return 操作是否成功
-     */
-    boolean cancelDispatcherHostAgent(Long clusterId, String ip, Integer installStateCode);
-
     /**
      * 检查主机代理分发是否完成
      * 
