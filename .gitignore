@@ -66,3 +66,4 @@ node/
 /.lingman/
 /.vercel/
 /datasophon-ui/vue3-app/.yarn/
+/plugins/
