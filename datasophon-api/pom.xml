@@ -246,6 +246,8 @@
                             <overWriteSnapshots>true</overWriteSnapshots>
                         </configuration>
                     </execution>
+                    
+
                 </executions>
             </plugin>
             
@@ -261,6 +263,41 @@
                     <!-- 非Latin1字符不转义，保持UTF-8 -->
                     <useDefaultDelimiters>true</useDefaultDelimiters>
                 </configuration>
+
+            </plugin>
+            
+            <!-- 批量复制所有插件JAR到统一目录 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-plugins</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <!-- 创建插件目录 -->
+                                <mkdir dir="${project.build.directory}/plugins"/>
+                                
+                                <!-- 批量复制所有插件JAR -->
+                                <copy todir="${project.build.directory}/plugins" flatten="true" overwrite="true">
+                                    <fileset dir="${project.basedir}/../datasophon-plugins/datasophon-plugins-impl/core-plugins">
+                                        <include name="**/target/*-plugin.jar"/>
+                                        <include name="**/target/dev-plugins/*.jar"/>
+                                        <exclude name="**/*-sources.jar"/>
+                                        <exclude name="**/*-jar-with-dependencies.jar"/>
+                                    </fileset>
+                                </copy>
+                                
+                                <echo message="插件复制完成，目标目录: ${project.build.directory}/plugins"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
             
             <plugin>
