@@ -18,11 +18,10 @@
 package com.datasophon.plugins.manager;
 
 import lombok.extern.slf4j.Slf4j;
-import org.pf4j.DefaultPluginManager;
+import org.pf4j.*;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -39,16 +38,10 @@ public class ConfigurablePluginManager extends DefaultPluginManager {
     private List<Path> customPluginRoots;
     
     /**
-     * 需要从父类加载器加载的包列表（解决类加载器约束冲突）
-     */
-    private final List<String> parentFirstPackages;
-    
-    /**
      * 无参构造函数
      */
     public ConfigurablePluginManager() {
         super();
-        this.parentFirstPackages = initializeDefaultParentFirstPackages();
         log.debug("ConfigurablePluginManager 使用默认构造函数初始化");
     }
     
@@ -58,22 +51,12 @@ public class ConfigurablePluginManager extends DefaultPluginManager {
      */
     public ConfigurablePluginManager(List<Path> pluginRoots) {
         super(pluginRoots);
-        this.parentFirstPackages = initializeDefaultParentFirstPackages();
         log.info("ConfigurablePluginManager 使用指定路径初始化: {}", pluginRoots);
         // 复制一份路径作为自定义根目录
         this.customPluginRoots = new ArrayList<>(pluginRoots);
     }
     
-    /**
-     * 初始化默认的父优先包列表
-     */
-    private List<String> initializeDefaultParentFirstPackages() {
-        return new ArrayList<>(Arrays.asList(
-            "com.datasophon.common.enums",
-            "com.datasophon.plugins.api.model", 
-            "com.datasophon.plugins.api"
-        ));
-    }
+
     
     /**
      * 确保customPluginRoots已初始化
@@ -170,31 +153,5 @@ public class ConfigurablePluginManager extends DefaultPluginManager {
         log.info("插件根目录缓存已刷新，准备重新加载插件");
     }
     
-    /**
-     * 添加父优先包
-     */
-    public void addParentFirstPackage(String packageName) {
-        if (packageName != null && !parentFirstPackages.contains(packageName)) {
-            parentFirstPackages.add(packageName);
-            log.debug("添加父优先包: {}", packageName);
-        }
-    }
-    
-    /**
-     * 批量添加父优先包
-     */
-    public void addParentFirstPackages(List<String> packages) {
-        if (packages != null) {
-            for (String pkg : packages) {
-                addParentFirstPackage(pkg);
-            }
-        }
-    }
-    
-    /**
-     * 获取父优先包列表
-     */
-    public List<String> getParentFirstPackages() {
-        return new ArrayList<>(parentFirstPackages);
-    }
+
 }
