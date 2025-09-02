@@ -73,10 +73,11 @@
             <artifactId>datasophon-plugin-api</artifactId>
             <version>${project.version}</version>
         </dependency>
+        
+        <!-- 官方pf4j-spring支持 -->
         <dependency>
-            <groupId>com.datasophon</groupId>
-            <artifactId>datasophon-plugin-manager</artifactId>
-            <version>${project.version}</version>
+            <groupId>org.pf4j</groupId>
+            <artifactId>pf4j-spring</artifactId>
         </dependency>
         
         <!-- K8s业务模块：被service层调用，处理K8s相关业务 -->

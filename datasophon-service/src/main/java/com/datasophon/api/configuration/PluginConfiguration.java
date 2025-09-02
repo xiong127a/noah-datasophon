@@ -1,15 +1,15 @@
 package com.datasophon.api.configuration;
 
-import com.datasophon.plugins.manager.SpringPluginManager;
 import lombok.extern.slf4j.Slf4j;
-// import org.pf4j.spring.ExtensionsInjector; // 暂时禁用
+import org.pf4j.spring.ExtensionsInjector;
+import org.pf4j.spring.SpringPluginManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-// import org.springframework.context.ApplicationContext; // 将在ExtensionsInjector实现时使用
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-// import org.springframework.context.annotation.DependsOn; // 暂时不需要
+import org.springframework.context.annotation.DependsOn;
 
 import jakarta.annotation.PostConstruct;
 import java.nio.file.Files;
@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.stream.Stream;
 
 /**
- * 插件配置类 - 使用SpringPluginManager的优雅方案
+ * 插件配置类 - 基于官方pf4j-spring标准实现
  * 完美整合Spring Boot与PF4J插件框架
  * 
  * @author 任相鹏
@@ -40,57 +40,51 @@ public class PluginConfiguration {
     @Autowired
     private PluginProperties pluginProperties;
 
-    // ApplicationContext将在需要时使用
-    // @Autowired
-    // private ApplicationContext applicationContext;
+    @Autowired
+    private ApplicationContext applicationContext;
     
     /**
-     * 创建SpringPluginManager Bean
-     * 自动装配，支持依赖注入
+     * 创建官方SpringPluginManager Bean
+     * 使用官方pf4j-spring实现
      */
     @Bean
     public SpringPluginManager springPluginManager() {
-        log.info("初始化SpringPluginManager...");
+        log.info("初始化官方SpringPluginManager...");
         
         // 构建插件扫描路径
         List<Path> pluginPaths = buildPluginPaths();
         
-        // 创建SpringPluginManager实例
+        // 使用官方SpringPluginManager
         SpringPluginManager pluginManager = new SpringPluginManager(pluginPaths);
         
-        log.info("SpringPluginManager创建完成 - 插件路径数量: {}, 延迟加载: {}", 
-                pluginPaths.size(), pluginProperties.getLoading().isLazy());
+        log.info("SpringPluginManager创建完成 - 插件路径数量: {}", pluginPaths.size());
                 
         return pluginManager;
     }
 
     /**
-     * ExtensionsInjector配置
-     * 暂时禁用自动扩展注入，等插件系统完全稳定后再启用
+     * ExtensionsInjector配置 - 核心功能！
+     * 自动将插件扩展注入为Spring Bean
      */
-    @PostConstruct
-    public void configureExtensionsInjector() {
-        // ExtensionsInjector的配置将在插件系统稳定后进行
-        // 目前通过SpringPluginManager的getPluginsByType等方法使用插件
-        log.info("插件系统已配置，扩展将通过SpringPluginManager API访问");
+    @Bean
+    @DependsOn("springPluginManager")
+    public ExtensionsInjector extensionsInjector() {
+        log.info("初始化ExtensionsInjector - 启用插件扩展自动注入");
+        return new ExtensionsInjector(springPluginManager(), applicationContext);
     }
     
     /**
-     * SpringPluginManager启动后配置
+     * 插件系统启动配置
      */
     @PostConstruct
-    public void initializePluginManager() {
+    public void initializePluginSystem() {
         if (!pluginProperties.getLoading().isEnabled()) {
             log.warn("插件功能已禁用");
             return;
         }
         
-        boolean lazyLoading = pluginProperties.getLoading().isLazy();
-        if (lazyLoading) {
-            log.info("延迟加载模式：插件将在首次使用时自动加载");
-        } else {
-            log.info("立即加载模式：SpringPluginManager将自动启动并加载所有插件");
-        }
+        log.info("插件系统启动完成 - ExtensionsInjector已启用自动注入功能");
+        log.info("插件扩展将自动注入到Spring容器中，业务代码可直接使用@Autowired");
     }
     
     /**
@@ -147,28 +141,31 @@ public class PluginConfiguration {
     
     /**
      * 获取默认的开发模式插件路径
-     * 动态扫描core-plugins目录下所有插件的target目录
+     * 动态扫描datasophon-plugins目录下所有插件的target目录
+     * 基于官方pf4j-spring简化结构
      */
     private List<String> getDefaultDevelopmentPluginPaths() {
         List<String> defaultPaths = new ArrayList<>();
         
         // 获取项目根目录
         String projectRoot = System.getProperty("user.dir");
-        String corePluginsDir = projectRoot + "/datasophon-plugins/datasophon-plugins-impl/core-plugins";
+        String pluginsDir = projectRoot + "/datasophon-plugins";
         
         try {
-            // 扫描core-plugins目录下的所有子目录
-            Path corePluginsPath = Paths.get(corePluginsDir);
-            if (Files.exists(corePluginsPath) && Files.isDirectory(corePluginsPath)) {
-                try (Stream<Path> pluginDirs = Files.list(corePluginsPath)) {
+            // 扫描datasophon-plugins目录下的所有子目录
+            Path pluginsPath = Paths.get(pluginsDir);
+            if (Files.exists(pluginsPath) && Files.isDirectory(pluginsPath)) {
+                try (Stream<Path> pluginDirs = Files.list(pluginsPath)) {
                     pluginDirs.filter(Files::isDirectory)
+                            .filter(dir -> !dir.getFileName().toString().equals("datasophon-plugin-api")) // 排除API模块
+                            .filter(dir -> !dir.getFileName().toString().equals("assembly")) // 排除assembly目录
                             .map(pluginDir -> pluginDir.resolve("target").toString())
                             .filter(targetPath -> Files.exists(Paths.get(targetPath)))
                             .forEach(defaultPaths::add);
                 }
             }
             
-            log.info("动态扫描到 {} 个插件开发路径: {}", defaultPaths.size(), defaultPaths);
+            log.info("官方pf4j-spring结构：扫描到 {} 个插件开发路径: {}", defaultPaths.size(), defaultPaths);
         } catch (Exception e) {
             log.warn("扫描插件开发路径失败，使用空列表", e);
         }

@@ -185,7 +185,7 @@
         
         <!-- 插件目录 - 自动包含所有核心插件JAR -->
         <fileSet>
-            <directory>${basedir}/../datasophon-plugins/datasophon-plugins-impl/core-plugins</directory>
+            <directory>${basedir}/../datasophon-plugins</directory>
             <includes>
                 <include>**/target/*-plugin.jar</include>
                 <include>**/target/dev-plugins/*.jar</include>
