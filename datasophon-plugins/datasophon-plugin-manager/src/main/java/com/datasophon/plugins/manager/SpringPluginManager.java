@@ -25,7 +25,9 @@ import com.datasophon.plugins.api.SystemInfoCollectorPlugin;
 
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
-import org.pf4j.ExtensionFactory;
+import org.pf4j.*;
+import org.pf4j.spring.SpringExtensionFactory;
+// import org.pf4j.spring.ExtensionsInjector; // 暂时禁用
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
@@ -37,18 +39,20 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Spring整合的插件管理器
- * 完美结合Spring Boot和PF4J，提供优雅的自动装配和生命周期管理
+ * 基于标准pf4j-spring实现，提供优雅的Spring集成和生命周期管理
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2025-01-28
  */
 @Slf4j
-public class SpringPluginManager extends ConfigurablePluginManager {
+public class SpringPluginManager extends DefaultPluginManager {
 
     @Getter
     @Autowired
     private ApplicationContext applicationContext;
+
+    // ExtensionsInjector由Spring管理，不需要在这里声明
 
     // 插件实例存储（支持热插拔）
     private final Map<String, SshConnectorPlugin> sshConnectorPlugins = new ConcurrentHashMap<>();
@@ -58,91 +62,73 @@ public class SpringPluginManager extends ConfigurablePluginManager {
     private final Map<String, PluginStatus> pluginStatus = new ConcurrentHashMap<>();
     private volatile boolean initialized = false;
 
+    /**
+     * 无参构造函数
+     */
+    public SpringPluginManager() {
+        super();
+        log.info("SpringPluginManager 使用默认构造函数初始化");
+    }
 
-
+    /**
+     * 带路径参数的构造函数
+     */
     public SpringPluginManager(List<Path> pluginRoots) {
         super(pluginRoots);
         log.info("SpringPluginManager 使用指定路径初始化: {}", pluginRoots);
+        // 构造完成后，等待Spring的@PostConstruct调用
+        log.debug("SpringPluginManager构造函数完成，等待Spring初始化");
     }
 
-
+    /**
+     * 重写initialize方法，允许PF4J初始化核心组件但不自动加载插件
+     * 这样pluginRepository等核心组件会被正确初始化
+     */
+    @Override
+    protected void initialize() {
+        // 调用父类的初始化逻辑来设置pluginRepository等核心组件
+        super.initialize();
+        log.debug("PF4J核心组件初始化完成，但插件加载将延迟到Spring @PostConstruct阶段执行");
+    }
 
     /**
-     * 重写扩展工厂，支持Spring的依赖注入
+     * 重写开发模式检测，启用开发模式以支持未打包的插件
+     */
+    @Override
+    public boolean isDevelopment() {
+        return true; // 开发模式下支持加载classes目录
+    }
+
+    /**
+     * 重写扩展工厂，使用标准的SpringExtensionFactory
      */
     @Override
     protected ExtensionFactory createExtensionFactory() {
         return new SpringExtensionFactory(this);
     }
 
-    /**
-     * Spring扩展工厂
-     * 支持插件中的扩展点使用Spring的依赖注入
-     */
-    public static class SpringExtensionFactory implements ExtensionFactory {
-
-        private final SpringPluginManager pluginManager;
-
-        public SpringExtensionFactory(SpringPluginManager pluginManager) {
-            this.pluginManager = pluginManager;
-        }
-
-        @Override
-        public <T> T create(Class<T> extensionClass) {
-            try {
-                log.debug("创建扩展实例: {}", extensionClass.getName());
-
-                // 1. 首先尝试使用默认构造函数创建实例
-                T extension = extensionClass.getDeclaredConstructor().newInstance();
-
-                // 2. 然后尝试注入Spring依赖（如果Spring上下文可用）
-                if (pluginManager.getApplicationContext() != null) {
-                    try {
-                        // 使用Spring的自动装配功能
-                        pluginManager.getApplicationContext()
-                                .getAutowireCapableBeanFactory()
-                                .autowireBean(extension);
-                        log.debug("成功为扩展 {} 注入Spring依赖", extensionClass.getName());
-                    } catch (Exception e) {
-                        log.debug("无法为扩展 {} 注入Spring依赖: {}", extensionClass.getName(), e.getMessage());
-                        // 继续使用没有依赖注入的实例
-                    }
-                }
-
-                return extension;
-
-            } catch (Exception e) {
-                log.error("创建扩展实例失败: {}", extensionClass.getName(), e);
-                throw new RuntimeException("无法创建扩展实例: " + extensionClass.getName(), e);
-            }
-        }
-    }
-
     @PostConstruct
-    public void initialize() {
-        log.info("SpringPluginManager开始初始化...");
-        startPluginSystem();
+    public void springInitialize() {
+        log.info("SpringPluginManager开始Spring初始化...");
+        // 延迟初始化，避免与构造函数冲突
+        if (!initialized) {
+            startPluginSystem();
+        } else {
+            log.info("SpringPluginManager已经初始化，跳过重复初始化");
+        }
     }
 
-    @PreDestroy
+    @PreDestroy 
     public void destroy() {
         log.info("正在关闭SpringPluginManager...");
         
         try {
             // 清理所有插件
-            cleanupPlugins(sshConnectorPlugins.values(), "SSH连接器");
-            cleanupPlugins(hostValidationPlugins.values(), "主机验证");
-            cleanupPlugins(hostRepairPlugins.values(), "主机修复");
-            cleanupPlugins(systemInfoCollectorPlugins.values(), "信息收集");
-
-            stop();
-
-            sshConnectorPlugins.clear();
-            hostValidationPlugins.clear();
-            hostRepairPlugins.clear();
-            systemInfoCollectorPlugins.clear();
-            pluginStatus.clear();
-
+            cleanupAllPlugins();
+            
+            // 停止插件系统
+            stopPlugins();
+            
             log.info("SpringPluginManager已关闭");
 
         } catch (Exception e) {
@@ -162,39 +148,51 @@ public class SpringPluginManager extends ConfigurablePluginManager {
         log.info("开始启动SpringPluginManager...");
         
         try {
-            // 启动PF4J
-                    start();
+            // 确保插件系统准备就绪
+            log.debug("检查插件系统状态...");
 
-        registerAllPlugins();
+            // 1. 启动PF4J插件系统（如果还没有启动的话）
+            if (getPlugins().isEmpty()) {
+                 log.info("开始加载插件...");
+                 loadPlugins();
+                 startPlugins();
+             } else {
+                 log.info("插件已在父类初始化时加载，跳过重复加载");
+             }
 
-        initialized = true;
-        int totalPlugins = sshConnectorPlugins.size() + hostValidationPlugins.size() + hostRepairPlugins.size() + systemInfoCollectorPlugins.size();
-        log.info("SpringPluginManager初始化完成，加载了 {} 个插件 (SSH连接器:{}, 主机验证:{}, 主机修复:{}, 信息收集:{})", 
-                totalPlugins, 
-                sshConnectorPlugins.size(),
-                hostValidationPlugins.size(), 
-                hostRepairPlugins.size(),
-                systemInfoCollectorPlugins.size());
+            // 2. Spring集成将通过ExtensionsInjector Bean自动处理
+            if (applicationContext != null) {
+                log.info("ApplicationContext已注入，ExtensionsInjector将自动处理Spring集成");
+            } else {
+                log.warn("ApplicationContext未注入，将跳过Spring集成");
+            }
+
+            // 3. 注册所有插件到业务缓存
+            registerAllPlugins();
+
+            initialized = true;
+            int totalPlugins = sshConnectorPlugins.size() + hostValidationPlugins.size() + 
+                              hostRepairPlugins.size() + systemInfoCollectorPlugins.size();
+            log.info("SpringPluginManager初始化完成，加载了 {} 个插件 (SSH连接器:{}, 主机验证:{}, 主机修复:{}, 信息收集:{})", 
+                    totalPlugins, 
+                    sshConnectorPlugins.size(),
+                    hostValidationPlugins.size(), 
+                    hostRepairPlugins.size(),
+                    systemInfoCollectorPlugins.size());
             
         } catch (Exception e) {
             log.error("SpringPluginManager初始化失败", e);
+            // 重置状态，允许重试
+            initialized = false;
             throw new RuntimeException("SpringPluginManager初始化失败", e);
         }
     }
 
-    public void start() {
-        log.info("SpringPluginManager PF4J 启动开始...");
-        loadPlugins();
-        startPlugins();
-        log.info("SpringPluginManager PF4J 启动完成");
-    }
 
-    public void stop() {
-        log.info("SpringPluginManager PF4J 停止开始...");
-        stopPlugins();
-        log.info("SpringPluginManager PF4J 停止完成");
-    }
 
+    /**
+     * 注册所有插件到业务缓存
+     */
     private void registerAllPlugins() {
         // 注册SSH连接器插件
         registerPlugins(SshConnectorPlugin.class, sshConnectorPlugins, "SSH连接器");
@@ -216,7 +214,7 @@ public class SpringPluginManager extends ConfigurablePluginManager {
         List<T> pluginList = getExtensions(pluginClass);
         for (T plugin : pluginList) {
             try {
-                // 获取插件ID的通用方法
+                // 获取插件ID
                 String pluginId = getPluginId(plugin);
                 
                 // 检查是否已存在同ID插件（热替换场景）
@@ -262,16 +260,35 @@ public class SpringPluginManager extends ConfigurablePluginManager {
     private <T> void initializePlugin(T plugin) {
         try {
             plugin.getClass().getMethod("initialize").invoke(plugin);
-        } catch (Exception e) {
+            log.debug("插件 {} 初始化成功", plugin.getClass().getName());
+        } catch (NoSuchMethodException e) {
             // 如果没有initialize方法，忽略
-            log.debug("插件 {} 没有initialize方法或初始化失败", plugin.getClass().getName());
+            log.debug("插件 {} 没有initialize方法", plugin.getClass().getName());
+        } catch (Exception e) {
+            log.warn("插件 {} 初始化失败", plugin.getClass().getName(), e);
         }
+    }
+
+    /**
+     * 清理所有插件
+     */
+    private void cleanupAllPlugins() {
+        cleanupPlugins(sshConnectorPlugins.values(), "SSH连接器");
+        cleanupPlugins(hostValidationPlugins.values(), "主机验证");
+        cleanupPlugins(hostRepairPlugins.values(), "主机修复");
+        cleanupPlugins(systemInfoCollectorPlugins.values(), "信息收集");
+
+        sshConnectorPlugins.clear();
+        hostValidationPlugins.clear();
+        hostRepairPlugins.clear();
+        systemInfoCollectorPlugins.clear();
+        pluginStatus.clear();
     }
 
     /**
      * 清理插件集合
      */
-    private <T> void cleanupPlugins(java.util.Collection<T> plugins, String pluginType) {
+    private <T> void cleanupPlugins(Collection<T> plugins, String pluginType) {
         for (T plugin : plugins) {
             cleanupSinglePlugin(plugin, pluginType);
         }
@@ -285,6 +302,9 @@ public class SpringPluginManager extends ConfigurablePluginManager {
             String pluginId = getPluginId(plugin);
             plugin.getClass().getMethod("cleanup").invoke(plugin);
             log.debug("{}插件清理成功: {}", pluginType, pluginId);
+        } catch (NoSuchMethodException e) {
+            // 如果没有cleanup方法，忽略
+            log.debug("插件 {} 没有cleanup方法", plugin.getClass().getName());
         } catch (Exception e) {
             String pluginId = getPluginId(plugin);
             log.warn("{}插件清理失败: {}", pluginType, pluginId, e);
@@ -295,9 +315,6 @@ public class SpringPluginManager extends ConfigurablePluginManager {
     
     /**
      * 根据插件类型枚举获取插件列表（用于业务代码）
-     * 
-     * @param pluginType 插件类型枚举
-     * @return 对应类型的插件列表
      */
     @SuppressWarnings("unchecked")
     public <T> List<T> getPluginsByType(PluginId pluginType) {
@@ -311,10 +328,6 @@ public class SpringPluginManager extends ConfigurablePluginManager {
     
     /**
      * 根据插件ID获取特定插件（用于业务代码）
-     * 
-     * @param pluginType 插件类型枚举
-     * @param pluginId 插件具体ID字符串
-     * @return 插件实例，如果不存在则返回null
      */
     @SuppressWarnings("unchecked")
     public <T> T getPlugin(PluginId pluginType, String pluginId) {
@@ -328,21 +341,13 @@ public class SpringPluginManager extends ConfigurablePluginManager {
     
     /**
      * 检查是否有可用的插件（用于业务代码）
-     * 
-     * @param pluginType 插件类型枚举
-     * @return 是否有可用插件
      */
     public boolean hasPlugins(PluginId pluginType) {
         return !getPluginsByType(pluginType).isEmpty();
     }
     
     /**
-     * 为了兼容现有代码，保留基于Class的API（用于业务代码）
-     * 建议优先使用基于PluginId枚举的API
-     * 
-     * @param <T> 插件类型
-     * @param pluginClass 插件接口类
-     * @return 插件列表
+     * 兼容现有代码的API（用于业务代码）
      */
     public <T> List<T> getPlugins(Class<T> pluginClass) {
         if (pluginClass == HostValidationPlugin.class) {
@@ -359,4 +364,43 @@ public class SpringPluginManager extends ConfigurablePluginManager {
         }
     }
 
+    /**
+     * 获取插件状态
+     */
+    public PluginStatus getPluginStatus(String pluginId) {
+        return pluginStatus.get(pluginId);
+    }
+
+    /**
+     * 获取所有插件状态
+     */
+    public Map<String, PluginStatus> getAllPluginStatus() {
+        return new HashMap<>(pluginStatus);
+    }
+
+
+
+    /**
+     * 手动刷新插件（用于热重载）
+     */
+    public synchronized void refreshPlugins() {
+        log.info("开始刷新插件...");
+        try {
+            // 清理现有插件
+            cleanupAllPlugins();
+            
+            // 重新加载插件
+            unloadPlugins();
+            loadPlugins();
+            startPlugins();
+            
+            // 重新注册插件
+            registerAllPlugins();
+            
+            log.info("插件刷新完成");
+        } catch (Exception e) {
+            log.error("插件刷新失败", e);
+            throw new RuntimeException("插件刷新失败", e);
+        }
+    }
 }

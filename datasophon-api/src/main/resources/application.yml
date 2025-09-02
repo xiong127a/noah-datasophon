@@ -149,9 +149,9 @@ mybatis-flex:
 
 logging:
   config: classpath:logback-api.xml
-  level:
-    org.pf4j: DEBUG
-    com.datasophon.plugins: DEBUG
+#  level:
+#    org.pf4j: DEBUG
+#    com.datasophon.plugins: DEBUG
 
 datasophon:
   migration:

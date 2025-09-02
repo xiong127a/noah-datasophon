@@ -2,17 +2,22 @@ package com.datasophon.api.configuration;
 
 import com.datasophon.plugins.manager.SpringPluginManager;
 import lombok.extern.slf4j.Slf4j;
+// import org.pf4j.spring.ExtensionsInjector; // 暂时禁用
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+// import org.springframework.context.ApplicationContext; // 将在ExtensionsInjector实现时使用
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+// import org.springframework.context.annotation.DependsOn; // 暂时不需要
 
 import jakarta.annotation.PostConstruct;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 
 /**
  * 插件配置类 - 使用SpringPluginManager的优雅方案
@@ -34,6 +39,10 @@ public class PluginConfiguration {
     
     @Autowired
     private PluginProperties pluginProperties;
+
+    // ApplicationContext将在需要时使用
+    // @Autowired
+    // private ApplicationContext applicationContext;
     
     /**
      * 创建SpringPluginManager Bean
@@ -53,6 +62,17 @@ public class PluginConfiguration {
                 pluginPaths.size(), pluginProperties.getLoading().isLazy());
                 
         return pluginManager;
+    }
+
+    /**
+     * ExtensionsInjector配置
+     * 暂时禁用自动扩展注入，等插件系统完全稳定后再启用
+     */
+    @PostConstruct
+    public void configureExtensionsInjector() {
+        // ExtensionsInjector的配置将在插件系统稳定后进行
+        // 目前通过SpringPluginManager的getPluginsByType等方法使用插件
+        log.info("插件系统已配置，扩展将通过SpringPluginManager API访问");
     }
     
     /**
@@ -91,6 +111,10 @@ public class PluginConfiguration {
             if (!devPaths.isEmpty()) {
                 pathStrings.addAll(devPaths);
                 log.info("添加了 {} 个开发模式插件路径", devPaths.size());
+            } else {
+                // 添加默认的开发模式插件路径（target/classes目录）
+                pathStrings.addAll(getDefaultDevelopmentPluginPaths());
+                log.info("使用默认开发模式插件路径");
             }
         } else {
             // 3. 生产模式：添加基础插件目录（JAR文件）
@@ -119,5 +143,36 @@ public class PluginConfiguration {
                     return exists;
                 })
                 .collect(java.util.stream.Collectors.toList());
+    }
+    
+    /**
+     * 获取默认的开发模式插件路径
+     * 动态扫描core-plugins目录下所有插件的target目录
+     */
+    private List<String> getDefaultDevelopmentPluginPaths() {
+        List<String> defaultPaths = new ArrayList<>();
+        
+        // 获取项目根目录
+        String projectRoot = System.getProperty("user.dir");
+        String corePluginsDir = projectRoot + "/datasophon-plugins/datasophon-plugins-impl/core-plugins";
+        
+        try {
+            // 扫描core-plugins目录下的所有子目录
+            Path corePluginsPath = Paths.get(corePluginsDir);
+            if (Files.exists(corePluginsPath) && Files.isDirectory(corePluginsPath)) {
+                try (Stream<Path> pluginDirs = Files.list(corePluginsPath)) {
+                    pluginDirs.filter(Files::isDirectory)
+                            .map(pluginDir -> pluginDir.resolve("target").toString())
+                            .filter(targetPath -> Files.exists(Paths.get(targetPath)))
+                            .forEach(defaultPaths::add);
+                }
+            }
+            
+            log.info("动态扫描到 {} 个插件开发路径: {}", defaultPaths.size(), defaultPaths);
+        } catch (Exception e) {
+            log.warn("扫描插件开发路径失败，使用空列表", e);
+        }
+        
+        return defaultPaths;
     }
 }
