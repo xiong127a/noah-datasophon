@@ -21,15 +21,16 @@ import com.datasophon.api.hostvalidation.manager.HostValidationStateManager;
 import com.datasophon.common.dto.HostValidationRequestDTO;
 import com.datasophon.common.enums.CheckType;
 import com.datasophon.common.enums.ValidationStatus;
-import com.datasophon.plugins.api.HostCheckerPlugin;
+import com.datasophon.plugins.api.HostValidationPlugin;
+import com.datasophon.plugins.api.HostRepairPlugin;
+import com.datasophon.plugins.api.PluginId;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
-import com.datasophon.plugins.manager.PluginManager;
+import com.datasophon.plugins.manager.SpringPluginManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -52,7 +53,7 @@ import java.util.Map;
 public class HostValidationExecutor {
     
     private final HostValidationStateManager stateManager;
-    private final PluginManager pluginManager;
+    private final SpringPluginManager springPluginManager;
     
     /**
      * 执行主机校验
@@ -64,7 +65,7 @@ public class HostValidationExecutor {
             log.info("开始执行主机校验: clusterId={}, 主机数量={}", clusterId, request.hostIps().size());
             
             // 1. 获取校验插件
-            List<HostCheckerPlugin> plugins = getAvailableValidationPlugins();
+            List<HostValidationPlugin> plugins = springPluginManager.getPluginsByType(PluginId.HOST_VALIDATION);
             if (plugins.isEmpty()) {
                 log.warn("未找到校验插件: clusterId={}", clusterId);
                 stateManager.completeValidationSession(clusterId);
@@ -92,12 +93,49 @@ public class HostValidationExecutor {
         try {
             log.info("开始执行主机修复: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
             
-            // 暂时更新状态为修复中，具体修复逻辑待实现
+            // 获取修复插件
+            List<HostRepairPlugin> repairPlugins = springPluginManager.getPluginsByType(PluginId.HOST_REPAIR);
+            if (repairPlugins.isEmpty()) {
+                log.warn("未找到修复插件: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
+                stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                    ValidationStatus.FAILED, "未找到可用的修复插件", Map.of());
+                return;
+            }
+
+            // 寻找支持该修复类型的插件
+            HostRepairPlugin targetPlugin = repairPlugins.stream()
+                .filter(plugin -> plugin.getSupportedRepairTypes().contains(checkType))
+                .findFirst()
+                .orElse(null);
+                
+            if (targetPlugin == null) {
+                log.warn("未找到支持修复类型{}的插件: clusterId={}, hostIp={}", checkType, clusterId, hostIp);
+                stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                    ValidationStatus.FAILED, "未找到支持该修复类型的插件", Map.of());
+                return;
+            }
+
+            // 构建修复上下文
+            HostCheckContext context = HostCheckContext.builder()
+                .hostIp(hostIp)
+                // 注意：这里需要从状态管理器或其他地方获取SSH连接信息
+                .build();
+
+            // 执行修复
             stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
-                ValidationStatus.REPAIRING, "修复功能正在开发中...", Map.of());
+                ValidationStatus.REPAIRING, "正在执行修复...", Map.of());
+                
+            CheckResult repairResult = targetPlugin.executeRepair(context, checkType, Map.of()).get();
             
-            log.info("主机修复功能正在开发中: clusterId={}, hostIp={}, checkType={}", 
-                clusterId, hostIp, checkType);
+            // 更新修复结果
+            stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                repairResult.isSuccess() ? ValidationStatus.SUCCESS : ValidationStatus.FAILED,
+                repairResult.getMessage(),
+                repairResult.getData()
+            );
+            
+            log.info("主机修复执行完成: clusterId={}, hostIp={}, checkType={}, result={}", 
+                clusterId, hostIp, checkType, repairResult.getStatus());
                 
         } catch (Exception e) {
             log.error("主机修复执行异常: clusterId={}, hostIp={}, checkType={}, error={}", 
@@ -108,7 +146,7 @@ public class HostValidationExecutor {
     /**
      * 校验单个主机 - 插件化处理
      */
-    private void validateSingleHost(HostValidationRequestDTO request, String hostIp, List<HostCheckerPlugin> plugins) {
+    private void validateSingleHost(HostValidationRequestDTO request, String hostIp, List<HostValidationPlugin> plugins) {
         Long clusterId = request.clusterId();
         
         try {
@@ -124,14 +162,17 @@ public class HostValidationExecutor {
                 .build();
             
             // 按优先级顺序执行插件
-            for (HostCheckerPlugin plugin : plugins) {
-                try {
-                    if (!plugin.canExecute(context)) {
-                        log.debug("插件不适用: plugin={}, hostIp={}", plugin.getClass().getSimpleName(), hostIp);
-                        continue;
-                    }
+            for (HostValidationPlugin plugin : plugins) {
+                // 遍历插件支持的检查类型
+                for (CheckType checkType : plugin.getSupportedCheckTypes()) {
+                    try {
+                        if (!plugin.canExecute(context, checkType)) {
+                            log.debug("插件检查项不适用: plugin={}, hostIp={}, checkType={}", 
+                                    plugin.getClass().getSimpleName(), hostIp, checkType);
+                            continue;
+                        }
                     
-                    CheckResult result = plugin.executeCheck(context).get(); // 同步等待结果
+                        CheckResult result = plugin.executeCheck(context, checkType).get(); // 同步等待结果
                     
                     // 更新检查结果
                     stateManager.updateCheckItemStatus(clusterId, hostIp, result.getCheckType(), 
@@ -141,13 +182,13 @@ public class HostValidationExecutor {
                     log.debug("插件检查完成: plugin={}, hostIp={}, checkType={}, success={}", 
                         plugin.getClass().getSimpleName(), hostIp, result.getCheckType(), result.isSuccess());
                     
-                } catch (Exception e) {
-                    log.error("插件执行异常: plugin={}, hostIp={}, error={}", 
-                        plugin.getClass().getSimpleName(), hostIp, e.getMessage(), e);
-                    
-                    // 记录插件执行失败 - 使用通用错误类型
-                    stateManager.updateCheckItemStatus(clusterId, hostIp, CheckType.SYSTEM_INFO, 
-                        ValidationStatus.FAILED, "插件执行异常: " + e.getMessage(), Map.of());
+                    } catch (Exception e) {
+                        log.error("插件检查异常: plugin={}, hostIp={}, checkType={}, error={}", 
+                                plugin.getClass().getSimpleName(), hostIp, checkType, e.getMessage(), e);
+                        // 检查失败时更新状态
+                        stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                            ValidationStatus.FAILED, "检查异常: " + e.getMessage(), Map.of());
+                    }
                 }
             }
             
@@ -165,13 +206,17 @@ public class HostValidationExecutor {
         try {
             log.info("重新检查项: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
             
-            List<HostCheckerPlugin> plugins = getAvailableValidationPlugins();
-            HostCheckerPlugin targetPlugin = plugins.stream()
-                .findFirst() // 暂时使用第一个可用插件
+            // 获取校验插件
+            List<HostValidationPlugin> plugins = springPluginManager.getPluginsByType(PluginId.HOST_VALIDATION);
+            HostValidationPlugin targetPlugin = plugins.stream()
+                .filter(plugin -> plugin.getSupportedCheckTypes().contains(checkType))
+                .findFirst()
                 .orElse(null);
                 
             if (targetPlugin == null) {
-                log.warn("未找到支持检查的插件: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
+                log.warn("未找到支持检查类型{}的插件: clusterId={}, hostIp={}", checkType, clusterId, hostIp);
+                stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                    ValidationStatus.FAILED, "未找到支持该检查类型的插件", Map.of());
                 return;
             }
             
@@ -180,8 +225,12 @@ public class HostValidationExecutor {
                 .clusterId(clusterId.toString())
                 .hostIp(hostIp)
                 .build();
+            
+            // 更新为检查中状态
+            stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
+                ValidationStatus.CHECKING, "重新检查中...", Map.of());
                 
-            CheckResult result = targetPlugin.executeCheck(context).get(); // 同步等待结果
+            CheckResult result = targetPlugin.executeCheck(context, checkType).get(); // 同步等待结果
             stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
                 result.isSuccess() ? ValidationStatus.SUCCESS : ValidationStatus.FAILED,
                 result.getMessage(), result.getData());
@@ -195,13 +244,5 @@ public class HostValidationExecutor {
         }
     }
     
-    /**
-     * 获取可用的校验插件
-     */
-    private List<HostCheckerPlugin> getAvailableValidationPlugins() {
-        return pluginManager.getPf4jManager().getExtensions(HostCheckerPlugin.class)
-            .stream()
-            .sorted(Comparator.comparingInt(HostCheckerPlugin::getPriority))
-            .toList();
-    }
+
 }

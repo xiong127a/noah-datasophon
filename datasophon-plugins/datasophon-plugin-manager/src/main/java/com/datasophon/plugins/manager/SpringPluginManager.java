@@ -17,9 +17,10 @@
 
 package com.datasophon.plugins.manager;
 
-import com.datasophon.plugins.api.SshConnectorPlugin;
 import com.datasophon.plugins.api.HostValidationPlugin;
 import com.datasophon.plugins.api.HostRepairPlugin;
+import com.datasophon.plugins.api.PluginId;
+import com.datasophon.plugins.api.SshConnectorPlugin;
 import com.datasophon.plugins.api.SystemInfoCollectorPlugin;
 
 import lombok.Getter;
@@ -290,5 +291,72 @@ public class SpringPluginManager extends ConfigurablePluginManager {
         }
     }
 
+    // ================== 业务代码专用API ==================
+    
+    /**
+     * 根据插件类型枚举获取插件列表（用于业务代码）
+     * 
+     * @param pluginType 插件类型枚举
+     * @return 对应类型的插件列表
+     */
+    @SuppressWarnings("unchecked")
+    public <T> List<T> getPluginsByType(PluginId pluginType) {
+        return switch (pluginType) {
+            case HOST_VALIDATION -> (List<T>) new ArrayList<>(hostValidationPlugins.values());
+            case HOST_REPAIR -> (List<T>) new ArrayList<>(hostRepairPlugins.values());
+            case SSH_CONNECTOR -> (List<T>) new ArrayList<>(sshConnectorPlugins.values());
+            case SYSTEM_INFO_COLLECTOR -> (List<T>) new ArrayList<>(systemInfoCollectorPlugins.values());
+        };
+    }
+    
+    /**
+     * 根据插件ID获取特定插件（用于业务代码）
+     * 
+     * @param pluginType 插件类型枚举
+     * @param pluginId 插件具体ID字符串
+     * @return 插件实例，如果不存在则返回null
+     */
+    @SuppressWarnings("unchecked")
+    public <T> T getPlugin(PluginId pluginType, String pluginId) {
+        return switch (pluginType) {
+            case HOST_VALIDATION -> (T) hostValidationPlugins.get(pluginId);
+            case HOST_REPAIR -> (T) hostRepairPlugins.get(pluginId);
+            case SSH_CONNECTOR -> (T) sshConnectorPlugins.get(pluginId);
+            case SYSTEM_INFO_COLLECTOR -> (T) systemInfoCollectorPlugins.get(pluginId);
+        };
+    }
+    
+    /**
+     * 检查是否有可用的插件（用于业务代码）
+     * 
+     * @param pluginType 插件类型枚举
+     * @return 是否有可用插件
+     */
+    public boolean hasPlugins(PluginId pluginType) {
+        return !getPluginsByType(pluginType).isEmpty();
+    }
+    
+    /**
+     * 为了兼容现有代码，保留基于Class的API（用于业务代码）
+     * 建议优先使用基于PluginId枚举的API
+     * 
+     * @param <T> 插件类型
+     * @param pluginClass 插件接口类
+     * @return 插件列表
+     */
+    public <T> List<T> getPlugins(Class<T> pluginClass) {
+        if (pluginClass == HostValidationPlugin.class) {
+            return getPluginsByType(PluginId.HOST_VALIDATION);
+        } else if (pluginClass == HostRepairPlugin.class) {
+            return getPluginsByType(PluginId.HOST_REPAIR);
+        } else if (pluginClass == SshConnectorPlugin.class) {
+            return getPluginsByType(PluginId.SSH_CONNECTOR);
+        } else if (pluginClass == SystemInfoCollectorPlugin.class) {
+            return getPluginsByType(PluginId.SYSTEM_INFO_COLLECTOR);
+        } else {
+            log.warn("不支持的插件类型: {}", pluginClass.getName());
+            return new ArrayList<>();
+        }
+    }
 
 }
