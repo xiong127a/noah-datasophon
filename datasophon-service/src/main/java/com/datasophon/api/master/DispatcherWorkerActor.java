@@ -28,8 +28,7 @@ import com.datasophon.api.master.handler.host.DispatcherWorkerHandlerChain;
 import com.datasophon.api.master.handler.host.StartWorkerHandler;
 import com.datasophon.api.master.handler.host.UploadWorkerHandler;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.service.SshPluginAdapterService;
-import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.utils.SshPluginHelper;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.model.HostInfo;
 
@@ -62,8 +61,8 @@ public class DispatcherWorkerActor extends AbstractActor {
                     
                     try {
                         // 通过SSH插件适配器验证连接
-                        SshPluginAdapterService sshAdapter = SpringUtil.getBean(SshPluginAdapterService.class);
-                        boolean connectionValid = sshAdapter.isConnectionValid(hostInfo);
+                        // 使用SSH插件辅助工具测试连接
+                        boolean connectionValid = SshPluginHelper.testConnection(hostInfo).isSuccess();
                         
                         if (!connectionValid) {
                             logger.error("【分发Worker Actor】SSH连接验证失败，无法分发代理: {}", hostInfo.getIp());

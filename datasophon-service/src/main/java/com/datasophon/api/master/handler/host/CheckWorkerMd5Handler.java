@@ -20,8 +20,7 @@ package com.datasophon.api.master.handler.host;
 import cn.hutool.core.io.FileUtil;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.service.SshPluginAdapterService;
-import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.utils.SshPluginHelper;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.HostInfo;
@@ -39,10 +38,10 @@ public class CheckWorkerMd5Handler implements DispatcherWorkerHandler {
         try {
             logger.info("【MD5检查处理器】开始MD5校验: {}", hostInfo.getIp());
             
-            SshPluginAdapterService sshAdapter = SpringUtil.getBean(SshPluginAdapterService.class);
+            // 使用SSH插件辅助工具
             
-            // 通过SSH插件适配器执行MD5检查命令
-            String checkWorkerMd5Result = sshAdapter.executeCommand(hostInfo, Constants.CHECK_WORKER_MD5_CMD).trim();
+            // 通过SSH插件辅助工具执行MD5检查命令
+            String checkWorkerMd5Result = SshPluginHelper.executeCommand(hostInfo, Constants.CHECK_WORKER_MD5_CMD).trim();
             
             // 读取本地MD5文件
             String md5 = FileUtil.readString(

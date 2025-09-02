@@ -46,6 +46,7 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.exception.ServiceException;
 import com.datasophon.common.exception.BusinessException;
 import com.datasophon.common.model.HostInfo;
+import com.datasophon.api.utils.SshPluginHelper;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -53,7 +54,6 @@ import com.datasophon.dao.entity.InstallStepEntity;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.pekko.actor.ActorRef;
-import com.datasophon.api.service.SshPluginAdapterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -82,8 +82,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     private  ClusterInfoService clusterInfoService;
     @Autowired
     private  ClusterHostService hostService;
-    @Autowired
-    private  SshPluginAdapterService sshPluginAdapter;
+    // SSH功能通过SshPluginHelper工具类提供
     @Autowired
     private  InstallStepConverter installStepConverter;
 
@@ -314,7 +313,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 HostInfo hostInfo = new HostInfo(clusterHostEntity.getIp(), 22, Constants.ROOT);
                 String command = "service datasophon-worker " + commandType;
                 
-                String commandResult = sshPluginAdapter.executeCommand(hostInfo, command);
+                String commandResult = SshPluginHelper.executeCommand(hostInfo, command);
                 result.put("success", true);
                 result.put("output", commandResult);
                 log.info("【安装服务】主机代理命令执行成功: {} -> {}", clusterHostEntity.getIp(), commandResult);
@@ -406,10 +405,10 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 String command = "tail -n 100 /opt/datasophon/datasophon-worker/logs/datasophon-worker.log";
                 
                 // 4. 使用SSH插件适配器执行命令并返回日志内容
-                String logContent = sshPluginAdapter.executeCommand(hostInfo, command);
+                String logContent = SshPluginHelper.executeCommand(hostInfo, command);
                 
-                log.debug("【安装服务】获取主机工作日志成功: {} -> {} 字符", hostInfo.getIp(), 
-                        logContent != null ? logContent.length() : 0);
+                log.debug("【安装服务】获取主机工作日志成功: {} -> {} 字符", hostInfo.getIp(),
+                        logContent.length());
                 
                 return logContent;
             } catch (Exception sshException) {

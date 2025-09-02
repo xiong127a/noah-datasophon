@@ -19,8 +19,7 @@ package com.datasophon.api.master.handler.host;
 
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.service.SshPluginAdapterService;
-import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.utils.SshPluginHelper;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.HostInfo;
@@ -39,10 +38,10 @@ public class DecompressWorkerHandler implements DispatcherWorkerHandler {
         try {
             logger.info("【解压Worker处理器】开始解压Worker包: {}", hostInfo.getIp());
             
-            SshPluginAdapterService sshAdapter = SpringUtil.getBean(SshPluginAdapterService.class);
+            // 使用SSH插件辅助工具
             
-            // 通过SSH插件适配器执行解压命令
-            String decompressResult = sshAdapter.executeCommand(hostInfo, Constants.UNZIP_DDH_WORKER_CMD);
+            // 通过SSH插件辅助工具执行解压命令
+            String decompressResult = SshPluginHelper.executeCommand(hostInfo, Constants.UNZIP_DDH_WORKER_CMD);
             
             if (Constants.FAILED.equals(decompressResult)) {
                 logger.error("【解压Worker处理器】tar -zxvf datasophon-worker.tar.gz failed");

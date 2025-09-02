@@ -23,7 +23,7 @@ package com.datasophon.api.master;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.service.SshPluginAdapterService;
+import com.datasophon.api.utils.SshPluginHelper;
 import com.datasophon.common.command.HostCheckCommand;
 import com.datasophon.common.model.CommonResult;
 import com.datasophon.common.model.HostInfo;
@@ -117,8 +117,8 @@ public class HostConnectActor extends AbstractActor {
                 
                 try {
                     // 通过SSH插件适配器测试连接
-                    SshPluginAdapterService sshAdapter = SpringUtil.getBean(SshPluginAdapterService.class);
-                    boolean connectionSuccess = sshAdapter.isConnectionValid(hostInfo);
+                    // 使用SSH插件辅助工具测试连接
+                    boolean connectionSuccess = SshPluginHelper.testConnection(hostInfo).isSuccess();
                     
                     if (connectionSuccess) {
                         hostInfo.setCommonResult(

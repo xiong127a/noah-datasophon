@@ -24,8 +24,6 @@ import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.dao.entity.ClusterHostEntity;
 import lombok.Data;
-import lombok.Getter;
-import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -37,9 +35,9 @@ import java.util.regex.Pattern;
 import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.StringUtils;
-import com.datasophon.api.service.SshPluginAdapterService;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.plugins.api.model.CommandResult;
+import com.datasophon.api.utils.SshPluginHelper;
+import com.datasophon.plugins.api.model.CheckResult;
 
 /**
  * PVM（传统虚拟机）主机管理策略实现
@@ -52,13 +50,14 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     @Autowired
     private ClusterHostService clusterHostService;
     
-    @Autowired
-    private SshPluginAdapterService sshPluginAdapterService;
+    // SSH功能通过SshPluginHelper工具类提供
 
     @Override
     public StrategyType getStrategyType() {
         return StrategyType.PVM;
     }
+
+
 
     @Override
     protected void validateDiscoveryRequest(HostDiscoveryRequest request) {
@@ -660,14 +659,14 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             // 使用SSH插件适配器获取主机名
             
             // 先测试连接
-            CommandResult connectionTest = sshPluginAdapterService.testConnection(hostInfo);
-            if (connectionTest.exitCode() != 0) {
-                log.warn("主机{}SSH连接测试失败: {}", ip, connectionTest.error());
+            CheckResult connectionTest = SshPluginHelper.testConnection(hostInfo);
+            if (!connectionTest.isSuccess()) {
+                log.warn("主机{}SSH连接测试失败: {}", ip, connectionTest.getMessage());
                 return ip; // 连接失败，返回IP
             }
             
             // 获取主机名
-            String hostname = sshPluginAdapterService.executeCommand(hostInfo, "hostname").trim();
+            String hostname = SshPluginHelper.executeCommand(hostInfo, "hostname").trim();
             if (!hostname.isEmpty() && !hostname.equals("localhost")) {
                 log.debug("成功获取主机{}的主机名: {}", ip, hostname);
                 return hostname;
@@ -698,10 +697,10 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             hostInfo.setSshPort(connectionParams.getSshPort());
             
             // 测试连接
-            CommandResult connectionTest = sshPluginAdapterService.testConnection(hostInfo);
-            if (connectionTest.exitCode() != 0) {
+            CheckResult connectionTest = SshPluginHelper.testConnection(hostInfo);
+            if (!connectionTest.isSuccess()) {
                 systemInfo.setConnectionStatus("FAILED");
-                systemInfo.setErrorMessage(connectionTest.error());
+                systemInfo.setErrorMessage(connectionTest.getMessage());
                 return systemInfo;
             }
             
@@ -729,7 +728,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     private void collectBasicInfo(HostInfo hostInfo, HostSystemInfo systemInfo) {
         try {
             // 主机名
-            String hostname = sshPluginAdapterService.executeCommand(hostInfo, "hostname").trim();
+            String hostname = SshPluginHelper.executeCommand(hostInfo, "hostname").trim();
             if (!hostname.isEmpty() && !hostname.equals("localhost")) {
                 systemInfo.setHostname(hostname);
             } else {
@@ -737,7 +736,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             }
             
             // 系统负载
-            String loadAvg = sshPluginAdapterService.executeCommand(hostInfo, "cat /proc/loadavg | awk '{print $2}'").trim();
+            String loadAvg = SshPluginHelper.executeCommand(hostInfo, "cat /proc/loadavg | awk '{print $2}'").trim();
             systemInfo.setAverageLoad(loadAvg.isEmpty() ? "0.0" : loadAvg);
             
         } catch (Exception e) {
@@ -753,18 +752,18 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     private void collectResourceInfo(HostInfo hostInfo, HostSystemInfo systemInfo) {
         try {
             // CPU核数
-            String cpuCores = sshPluginAdapterService.executeCommand(hostInfo, "nproc").trim();
+            String cpuCores = SshPluginHelper.executeCommand(hostInfo, "nproc").trim();
             systemInfo.setCoreNum(cpuCores.isEmpty() ? 0 : Integer.parseInt(cpuCores));
             
             // 内存总量（KB转换为GB）
-            String memKb = sshPluginAdapterService.executeCommand(hostInfo, "grep MemTotal /proc/meminfo | awk '{print $2}'").trim();
+            String memKb = SshPluginHelper.executeCommand(hostInfo, "grep MemTotal /proc/meminfo | awk '{print $2}'").trim();
             if (!memKb.isEmpty()) {
                 int memGb = (int) (Long.parseLong(memKb) / 1024 / 1024);
                 systemInfo.setTotalMem(memGb);
             }
             
             // 磁盘总量（获取根分区大小，GB）
-            String diskOutput = sshPluginAdapterService.executeCommand(hostInfo, "df -BG / | awk 'NR==2 {print $2}' | sed 's/G//'").trim();
+            String diskOutput = SshPluginHelper.executeCommand(hostInfo, "df -BG / | awk 'NR==2 {print $2}' | sed 's/G//'").trim();
             if (!diskOutput.isEmpty()) {
                 systemInfo.setTotalDisk(Integer.parseInt(diskOutput));
             }
@@ -783,7 +782,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     private void collectOsInfo(HostInfo hostInfo, HostSystemInfo systemInfo) {
         try {
             // CPU架构
-            String arch = sshPluginAdapterService.executeCommand(hostInfo, "uname -m").trim();
+            String arch = SshPluginHelper.executeCommand(hostInfo, "uname -m").trim();
             systemInfo.setCpuArchitecture(arch.isEmpty() ? "unknown" : arch);
             
         } catch (Exception e) {

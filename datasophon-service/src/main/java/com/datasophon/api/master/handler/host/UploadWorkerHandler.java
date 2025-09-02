@@ -19,8 +19,7 @@ package com.datasophon.api.master.handler.host;
 
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.service.SshPluginAdapterService;
-import cn.hutool.extra.spring.SpringUtil;
+import com.datasophon.api.utils.SshPluginHelper;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.HostInfo;
@@ -39,10 +38,8 @@ public class UploadWorkerHandler implements DispatcherWorkerHandler {
         try {
             logger.info("【上传Worker处理器】开始上传Worker包: {}", hostInfo.getIp());
             
-            SshPluginAdapterService sshAdapter = SpringUtil.getBean(SshPluginAdapterService.class);
-            
             String localPath = Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
-            boolean uploadFile = sshAdapter.uploadFile(hostInfo, localPath, Constants.INSTALL_PATH);
+            boolean uploadFile = SshPluginHelper.uploadFile(hostInfo, localPath, Constants.INSTALL_PATH);
             
             if (uploadFile) {
                 hostInfo.setMessage(

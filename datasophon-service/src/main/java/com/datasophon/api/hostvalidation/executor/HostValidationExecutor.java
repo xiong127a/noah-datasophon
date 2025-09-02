@@ -37,7 +37,7 @@ import java.util.Map;
 /**
  * 主机校验执行器
  * 专门负责校验和修复的具体执行逻辑
- * 
+ * <p>
  * 职责：
  * 1. 插件发现和调用
  * 2. 校验结果处理
@@ -53,7 +53,7 @@ import java.util.Map;
 public class HostValidationExecutor {
     
     private final HostValidationStateManager stateManager;
-    private final SpringPluginManager springPluginManager;
+    private final SpringPluginManager springPluginManager; // 保留SpringPluginManager用于获取插件列表
     
     /**
      * 执行主机校验
