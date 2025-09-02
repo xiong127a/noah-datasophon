@@ -27,10 +27,10 @@ import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
 import com.datasophon.plugins.api.model.SystemInfo;
 import com.datasophon.plugins.api.service.SshConnectionService;
-import lombok.RequiredArgsConstructor;
+
+import com.datasophon.common.spring.SpringContextUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
-import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,13 +40,13 @@ import java.util.concurrent.CompletableFuture;
 /**
  * 主机修复插件实现
  * 负责执行各种主机问题修复
- * 
+ * <p>
  * 分层调用架构：
  * 1. 主程序调用修复插件
  * 2. 修复插件调用系统信息收集插件获取当前状态
  * 3. 修复插件调用SSH插件执行修复命令
  * 4. 修复完成后可以重新调用检查插件验证修复结果
- * 
+ * <p>
  * 设计原则：
  * - 修复插件不直接处理SSH连接，通过SSH插件执行命令
  * - 修复插件专注于修复逻辑和命令生成
@@ -58,17 +58,42 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 @Extension
-@Component
-@RequiredArgsConstructor
 public class HostRepairPluginImpl implements HostRepairPlugin {
 
-    private final SshConnectionService sshConnectionService;
-    private final SystemInfoCollectorPlugin systemInfoCollector;
+    private SshConnectionService sshConnectionService;
+    private SystemInfoCollectorPlugin systemInfoCollector;
+
+    @Override
+    public void initialize() {
+        log.info("初始化主机修复插件...");
+        try {
+            // 从Spring容器获取所需的bean
+            if (SpringContextUtils.isInitialized()) {
+                this.sshConnectionService = SpringContextUtils.getBean(SshConnectionService.class);
+                this.systemInfoCollector = SpringContextUtils.getBean(SystemInfoCollectorPlugin.class);
+                
+                if (sshConnectionService != null && systemInfoCollector != null) {
+                    log.info("主机修复插件初始化成功");
+                } else {
+                    log.error("获取Spring bean失败: sshConnectionService={}, systemInfoCollector={}", 
+                             sshConnectionService, systemInfoCollector);
+                }
+            } else {
+                log.error("Spring上下文尚未初始化，无法获取依赖bean");
+            }
+        } catch (Exception e) {
+            log.error("主机修复插件初始化失败", e);
+        }
+    }
 
     @Override
     public Set<OsType> getSupportedOperatingSystems() {
         return Set.of(OsType.CENTOS, OsType.UBUNTU, OsType.KYLIN);
     }
+
+
+
+
 
     @Override
     public List<CheckType> getSupportedRepairTypes() {
@@ -125,20 +150,21 @@ public class HostRepairPluginImpl implements HostRepairPlugin {
 
     @Override
     public boolean canRepair(HostCheckContext context, CheckType repairType) {
-        return getSupportedRepairTypes().contains(repairType) &&
-               getSupportedOperatingSystems().contains(context.getOsType());
+        return getSupportedRepairTypes().contains(repairType) && getSupportedOperatingSystems().contains(context.getOsType()) && sshConnectionService != null && systemInfoCollector != null && context.getHostIp() != null && !context.getHostIp().trim().isEmpty();
     }
 
     @Override
     public String getRepairSuggestion(HostCheckContext context, CheckType repairType) {
         return switch (repairType) {
             case SSH_PASSWORDLESS -> "配置SSH免密登录，添加公钥到authorized_keys文件";
-            case JAVA_ENVIRONMENT_CHECK -> "安装Java环境并配置JAVA_HOME环境变量";
-            case FIREWALL_CHECK -> "关闭防火墙服务或配置防火墙规则";
-            case SELINUX_CHECK -> "禁用SELinux或设置为permissive模式";
-            case FILE_HANDLE_LIMIT_CHECK -> "修改系统文件句柄限制配置";
-            case HOSTS_FILE_CHECK -> "更新hosts文件配置";
-            case TIME_SYNC_CHECK -> "配置时间同步服务";
+            case SSH_CONNECTION -> "检查SSH服务状态，确保端口开放和网络连通性";
+            case JAVA_ENV -> "安装Java环境并配置JAVA_HOME环境变量";
+            case FIREWALL -> "关闭防火墙服务或配置防火墙规则";
+            case SELINUX -> "禁用SELinux或设置为permissive模式";
+            case FILE_HANDLE_LIMIT -> "修改系统文件句柄限制配置";
+            case HOSTS_FILE -> "更新hosts文件配置";
+            case TIME_SYNC -> "配置时间同步服务";
+            case SERVICES -> "启动必要的系统服务";
             default -> "暂无修复建议";
         };
     }

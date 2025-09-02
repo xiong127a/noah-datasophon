@@ -1,2 +1,1 @@
-com.datasophon.plugins.os.OsInfoCollectionPlugin
-com.datasophon.plugins.hardware.HardwareInfoCollectionPlugin
+com.datasophon.plugins.systeminfo.SystemInfoCollectorPluginImpl

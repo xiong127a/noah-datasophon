@@ -54,4 +54,18 @@ public interface SystemInfoCollectorPlugin extends ExtensionPoint {
     default boolean isHealthy() {
         return true;
     }
+
+    /**
+     * 插件初始化方法
+     */
+    default void initialize() {
+        // 默认空实现
+    }
+
+    /**
+     * 插件清理方法
+     */
+    default void cleanup() {
+        // 默认空实现
+    }
 }

@@ -19,7 +19,7 @@ package com.datasophon.plugins.ssh;
 
 import com.datasophon.common.enums.CheckType;
 import com.datasophon.common.enums.OsType;
-import com.datasophon.plugins.api.HostCheckerPlugin;
+import com.datasophon.plugins.api.SshConnectorPlugin;
 import com.datasophon.plugins.api.PluginId;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
@@ -48,7 +48,7 @@ import java.util.concurrent.CompletableFuture;
  */
 @Extension
 @Slf4j
-public class SshConnectivityCheckPlugin implements HostCheckerPlugin {
+public class SshConnectorPluginImpl implements SshConnectorPlugin {
     
     // SSH连接池管理器（插件内部组件）
     private SshConnectionPoolManager sshPoolManager;

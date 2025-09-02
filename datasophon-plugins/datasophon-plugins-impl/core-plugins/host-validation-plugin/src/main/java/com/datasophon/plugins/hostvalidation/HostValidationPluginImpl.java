@@ -27,10 +27,9 @@ import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
 import com.datasophon.plugins.api.model.SystemInfo;
 import com.datasophon.plugins.api.service.SshConnectionService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
-import org.springframework.stereotype.Component;
+import com.datasophon.common.spring.SpringContextUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -40,7 +39,7 @@ import java.util.concurrent.CompletableFuture;
 /**
  * 主机校验插件实现
  * 负责执行各种主机检查项
- * 
+ * <p>
  * 分层调用架构：
  * 1. 主程序调用校验插件
  * 2. 校验插件调用系统信息收集插件获取数据
@@ -53,12 +52,33 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 @Extension
-@Component
-@RequiredArgsConstructor
 public class HostValidationPluginImpl implements HostValidationPlugin {
 
-    private final SshConnectionService sshConnectionService;
-    private final SystemInfoCollectorPlugin systemInfoCollector;
+    private SshConnectionService sshConnectionService;
+    private SystemInfoCollectorPlugin systemInfoCollector;
+
+    @Override
+    public void initialize() {
+        log.info("初始化主机校验插件...");
+        try {
+            // 从Spring容器获取所需的bean
+            if (SpringContextUtils.isInitialized()) {
+                this.sshConnectionService = SpringContextUtils.getBean(SshConnectionService.class);
+                this.systemInfoCollector = SpringContextUtils.getBean(SystemInfoCollectorPlugin.class);
+                
+                if (sshConnectionService != null && systemInfoCollector != null) {
+                    log.info("主机校验插件初始化成功");
+                } else {
+                    log.error("获取Spring bean失败: sshConnectionService={}, systemInfoCollector={}", 
+                             sshConnectionService, systemInfoCollector);
+                }
+            } else {
+                log.error("Spring上下文尚未初始化，无法获取依赖bean");
+            }
+        } catch (Exception e) {
+            log.error("主机校验插件初始化失败", e);
+        }
+    }
 
     @Override
     public Set<OsType> getSupportedOperatingSystems() {
@@ -86,7 +106,8 @@ public class HostValidationPluginImpl implements HostValidationPlugin {
         );
     }
 
-    @Override
+
+
     public CompletableFuture<CheckResult> executeCheck(HostCheckContext context, CheckType checkType) {
         return CompletableFuture.supplyAsync(() -> {
             try {
@@ -128,7 +149,8 @@ public class HostValidationPluginImpl implements HostValidationPlugin {
         });
     }
 
-    @Override
+
+
     public boolean canExecute(HostCheckContext context, CheckType checkType) {
         return getSupportedCheckTypes().contains(checkType) &&
                getSupportedOperatingSystems().contains(context.getOsType());
@@ -398,18 +420,22 @@ public class HostValidationPluginImpl implements HostValidationPlugin {
 
     // 其他检查方法的简化实现
     private CheckResult checkServices(HostCheckContext context) {
+        log.debug("执行系统服务检查: {}", context.getHostIp());
         return createSimpleResult(CheckType.SERVICES, ValidationStatus.SUCCESS, "系统服务检查通过");
     }
 
     private CheckResult checkHostsFile(HostCheckContext context) {
+        log.debug("执行Hosts文件检查: {}", context.getHostIp());
         return createSimpleResult(CheckType.HOSTS_FILE, ValidationStatus.SUCCESS, "Hosts文件检查通过");
     }
 
     private CheckResult checkFileHandleLimit(HostCheckContext context) {
+        log.debug("执行文件句柄限制检查: {}", context.getHostIp());
         return createSimpleResult(CheckType.FILE_HANDLE_LIMIT, ValidationStatus.SUCCESS, "文件句柄限制检查通过");
     }
 
     private CheckResult checkTimeSync(HostCheckContext context) {
+        log.debug("执行时间同步检查: {}", context.getHostIp());
         return createSimpleResult(CheckType.TIME_SYNC, ValidationStatus.SUCCESS, "时间同步检查通过");
     }
 

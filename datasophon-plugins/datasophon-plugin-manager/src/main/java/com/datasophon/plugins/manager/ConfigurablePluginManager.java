@@ -92,6 +92,7 @@ public class ConfigurablePluginManager extends DefaultPluginManager {
     
     /**
      * 重写getPluginsRoots方法，返回包含自定义路径的列表
+     * 修复路径重复问题：如果构造函数传入了路径，则不再添加自定义路径，避免重复
      */
     @Override
     public List<Path> getPluginsRoots() {
@@ -105,8 +106,13 @@ public class ConfigurablePluginManager extends DefaultPluginManager {
             allRoots.addAll(superRoots);
         }
         
-        // 添加自定义根目录（现在保证不为null）
-        allRoots.addAll(customPluginRoots);
+        // 只有在父类没有路径时才添加自定义根目录，避免重复
+        if (superRoots == null || superRoots.isEmpty()) {
+            allRoots.addAll(customPluginRoots);
+            log.debug("添加自定义插件根目录: {}", customPluginRoots.size());
+        } else {
+            log.debug("父类已有插件根目录，跳过自定义根目录添加以避免重复");
+        }
         
         log.debug("插件根目录总数: {}, 默认: {}, 自定义: {}", 
                 allRoots.size(), 

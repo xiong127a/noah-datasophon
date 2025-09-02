@@ -25,12 +25,10 @@ import com.datasophon.plugins.api.model.SystemInfo;
 import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.plugins.systeminfo.strategy.OsInfoCollectionStrategy;
 import com.datasophon.plugins.systeminfo.strategy.OsInfoCollectionStrategyFactory;
-import lombok.RequiredArgsConstructor;
+import com.datasophon.common.spring.SpringContextUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
-import org.springframework.stereotype.Component;
 
-import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -53,12 +51,33 @@ import java.util.concurrent.CompletableFuture;
  */
 @Slf4j
 @Extension
-@Component
-@RequiredArgsConstructor
 public class SystemInfoCollectorPluginImpl implements SystemInfoCollectorPlugin {
 
-    private final SshConnectionService sshConnectionService;
-    private final OsInfoCollectionStrategyFactory strategyFactory;
+    private SshConnectionService sshConnectionService;
+    private OsInfoCollectionStrategyFactory strategyFactory;
+
+    @Override
+    public void initialize() {
+        log.info("初始化系统信息收集插件...");
+        try {
+            // 从Spring容器获取所需的bean
+            if (SpringContextUtils.isInitialized()) {
+                this.sshConnectionService = SpringContextUtils.getBean(SshConnectionService.class);
+                this.strategyFactory = SpringContextUtils.getBean(OsInfoCollectionStrategyFactory.class);
+                
+                if (sshConnectionService != null && strategyFactory != null) {
+                    log.info("系统信息收集插件初始化成功");
+                } else {
+                    log.error("获取Spring bean失败: sshConnectionService={}, strategyFactory={}", 
+                             sshConnectionService, strategyFactory);
+                }
+            } else {
+                log.error("Spring上下文尚未初始化，无法获取依赖bean");
+            }
+        } catch (Exception e) {
+            log.error("系统信息收集插件初始化失败", e);
+        }
+    }
 
     @Override
     public CompletableFuture<SystemInfo> collectSystemInfo(HostCheckContext context) {
