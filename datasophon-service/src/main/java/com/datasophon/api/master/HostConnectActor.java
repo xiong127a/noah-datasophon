@@ -23,7 +23,10 @@ package com.datasophon.api.master;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.api.utils.SshPluginHelper;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.model.CommandResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.common.command.HostCheckCommand;
 import com.datasophon.common.model.CommonResult;
 import com.datasophon.common.model.HostInfo;
@@ -40,6 +43,22 @@ import java.util.Optional;
 public class HostConnectActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(HostConnectActor.class);
+    
+    // SSH连接服务
+    private final SshConnectionService sshService = 
+            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+
+    /**
+     * 构建SSH检查上下文
+     */
+    private HostCheckContext buildHostCheckContext(HostInfo hostInfo) {
+        return HostCheckContext.builder()
+                .hostIp(hostInfo.getIp())
+                .sshPort(hostInfo.getSshPort())
+                .sshUser(hostInfo.getSshUser())
+                .sshPassword(hostInfo.getSshPassword())
+                .build();
+    }
 
     @Override
     public void preRestart(Throwable reason, Optional<Object> message) throws Exception {
@@ -118,7 +137,9 @@ public class HostConnectActor extends AbstractActor {
                 try {
                     // 通过SSH插件适配器测试连接
                     // 使用SSH插件辅助工具测试连接
-                    boolean connectionSuccess = SshPluginHelper.testConnection(hostInfo).isSuccess();
+                    HostCheckContext context = buildHostCheckContext(hostInfo);
+                    CommandResult connectionTest = sshService.testConnection(context);
+                    boolean connectionSuccess = connectionTest.isSuccess();
                     
                     if (connectionSuccess) {
                         hostInfo.setCommonResult(

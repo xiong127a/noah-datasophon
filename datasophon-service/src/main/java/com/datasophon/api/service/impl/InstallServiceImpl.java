@@ -46,7 +46,10 @@ import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.exception.ServiceException;
 import com.datasophon.common.exception.BusinessException;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.utils.SshPluginHelper;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.model.CommandResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.common.model.WorkerServiceMessage;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
@@ -82,9 +85,23 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     private  ClusterInfoService clusterInfoService;
     @Autowired
     private  ClusterHostService hostService;
-    // SSH功能通过SshPluginHelper工具类提供
+    // SSH连接服务
+    private final SshConnectionService sshService = 
+            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
     @Autowired
     private  InstallStepConverter installStepConverter;
+
+    /**
+     * 构建SSH检查上下文
+     */
+    private HostCheckContext buildHostCheckContext(HostInfo hostInfo) {
+        return HostCheckContext.builder()
+                .hostIp(hostInfo.getIp())
+                .sshPort(hostInfo.getSshPort())
+                .sshUser(hostInfo.getSshUser())
+                .sshPassword(hostInfo.getSshPassword())
+                .build();
+    }
 
     @Override
     public List<InstallStepDTO> getInstallStepsByType(Integer installType) {
@@ -313,7 +330,9 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 HostInfo hostInfo = new HostInfo(clusterHostEntity.getIp(), 22, Constants.ROOT);
                 String command = "service datasophon-worker " + commandType;
                 
-                String commandResult = SshPluginHelper.executeCommand(hostInfo, command);
+                HostCheckContext context = buildHostCheckContext(hostInfo);
+                CommandResult cmdResult = sshService.executeCommand(context, command);
+                String commandResult = cmdResult.isSuccess() ? cmdResult.output() : "";
                 result.put("success", true);
                 result.put("output", commandResult);
                 log.info("【安装服务】主机代理命令执行成功: {} -> {}", clusterHostEntity.getIp(), commandResult);
@@ -405,7 +424,9 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 String command = "tail -n 100 /opt/datasophon/datasophon-worker/logs/datasophon-worker.log";
                 
                 // 4. 使用SSH插件适配器执行命令并返回日志内容
-                String logContent = SshPluginHelper.executeCommand(hostInfo, command);
+                HostCheckContext context = buildHostCheckContext(hostInfo);
+                CommandResult result = sshService.executeCommand(context, command);
+                String logContent = result.isSuccess() ? result.output() : "";
                 
                 log.debug("【安装服务】获取主机工作日志成功: {} -> {} 字符", hostInfo.getIp(),
                         logContent.length());

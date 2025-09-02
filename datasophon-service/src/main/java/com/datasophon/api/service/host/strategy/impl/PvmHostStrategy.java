@@ -36,8 +36,10 @@ import org.apache.commons.validator.routines.InetAddressValidator;
 import org.apache.commons.lang3.Range;
 import org.apache.commons.lang3.StringUtils;
 import com.datasophon.common.model.HostInfo;
-import com.datasophon.api.utils.SshPluginHelper;
-import com.datasophon.plugins.api.model.CheckResult;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.model.CommandResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.service.SshConnectionService;
 
 /**
  * PVM（传统虚拟机）主机管理策略实现
@@ -50,11 +52,25 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     @Autowired
     private ClusterHostService clusterHostService;
     
-    // SSH功能通过SshPluginHelper工具类提供
+    // SSH连接服务
+    private final SshConnectionService sshService = 
+            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
 
     @Override
     public StrategyType getStrategyType() {
         return StrategyType.PVM;
+    }
+
+    /**
+     * 构建SSH检查上下文
+     */
+    private HostCheckContext buildHostCheckContext(HostInfo hostInfo) {
+        return HostCheckContext.builder()
+                .hostIp(hostInfo.getIp())
+                .sshPort(hostInfo.getSshPort())
+                .sshUser(hostInfo.getSshUser())
+                .sshPassword(hostInfo.getSshPassword())
+                .build();
     }
 
 
@@ -659,14 +675,16 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             // 使用SSH插件适配器获取主机名
             
             // 先测试连接
-            CheckResult connectionTest = SshPluginHelper.testConnection(hostInfo);
+            HostCheckContext context = buildHostCheckContext(hostInfo);
+            CommandResult connectionTest = sshService.testConnection(context);
             if (!connectionTest.isSuccess()) {
-                log.warn("主机{}SSH连接测试失败: {}", ip, connectionTest.getMessage());
+                log.warn("主机{}SSH连接测试失败: {}", ip, connectionTest.error());
                 return ip; // 连接失败，返回IP
             }
             
             // 获取主机名
-            String hostname = SshPluginHelper.executeCommand(hostInfo, "hostname").trim();
+            CommandResult hostnameResult = sshService.executeCommand(context, "hostname");
+            String hostname = hostnameResult.isSuccess() ? hostnameResult.output().trim() : "";
             if (!hostname.isEmpty() && !hostname.equals("localhost")) {
                 log.debug("成功获取主机{}的主机名: {}", ip, hostname);
                 return hostname;
@@ -697,10 +715,11 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             hostInfo.setSshPort(connectionParams.getSshPort());
             
             // 测试连接
-            CheckResult connectionTest = SshPluginHelper.testConnection(hostInfo);
+            HostCheckContext context = buildHostCheckContext(hostInfo);
+            CommandResult connectionTest = sshService.testConnection(context);
             if (!connectionTest.isSuccess()) {
                 systemInfo.setConnectionStatus("FAILED");
-                systemInfo.setErrorMessage(connectionTest.getMessage());
+                systemInfo.setErrorMessage(connectionTest.error());
                 return systemInfo;
             }
             
@@ -728,7 +747,9 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     private void collectBasicInfo(HostInfo hostInfo, HostSystemInfo systemInfo) {
         try {
             // 主机名
-            String hostname = SshPluginHelper.executeCommand(hostInfo, "hostname").trim();
+            HostCheckContext context = buildHostCheckContext(hostInfo);
+            CommandResult hostnameResult = sshService.executeCommand(context, "hostname");
+            String hostname = hostnameResult.isSuccess() ? hostnameResult.output().trim() : "";
             if (!hostname.isEmpty() && !hostname.equals("localhost")) {
                 systemInfo.setHostname(hostname);
             } else {
@@ -736,7 +757,8 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             }
             
             // 系统负载
-            String loadAvg = SshPluginHelper.executeCommand(hostInfo, "cat /proc/loadavg | awk '{print $2}'").trim();
+            CommandResult loadResult = sshService.executeCommand(context, "cat /proc/loadavg | awk '{print $2}'");
+            String loadAvg = loadResult.isSuccess() ? loadResult.output().trim() : "0.0";
             systemInfo.setAverageLoad(loadAvg.isEmpty() ? "0.0" : loadAvg);
             
         } catch (Exception e) {
@@ -752,18 +774,22 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     private void collectResourceInfo(HostInfo hostInfo, HostSystemInfo systemInfo) {
         try {
             // CPU核数
-            String cpuCores = SshPluginHelper.executeCommand(hostInfo, "nproc").trim();
+            HostCheckContext context = buildHostCheckContext(hostInfo);
+            CommandResult coreResult = sshService.executeCommand(context, "nproc");
+            String cpuCores = coreResult.isSuccess() ? coreResult.output().trim() : "1";
             systemInfo.setCoreNum(cpuCores.isEmpty() ? 0 : Integer.parseInt(cpuCores));
             
             // 内存总量（KB转换为GB）
-            String memKb = SshPluginHelper.executeCommand(hostInfo, "grep MemTotal /proc/meminfo | awk '{print $2}'").trim();
+            CommandResult memResult = sshService.executeCommand(context, "grep MemTotal /proc/meminfo | awk '{print $2}'");
+            String memKb = memResult.isSuccess() ? memResult.output().trim() : "";
             if (!memKb.isEmpty()) {
                 int memGb = (int) (Long.parseLong(memKb) / 1024 / 1024);
                 systemInfo.setTotalMem(memGb);
             }
             
             // 磁盘总量（获取根分区大小，GB）
-            String diskOutput = SshPluginHelper.executeCommand(hostInfo, "df -BG / | awk 'NR==2 {print $2}' | sed 's/G//'").trim();
+            CommandResult diskResult = sshService.executeCommand(context, "df -BG / | awk 'NR==2 {print $2}' | sed 's/G//'");
+            String diskOutput = diskResult.isSuccess() ? diskResult.output().trim() : "";
             if (!diskOutput.isEmpty()) {
                 systemInfo.setTotalDisk(Integer.parseInt(diskOutput));
             }
@@ -782,7 +808,9 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     private void collectOsInfo(HostInfo hostInfo, HostSystemInfo systemInfo) {
         try {
             // CPU架构
-            String arch = SshPluginHelper.executeCommand(hostInfo, "uname -m").trim();
+            HostCheckContext context = buildHostCheckContext(hostInfo);
+            CommandResult archResult = sshService.executeCommand(context, "uname -m");
+            String arch = archResult.isSuccess() ? archResult.output().trim() : "unknown";
             systemInfo.setCpuArchitecture(arch.isEmpty() ? "unknown" : arch);
             
         } catch (Exception e) {

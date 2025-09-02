@@ -20,7 +20,10 @@ package com.datasophon.api.master.handler.host;
 import cn.hutool.core.io.FileUtil;
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.utils.SshPluginHelper;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.model.CommandResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.HostInfo;
@@ -33,6 +36,23 @@ import java.nio.charset.Charset;
 public class CheckWorkerMd5Handler implements DispatcherWorkerHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(CheckWorkerMd5Handler.class);
+    
+    // SSH连接服务
+    private final SshConnectionService sshService = 
+            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+
+    /**
+     * 构建SSH检查上下文
+     */
+    private HostCheckContext buildHostCheckContext(HostInfo hostInfo) {
+        return HostCheckContext.builder()
+                .hostIp(hostInfo.getIp())
+                .sshPort(hostInfo.getSshPort())
+                .sshUser(hostInfo.getSshUser())
+                .sshPassword(hostInfo.getSshPassword())
+                .build();
+    }
+    
     @Override
     public boolean handle(HostInfo hostInfo) {
         try {
@@ -41,7 +61,9 @@ public class CheckWorkerMd5Handler implements DispatcherWorkerHandler {
             // 使用SSH插件辅助工具
             
             // 通过SSH插件辅助工具执行MD5检查命令
-            String checkWorkerMd5Result = SshPluginHelper.executeCommand(hostInfo, Constants.CHECK_WORKER_MD5_CMD).trim();
+            HostCheckContext context = buildHostCheckContext(hostInfo);
+            CommandResult md5Result = sshService.executeCommand(context, Constants.CHECK_WORKER_MD5_CMD);
+            String checkWorkerMd5Result = md5Result.isSuccess() ? md5Result.output().trim() : "";
             
             // 读取本地MD5文件
             String md5 = FileUtil.readString(

@@ -28,7 +28,10 @@ import com.datasophon.api.master.handler.host.DispatcherWorkerHandlerChain;
 import com.datasophon.api.master.handler.host.StartWorkerHandler;
 import com.datasophon.api.master.handler.host.UploadWorkerHandler;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.utils.SshPluginHelper;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.model.CommandResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.model.HostInfo;
 
@@ -41,6 +44,22 @@ import java.util.Optional;
 public class DispatcherWorkerActor extends AbstractActor {
 
     private static final Logger logger = LoggerFactory.getLogger(DispatcherWorkerActor.class);
+    
+    // SSH连接服务
+    private final SshConnectionService sshService = 
+            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+
+    /**
+     * 构建SSH检查上下文
+     */
+    private HostCheckContext buildHostCheckContext(HostInfo hostInfo) {
+        return HostCheckContext.builder()
+                .hostIp(hostInfo.getIp())
+                .sshPort(hostInfo.getSshPort())
+                .sshUser(hostInfo.getSshUser())
+                .sshPassword(hostInfo.getSshPassword())
+                .build();
+    }
 
     @Override
     public void preRestart(Throwable reason, Optional<Object> message) throws Exception {
@@ -62,7 +81,9 @@ public class DispatcherWorkerActor extends AbstractActor {
                     try {
                         // 通过SSH插件适配器验证连接
                         // 使用SSH插件辅助工具测试连接
-                        boolean connectionValid = SshPluginHelper.testConnection(hostInfo).isSuccess();
+                        HostCheckContext context = buildHostCheckContext(hostInfo);
+                        CommandResult connectionTest = sshService.testConnection(context);
+                        boolean connectionValid = connectionTest.isSuccess();
                         
                         if (!connectionValid) {
                             logger.error("【分发Worker Actor】SSH连接验证失败，无法分发代理: {}", hostInfo.getIp());

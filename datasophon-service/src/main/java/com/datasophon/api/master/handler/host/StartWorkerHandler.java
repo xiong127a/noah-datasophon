@@ -24,9 +24,13 @@ import com.datasophon.api.utils.MessageResolverUtils;
 
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.InstallState;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.model.CommandResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.common.model.HostInfo;
 import org.apache.commons.lang3.StringUtils;
-import com.datasophon.api.utils.SshPluginHelper;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -38,16 +42,29 @@ import java.time.LocalDateTime;
 public class StartWorkerHandler implements DispatcherWorkerHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(StartWorkerHandler.class);
-
+    
+    // SSH连接服务
+    private final SshConnectionService sshService = 
+            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
 
     private Long clusterId;
-
-
     private String clusterFrame;
 
     public StartWorkerHandler(Long clusterId, String clusterFrame) {
         this.clusterId = clusterId;
         this.clusterFrame = clusterFrame;
+    }
+    
+    /**
+     * 构建SSH检查上下文
+     */
+    private HostCheckContext buildHostCheckContext(HostInfo hostInfo) {
+        return HostCheckContext.builder()
+                .hostIp(hostInfo.getIp())
+                .sshPort(hostInfo.getSshPort())
+                .sshUser(hostInfo.getSshUser())
+                .sshPassword(hostInfo.getSshPassword())
+                .build();
     }
 
     @Override
@@ -61,12 +78,13 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             logger.info("【StartWorker处理器】开始启动Worker: {}", hostInfo.getIp());
 
             // 检测Linux发行版
-            String distroInfo = SshPluginHelper.detectLinuxDistro(hostInfo);
+            // 检测Linux发行版和系统ID
+            HostCheckContext context = buildHostCheckContext(hostInfo);
+            CommandResult distroResult = sshService.executeCommand(context, 
+                    "cat /etc/os-release | grep -E '^ID=' | cut -d'=' -f2 | tr -d '\"'");
+            String osId = distroResult.isSuccess() ? distroResult.output().trim() : "linux";
+            String distroInfo = osId.isEmpty() ? "linux" : osId;
             logger.info("【StartWorker处理器】主机 {} 的Linux发行版: {}", hostInfo.getIp(), distroInfo);
-
-            // 获取系统ID
-            String osId = SshPluginHelper.executeCommand(hostInfo, 
-                    "cat /etc/os-release | grep -E '^ID=' | cut -d'=' -f2 | tr -d '\"'").trim();
             logger.info("【StartWorker处理器】系统ID: {}", osId);
 
         // 确定服务脚本路径
@@ -95,7 +113,8 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
                     Constants.SPACE +
                     hostInfo.getIp();
             
-            String updateCommonPropertiesResult = SshPluginHelper.executeCommand(hostInfo, updateCommand);
+            CommandResult updateResult = sshService.executeCommand(context, updateCommand);
+            String updateCommonPropertiesResult = updateResult.isSuccess() ? updateResult.output() : "failed";
         if (StringUtils.isBlank(updateCommonPropertiesResult) || "failed".equals(updateCommonPropertiesResult)) {
             logger.error("common.properties update failed");
             hostInfo.setErrMsg("common.properties update failed");
@@ -106,8 +125,8 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
 
             // 初始化环境
             logger.info("【StartWorker处理器】初始化系统环境");
-            SshPluginHelper.safeExecuteCommand(hostInfo, "ulimit -n 65535");
-            SshPluginHelper.safeExecuteCommand(hostInfo, "sysctl -w vm.max_map_count=2000000");
+            sshService.executeCommand(context, "ulimit -n 65535");
+            sshService.executeCommand(context, "sysctl -w vm.max_map_count=2000000");
 
             // 配置Worker服务自启动
             logger.info("【StartWorker处理器】配置Worker服务自启动");
@@ -117,49 +136,59 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             String result;
 
             // 1. 检查并创建服务目录（如果需要）
-            SshPluginHelper.safeExecuteCommand(hostInfo, "sudo mkdir -p " + serviceDir);
+            sshService.executeCommand(context, "sudo mkdir -p " + serviceDir);
 
             // 2. 复制服务脚本
-            result = SshPluginHelper.safeExecuteCommand(hostInfo,
+            CommandResult copyResult = sshService.executeCommand(context,
                     "\\cp " + installPath + "/datasophon-worker/script/datasophon-worker " + serviceDir + "/");
-            success &= !result.startsWith("ERROR:");
+            success &= copyResult.isSuccess();
+            result = copyResult.isSuccess() ? "SUCCESS" : "ERROR: " + copyResult.error();
 
             // 3. 设置执行权限
-            result = SshPluginHelper.safeExecuteCommand(hostInfo, "chmod +x " + serviceDir + "/datasophon-worker");
-            success &= !result.startsWith("ERROR:");
+            CommandResult chmodResult = sshService.executeCommand(context, "chmod +x " + serviceDir + "/datasophon-worker");
+            success &= chmodResult.isSuccess();
+            result = chmodResult.isSuccess() ? "SUCCESS" : "ERROR: " + chmodResult.error();
 
             // 4. 根据系统类型配置服务
             if (useSystemd) {
                 logger.info("【StartWorker处理器】使用systemd配置服务");
-                boolean createResult = SshPluginHelper.createSystemdServiceForDebian(hostInfo,
-                        serviceDir + "/datasophon-worker", installPath);
+                // 创建systemd服务文件
+                String createServiceCommand = getCreateServiceCommand(serviceDir, installPath);
+                CommandResult serviceFileResult = sshService.executeCommand(context, createServiceCommand);
+                boolean createResult = serviceFileResult.isSuccess();
                 logger.info("【StartWorker处理器】systemd服务文件创建结果: {}", createResult ? "成功" : "失败");
 
                 if (createResult) {
                     // 如果创建成功，使用systemctl管理服务
-                    SshPluginHelper.safeExecuteCommand(hostInfo, "systemctl daemon-reload");
-                    result = SshPluginHelper.safeExecuteCommand(hostInfo, "systemctl enable datasophon-worker");
+                    sshService.executeCommand(context, "systemctl daemon-reload");
+                    CommandResult enableResult = sshService.executeCommand(context, "systemctl enable datasophon-worker");
+                    result = enableResult.isSuccess() ? "SUCCESS" : "ERROR: " + enableResult.error();
                 } else {
                     // 回退到传统方式
+                    CommandResult serviceResult;
                     if ("kylin".equals(osId)) {
-                        result = SshPluginHelper.safeExecuteCommand(hostInfo, "chkconfig --add datasophon-worker");
+                        serviceResult = sshService.executeCommand(context, "chkconfig --add datasophon-worker");
                     } else {
-                        result = SshPluginHelper.safeExecuteCommand(hostInfo, "update-rc.d datasophon-worker defaults");
+                        serviceResult = sshService.executeCommand(context, "update-rc.d datasophon-worker defaults");
                     }
+                    result = serviceResult.isSuccess() ? "SUCCESS" : "ERROR: " + serviceResult.error();
                 }
             } else {
                 // CentOS使用chkconfig
-                result = SshPluginHelper.safeExecuteCommand(hostInfo, "chkconfig --add datasophon-worker");
+                CommandResult chkconfigResult = sshService.executeCommand(context, "chkconfig --add datasophon-worker");
+                result = chkconfigResult.isSuccess() ? "SUCCESS" : "ERROR: " + chkconfigResult.error();
             }
             success &= !result.startsWith("ERROR:");
 
             // 6. 安装环境变量脚本
-            result = SshPluginHelper.safeExecuteCommand(hostInfo,
+            CommandResult envResult = sshService.executeCommand(context,
                     "\\cp " + installPath + "/datasophon-worker/script/datasophon-env.sh /etc/profile.d/");
-            success &= !result.startsWith("ERROR:");
+            success &= envResult.isSuccess();
+            result = envResult.isSuccess() ? "SUCCESS" : "ERROR: " + envResult.error();
 
             // 7. 加载环境变量
-            result = SshPluginHelper.safeExecuteCommand(hostInfo, "source /etc/profile.d/datasophon-env.sh");
+            CommandResult sourceResult = sshService.executeCommand(context, "source /etc/profile.d/datasophon-env.sh");
+            result = sourceResult.isSuccess() ? "SUCCESS" : "ERROR: " + sourceResult.error();
             success &= !result.startsWith("ERROR:");
 
             hostInfo.setMessage(MessageResolverUtils.getMessage("start.host.management.agent"));
@@ -167,16 +196,20 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             // 8. 启动服务
             logger.info("【StartWorker处理器】启动Worker服务: {}", hostInfo.getIp());
             if (useSystemd) {
-                SshPluginHelper.safeExecuteCommand(hostInfo, "systemctl daemon-reload");
+                sshService.executeCommand(context, "systemctl daemon-reload");
                 // 使用restart替代start命令启动
-                result = SshPluginHelper.safeExecuteCommand(hostInfo,
+                CommandResult restartScriptResult = sshService.executeCommand(context,
                         installPath + "/datasophon-worker/bin/datasophon-worker.sh restart worker");
                 // 如果直接调用成功，再通过systemd重启确保服务被正确管理
-                if (!result.startsWith("ERROR:")) {
-                    result = SshPluginHelper.safeExecuteCommand(hostInfo, "systemctl restart datasophon-worker");
+                if (restartScriptResult.isSuccess()) {
+                    CommandResult systemdRestartResult = sshService.executeCommand(context, "systemctl restart datasophon-worker");
+                    result = systemdRestartResult.isSuccess() ? "SUCCESS" : "ERROR: " + systemdRestartResult.error();
+                } else {
+                    result = "ERROR: " + restartScriptResult.error();
                 }
             } else {
-                result = SshPluginHelper.safeExecuteCommand(hostInfo, "service datasophon-worker restart");
+                CommandResult serviceRestartResult = sshService.executeCommand(context, "service datasophon-worker restart");
+                result = serviceRestartResult.isSuccess() ? "SUCCESS" : "ERROR: " + serviceRestartResult.error();
             }
             success &= !result.startsWith("ERROR:");
 
@@ -186,11 +219,13 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
 
             // 9. 验证服务状态
             logger.info("【StartWorker处理器】验证服务状态...");
+            CommandResult statusResult;
             if (useSystemd) {
-                result = SshPluginHelper.safeExecuteCommand(hostInfo, "systemctl status datasophon-worker");
+                statusResult = sshService.executeCommand(context, "systemctl status datasophon-worker");
             } else {
-                result = SshPluginHelper.safeExecuteCommand(hostInfo, "service datasophon-worker status");
+                statusResult = sshService.executeCommand(context, "service datasophon-worker status");
             }
+            result = statusResult.isSuccess() ? "SUCCESS" : "ERROR: " + statusResult.error();
             logger.info("【StartWorker处理器】服务状态: {}", result);
 
             hostInfo.setProgress(75);
@@ -205,5 +240,33 @@ public class StartWorkerHandler implements DispatcherWorkerHandler {
             hostInfo.setErrorMessage("StartWorker处理异常: " + e.getMessage());
             return false;
         }
+    }
+
+    private static String getCreateServiceCommand(String serviceDir, String installPath) {
+        String serviceContent = String.format(
+                """
+                        [Unit]
+                        Description=DataSophon Worker Service
+                        After=network.target
+                        
+                        [Service]
+                        Type=forking
+                        ExecStart=%s start
+                        ExecStop=%s stop
+                        ExecReload=%s restart
+                        WorkingDirectory=%s
+                        User=root
+                        Group=root
+                        Restart=on-failure
+                        RestartSec=10
+                        
+                        [Install]
+                        WantedBy=multi-user.target
+                        """,
+            serviceDir + "/datasophon-worker", serviceDir + "/datasophon-worker",
+            serviceDir + "/datasophon-worker", installPath);
+
+        return String.format("echo '%s' | tee /etc/systemd/system/datasophon-worker.service > /dev/null",
+                serviceContent.replace("'", "'\"'\"'"));
     }
 }

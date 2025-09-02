@@ -19,7 +19,10 @@ package com.datasophon.api.master.handler.host;
 
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.utils.SshPluginHelper;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.model.CommandResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.HostInfo;
@@ -32,6 +35,22 @@ import org.slf4j.LoggerFactory;
 public class DecompressWorkerHandler implements DispatcherWorkerHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DecompressWorkerHandler.class);
+    
+    // SSH连接服务
+    private final SshConnectionService sshService = 
+            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+
+    /**
+     * 构建SSH检查上下文
+     */
+    private HostCheckContext buildHostCheckContext(HostInfo hostInfo) {
+        return HostCheckContext.builder()
+                .hostIp(hostInfo.getIp())
+                .sshPort(hostInfo.getSshPort())
+                .sshUser(hostInfo.getSshUser())
+                .sshPassword(hostInfo.getSshPassword())
+                .build();
+    }
 
     @Override
     public boolean handle(HostInfo hostInfo) {
@@ -41,9 +60,11 @@ public class DecompressWorkerHandler implements DispatcherWorkerHandler {
             // 使用SSH插件辅助工具
             
             // 通过SSH插件辅助工具执行解压命令
-            String decompressResult = SshPluginHelper.executeCommand(hostInfo, Constants.UNZIP_DDH_WORKER_CMD);
+            HostCheckContext context = buildHostCheckContext(hostInfo);
+            CommandResult decompressResult = sshService.executeCommand(context, Constants.UNZIP_DDH_WORKER_CMD);
+            String result = decompressResult.isSuccess() ? decompressResult.output() : "";
             
-            if (Constants.FAILED.equals(decompressResult)) {
+            if (Constants.FAILED.equals(result)) {
                 logger.error("【解压Worker处理器】tar -zxvf datasophon-worker.tar.gz failed");
                 hostInfo.setErrMsg("tar -zxvf datasophon-worker.tar.gz failed");
                 hostInfo.setMessage(MessageResolverUtils.getMessage("decompress.installation.package.fail"));

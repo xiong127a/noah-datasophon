@@ -19,7 +19,9 @@ package com.datasophon.api.master.handler.host;
 
 import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.api.utils.MessageResolverUtils;
-import com.datasophon.api.utils.SshPluginHelper;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.enums.InstallState;
 import com.datasophon.common.model.HostInfo;
@@ -32,6 +34,22 @@ import org.slf4j.LoggerFactory;
 public class UploadWorkerHandler implements DispatcherWorkerHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(UploadWorkerHandler.class);
+    
+    // SSH连接服务
+    private final SshConnectionService sshService = 
+            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+
+    /**
+     * 构建SSH检查上下文
+     */
+    private HostCheckContext buildHostCheckContext(HostInfo hostInfo) {
+        return HostCheckContext.builder()
+                .hostIp(hostInfo.getIp())
+                .sshPort(hostInfo.getSshPort())
+                .sshUser(hostInfo.getSshUser())
+                .sshPassword(hostInfo.getSshPassword())
+                .build();
+    }
 
     @Override
     public boolean handle(HostInfo hostInfo) {
@@ -39,7 +57,8 @@ public class UploadWorkerHandler implements DispatcherWorkerHandler {
             logger.info("【上传Worker处理器】开始上传Worker包: {}", hostInfo.getIp());
             
             String localPath = Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
-            boolean uploadFile = SshPluginHelper.uploadFile(hostInfo, localPath, Constants.INSTALL_PATH);
+            HostCheckContext context = buildHostCheckContext(hostInfo);
+            boolean uploadFile = sshService.uploadFile(context, localPath, Constants.INSTALL_PATH);
             
             if (uploadFile) {
                 hostInfo.setMessage(
