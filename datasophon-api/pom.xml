@@ -154,59 +154,32 @@
             </resource>
         </resources>
         <plugins>
-            <!-- Maven编译插件配置MapStruct注解处理器 -->
+            <!-- 🔧 修复：API模块编译器配置优化 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>21</source>
-                    <target>21</target>
+                    <release>21</release>
                     <encoding>UTF-8</encoding>
-                    <!-- Windows乱码修复：强制设置文件编码 -->
-                    <fork>true</fork>
-                    <meminitial>1024m</meminitial>
-                    <maxmem>4096m</maxmem>
-                    <!-- 启用参数名保留、并行编译和UTF-8编码 -->
+                    <!-- 🔧 修复：简化配置，继承父配置 -->
                     <compilerArgs>
                         <arg>-parameters</arg>
-                        <arg>-J-Dfile.encoding=UTF-8</arg>
-                        <arg>-J-Duser.language=zh</arg>
-                        <arg>-J-Duser.country=CN</arg>
-                        <arg>-J-Dconsole.encoding=UTF-8</arg>
-                        <arg>-J-Dstdout.encoding=UTF-8</arg>
-                        <arg>-J-Dstderr.encoding=UTF-8</arg>
-                        <arg>-J-Dsun.jnu.encoding=UTF-8</arg>
-                        <arg>-J-Xmx4g</arg>
-                        <arg>-J-Xms1g</arg>
-                        <arg>-J-XX:+UseG1GC</arg>
-                        <arg>-J-XX:+ParallelRefProcEnabled</arg>
-                        <arg>-J-XX:MaxMetaspaceSize=512m</arg>
                     </compilerArgs>
-                    <!-- 禁用增量编译，确保完整重建 -->
-                    <useIncrementalCompilation>false</useIncrementalCompilation>
-                    <!-- 强制重新编译所有源文件 -->
-                    <staleMillis>0</staleMillis>
-                    <!-- 确保编译过程的确定性 -->
-                    <forceJavacCompilerUse>true</forceJavacCompilerUse>
-                    <!-- 显示详细的编译信息 -->
-                    <verbose>false</verbose>
-                    <showWarnings>true</showWarnings>
-                    <showDeprecation>false</showDeprecation>
-                    <!-- 确保依赖的类路径正确 -->
+                    <!-- 🔧 修复：严格的错误处理 -->
                     <failOnError>true</failOnError>
+                    <!-- 🔧 修复：正确的注解处理器配置顺序 -->
                     <annotationProcessorPaths>
-                        <path>
-                            <groupId>org.mapstruct</groupId>
-                            <artifactId>mapstruct-processor</artifactId>
-                            <version>${mapstruct.version}</version>
-                        </path>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
                             <version>${lombok.version}</version>
                         </path>
-                        <!-- Lombok和MapStruct一起使用的适配器 -->
+                        <path>
+                            <groupId>org.mapstruct</groupId>
+                            <artifactId>mapstruct-processor</artifactId>
+                            <version>${mapstruct.version}</version>
+                        </path>
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok-mapstruct-binding</artifactId>

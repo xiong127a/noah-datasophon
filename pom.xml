@@ -613,31 +613,28 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <source>${java.version}</source>
-                    <target>${java.version}</target>
+                    <release>${java.version}</release>
                     <encoding>UTF-8</encoding>
-                    <!-- Windows乱码修复：强制设置文件编码 -->
+                    <!-- 🔧 修复：启用增量编译和正确的错误处理 -->
+                    <useIncrementalCompilation>true</useIncrementalCompilation>
+                    <!-- 🔧 修复：正确的内存配置 -->
                     <fork>true</fork>
                     <meminitial>1024m</meminitial>
-                    <maxmem>4096m</maxmem>
-                    <!-- 启用参数名保留和并行编译 -->
+                    <maxmem>2048m</maxmem>
+                    <!-- 🔧 修复：JDK21优化的编译参数 -->
                     <compilerArgs>
                         <arg>-parameters</arg>
-                        <arg>-J-Djava.util.concurrent.ForkJoinPool.common.parallelism=8</arg>
                         <arg>-J-Dfile.encoding=UTF-8</arg>
-                        <arg>-J-Duser.language=zh</arg>
-                        <arg>-J-Duser.country=CN</arg>
+                        <arg>-J-XX:+UseG1GC</arg>
+                        <arg>-J-Xmx2g</arg>
                     </compilerArgs>
-                    <!-- 禁用增量编译，确保完整重建 -->
-                    <useIncrementalCompilation>false</useIncrementalCompilation>
-                    <!-- 强制重新编译所有源文件 -->
-                    <staleMillis>0</staleMillis>
-                    <!-- 显示详细的编译信息 -->
-                    <verbose>false</verbose>
+                    <!-- 🔧 修复：严格的错误处理 -->
+                    <failOnError>true</failOnError>
+                    <failOnWarning>false</failOnWarning>
                     <showWarnings>true</showWarnings>
                     <showDeprecation>false</showDeprecation>
-                    <!-- 确保编译过程的确定性 -->
-                    <forceJavacCompilerUse>true</forceJavacCompilerUse>
+                    <!-- 🔧 修复：移除可能导致冲突的配置 -->
+                    <verbose>false</verbose>
                 </configuration>
             </plugin>
 
