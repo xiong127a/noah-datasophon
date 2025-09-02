@@ -25,33 +25,12 @@
     <build>
         <pluginManagement>
             <plugins>
-                <!-- 为所有核心插件配置Maven资源插件 -->
+                <!-- Maven资源插件配置 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-resources-plugin</artifactId>
                     <version>3.3.1</version>
-                    <executions>
-                        <!-- PF4J开发模式需要plugin.properties在根目录 -->
-                        <execution>
-                            <id>copy-plugin-properties-to-root</id>
-                            <phase>process-resources</phase>
-                            <goals>
-                                <goal>copy-resources</goal>
-                            </goals>
-                            <configuration>
-                                <outputDirectory>${project.build.outputDirectory}</outputDirectory>
-                                <resources>
-                                    <resource>
-                                        <directory>src/main/resources/META-INF</directory>
-                                        <includes>
-                                            <include>plugin.properties</include>
-                                        </includes>
-                                        <filtering>true</filtering>
-                                    </resource>
-                                </resources>
-                            </configuration>
-                        </execution>
-                    </executions>
+                    <!-- 删除多余的plugin.properties复制配置，PF4J只需要META-INF/plugin.properties -->
                 </plugin>
             </plugins>
         </pluginManagement>
