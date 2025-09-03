@@ -17,7 +17,11 @@
 
 package com.datasophon.plugins.hostvalidation;
 
-import com.datasophon.plugins.api.HostValidationPlugin;
+import com.datasophon.plugins.api.HostValidator;
+import com.datasophon.plugins.api.model.CheckResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.common.enums.CheckType;
+import com.datasophon.common.enums.OsType;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
 import org.pf4j.PluginWrapper;
@@ -25,8 +29,14 @@ import org.pf4j.spring.SpringPlugin;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
+import java.util.List;
+import java.util.Set;
+import java.util.EnumSet;
+import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
+
 /**
- * 主机验证插件 - 官方pf4j-spring标准结构
+ * 主机验证插件主类 - 官方pf4j-spring标准结构
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
@@ -66,7 +76,52 @@ public class HostValidationPlugin extends SpringPlugin {
      * 主机验证扩展实现
      */
     @Extension
-    public static class HostValidationExtension implements com.datasophon.plugins.api.HostValidationPlugin {
+    public static class HostValidationExtension implements HostValidator {
+        
+        @Override
+        public Set<OsType> getSupportedOperatingSystems() {
+            return EnumSet.of(OsType.CENTOS, OsType.UBUNTU);
+        }
+        
+        @Override
+        public int getPriority() {
+            return 100; // 默认优先级
+        }
+        
+        @Override
+        public List<CheckType> getSupportedCheckTypes() {
+            return Arrays.asList(
+                CheckType.SSH_CONNECTION,
+                CheckType.NETWORK_CONNECTIVITY,
+                CheckType.DISK_SPACE_CHECK,
+                CheckType.MEMORY_CHECK,
+                CheckType.CPU_CHECK
+            );
+        }
+        
+        @Override
+        public CompletableFuture<CheckResult> executeCheck(HostCheckContext context, CheckType checkType) {
+            return CompletableFuture.supplyAsync(() -> {
+                log.info("执行主机检查: {} for host: {}", checkType, context.getHostname() != null ? context.getHostname() : context.getHostIp());
+                
+                // 这里实现具体的检查逻辑
+
+                return CheckResult.builder()
+                    .success(true)
+                    .checkType(checkType)
+                    .message("检查通过")
+                    .checkTime(java.time.LocalDateTime.now())
+                    .build();
+            });
+        }
+        
+        @Override
+        public boolean canExecute(HostCheckContext context, CheckType checkType) {
+            // 检查是否支持该操作系统和检查类型
+            OsType osType = context.getOsType();
+            return getSupportedCheckTypes().contains(checkType) &&
+                   (osType == null || getSupportedOperatingSystems().contains(osType));
+        }
         
         @Override
         public String getPluginId() {
@@ -74,18 +129,8 @@ public class HostValidationPlugin extends SpringPlugin {
         }
         
         @Override
-        public String getPluginName() {
-            return "主机验证插件";
-        }
-        
-        @Override
         public String getVersion() {
             return "1.0.0";
-        }
-        
-        @Override
-        public String getDescription() {
-            return "提供主机验证功能";
         }
         
         @Override

@@ -17,13 +17,17 @@
 
 package com.datasophon.plugins.systeminfo;
 
-import com.datasophon.plugins.api.SystemInfoCollectorPlugin;
+import com.datasophon.plugins.api.SystemInfoCollector;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.model.SystemInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
 import org.pf4j.PluginWrapper;
 import org.pf4j.spring.SpringPlugin;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 系统信息收集插件 - 官方pf4j-spring标准结构
@@ -33,9 +37,9 @@ import org.springframework.context.annotation.AnnotationConfigApplicationContext
  * @date 2025-01-28
  */
 @Slf4j
-public class SystemInfoPlugin extends SpringPlugin {
+public class SystemInfoCollectorPlugin extends SpringPlugin {
     
-    public SystemInfoPlugin(PluginWrapper wrapper) {
+    public SystemInfoCollectorPlugin(PluginWrapper wrapper) {
         super(wrapper);
     }
     
@@ -66,26 +70,24 @@ public class SystemInfoPlugin extends SpringPlugin {
      * 系统信息收集扩展实现
      */
     @Extension
-    public static class SystemInfoExtension implements com.datasophon.plugins.api.SystemInfoCollectorPlugin {
+    public static class SystemInfoExtension implements SystemInfoCollector {
+        
+        @Override
+        public CompletableFuture<SystemInfo> collectSystemInfo(HostCheckContext context) {
+            return CompletableFuture.supplyAsync(() -> {
+                log.info("收集系统信息 for host: {}", context.getHostname() != null ? context.getHostname() : context.getHostIp());
+                
+                // 这里实现具体的系统信息收集逻辑
+                SystemInfo systemInfo = new SystemInfo();
+                // 设置系统信息...
+                
+                return systemInfo;
+            });
+        }
         
         @Override
         public String getPluginId() {
-            return "system-info";
-        }
-        
-        @Override
-        public String getPluginName() {
-            return "系统信息收集插件";
-        }
-        
-        @Override
-        public String getVersion() {
-            return "1.0.0";
-        }
-        
-        @Override
-        public String getDescription() {
-            return "提供系统信息收集功能";
+            return "system-info-collector";
         }
         
         @Override

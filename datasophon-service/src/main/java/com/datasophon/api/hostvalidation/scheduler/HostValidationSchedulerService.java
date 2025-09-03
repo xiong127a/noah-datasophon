@@ -26,7 +26,6 @@ import com.github.kagkarlsson.scheduler.task.helper.OneTimeTask;
 import com.github.kagkarlsson.scheduler.task.helper.Tasks;
 import com.github.kagkarlsson.scheduler.task.TaskInstanceId;
 import com.github.kagkarlsson.scheduler.Scheduler;
-import com.datasophon.plugins.api.PluginId;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -34,7 +33,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 
 /**
- * 主机校验调度服务
+ * 主机校验调度服务 - 基于官方pf4j-spring标准
  * 基于db-scheduler实现任务调度和管理
  * 
  * @author 任相鹏
@@ -49,9 +48,9 @@ public class HostValidationSchedulerService {
     private final HostValidationStateManager stateManager;
     private final Scheduler scheduler;
     
-    // 任务名称常量
-    public static final String TASK_HOST_VALIDATION = PluginId.HOST_VALIDATION.getId();
-    public static final String TASK_HOST_REPAIR = PluginId.HOST_REPAIR.getId();
+    // 任务名称常量（直接使用字符串常量，符合官方pf4j-spring标准）
+    public static final String TASK_HOST_VALIDATION = "host-validation";
+    public static final String TASK_HOST_REPAIR = "host-repair";
     public static final String TASK_HOST_CLEANUP = "host-cleanup";
     
     public HostValidationSchedulerService(HostValidationExecutor hostValidationExecutor,
@@ -61,7 +60,7 @@ public class HostValidationSchedulerService {
         this.stateManager = stateManager;
         this.scheduler = scheduler;
         
-        log.info("主机校验调度服务初始化完成");
+        log.info("主机校验调度服务初始化完成 - 官方pf4j-spring标准");
     }
 
     /**

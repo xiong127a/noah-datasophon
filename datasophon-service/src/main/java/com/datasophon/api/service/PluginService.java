@@ -17,10 +17,10 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.plugins.api.HostValidationPlugin;
-import com.datasophon.plugins.api.HostRepairPlugin;
-import com.datasophon.plugins.api.SshConnectorPlugin;
-import com.datasophon.plugins.api.SystemInfoCollectorPlugin;
+import com.datasophon.plugins.api.HostValidator;
+import com.datasophon.plugins.api.HostRepairer;
+import com.datasophon.plugins.api.SshConnector;
+import com.datasophon.plugins.api.SystemInfoCollector;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,21 +44,21 @@ import java.util.List;
 @DependsOn("extensionsInjector")
 public class PluginService {
 
-    // 自动注入所有HostValidationPlugin扩展
+    // 自动注入所有HostValidator扩展
     @Autowired
-    private List<HostValidationPlugin> hostValidationPlugins;
+    private List<HostValidator> hostValidationPlugins;
 
-    // 自动注入所有HostRepairPlugin扩展
+    // 自动注入所有HostRepairer扩展
     @Autowired
-    private List<HostRepairPlugin> hostRepairPlugins;
+    private List<HostRepairer> hostRepairPlugins;
 
-    // 自动注入所有SshConnectorPlugin扩展
+    // 自动注入所有SshConnector扩展
     @Autowired
-    private List<SshConnectorPlugin> sshConnectorPlugins;
+    private List<SshConnector> sshConnectorPlugins;
 
-    // 自动注入所有SystemInfoCollectorPlugin扩展
+    // 自动注入所有SystemInfoCollector扩展
     @Autowired
-    private List<SystemInfoCollectorPlugin> systemInfoCollectorPlugins;
+    private List<SystemInfoCollector> systemInfoCollectorPlugins;
 
     @PostConstruct
     public void printPluginInfo() {
@@ -88,35 +88,35 @@ public class PluginService {
     /**
      * 获取所有主机验证插件
      */
-    public List<HostValidationPlugin> getHostValidationPlugins() {
+    public List<HostValidator> getHostValidationPlugins() {
         return hostValidationPlugins;
     }
 
     /**
      * 获取所有主机修复插件
      */
-    public List<HostRepairPlugin> getHostRepairPlugins() {
+    public List<HostRepairer> getHostRepairPlugins() {
         return hostRepairPlugins;
     }
 
     /**
      * 获取所有SSH连接插件
      */
-    public List<SshConnectorPlugin> getSshConnectorPlugins() {
+    public List<SshConnector> getSshConnectorPlugins() {
         return sshConnectorPlugins;
     }
 
     /**
      * 获取所有系统信息收集插件
      */
-    public List<SystemInfoCollectorPlugin> getSystemInfoCollectorPlugins() {
+    public List<SystemInfoCollector> getSystemInfoCollectorPlugins() {
         return systemInfoCollectorPlugins;
     }
 
     /**
      * 根据插件ID获取特定的主机验证插件
      */
-    public HostValidationPlugin getHostValidationPlugin(String pluginId) {
+    public HostValidator getHostValidationPlugin(String pluginId) {
         return hostValidationPlugins.stream()
                 .filter(plugin -> pluginId.equals(plugin.getPluginId()))
                 .findFirst()
@@ -126,7 +126,7 @@ public class PluginService {
     /**
      * 根据插件ID获取特定的SSH连接插件
      */
-    public SshConnectorPlugin getSshConnectorPlugin(String pluginId) {
+    public SshConnector getSshConnectorPlugin(String pluginId) {
         return sshConnectorPlugins.stream()
                 .filter(plugin -> pluginId.equals(plugin.getPluginId()))
                 .findFirst()

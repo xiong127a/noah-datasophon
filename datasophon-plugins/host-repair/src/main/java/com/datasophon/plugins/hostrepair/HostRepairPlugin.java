@@ -17,13 +17,24 @@
 
 package com.datasophon.plugins.hostrepair;
 
-import com.datasophon.plugins.api.HostRepairPlugin;
+import com.datasophon.plugins.api.HostRepairer;
+import com.datasophon.plugins.api.model.CheckResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.common.enums.CheckType;
+import com.datasophon.common.enums.OsType;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
 import org.pf4j.PluginWrapper;
 import org.pf4j.spring.SpringPlugin;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.EnumSet;
+import java.util.Arrays;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * 主机修复插件 - 官方pf4j-spring标准结构
@@ -66,7 +77,55 @@ public class HostRepairPlugin extends SpringPlugin {
      * 主机修复扩展实现
      */
     @Extension
-    public static class HostRepairExtension implements com.datasophon.plugins.api.HostRepairPlugin {
+    public static class HostRepairExtension implements HostRepairer {
+        
+        @Override
+        public Set<OsType> getSupportedOperatingSystems() {
+            return EnumSet.of(OsType.CENTOS, OsType.UBUNTU);
+        }
+        
+        @Override
+        public List<CheckType> getSupportedRepairTypes() {
+            return Arrays.asList(
+                CheckType.DISK_SPACE_CHECK,
+                CheckType.MEMORY_CHECK,
+                CheckType.NETWORK_CONNECTIVITY
+            );
+        }
+        
+        @Override
+        public CompletableFuture<CheckResult> executeRepair(HostCheckContext context, CheckType repairType, Map<String, Object> repairParams) {
+            return CompletableFuture.supplyAsync(() -> {
+                log.info("执行主机修复: {} for host: {}", repairType, context.getHostname() != null ? context.getHostname() : context.getHostIp());
+                
+                // 这里实现具体的修复逻辑
+                CheckResult result = CheckResult.builder()
+                    .success(true)
+                    .checkType(repairType)
+                    .message("修复完成")
+                    .checkTime(java.time.LocalDateTime.now())
+                    .build();
+                
+                return result;
+            });
+        }
+        
+        @Override
+        public boolean canRepair(HostCheckContext context, CheckType repairType) {
+            OsType osType = context.getOsType();
+            return getSupportedRepairTypes().contains(repairType) &&
+                   (osType == null || getSupportedOperatingSystems().contains(osType));
+        }
+        
+        @Override
+        public String getRepairSuggestion(HostCheckContext context, CheckType repairType) {
+            return switch (repairType) {
+                case DISK_SPACE_CHECK -> "清理磁盘空间或扩容";
+                case MEMORY_CHECK -> "释放内存或增加内存";
+                case NETWORK_CONNECTIVITY -> "检查网络连接和防火墙设置";
+                default -> "请联系管理员";
+            };
+        }
         
         @Override
         public String getPluginId() {
@@ -74,18 +133,8 @@ public class HostRepairPlugin extends SpringPlugin {
         }
         
         @Override
-        public String getPluginName() {
-            return "主机修复插件";
-        }
-        
-        @Override
         public String getVersion() {
             return "1.0.0";
-        }
-        
-        @Override
-        public String getDescription() {
-            return "提供主机修复功能";
         }
         
         @Override

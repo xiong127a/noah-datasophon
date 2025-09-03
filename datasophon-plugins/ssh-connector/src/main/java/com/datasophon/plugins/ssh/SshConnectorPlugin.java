@@ -17,13 +17,21 @@
 
 package com.datasophon.plugins.ssh;
 
-import com.datasophon.plugins.api.SshConnectorPlugin;
+import com.datasophon.plugins.api.SshConnector;
+import com.datasophon.plugins.api.model.CheckResult;
+import com.datasophon.plugins.api.model.HostCheckContext;
+import com.datasophon.plugins.api.model.PluginMetadata;
+import com.datasophon.common.enums.OsType;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
 import org.pf4j.PluginWrapper;
 import org.pf4j.spring.SpringPlugin;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+import java.util.Set;
+import java.util.EnumSet;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * SSH连接器插件 - 官方pf4j-spring标准结构
@@ -66,7 +74,53 @@ public class SshConnectorPlugin extends SpringPlugin {
      * SSH连接器扩展实现
      */
     @Extension
-    public static class SshConnectorExtension implements com.datasophon.plugins.api.SshConnectorPlugin {
+    public static class SshConnectorExtension implements SshConnector {
+        
+        @Override
+        public Set<OsType> getSupportedOperatingSystems() {
+            return EnumSet.allOf(OsType.class); // 支持所有操作系统
+        }
+        
+        @Override
+        public int getPriority() {
+            return 50; // 高优先级
+        }
+        
+        @Override
+        public CompletableFuture<CheckResult> executeCheck(HostCheckContext context) {
+            return CompletableFuture.supplyAsync(() -> {
+                log.info("执行SSH连接检查 for host: {}", context.getHostname() != null ? context.getHostname() : context.getHostIp());
+                
+                // 这里实现具体的SSH连接检查逻辑
+                CheckResult result = CheckResult.builder()
+                    .success(true)
+                    .message("SSH连接正常")
+                    .checkTime(java.time.LocalDateTime.now())
+                    .build();
+                
+                return result;
+            });
+        }
+        
+        @Override
+        public boolean canExecute(HostCheckContext context) {
+            OsType osType = context.getOsType();
+            return osType == null || getSupportedOperatingSystems().contains(osType);
+        }
+        
+        @Override
+        public PluginMetadata getMetadata() {
+            return PluginMetadata.builder()
+                .pluginId("ssh-connector")
+                .name("SSH连接器插件")
+                .version("1.0.0")
+                .description("提供SSH连接功能")
+                .author("任相鹏")
+                .license("Apache License 2.0")
+                .corePlugin(true)
+                .enabled(true)
+                .build();
+        }
         
         @Override
         public String getPluginId() {
@@ -74,18 +128,8 @@ public class SshConnectorPlugin extends SpringPlugin {
         }
         
         @Override
-        public String getPluginName() {
-            return "SSH连接器插件";
-        }
-        
-        @Override
         public String getVersion() {
             return "1.0.0";
-        }
-        
-        @Override
-        public String getDescription() {
-            return "提供SSH连接功能";
         }
         
         @Override

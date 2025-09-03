@@ -21,39 +21,48 @@ import com.datasophon.api.hostvalidation.manager.HostValidationStateManager;
 import com.datasophon.common.dto.HostValidationRequestDTO;
 import com.datasophon.common.enums.CheckType;
 import com.datasophon.common.enums.ValidationStatus;
-import com.datasophon.plugins.api.HostValidationPlugin;
-import com.datasophon.plugins.api.HostRepairPlugin;
-import com.datasophon.plugins.api.PluginId;
+import com.datasophon.plugins.api.HostValidator;
+import com.datasophon.plugins.api.HostRepairer;
 import com.datasophon.plugins.api.model.CheckResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
-import com.datasophon.plugins.manager.SpringPluginManager;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.DependsOn;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * 主机校验执行器
+ * 主机校验执行器 - 基于官方pf4j-spring标准
  * 专门负责校验和修复的具体执行逻辑
  * <p>
  * 职责：
- * 1. 插件发现和调用
+ * 1. 插件发现和调用（通过Spring自动注入）
  * 2. 校验结果处理
  * 3. 状态更新
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
- * @date 2025-08-29
+ * @date 2025-01-28
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
+@DependsOn("extensionsInjector")
 public class HostValidationExecutor {
     
     private final HostValidationStateManager stateManager;
-    private final SpringPluginManager springPluginManager; // 保留SpringPluginManager用于获取插件列表
+    
+    // 官方pf4j-spring方式：直接通过Spring自动注入所有插件扩展
+    @Autowired
+    private List<HostValidator> hostValidators;
+    
+    @Autowired
+    private List<HostRepairer> hostRepairers;
+    
+    public HostValidationExecutor(HostValidationStateManager stateManager) {
+        this.stateManager = stateManager;
+    }
     
     /**
      * 执行主机校验
@@ -64,9 +73,8 @@ public class HostValidationExecutor {
         try {
             log.info("开始执行主机校验: clusterId={}, 主机数量={}", clusterId, request.hostIps().size());
             
-            // 1. 获取校验插件
-            List<HostValidationPlugin> plugins = springPluginManager.getPluginsByType(PluginId.HOST_VALIDATION);
-            if (plugins.isEmpty()) {
+            // 1. 获取校验插件（官方pf4j-spring自动注入）
+            if (hostValidators.isEmpty()) {
                 log.warn("未找到校验插件: clusterId={}", clusterId);
                 stateManager.completeValidationSession(clusterId);
                 return;
@@ -74,7 +82,7 @@ public class HostValidationExecutor {
             
             // 2. 并发校验所有主机
             request.hostIps().parallelStream().forEach(hostIp -> 
-                validateSingleHost(request, hostIp, plugins)
+                validateSingleHost(request, hostIp, hostValidators)
             );
             
             log.info("主机校验执行完成: clusterId={}", clusterId);
@@ -93,9 +101,8 @@ public class HostValidationExecutor {
         try {
             log.info("开始执行主机修复: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
             
-            // 获取修复插件
-            List<HostRepairPlugin> repairPlugins = springPluginManager.getPluginsByType(PluginId.HOST_REPAIR);
-            if (repairPlugins.isEmpty()) {
+            // 获取修复插件（官方pf4j-spring自动注入）
+            if (hostRepairers.isEmpty()) {
                 log.warn("未找到修复插件: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
                 stateManager.updateCheckItemStatus(clusterId, hostIp, checkType, 
                     ValidationStatus.FAILED, "未找到可用的修复插件", Map.of());
@@ -103,7 +110,7 @@ public class HostValidationExecutor {
             }
 
             // 寻找支持该修复类型的插件
-            HostRepairPlugin targetPlugin = repairPlugins.stream()
+            HostRepairer targetPlugin = hostRepairers.stream()
                 .filter(plugin -> plugin.getSupportedRepairTypes().contains(checkType))
                 .findFirst()
                 .orElse(null);
@@ -146,7 +153,7 @@ public class HostValidationExecutor {
     /**
      * 校验单个主机 - 插件化处理
      */
-    private void validateSingleHost(HostValidationRequestDTO request, String hostIp, List<HostValidationPlugin> plugins) {
+    private void validateSingleHost(HostValidationRequestDTO request, String hostIp, List<HostValidator> plugins) {
         Long clusterId = request.clusterId();
         
         try {
@@ -162,7 +169,7 @@ public class HostValidationExecutor {
                 .build();
             
             // 按优先级顺序执行插件
-            for (HostValidationPlugin plugin : plugins) {
+            for (HostValidator plugin : plugins) {
                 // 遍历插件支持的检查类型
                 for (CheckType checkType : plugin.getSupportedCheckTypes()) {
                     try {
@@ -206,9 +213,8 @@ public class HostValidationExecutor {
         try {
             log.info("重新检查项: clusterId={}, hostIp={}, checkType={}", clusterId, hostIp, checkType);
             
-            // 获取校验插件
-            List<HostValidationPlugin> plugins = springPluginManager.getPluginsByType(PluginId.HOST_VALIDATION);
-            HostValidationPlugin targetPlugin = plugins.stream()
+            // 获取校验插件（官方pf4j-spring自动注入）
+            HostValidator targetPlugin = hostValidators.stream()
                 .filter(plugin -> plugin.getSupportedCheckTypes().contains(checkType))
                 .findFirst()
                 .orElse(null);

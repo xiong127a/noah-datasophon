@@ -6,6 +6,7 @@ import org.pf4j.spring.SpringPluginManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.beans.factory.support.AbstractAutowireCapableBeanFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -70,7 +71,10 @@ public class PluginConfiguration {
     @DependsOn("springPluginManager")
     public ExtensionsInjector extensionsInjector() {
         log.info("初始化ExtensionsInjector - 启用插件扩展自动注入");
-        return new ExtensionsInjector(springPluginManager(), applicationContext);
+        // 使用官方正确的构造函数参数
+        AbstractAutowireCapableBeanFactory beanFactory = 
+            (AbstractAutowireCapableBeanFactory) applicationContext.getAutowireCapableBeanFactory();
+        return new ExtensionsInjector(springPluginManager(), beanFactory);
     }
     
     /**

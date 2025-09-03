@@ -217,9 +217,18 @@
                 <configuration>
                     <release>${maven.compiler.source}</release>
                     <encoding>UTF-8</encoding>
-                    <!-- 🔧 修复：简化配置，继承父配置 -->
+                    <!-- 🔧 强化编码配置 -->
+                    <fork>true</fork>
+                    <meminitial>1024m</meminitial>
+                    <maxmem>2048m</maxmem>
                     <compilerArgs>
                         <arg>-parameters</arg>
+                        <arg>-J-Dfile.encoding=UTF-8</arg>
+                        <arg>-J-Duser.language=zh</arg>
+                        <arg>-J-Duser.country=CN</arg>
+                        <arg>-J-Dconsole.encoding=UTF-8</arg>
+                        <arg>-J-Dstdout.encoding=UTF-8</arg>
+                        <arg>-J-Dstderr.encoding=UTF-8</arg>
                     </compilerArgs>
                     <!-- 🔧 修复：正确的注解处理器配置 -->
                     <annotationProcessorPaths>

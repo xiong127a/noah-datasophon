@@ -11,7 +11,7 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 主机修复插件接口
+ * 主机修复接口
  * 负责执行各种主机问题修复
  * 
  * 分层调用架构：
@@ -29,7 +29,7 @@ import java.util.concurrent.CompletableFuture;
  * @email 635887935@qq.com
  * @date 2025-01-28
  */
-public interface HostRepairPlugin extends ExtensionPoint {
+public interface HostRepairer extends ExtensionPoint {
     
     /**
      * 支持的操作系统类型

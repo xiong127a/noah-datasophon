@@ -7,7 +7,7 @@ import org.pf4j.ExtensionPoint;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * 系统信息收集插件接口
+ * 系统信息收集接口
  * 负责收集各种系统信息，供检查和修复插件使用
  * 
  * 分层调用架构：
@@ -24,7 +24,7 @@ import java.util.concurrent.CompletableFuture;
  * @email 635887935@qq.com
  * @date 2025-01-28
  */
-public interface SystemInfoCollectorPlugin extends ExtensionPoint {
+public interface SystemInfoCollector extends ExtensionPoint {
     
 
     

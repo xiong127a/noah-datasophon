@@ -10,14 +10,14 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * SSH连接器插件接口
+ * SSH连接器接口
  * 负责SSH连接检查和管理
  * 
  * @author 任相鹏
  * @email 635887935@qq.com
  * @date 2025-01-28
  */
-public interface SshConnectorPlugin extends ExtensionPoint {
+public interface SshConnector extends ExtensionPoint {
     
     /**
      * 支持的操作系统类型
