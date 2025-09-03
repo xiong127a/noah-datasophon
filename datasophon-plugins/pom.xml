@@ -12,7 +12,7 @@
     <artifactId>datasophon-plugins</artifactId>
     <packaging>pom</packaging>
     
-    <name>DataSophon Plugins - 官方pf4j-spring标准结构</name>
+    <name>DataSophon Plugins</name>
     <description>基于官方pf4j-spring的插件实现模块</description>
 
     <modules>
