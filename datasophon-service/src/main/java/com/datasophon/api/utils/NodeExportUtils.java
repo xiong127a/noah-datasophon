@@ -28,7 +28,7 @@ public class NodeExportUtils {
         try {
             Integer clusterId = PropertyUtils.getInt("clusterId");
             String depMode =  clusterInfoService.getById(clusterId).getDepType();
-            if (Constants.K8S_MODE.equals(depMode)) {
+            if (Constants.KUBERNETES_MODE.equals(depMode)) {
                 String workDir = System.getProperty(USER_DIR);
                 operateNodeExporter(workDir, "apply");
             }
@@ -40,7 +40,7 @@ public class NodeExportUtils {
     public static void stopNodeExporter() {
         Integer clusterId = PropertyUtils.getInt("clusterId");
         String depMode = getDepMode(clusterId);
-        if (Constants.K8S_MODE.equals(depMode)) {
+        if (Constants.KUBERNETES_MODE.equals(depMode)) {
             String workDir = System.getProperty(USER_DIR);
             operateNodeExporter(workDir, "delete");
         }
