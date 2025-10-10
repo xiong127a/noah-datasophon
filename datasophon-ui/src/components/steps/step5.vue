@@ -50,7 +50,7 @@ export default {
       loading: false,
       templateData: [],
       saveData: [],
-      hostList: [],
+      hostList: []
     };
   },
   methods: {

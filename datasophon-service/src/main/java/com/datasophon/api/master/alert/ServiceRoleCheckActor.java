@@ -20,13 +20,12 @@
 package com.datasophon.api.master.alert;
 
 import akka.actor.UntypedActor;
-import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ServiceRoleCheckCommand;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
@@ -44,7 +43,7 @@ public class ServiceRoleCheckActor extends UntypedActor {
     @Override
     public void onReceive(Object msg) throws Throwable {
         if (msg instanceof ServiceRoleCheckCommand) {
-            ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
 
             //查询服务实例
             List<ClusterServiceRoleInstanceEntity> list = roleInstanceService.list(
@@ -67,9 +66,9 @@ public class ServiceRoleCheckActor extends UntypedActor {
                         case Constants.PVM_MODE:
                             Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerServiceRoleCheck(roleInstanceEntity, map));
                             break;
-                        case Constants.K8S_MODE:
-                            handlerK8sServiceRoleCheck(roleInstanceEntity, map);
-                            Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerK8sServiceRoleCheck(roleInstanceEntity, map));
+                        case Constants.KUBERNETES_MODE:
+                            handlerKubernetesServiceRoleCheck(roleInstanceEntity, map);
+                            Optional.ofNullable(serviceRoleHandler).ifPresent(handler -> handler.handlerKubernetesServiceRoleCheck(roleInstanceEntity, map));
                             break;
                         default:
                             break;
@@ -85,9 +84,9 @@ public class ServiceRoleCheckActor extends UntypedActor {
     }
 
 
-    private void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-        K8sServiceRoleStatusService k8sServiceRoleStatusHandler = new K8sServiceRoleStatusService();
-        k8sServiceRoleStatusHandler.checkStatusAndOpAlert(roleInstanceEntity);
+    private void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
+        KubernetesServiceRoleStatusService kubernetesServiceRoleStatusService = new KubernetesServiceRoleStatusService();
+        kubernetesServiceRoleStatusService.checkStatusAndOpAlert(roleInstanceEntity);
     }
 
 

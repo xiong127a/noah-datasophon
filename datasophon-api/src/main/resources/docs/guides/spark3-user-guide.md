@@ -209,7 +209,7 @@ spark-submit --master local[*] --class org.example.MyApp myapp.jar
 3. **提交应用到Kubernetes**
 
    ```bash
-   spark-submit --master k8s://https://kubernetes-api:443 \
+   spark-submit --master kubernetes://https://kubernetes-api:443 \
      --deploy-mode cluster \
      --name spark-app \
      --class org.example.MyApp \

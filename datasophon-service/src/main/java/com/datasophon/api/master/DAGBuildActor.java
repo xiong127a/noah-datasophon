@@ -17,10 +17,18 @@
 
 package com.datasophon.api.master;
 
-import com.datasophon.api.service.*;
+import akka.actor.ActorRef;
+import akka.actor.UntypedActor;
+import cn.hutool.core.util.ArrayUtil;
+import cn.hutool.extra.spring.SpringUtil;
+import com.alibaba.fastjson.JSONObject;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
+import com.datasophon.api.service.ClusterServiceCommandService;
+import com.datasophon.api.service.FrameServiceRoleService;
+import com.datasophon.api.service.FrameServiceService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.StartExecuteCommandCommand;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
@@ -30,21 +38,21 @@ import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.DAGGraph;
 import com.datasophon.common.model.ServiceNode;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.dao.entity.*;
-
+import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.dao.entity.ClusterServiceCommandEntity;
+import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
+import com.datasophon.dao.entity.FrameServiceEntity;
+import com.datasophon.dao.entity.FrameServiceRoleEntity;
 import org.apache.commons.lang.StringUtils;
-
-import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.alibaba.fastjson.JSONObject;
-
-import akka.actor.ActorRef;
-import akka.actor.UntypedActor;
-import cn.hutool.core.util.ArrayUtil;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class DAGBuildActor extends UntypedActor {
 
@@ -60,14 +68,14 @@ public class DAGBuildActor extends UntypedActor {
             logger.info("start execute command");
 
             ClusterServiceCommandService commandService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceCommandService.class);
+                    SpringUtil.getBean(ClusterServiceCommandService.class);
             ClusterServiceCommandHostCommandService hostCommandService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceCommandHostCommandService.class);
+                    SpringUtil.getBean(ClusterServiceCommandHostCommandService.class);
             FrameServiceRoleService frameServiceRoleService =
-                    SpringTool.getApplicationContext().getBean(FrameServiceRoleService.class);
-            FrameServiceService frameService = SpringTool.getApplicationContext().getBean(FrameServiceService.class);
+                    SpringUtil.getBean(FrameServiceRoleService.class);
+            FrameServiceService frameService = SpringUtil.getBean(FrameServiceService.class);
             ClusterInfoService clusterInfoService =
-                    SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+                    SpringUtil.getBean(ClusterInfoService.class);
 
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(executeCommandCommand.getClusterId());
             // [{"commandId":"28662079bf3043c78f940ce160b325f9","createBy":"admin","createTime":1717399060000,"commandName":"安装 HDFS","commandState":"正在运行","commandProgress":0,"clusterId":1,"serviceName":"HDFS","commandType":1,"serviceInstanceId":10}]

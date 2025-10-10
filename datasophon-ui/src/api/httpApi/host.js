@@ -26,7 +26,7 @@ export default {
   dispatcherHostAgentList: path + '/host/install/dispatcherHostAgentList', // 主机agent分发进度列表
   rehostCheck: path + '/host/install/rehostCheck', // 重试主机环境校验
   analysisHostList: path + '/host/install/analysisHostList', // 解析主机列表
-  saveK8sHost: path + '/api/cluster/host/saveK8sHost', // 保存k8s主机
+  saveKubernetesHost: path + '/api/cluster/host/saveKubernetesHost', // 保存Kubernetes主机
   hostCheckCompleted: path + '/host/install/hostCheckCompleted', // 查询主机环境校验是否完成
   dispatcherHostAgentCompleted:
     path + '/host/install/dispatcherHostAgentCompleted', // 查询主机agent分发是否完成

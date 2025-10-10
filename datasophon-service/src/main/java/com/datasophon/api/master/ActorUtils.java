@@ -51,8 +51,6 @@ public class ActorUtils {
 
     public static ActorSystem actorSystem;
 
-    public static final String DATASOPHON = "datasophon";
-
     public static final String AKKA_REMOTE_NETTY_TCP_HOSTNAME = "akka.remote.netty.tcp.hostname";
 
     private static Random rand;
@@ -69,7 +67,7 @@ public class ActorUtils {
     public static void init() throws UnknownHostException, NoSuchAlgorithmException {
         String hostname = InetAddress.getLocalHost().getHostName();
         Config config = ConfigFactory.parseString(AKKA_REMOTE_NETTY_TCP_HOSTNAME + "=" + hostname);
-        actorSystem = ActorSystem.create(DATASOPHON, config.withFallback(ConfigFactory.load()));
+        actorSystem = ActorSystem.create("datasophon", config.withFallback(ConfigFactory.load()));
         actorSystem.actorOf(Props.create(WorkerStartActor.class), getActorRefName(WorkerStartActor.class));
         ActorRef serviceRoleCheckActor = actorSystem.actorOf(Props.create(ServiceRoleCheckActor.class),
                 getActorRefName(ServiceRoleCheckActor.class));

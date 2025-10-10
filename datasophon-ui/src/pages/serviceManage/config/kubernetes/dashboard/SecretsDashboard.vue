@@ -1,24 +1,24 @@
 <template>
   <div class="resource-list">
     <!-- Secrets列表区域 -->
-    <div class="k8s-dashboard-card k8s-resource-card">
-      <div class="k8s-card-header">
-        <span class="k8s-card-title">Secrets</span>
-        <div class="k8s-card-actions">
-          <a-icon type="bars" class="k8s-action-icon" />
-          <a class="k8s-card-collapse-icon">
+    <div class="kubernetes-dashboard-card kubernetes-resource-card">
+      <div class="kubernetes-card-header">
+        <span class="kubernetes-card-title">Secrets</span>
+        <div class="kubernetes-card-actions">
+          <a-icon type="bars" class="kubernetes-action-icon" />
+          <a class="kubernetes-card-collapse-icon">
             <a-icon type="minus" />
           </a>
         </div>
       </div>
-      <div class="k8s-card-content">
+      <div class="kubernetes-card-content">
         <a-spin :spinning="loading">
           <a-table
             :columns="columns"
             :dataSource="secrets"
             :rowKey="rowKey"
             :pagination="false"
-            class="k8s-table"
+            class="kubernetes-table"
             :table-layout="'auto'"
             :bordered="false"
             :zebra-stripes="false"
@@ -199,8 +199,8 @@ export default {
           pageSize: this.pageSize
         };
         
-        // 使用全局API对象中定义的getK8sSecrets接口
-        const res = await this.$axiosGet(global.API.getK8sSecrets, params);
+        // 使用全局API对象中定义的getKubernetesSecrets接口
+        const res = await this.$axiosGet(global.API.getKubernetesSecrets, params);
 
         // 打印API返回的原始数据，用于调试
         console.log('API返回的原始数据:', JSON.stringify(res, null, 2));
@@ -327,13 +327,13 @@ export default {
 </script>
 
 <style lang="less" scoped>
-@import './styles/k8s-table-styles.less';
+@import 'styles/kubernetes-table-styles.less';
 
 .resource-list {
   margin-bottom: 16px;
 }
 
-.k8s-dashboard-card {
+.kubernetes-dashboard-card {
   background-color: #fff;
   border-radius: 4px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
@@ -341,7 +341,7 @@ export default {
   overflow: hidden;
 }
 
-.k8s-card-header {
+.kubernetes-card-header {
   align-items: center;
   border-bottom: 1px solid #f0f0f0;
   display: flex;
@@ -350,30 +350,30 @@ export default {
   padding: 12px 16px;
 }
 
-.k8s-card-title {
+.kubernetes-card-title {
   font-size: 16px;
 }
 
-.k8s-card-actions {
+.kubernetes-card-actions {
   display: flex;
   gap: 8px;
 }
 
-.k8s-card-content {
+.kubernetes-card-content {
   padding: 16px;
 }
 
-.k8s-action-icon {
+.kubernetes-action-icon {
   cursor: pointer;
   font-size: 14px;
   margin-right: 8px;
 }
 
-.k8s-card-collapse-icon {
+.kubernetes-card-collapse-icon {
   cursor: pointer;
 }
 
-.k8s-table {
+.kubernetes-table {
   margin-bottom: 0;
 }
 

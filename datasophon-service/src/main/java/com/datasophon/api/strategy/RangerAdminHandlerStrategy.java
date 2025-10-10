@@ -18,6 +18,7 @@
 package com.datasophon.api.strategy;
 
 import akka.actor.ActorRef;
+import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
@@ -29,7 +30,6 @@ import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
 import com.datasophon.common.enums.RangerOpType;
@@ -152,14 +152,14 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
     }
 
     private void enableRangerPlugin(Integer clusterId, String serviceName, String serviceRoleName) {
-        ClusterServiceInstanceService serviceInstanceService = SpringTool.getApplicationContext()
+        ClusterServiceInstanceService serviceInstanceService = SpringUtil
                 .getBean(ClusterServiceInstanceService.class);
-        ClusterServiceRoleInstanceService roleInstanceService = SpringTool.getApplicationContext()
+        ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
                 .getBean(ClusterServiceRoleInstanceService.class);
-        ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringTool.getApplicationContext()
+        ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringUtil
                 .getBean(ClusterServiceRoleGroupConfigService.class);
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        ServiceInstallService serviceInstallService = SpringTool.getApplicationContext()
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ServiceInstallService serviceInstallService = SpringUtil
                 .getBean(ServiceInstallService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);

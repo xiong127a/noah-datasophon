@@ -23,7 +23,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
-import com.datasophon.api.k8s.handler.K8sServiceStopHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.ClusterInfoService;
@@ -36,7 +36,6 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
-import com.datasophon.api.utils.CommonUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
@@ -68,8 +67,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
-
-import static com.datasophon.common.Constants.GENERAL;
 
 @Service("clusterServiceInstanceService")
 @Transactional
@@ -227,14 +224,14 @@ public class ClusterServiceInstanceServiceImpl
      */
     private boolean isKubernetesConfig(ServiceConfig config) {
         return config != null && config.getConfigGroup() != null &&
-                config.getConfigGroup().startsWith(Constants.K8S_CONFIG_PREFIX);
+                config.getConfigGroup().startsWith(Constants.KUBERNETES_CONFIG_PREFIX);
     }
 
     /**
      * 从Kubernetes配置名称中提取基础名称（去除角色前缀）
      * 例如：从 "ZkServer_默认_storage_classes" 提取出 "storage_classes"
      */
-    private String extractK8sBaseConfigName(String fullName) {
+    private String extractKubernetesBaseConfigName(String fullName) {
         if (fullName == null)
             return null;
 
@@ -250,7 +247,7 @@ public class ClusterServiceInstanceServiceImpl
      * 从Kubernetes配置组获取角色名称
      */
     private String getKubernetesRole(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
+        if (configGroup == null || !configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -265,7 +262,7 @@ public class ClusterServiceInstanceServiceImpl
      * 从Kubernetes配置组获取子组名称
      */
     private String getKubernetesSubgroup(String configGroup) {
-        if (configGroup == null || !configGroup.startsWith(Constants.K8S_CONFIG_PREFIX)) {
+        if (configGroup == null || !configGroup.startsWith(Constants.KUBERNETES_CONFIG_PREFIX)) {
             return null;
         }
 
@@ -311,9 +308,9 @@ public class ClusterServiceInstanceServiceImpl
                 String subgroup = getKubernetesSubgroup(configGroup);
 
                 if (role != null && subgroup != null) {
-                    String baseConfigName = extractK8sBaseConfigName(config.getName());
+                    String baseConfigName = extractKubernetesBaseConfigName(config.getName());
                     String keyName = role + "." + subgroup + "." + baseConfigName;
-                    config.setConfigCategory("k8s"); // 标记为Kubernetes配置
+                    config.setConfigCategory("kubernetes"); // 标记为Kubernetes配置
                     configMapA.put(keyName, config);
                 } else {
                     configMapA.put(config.getName(), config);
@@ -331,9 +328,9 @@ public class ClusterServiceInstanceServiceImpl
                 String subgroup = getKubernetesSubgroup(configGroup);
 
                 if (role != null && subgroup != null) {
-                    String baseConfigName = extractK8sBaseConfigName(config.getName());
+                    String baseConfigName = extractKubernetesBaseConfigName(config.getName());
                     String keyName = role + "." + subgroup + "." + baseConfigName;
-                    config.setConfigCategory("k8s"); // 标记为Kubernetes配置
+                    config.setConfigCategory("kubernetes"); // 标记为Kubernetes配置
                     configMapB.put(keyName, config);
                 } else {
                     configMapB.put(config.getName(), config);
@@ -367,28 +364,28 @@ public class ClusterServiceInstanceServiceImpl
 
             // 确定此配置项的分组
             String groupName;
-            boolean isK8sConfig = false;
+            boolean isKubernetesConfig = false;
 
-            if (configA_item != null && "k8s".equals(configA_item.getConfigCategory())) {
-                isK8sConfig = true;
+            if (configA_item != null && "kubernetes".equals(configA_item.getConfigCategory())) {
+                isKubernetesConfig = true;
                 // 从组合键中提取角色和子组
                 String[] parts = key.split("\\.");
                 if (parts.length >= 3) {
                     String role = parts[0];
                     String subgroup = parts[1];
-                    groupName = Constants.K8S_CONFIG_PREFIX + subgroup + "." + role;
+                    groupName = Constants.KUBERNETES_CONFIG_PREFIX + subgroup + "." + role;
                 } else {
                     // 如果键格式异常，使用configGroup
                     groupName = configA_item.getConfigGroup();
                 }
-            } else if (configB_item != null && "k8s".equals(configB_item.getConfigCategory())) {
-                isK8sConfig = true;
+            } else if (configB_item != null && "kubernetes".equals(configB_item.getConfigCategory())) {
+                isKubernetesConfig = true;
                 // 从组合键中提取角色和子组
                 String[] parts = key.split("\\.");
                 if (parts.length >= 3) {
                     String role = parts[0];
                     String subgroup = parts[1];
-                    groupName = Constants.K8S_CONFIG_PREFIX + subgroup + "." + role;
+                    groupName = Constants.KUBERNETES_CONFIG_PREFIX + subgroup + "." + role;
                 } else {
                     // 如果键格式异常，使用configGroup
                     groupName = configB_item.getConfigGroup();
@@ -403,7 +400,7 @@ public class ClusterServiceInstanceServiceImpl
             Map<String, Object> compareItem = new HashMap<>();
 
             // 设置名称（对于Kubernetes配置，使用不带前缀的基础名称）
-            if (isK8sConfig) {
+            if (isKubernetesConfig) {
                 String baseConfigName = key.substring(key.lastIndexOf('.') + 1);
                 compareItem.put("name", baseConfigName);
             } else {
@@ -443,17 +440,17 @@ public class ClusterServiceInstanceServiceImpl
         ClusterServiceInstanceEntity clusterServiceInstance = this.getById(serviceInstanceId);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterServiceInstance.getClusterId());
 
-        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
+        if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
             List<String> serviceRoleList = roleInstanceList.stream()
                     .map(ClusterServiceRoleInstanceEntity::getServiceRoleName).distinct().collect(Collectors.toList());
             for (String serviceRoleName : serviceRoleList) {
-                K8sServiceStopHandler k8sServiceStopHandler = new K8sServiceStopHandler();
+                KubernetesServiceStopHandler kubernetesServiceStopHandler = new KubernetesServiceStopHandler();
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
                 serviceRoleInfo.setClusterId(clusterServiceInstance.getClusterId());
                 serviceRoleInfo.setParentName(clusterServiceInstance.getServiceName());
                 serviceRoleInfo.setName(serviceRoleName);
                 try {
-                    k8sServiceStopHandler.handlerRequest(serviceRoleInfo);
+                    kubernetesServiceStopHandler.handlerRequest(serviceRoleInfo);
                     log.info("remove {} deployment success", serviceRoleName);
                 } catch (Exception e) {
                     log.error("remove {} deployment failed", serviceRoleName);

@@ -60,7 +60,7 @@ public class HostCheckActor extends UntypedActor {
   @Override
   public void onReceive(Object msg) throws Throwable {
     if (msg instanceof HostCheckCommand) {
-      logger.info("start to check host info");
+      //logger.info("start to check host info");
       ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
       ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
           .getBean(ClusterServiceRoleInstanceService.class);
@@ -77,12 +77,19 @@ public class HostCheckActor extends UntypedActor {
       for (ClusterInfoEntity clusterInfoEntity : clusterList) {
         // 获取集群上安装的 Prometheus 服务, 从 Prometheus 获取CPU、磁盘使用量等
         Integer clusterId = clusterInfoEntity.getId();
+        String depType = clusterInfoEntity.getDepType();
+        String prometheusPort = "9090";
+        if (Constants.KUBERNETES_MODE.equals(depType)) {
+          prometheusPort="30909";
+        }
+
         ClusterServiceRoleInstanceEntity prometheusInstance = roleInstanceService.getOneServiceRole("Prometheus", "",
             clusterId);
         if (Objects.nonNull(prometheusInstance)) {
           // 集群正常安装了 Prometheus
           List<ClusterHostDO> list = clusterHostService.getHostListByClusterId(clusterId);
-          String promUrl = "http://" + prometheusInstance.getHostname() + ":9090/api/v1/query";
+
+          String promUrl = "http://" + prometheusInstance.getHostname() + ":" + prometheusPort + "/api/v1/query";
           for (ClusterHostDO clusterHostDO : list) {
             if (hostInfo != null && !StringUtils.equals(clusterHostDO.getHostname(), hostInfo.getHostname())) {
               // 指定了节点，直接只处理这一个节点的
@@ -155,23 +162,22 @@ public class HostCheckActor extends UntypedActor {
             try {
               // rpc 检测
               ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-              String depType = clusterInfo.getDepType();
-              if (Constants.K8S_MODE.equals(depType)) {
+              if (Constants.KUBERNETES_MODE.equals(depType)) {
                 try {
                   // 使用Java原生的isReachable方法替代系统ping命令
                   java.net.InetAddress address = java.net.InetAddress.getByName(host.getHostname());
                   boolean reachable = address.isReachable(3000); // 3000毫秒超时
 
                   if (reachable) {
-                    logger.info("检查主机连通性: {} 成功 (K8S模式)", host.getHostname());
+                    logger.info("检查主机连通性: {} 成功 (Kubernetes模式)", host.getHostname());
                     checkedHost.setHostState(HostState.RUNNING);
                     checkedHost.setManaged(MANAGED.YES);
                   } else {
-                    logger.warn("检查主机连通性: {} 失败 (K8S模式)", host.getHostname());
+                    logger.warn("检查主机连通性: {} 失败 (Kubernetes模式)", host.getHostname());
                     checkedHost.setHostState(HostState.OFFLINE);
                   }
                 } catch (Exception e) {
-                  logger.warn("K8S模式下检查主机: {} 失败, 原因: {}", host.getHostname(), e.getMessage());
+                  logger.warn("Kubernetes模式下检查主机: {} 失败, 原因: {}", host.getHostname(), e.getMessage());
                   checkedHost.setHostState(HostState.OFFLINE);
                 }
                 continue; // 跳过下面的pingActor检测

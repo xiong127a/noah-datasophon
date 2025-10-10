@@ -129,7 +129,7 @@ public class WorkerApplicationServer {
 
     private static ActorSystem initActor(String hostname) {
         Config config = ConfigFactory.parseString("akka.remote.netty.tcp.hostname=" + hostname);
-        ActorSystem system = ActorSystem.create(Constants.DATASOPHON, config.withFallback(ConfigFactory.load()));
+        ActorSystem system = ActorSystem.create("datasophon", config.withFallback(ConfigFactory.load()));
         system.actorOf(Props.create(WorkerActor.class), WORKER);
 
         // 设置ActorSystem到FreemakerUtils，用于模板获取

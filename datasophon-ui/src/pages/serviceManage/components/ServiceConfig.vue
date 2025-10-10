@@ -339,7 +339,7 @@
               class="panel-header" 
               @click="toggleGroup(groupName)"
             >
-              {{ isKubernetesConfig(groupName) ? formatK8sGroupTitle(groupName) : convertGroupName(groupName) }}
+              {{ isKubernetesConfig(groupName) ? formatKubernetesGroupTitle(groupName) : convertGroupName(groupName) }}
               <a-icon 
                 :type="isGroupExpanded[groupName] ? 'up' : 'right'" 
                 class="toggle-icon" 
@@ -355,14 +355,14 @@
                     class="compare-row-simple"
                     :class="{ 
                       'different': item.isDifferent,
-                      'k8s-config-divider': item.isDivider,
-                      'k8s-config-first-divider': item.isFirstDivider
+                      'kubernetes-config-divider': item.isDivider,
+                      'kubernetes-config-first-divider': item.isFirstDivider
                     }"
                   >
                     <!-- 如果是分隔符，显示分隔标题 -->
                     <template v-if="item.isDivider || item.isFirstDivider">
-                      <td colspan="3" class="k8s-config-divider-cell">
-                        <div class="k8s-divider-label" v-html="item.dividerLabel">
+                      <td colspan="3" class="kubernetes-config-divider-cell">
+                        <div class="kubernetes-divider-label" v-html="item.dividerLabel">
                         </div>
                       </td>
                     </template>
@@ -573,12 +573,13 @@ export default {
       restoreDialogVisible: false, // 控制恢复确认对话框的显示
       restoreDescription: '', // 存储恢复版本的备注
       activeKubernetesTabs: {}, // 存储每个角色组的Kubernetes标签页激活状态
-      k8sSubGroupChineseNames: { // Copied from step7.vue
+      kubernetesSubGroupChineseNames: { // Copied from step7.vue
         'persistentVolumeClaims': '持久卷声明',
         'resources': '资源规格',
         'services': '服务暴露',
         'node_port_mappings': '节点端口映射',
         'cluster_port_mappings': '集群端口映射',
+        'load_balancer_port_mappings': '负载均衡器端口映射',
         'requests_memory': '内存请求',
         'requests_cpu': 'CPU请求',
         'limits_memory': '内存限制',
@@ -631,8 +632,8 @@ export default {
           });
           
           // 过滤Kubernetes配置
-          const filteredK8sSubGroups = {};
-          let hasMatchingK8sConfig = false;
+          const filteredKubernetesSubGroups = {};
+          let hasMatchingKubernetesConfig = false;
           
           Object.entries(kubernetesSubGroups).forEach(([subGroupName, configs]) => {
             const filteredConfigs = configs.filter(item => {
@@ -649,17 +650,17 @@ export default {
             });
             
             if (filteredConfigs.length > 0) {
-              filteredK8sSubGroups[subGroupName] = filteredConfigs;
-              hasMatchingK8sConfig = true;
+              filteredKubernetesSubGroups[subGroupName] = filteredConfigs;
+              hasMatchingKubernetesConfig = true;
             }
           });
           
           // 如果有匹配的配置项，则添加到结果中
-          if (filteredRegularConfigs.length > 0 || hasMatchingK8sConfig) {
+          if (filteredRegularConfigs.length > 0 || hasMatchingKubernetesConfig) {
             result[groupName] = [{
               hasKubernetesConfig: true,
               regularConfigs: filteredRegularConfigs,
-              kubernetesSubGroups: filteredK8sSubGroups
+              kubernetesSubGroups: filteredKubernetesSubGroups
             }];
           }
         } else if (configData && configData.isKubernetesGroup) {
@@ -890,13 +891,13 @@ export default {
             const roleGroup = group[0];
             const hasVisibleRegularConfigs = (roleGroup.regularConfigs || []).some(item => !item.hidden);
             
-            let hasVisibleK8sConfigs = false;
+            let hasVisibleKubernetesConfigs = false;
             if (roleGroup.kubernetesSubGroups) {
-              hasVisibleK8sConfigs = Object.values(roleGroup.kubernetesSubGroups).some(configs => 
+              hasVisibleKubernetesConfigs = Object.values(roleGroup.kubernetesSubGroups).some(configs =>
                 (configs || []).some(item => !item.hidden)
               );
             }
-            return hasVisibleRegularConfigs || hasVisibleK8sConfigs;
+            return hasVisibleRegularConfigs || hasVisibleKubernetesConfigs;
           }
           
           // 2. 处理旧格式：Kubernetes配置组 (isKubernetesGroup flag)
@@ -1203,9 +1204,9 @@ export default {
             
             // 添加Kubernetes配置表单
             Object.keys(group[0].kubernetesSubGroups).forEach(subGroupName => {
-              const k8sFormRef = this.$refs[`template_${groupName}_${subGroupName}`]?.[0];
-              if (k8sFormRef) {
-                allFormRefs.push(k8sFormRef);
+              const kubernetesFormRef = this.$refs[`template_${groupName}_${subGroupName}`]?.[0];
+              if (kubernetesFormRef) {
+                allFormRefs.push(kubernetesFormRef);
               }
             });
           } 
@@ -1452,7 +1453,7 @@ export default {
     },
     handlerTemplate(data) {
       const finalResult = {};
-      const kubernetesConfigsByBaseRole = {}; // { "ZkServer": { "k8s.config.pvc": [...] } }
+      const kubernetesConfigsByBaseRole = {}; // { "ZkServer": { "kubernetes.config.pvc": [...] } }
       const regularConfigsByBaseRole = {};  // { "ZkServer": [...], "General": [...] }
 
       try {
@@ -1477,16 +1478,16 @@ export default {
 
           if (cleanedOriginalKey.startsWith('kubernetes.config.')) {
             const parts = cleanedOriginalKey.split('.');
-            const baseRoleName = parts[parts.length - 1]; // Assumes format k8s.config.subgroup.Role
-            const k8sSubGroupName = parts.slice(0, -1).join('.'); // e.g., kubernetes.config.persistent-volume-claims
+            const baseRoleName = parts[parts.length - 1]; // Assumes format kubernetes.config.subgroup.Role
+            const kubernetesSubGroupName = parts.slice(0, -1).join('.'); // e.g., kubernetes.config.persistent-volume-claims
             
             if (!kubernetesConfigsByBaseRole[baseRoleName]) {
               kubernetesConfigsByBaseRole[baseRoleName] = {};
             }
-            if (!kubernetesConfigsByBaseRole[baseRoleName][k8sSubGroupName]) {
-              kubernetesConfigsByBaseRole[baseRoleName][k8sSubGroupName] = [];
+            if (!kubernetesConfigsByBaseRole[baseRoleName][kubernetesSubGroupName]) {
+              kubernetesConfigsByBaseRole[baseRoleName][kubernetesSubGroupName] = [];
             }
-            kubernetesConfigsByBaseRole[baseRoleName][k8sSubGroupName].push(...processedConfigList);
+            kubernetesConfigsByBaseRole[baseRoleName][kubernetesSubGroupName].push(...processedConfigList);
           } else {
             // Regular group or role-specific regular configs
             const baseRoleName = cleanedOriginalKey;
@@ -1510,10 +1511,10 @@ export default {
         ]);
 
         allBaseRoleNames.forEach(baseRoleName => {
-          const k8sSubGroups = kubernetesConfigsByBaseRole[baseRoleName];
+          const kubernetesSubGroups = kubernetesConfigsByBaseRole[baseRoleName];
           const regularContent = regularConfigsByBaseRole[baseRoleName];
 
-          if (k8sSubGroups) {
+          if (kubernetesSubGroups) {
             let regs = [];
             if (regularContent) {
               regs = Array.isArray(regularContent) ? regularContent : (regularContent.items || []);
@@ -1522,7 +1523,7 @@ export default {
               hasKubernetesConfig: true,
               roleGroupName: baseRoleName,
               regularConfigs: regs,
-              kubernetesSubGroups: k8sSubGroups
+              kubernetesSubGroups: kubernetesSubGroups
             }];
           } else if (regularContent) {
             finalResult[baseRoleName] = regularContent; // This is already an array or {items, templateContent}
@@ -1646,7 +1647,7 @@ export default {
       
       this.$axiosPost(global.API.configVersionCompare, params).then(res => {
         if (res.code === 200) {
-          // 预处理数据，合并同一服务的k8s配置
+          // 预处理数据，合并同一服务的kubernetes配置
           this.compareData = this.preprocessCompareGroups(res.data);
           
           // 自动展开所有分组
@@ -1824,9 +1825,9 @@ export default {
       Object.entries(kubernetesAwareGroups).forEach(([roleName, groupArray]) => {
         // groupArray is expected to be like [{ hasKubernetesConfig: true, kubernetesSubGroups: {...} }]
         if (Array.isArray(groupArray) && groupArray.length === 1 && groupArray[0].hasKubernetesConfig) {
-          const k8sData = groupArray[0];
-          if (k8sData.kubernetesSubGroups) {
-            const subGroupNames = Object.keys(k8sData.kubernetesSubGroups);
+          const kubernetesData = groupArray[0];
+          if (kubernetesData.kubernetesSubGroups) {
+            const subGroupNames = Object.keys(kubernetesData.kubernetesSubGroups);
             // Set the first subGroup as active if no tab is currently active for this roleName
             if (!this.activeKubernetesTabs[roleName] && subGroupNames.length > 0) {
               this.$set(this.activeKubernetesTabs, roleName, subGroupNames[0]);
@@ -1853,7 +1854,7 @@ export default {
       if (!readableEnglishName && actualSubGroupName) readableEnglishName = actualSubGroupName; 
       else if (!readableEnglishName && !actualSubGroupName) readableEnglishName = 'Unknown';
 
-      const chineseName = this.k8sSubGroupChineseNames[actualSubGroupName];
+      const chineseName = this.kubernetesSubGroupChineseNames[actualSubGroupName];
 
       let displayText;
       if (chineseName) {
@@ -1863,12 +1864,12 @@ export default {
         displayText = readableEnglishName; 
       }
       // 返回HTML字符串，其中英文部分用特定class包裹
-      return `${displayText} <span class="k8s-subgroup-en">(${readableEnglishName})</span>`;
+      return `${displayText} <span class="kubernetes-subgroup-en">(${readableEnglishName})</span>`;
     },
     isKubernetesConfig(groupName) {
       return groupName && groupName.startsWith('kubernetes.config.');
     },
-    formatK8sGroupTitle(groupName) {
+    formatKubernetesGroupTitle(groupName) {
       if (!groupName || !groupName.startsWith('kubernetes.config.')) {
         return groupName;
       }
@@ -1891,7 +1892,7 @@ export default {
       const result = {};
       const roleBasedGroups = {}; // 按服务名（角色）分组
       
-      // 第一步：收集所有k8s配置，按服务名分组
+      // 第一步：收集所有kubernetes配置，按服务名分组
       Object.entries(data).forEach(([groupName, items]) => {
         if (this.isKubernetesConfig(groupName)) {
           const parts = groupName.split('.');
@@ -1910,8 +1911,8 @@ export default {
             // 为每个配置项添加类型标记
             const itemsWithType = items.map(item => ({
               ...item,
-              k8sConfigType: configType,
-              k8sConfigTypeLabel: this.k8sSubGroupChineseNames[configType] || configType
+              kubernetesConfigType: configType,
+              kubernetesConfigTypeLabel: this.kubernetesSubGroupChineseNames[configType] || configType
             }));
             
             roleBasedGroups[roleName][configType].push(...itemsWithType);
@@ -1920,12 +1921,12 @@ export default {
             result[groupName] = items;
           }
         } else {
-          // 非k8s配置保持原样
+          // 非kubernetes配置保持原样
           result[groupName] = items;
         }
       });
       
-      // 第二步：将收集的k8s配置添加到结果中，并添加分隔符项
+      // 第二步：将收集的kubernetes配置添加到结果中，并添加分隔符项
       Object.entries(roleBasedGroups).forEach(([roleName, configTypes]) => {
         const newGroupName = `kubernetes.config.combined.${roleName}`;
         const combinedItems = [];
@@ -1939,15 +1940,15 @@ export default {
             .trim();
             
           // 获取中文显示名称
-          const chineseName = this.k8sSubGroupChineseNames[configType] || readableEnglishName;
+          const chineseName = this.kubernetesSubGroupChineseNames[configType] || readableEnglishName;
           
           // 组合显示标签
-          const dividerLabel = `${chineseName} <span class="k8s-subgroup-en">(${readableEnglishName})</span>`;
+          const dividerLabel = `${chineseName} <span class="kubernetes-subgroup-en">(${readableEnglishName})</span>`;
           
           // 如果不是第一个配置类型，添加分隔符
           if (index > 0) {
             combinedItems.push({
-              name: `k8s-divider-${configType}`,
+              name: `kubernetes-divider-${configType}`,
               isDivider: true,
               dividerLabel,
               [this.currentVersion]: '',
@@ -1956,7 +1957,7 @@ export default {
           } else {
             // 第一个配置类型也添加标签，但不显示分隔线
             combinedItems.push({
-              name: `k8s-divider-${configType}`,
+              name: `kubernetes-divider-${configType}`,
               isFirstDivider: true,
               dividerLabel,
               [this.currentVersion]: '',
@@ -2737,13 +2738,13 @@ export default {
   font-size: 12px;
 }
 
-.k8s-subgroup-en {
+.kubernetes-subgroup-en {
   font-size: 0.8em;
   color: #999;
 }
 
 /* Kubernetes子组Tab英文名样式 (类似 step7.vue) */
-/deep/ .k8s-subgroup-en {
+/deep/ .kubernetes-subgroup-en {
   color: #E6A23C; /* 浅橙色 */
   font-size: 0.9em;   /* 辅助字体稍小 */
   font-weight: normal; /* 非粗体 */
@@ -2751,14 +2752,14 @@ export default {
 }
 
 /* 分隔符样式 */
-.k8s-config-divider-cell {
+.kubernetes-config-divider-cell {
   text-align: left;
   padding: 10px 16px;
   background-color: #f5f7fa;
 }
 
 /* 分隔符标签样式 */
-.k8s-divider-label {
+.kubernetes-divider-label {
   padding: 4px 0;
   font-weight: 500;
   color: #1890ff;
@@ -2767,7 +2768,7 @@ export default {
   align-items: center;
 }
 
-.k8s-divider-label::before {
+.kubernetes-divider-label::before {
   content: '';
   display: inline-block;
   width: 4px;
@@ -2778,13 +2779,13 @@ export default {
 }
 
 /* 分隔符样式 */
-.k8s-config-divider {
+.kubernetes-config-divider {
   background-color: transparent;
   border-top: 1px dashed #d9d9d9;
 }
 
 /* 第一个配置类型标题样式 */
-.k8s-config-first-divider {
+.kubernetes-config-first-divider {
   background-color: transparent;
 }
 </style> 

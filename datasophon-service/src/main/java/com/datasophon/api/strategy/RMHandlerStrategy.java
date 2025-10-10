@@ -20,11 +20,11 @@
 package com.datasophon.api.strategy;
 
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.service.ClusterYarnSchedulerService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.ConnectionInfo;
@@ -64,7 +64,7 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
 
         @Override
         public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-                ClusterYarnSchedulerService schedulerService = SpringTool.getApplicationContext()
+                ClusterYarnSchedulerService schedulerService = SpringUtil
                                 .getBean(ClusterYarnSchedulerService.class);
                 Map<String, String> globalVariables = GlobalVariables.get(clusterId);
                 ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
@@ -111,8 +111,8 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
         }
 
         @Override
-        public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+        public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
                 // 调用通用方法，传递特定的actorPath
                 performServiceRoleCheck(roleInstanceEntity, "");
         }

@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: datasophon-ui-service
+  labels:
+    app: datasophon-ui
+  namespace: datasophon
+spec:
+  selector:
+    app: datasophon-ui
+  ports:
+    - port: 80
+      targetPort: 80
+      name: http
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: datasophon-ui
+  labels:
+    app: datasophon-ui
+  namespace: datasophon
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: datasophon-ui
+  template:
+    metadata:
+      labels:
+        app: datasophon-ui
+    spec:
+      containers:
+        - name: datasophon-ui
+          image: harbor.norintech.com/bdp/datasophon-ui:latest
+          imagePullPolicy: Always
+          env:
+            - name: RUNNING_IN_KUBERNETES
+              value: "true"
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+          ports:
+            - containerPort: 80
+              name: http
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "200m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 20
+            periodSeconds: 10
+      volumes:
+        - name: logs-volume
+          persistentVolumeClaim:
+            claimName: datasophon-logs
+      initContainers:
+        - name: wait-for-backend
+          image: harbor.norintech.com/bdp/busybox:1.28
+          command: ['sh', '-c', 'until wget -T 5 -q --spider http://datasophon-api-service:8081/ddh/actuator/health/liveness; do echo waiting for backend; sleep 5; done;']
+
+---
+apiVersion: networking.kubernetes.io/v1
+kind: Ingress
+metadata:
+  name: datasophon-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "PUT, GET, POST, OPTIONS, DELETE, PATCH"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+  namespace: datasophon
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: datasophon.noah.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: datasophon-ui-service
+                port:
+                  number: 80 

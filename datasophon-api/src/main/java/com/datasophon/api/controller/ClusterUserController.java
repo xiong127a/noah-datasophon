@@ -60,7 +60,7 @@ public class ClusterUserController {
      */
     @RequestMapping("/create")
     public Result save(Integer clusterId, String username, Integer mainGroupId, String otherGroupIds) {
-        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterUserService.create(clusterId, username, mainGroupId, otherGroupIds):clusterUserService.createOnK8s(clusterId, username, mainGroupId, otherGroupIds);
+        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterUserService.create(clusterId, username, mainGroupId, otherGroupIds):clusterUserService.createOnKubernetes(clusterId, username, mainGroupId, otherGroupIds);
     }
 
     /**
@@ -79,7 +79,7 @@ public class ClusterUserController {
      */
     @RequestMapping("/delete")
     public Result delete(Integer clusterId,Integer id) {
-        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterUserService.deleteClusterUser(id):clusterUserService.deleteClusterUserOnK8s(id);
+        return Constants.PVM_MODE.equals(getDepMode(clusterId))?clusterUserService.deleteClusterUser(id):clusterUserService.deleteClusterUserOnkubernetes(id);
     }
 
 }

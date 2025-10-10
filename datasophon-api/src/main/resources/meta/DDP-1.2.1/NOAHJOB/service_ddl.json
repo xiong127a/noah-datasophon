@@ -4,7 +4,9 @@
   "description": "分布式易扩展的可视化工作流任务调度平台",
   "version": "3.0.0",
   "sortNum": 44,
-  "dependencies":["ZOOKEEPER"],
+  "dependencies": [
+    "ZOOKEEPER"
+  ],
   "packageName": "noah-job-3.0.0.tar.gz",
   "decompressPackageName": "noah-job-3.0.0",
   "roles": [
@@ -114,6 +116,42 @@
           "portal.url",
           "custom.common.properties"
         ]
+      },
+      {
+        "filename": "kubernetes.config.persistent-volume-claims",
+        "fileDescription": "NOAHJOB Kubernetes存储配置，定义持久卷存储类和挂载路径",
+        "configFormat": "properties",
+        "configTargetRoles": "NoahJobServer",
+        "outputDirectory": "",
+        "includeParams": [
+          "storage_classes",
+          "mount_path",
+          "storage_size"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "NOAHJOB Kubernetes网络服务配置，定义端口",
+        "configFormat": "properties",
+        "configTargetRoles": "NoahJobServer",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "cpu、memory系统资源",
+        "configFormat": "properties",
+        "configTargetRoles": "NoahJobServer",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
+        ]
       }
     ]
   },
@@ -140,7 +178,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "jdbc:mysql://${apiHost}:3306/noah_scheduler?useUnicode=true&characterEncoding=UTF-8&useSSL=false"
+      "defaultValue": "jdbc:mysql://192.168.1.143:3306/noah?useUnicode=true&characterEncoding=UTF-8&useSSL=false"
     },
     {
       "name": "username",
@@ -152,7 +190,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "ke_dev"
+      "defaultValue": "root"
     },
     {
       "name": "password",
@@ -164,7 +202,7 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "ke_dev"
+      "defaultValue": "962464"
     },
     {
       "name": "zkUrls",
@@ -188,8 +226,9 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "https://192.168.5.184:10000/index.html"
-    },{
+      "defaultValue": "http://192.168.101.176:10001/index.html"
+    },
+    {
       "name": "serverUrl",
       "label": "serverUrl",
       "description": "",
@@ -199,8 +238,9 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "https://192.168.5.174:10000/sso-server/"
-    },{
+      "defaultValue": "http://192.168.101.176:10000/sso-server/"
+    },
+    {
       "name": "orgQuartzJobStoreDriverDelegateClass",
       "label": "orgQuartzJobStoreDriverDelegateClass",
       "description": "",
@@ -222,7 +262,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "/data/dolphinscheduler"
-    },{
+    },
+    {
       "name": "resource.storage.type",
       "label": "resource.storage.type",
       "description": "",
@@ -232,7 +273,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "S3"
-    },{
+    },
+    {
       "name": "resource.upload.path",
       "label": "resource.upload.path",
       "description": "",
@@ -242,7 +284,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "/dolphinscheduler"
-    },{
+    },
+    {
       "name": "aws.access.key.id",
       "label": "aws.access.key.id",
       "description": "",
@@ -251,8 +294,9 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "minioadmin"
-    },{
+      "defaultValue": "test1"
+    },
+    {
       "name": "aws.secret.access.key",
       "label": "aws.secret.access.key",
       "description": "",
@@ -261,8 +305,9 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "minioadmin"
-    },{
+      "defaultValue": "test1@1234"
+    },
+    {
       "name": "aws.region",
       "label": "aws.region",
       "description": "",
@@ -272,7 +317,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "us-east-1"
-    },{
+    },
+    {
       "name": "aws.bucket",
       "label": "aws.bucket",
       "description": "",
@@ -281,8 +327,9 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "noah"
-    },{
+      "defaultValue": "dolphinscheduler-test"
+    },
+    {
       "name": "aws.datasource.authentication.bucket",
       "label": "aws.datasource.authentication.bucket",
       "description": "",
@@ -292,7 +339,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "datasource-authentication"
-    },{
+    },
+    {
       "name": "aws.endpoint",
       "label": "aws.endpoint",
       "description": "",
@@ -301,8 +349,9 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "http://${hostname}/"
-    },{
+      "defaultValue": "http://192.168.101.224:9000/"
+    },
+    {
       "name": "hdfs.root.user",
       "label": "hdfs.root.user",
       "description": "",
@@ -312,7 +361,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "hdfs"
-    },{
+    },
+    {
       "name": "noahjob.fs.defaultFS",
       "label": "noahjob.fs.defaultFS",
       "description": "",
@@ -321,8 +371,9 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "http://${hostname}/noah"
-    },{
+      "defaultValue": "http://192.168.101.224:9000/dolphinscheduler-test"
+    },
+    {
       "name": "resource.manager.httpaddress.port",
       "label": "resource.manager.httpaddress.port",
       "description": "",
@@ -332,7 +383,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "8088"
-    },{
+    },
+    {
       "name": "yarn.resourcemanager.ha.rm.ids",
       "label": "yarn.resourcemanager.ha.rm.ids",
       "description": "",
@@ -342,7 +394,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "${rmHost}"
-    },{
+    },
+    {
       "name": "yarn.application.status.address",
       "label": "yarn.application.status.address",
       "description": "",
@@ -352,7 +405,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "http://ds1:%s/ws/v1/cluster/apps/%s"
-    },{
+    },
+    {
       "name": "yarn.job.history.status.address",
       "label": "yarn.job.history.status.address",
       "description": "",
@@ -362,7 +416,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "http://ds1:19888/ws/v1/history/mapreduce/jobs/%s"
-    },{
+    },
+    {
       "name": "datasource.encryption.enable",
       "label": "datasource.encryption.enable",
       "description": "",
@@ -372,7 +427,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "false"
-    },{
+    },
+    {
       "name": "datasource.encryption.salt",
       "label": "datasource.encryption.salt",
       "description": "",
@@ -382,7 +438,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "!@#$%^&*"
-    },{
+    },
+    {
       "name": "data-quality.jar.name",
       "label": "data-quality.jar.name",
       "description": "",
@@ -392,7 +449,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "dolphinscheduler-data-quality-dev-SNAPSHOT.jar"
-    },{
+    },
+    {
       "name": "support.hive.oneSession",
       "label": "support.hive.oneSession",
       "description": "",
@@ -402,7 +460,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "false"
-    },{
+    },
+    {
       "name": "sudo.enable",
       "label": "sudo.enable",
       "description": "",
@@ -412,7 +471,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "true"
-    },{
+    },
+    {
       "name": "development.state",
       "label": "development.state",
       "description": "",
@@ -422,7 +482,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "false"
-    },{
+    },
+    {
       "name": "alert.rpc.port",
       "label": "alert.rpc.port",
       "description": "",
@@ -431,8 +492,9 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "50052"
-    },{
+      "defaultValue": "25005"
+    },
+    {
       "name": "zeppelin.rest.url",
       "label": "zeppelin.rest.url",
       "description": "",
@@ -442,7 +504,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "http://localhost:8080"
-    },{
+    },
+    {
       "name": "portal.url",
       "label": "portal.url",
       "description": "",
@@ -452,7 +515,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "http://192.168.5.228:8111/portal-api"
-    },{
+    },
+    {
       "name": "redisNodes",
       "label": "redisNodes",
       "configType": "map",
@@ -462,8 +526,9 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "null"
-    },{
+      "defaultValue": "192.168.101.172:6379,192.168.101.173:6379,192.168.101.174:6379"
+    },
+    {
       "name": "redisAloneEnabled",
       "label": "redisAloneEnabled",
       "configType": "map",
@@ -474,7 +539,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "true"
-    },{
+    },
+    {
       "name": "redisAloneHost",
       "label": "redisAloneHost",
       "configType": "map",
@@ -485,7 +551,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "null"
-    },{
+    },
+    {
       "name": "redisAlonePort",
       "label": "redisAlonePort",
       "configType": "map",
@@ -496,7 +563,8 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "null"
-    },{
+    },
+    {
       "name": "redisPassword",
       "label": "redisPassword",
       "description": "",
@@ -506,18 +574,193 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
-    },{
-      "name": "custom.common.properties",
-      "label": "自定义配置common.properties",
-      "description": "自定义配置",
+      "defaultValue": "opstest@123"
+    },
+    {
+      "name": "custom.application.yaml",
+      "label": "自定义NOAHJOB应用配置",
+      "description": "用于添加自定义的NOAHJOB应用参数，这些参数将被添加到application.yaml配置文件中",
       "configType": "custom",
       "required": false,
       "type": "multipleWithKey",
       "value": [],
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": ""
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "application",
+      "configLevel": "custom"
+    },
+    {
+      "name": "custom.common.properties",
+      "label": "自定义NOAHJOB通用配置",
+      "description": "用于添加自定义的NOAHJOB通用参数，这些参数将被添加到common.properties配置文件中",
+      "configType": "custom",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "",
+      "configCategory": "file",
+      "configGroup": "common",
+      "configLevel": "custom"
+    },
+    {
+      "name": "storage_classes",
+      "label": "存储类名称",
+      "description": "Kubernetes存储类名称，用于动态创建持久卷(PV)。需预先在集群中创建对应存储类（如nfs-client），确保与底层存储系统匹配",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "nfs-client",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nfs-client",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "mount_path",
+      "label": "挂载路径",
+      "description": "持久卷在Pod内的挂载路径，需与存储类配合使用。该路径将作为NOAHJOB的数据存储位置的父目录",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "/data",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/data",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "storage_size",
+      "label": "存储大小",
+      "description": "持久卷的存储大小，需与存储类配合使用。例如：20Gi",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "20",
+      "configurableInWizard": true,
+      "hidden": false,
+      "unit": "Gi",
+      "defaultValue": "20",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器启动时保证分配的最小内存量（如 2Gi）。建议设置为日常内存使用峰值的 1.2 倍，单位支持 Gi/Mi。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU 请求值",
+      "description": "容器启动时保证分配的最小 CPU 核心数（如 1）。建议设置为日常 CPU 使用峰值的 1.5 倍，支持小数（如 0.5 表示 500m 毫核）。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器允许使用的最大内存量（如 4Gi）。必须大于请求值，建议不超过请求值的 2 倍，否则可能引发 OOM Kill 风险。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU 限制值 (limits.cpu)",
+      "description": "容器允许使用的最大 CPU 核心数（如 2）。建议设置为请求值的 2-3 倍以应对突发负载，但需确保节点资源充足。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "配置Kubernetes Service的NodePort类型端口映射，实现集群外部对服务的访问。键(key)指定容器内的服务端口(containerPort)，值(value)指定对应的NodePort端口(集群节点上开放的外部访问端口，范围30000-32767)。若值为空，则仅创建ClusterIP服务不开放NodePort。例如：9870:30870表示将容器的9870端口映射到集群节点的30870端口。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
+    },
+    {
+      "name": "noahJob_port",
+      "label": "noahJob_port端口",
+      "description": "noahJob_port端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "54321",
+      "configCategory": "file",
+      "configGroup": "NoahJobServer",
+      "configLevel": "advanced",
+      "bindRole": "NoahJobServer",
+      "serviceType": "NodePort",
+      "portNumber": "54321",
+      "nodePort": "31234"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "配置Kubernetes Service的ClusterIP类型端口映射，仅用于集群内部通信。键(key)指定容器内的服务端口(containerPort)，值(value)通常与键相同，表示不需要特别映射。这些端口只能在Kubernetes集群内部访问，无法从外部直接访问。",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services",
+      "configLevel": "advanced"
     }
   ]
 }

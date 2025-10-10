@@ -35,12 +35,12 @@ import com.datasophon.api.service.ServiceConfigFileService;
 import com.datasophon.api.utils.CompressUtils;
 import com.datasophon.api.utils.MetaPathUtils;
 import com.datasophon.api.utils.SpringTool;
-import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ConfigFile;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.FreemarkerUtils;
+import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceEntity;
 import com.datasophon.dao.entity.ClusterServiceInstanceRoleGroup;
@@ -103,7 +103,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
                 // 这里是建议的新字段，用于描述配置文件
                 String fileDescription = generator.getString("fileDescription");
 
-                if (StrUtil.startWith(fileName, Constants.K8S_CONFIG_PREFIX)) {
+                if (StrUtil.startWith(fileName, Constants.KUBERNETES_CONFIG_PREFIX)) {
                     continue;
                 }
 
@@ -163,7 +163,7 @@ public class ServiceConfigFileServiceImpl implements ServiceConfigFileService {
             }
 
             // 获取集群信息
-            ClusterInfoService clusterInfoService = SpringTool.getApplicationContext()
+            ClusterInfoService clusterInfoService = SpringUtil
                     .getBean(ClusterInfoService.class);
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(roleGroup.getClusterId());
             if (clusterInfo == null) {
