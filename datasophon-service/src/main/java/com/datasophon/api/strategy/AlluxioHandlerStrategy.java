@@ -1,11 +1,12 @@
 package com.datasophon.api.strategy;
 
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.fasterxml.jackson.core.type.TypeReference;
 
 import java.util.HashMap;
 import java.util.List;
@@ -21,11 +22,11 @@ public class AlluxioHandlerStrategy implements ServiceRoleStrategy {
 
     @Override
     public void getConfig(Integer clusterId, List<ServiceConfig> list) {
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
 
         String hostMapKey = clusterInfo.getClusterCode() + Constants.UNDERLINE + Constants.SERVICE_ROLE_HOST_MAPPING;
-        HashMap<String, List<String>> hostMap = (HashMap<String, List<String>>) CacheOperateUtils.get(hostMapKey);
+        HashMap<String, List<String>> hostMap = CacheOperateUtils.getWithType(hostMapKey, new TypeReference<HashMap<String, List<String>>>() {});
 
         if (Objects.nonNull(hostMap)) {
             List<String> masterHosts = hostMap.get("AlluxioMaster");

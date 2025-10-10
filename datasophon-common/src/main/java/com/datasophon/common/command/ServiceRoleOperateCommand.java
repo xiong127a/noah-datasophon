@@ -50,6 +50,7 @@ public class ServiceRoleOperateCommand extends BaseCommand implements Serializab
     private Boolean enableKerberos;
 
     private String extended;
+    private String extendConfig;
 
     public ServiceRoleOperateCommand() {
         this.enableRangerPlugin = false;

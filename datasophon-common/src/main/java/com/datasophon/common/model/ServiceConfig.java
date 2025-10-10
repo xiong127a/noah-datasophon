@@ -80,4 +80,42 @@ public class ServiceConfig implements Serializable {
      */
     private String close;
 
+    private String configTargetRoles;
+
+    private String configCategory;
+
+    private String configGroup;
+
+    private String configLevel;
+
+    private String templateName;
+    private String templateContent;
+    private String displayName;
+    private Integer heightMultiple;
+
+    /**
+     * 配置项所属的服务名称
+     */
+    private String serviceName;
+
+    /**
+     * 端口绑定的角色，多个角色用逗号分隔
+     */
+    private String bindRole;
+
+    /**
+     * 服务类型：NodePort或ClusterIP
+     */
+    private String serviceType;
+
+    /**
+     * 端口号
+     */
+    private String portNumber;
+
+    /**
+     * NodePort类型服务的外部端口号（30000-32767）
+     */
+    private String nodePort;
+
 }

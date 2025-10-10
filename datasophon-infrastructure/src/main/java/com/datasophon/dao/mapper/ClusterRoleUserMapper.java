@@ -25,7 +25,8 @@ import org.apache.ibatis.annotations.Param;
 
 import java.util.List;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.github.yulichang.base.MPJBaseMapper;
+import com.github.yulichang.wrapper.MPJLambdaWrapper;
 
 /**
  * 集群角色用户中间表
@@ -35,7 +36,19 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @date 2022-03-15 17:36:08
  */
 @Mapper
-public interface ClusterRoleUserMapper extends BaseMapper<ClusterRoleUserEntity> {
+public interface ClusterRoleUserMapper extends MPJBaseMapper<ClusterRoleUserEntity> {
 
-    List<UserInfoEntity> getAllClusterManagerByClusterId(@Param("clusterId") Integer clusterId);
+    /**
+     * 获取指定集群的所有管理员
+     *
+     * @param clusterId 集群ID
+     * @return 管理员用户列表
+     */
+    default List<UserInfoEntity> getAllClusterManagerByClusterId(@Param("clusterId") Integer clusterId) {
+        return selectJoinList(UserInfoEntity.class,
+                new MPJLambdaWrapper<ClusterRoleUserEntity>()
+                        .selectAll(UserInfoEntity.class)
+                        .leftJoin(UserInfoEntity.class, UserInfoEntity::getId, ClusterRoleUserEntity::getUserId)
+                        .eq(ClusterRoleUserEntity::getClusterId, clusterId));
+    }
 }

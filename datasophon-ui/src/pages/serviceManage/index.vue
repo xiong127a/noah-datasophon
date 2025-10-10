@@ -10,11 +10,20 @@
       <a-tab-pane :key="3" tab="配置">
         <Setting />
       </a-tab-pane>
-      <a-tab-pane v-if="serviceName === 'YARN'" :key="4" tab="资源配置">
+      <a-tab-pane :key="4" tab="连接信息" v-if="hasConnectionInfo && isServiceConnectionAvailable">
+        <ConnectInfo :serviceId="$route.params.serviceId" ref="connectInfoRef" />
+      </a-tab-pane>
+      <a-tab-pane :key="5" tab="组件介绍">
+        <ComponentIntro :serviceId="$route.params.serviceId" />
+      </a-tab-pane>
+      <a-tab-pane :key="6" tab="用户指南">
+        <UserGuide :serviceId="$route.params.serviceId" />
+      </a-tab-pane>
+      <a-tab-pane v-if="serviceName === 'YARN'" :key="7" tab="资源配置">
         <Queue />
       </a-tab-pane>
     </a-tabs>
-    <a-dropdown class="webui" :style="{left: serviceName === 'YARN' ?'280px':'200px'}" v-if="webUis.length > 0">
+    <a-dropdown class="webui" :style="{left: getWebUILeftPosition()}" v-if="webUis.length > 0">
       <a-menu slot="overlay" @click="handleMenuClick">
         <a-menu-item v-for="(item, index) in webUis" :key="index">{{item.name}}</a-menu-item>
       </a-menu>
@@ -23,7 +32,7 @@
         <a-icon type="down" />
       </div>
     </a-dropdown>
-    <div v-else class="webui" :style="{left: getWebUIWidth(serviceName)}">
+    <div v-else class="webui" :style="{left: getWebUILeftPosition()}">
       WebUI
       <a-icon type="down" />
     </div>
@@ -36,19 +45,28 @@ import ExampleList from "./exampleList.vue";
 const OverViewPage = () => import ('./overViewPage.vue')
 import Setting from "./setting.vue";
 import Queue from './queue.vue'
+import ConnectInfo from './connectInfo/index.vue'
+import ComponentIntro from './helpInfo/componentIntro.vue'
+import UserGuide from './helpInfo/userGuide.vue'
+
+// 导入连接信息服务检测工具
+import { checkServiceSupport } from './connectInfo/serviceSupport'
+
 export default {
   name: "ServiceList",
-  components: { ExampleList, Setting, OverViewPage, Queue },
+  components: { ExampleList, Setting, OverViewPage, Queue, ConnectInfo, ComponentIntro, UserGuide },
 
   data() {
     return {
       tabKey: 1,
       serviceName: '',
       loading: false,
-      tabList: ["总览", "实例", "配置"],
+      tabList: ["总览", "实例", "配置", "连接信息", "组件介绍", "用户指南"],
       serviceId: "",
       webUis: [],
       pageOverview: true,
+      hasConnectionInfo: false, // 是否显示连接信息标签
+      isServiceConnectionAvailable: false, // 服务是否有可用的连接信息内容
       tableColumns: [
         { title: "序号", key: "index" },
         { title: "角色类型", key: "serviceName" },
@@ -85,20 +103,66 @@ export default {
   },
 
   methods: {
-    getWebUIWidth (serviceName) {
-      if (serviceName === 'KRBCLIENT') {
-        return '136px'
-      } else {
-        return  serviceName==='YARN' ? '280px':'200px'
-      }
+    getWebUILeftPosition() {
+      let visibleTabs = 0;
+      
+      if (this.pageOverview) visibleTabs++;
+      visibleTabs++; // 实例页签总是显示
+      visibleTabs++; // 配置页签总是显示
+      if (this.hasConnectionInfo && this.isServiceConnectionAvailable) visibleTabs++;
+      visibleTabs += 2; // 组件介绍和用户指南总是显示
+      if (this.serviceName === 'YARN') visibleTabs++;
+      
+      // 为每个标签分配更合理的空间
+      const baseWidth = 60;   // 每个标签的基础宽度(减小)
+      const tabSpacing = 16;  // 标签之间的间距(减小到16px，与CSS一致)
+      const totalWidth = visibleTabs * baseWidth + (visibleTabs - 1) * tabSpacing;
+      
+      // 特殊处理某些服务
+      if (this.serviceName === 'KRBCLIENT') return '140px';
+      
+      // 添加标准的16px间距，使WebUI与最后一个标签的间距与标签之间的间距一致
+      return (totalWidth + tabSpacing) + 'px';
+    },
+    
+    getWebUIWidth(serviceName) {
+      return this.getWebUILeftPosition();
     },
     handleMenuClick(item) {
       let url = this.webUis[item.key].webUrl
       window.open(url)
     },
     callback(key) {
-      console.log(key);
+      console.log("Tab changed to:", key, "类型:", typeof key);
       this.tabKey = key;
+      
+      if (key === 4) {
+        console.log("连接信息标签页激活，serviceId:", this.$route.params.serviceId);
+        this.$nextTick(() => {
+          if (this.$refs.connectInfoRef) {
+            console.log("手动调用连接信息刷新方法");
+            try {
+              // 优先使用 getConnectionInfo 方法，如果不存在则使用 fetchServiceInfo，避免两个都调用
+              const hasGetConnectionInfo = typeof this.$refs.connectInfoRef.getConnectionInfo === 'function';
+              const hasFetchServiceInfo = typeof this.$refs.connectInfoRef.fetchServiceInfo === 'function';
+              
+              if (hasGetConnectionInfo) {
+                console.log("调用 getConnectionInfo 方法");
+                this.$refs.connectInfoRef.getConnectionInfo();
+              } else if (hasFetchServiceInfo) {
+                console.log("调用 fetchServiceInfo 方法");
+                this.$refs.connectInfoRef.fetchServiceInfo();
+              } else {
+                console.warn("连接信息组件没有可用的刷新方法");
+              }
+            } catch (error) {
+              console.error("调用连接信息刷新方法失败:", error);
+            }
+          } else {
+            console.error("connectInfoRef不存在");
+          }
+        });
+      }
     },
     getWebUis() {
       this.$axiosPost(global.API.getWebUis, {
@@ -119,14 +183,26 @@ export default {
           arr[0].children.map(item => {
             if (item.meta.params.serviceId == serviceId) {
               name = item.name
-              // console.log("grafana url: " + item.meta.obj.dashboardUrl)
               this.pageOverview = (item.meta.obj.dashboardUrl != undefined && item.meta.obj.dashboardUrl != "")
-              this.tabKey = (this.pageOverview ? 1 : 2); // 如果没有总览，则显示实例为第二个页签
+              this.tabKey = (this.pageOverview ? 1 : 2);
             }
           })
           this.serviceName = name
+          
+          this.checkConnectionInfoSupport(name);
         }
       }
+    },
+    
+    checkConnectionInfoSupport(serviceName) {
+      // 只通过服务名称判断是否支持连接信息，不再调用API
+      this.hasConnectionInfo = checkServiceSupport(serviceName);
+      
+      // 默认将isServiceConnectionAvailable设置为与hasConnectionInfo相同
+      // 这表示如果服务类型支持连接信息，就显示标签页
+      this.isServiceConnectionAvailable = this.hasConnectionInfo;
+      
+      console.log(`服务[${serviceName}]是否支持连接信息: ${this.hasConnectionInfo}`);
     }
   }
 };

@@ -17,8 +17,13 @@ public class RoleApis {
         return client.createRole(role);
     }
 
-    public Role getRoleByName(@Param("name") final String name) throws RangerClientException {
-        return client.getRoleByName(name);
+    public Role getRoleByName(@Param("name") final String name) {
+        try {
+            return client.getRoleByName(name);
+        } catch (RangerClientException e) {
+            log.warn("Failed to get role by name: {}. Error: {}", name, e.getMessage(), e);
+            return null;
+        }
     }
 
     public void deleteRoleByName(@Param("name") final String name) throws RangerClientException {

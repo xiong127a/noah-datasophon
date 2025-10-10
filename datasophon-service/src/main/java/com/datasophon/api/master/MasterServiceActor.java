@@ -20,11 +20,11 @@
 package com.datasophon.api.master;
 
 import akka.actor.UntypedActor;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
 import com.datasophon.common.enums.CommandType;
@@ -60,18 +60,15 @@ public class MasterServiceActor extends UntypedActor {
     @Override
     public void onReceive(Object message) {
         if (message instanceof ExecuteServiceRoleCommand) {
-            ExecuteServiceRoleCommand executeServiceRoleCommand =
-                    (ExecuteServiceRoleCommand) message;
+            ExecuteServiceRoleCommand executeServiceRoleCommand = (ExecuteServiceRoleCommand) message;
 
-            ClusterServiceRoleGroupConfigService roleGroupConfigService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleGroupConfigService.class);
-            ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleInstanceService.class);
+            ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringUtil
+                    .getBean(ClusterServiceRoleGroupConfigService.class);
+            ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
+                    .getBean(ClusterServiceRoleInstanceService.class);
 
             List<ServiceRoleInfo> serviceRoleInfoList = executeServiceRoleCommand.getMasterRoles();
-            Collections.sort(serviceRoleInfoList); //排序
+            Collections.sort(serviceRoleInfoList); // 排序
 
             int successNum = 0;
             for (ServiceRoleInfo serviceRoleInfo : serviceRoleInfoList) {
@@ -84,32 +81,29 @@ public class MasterServiceActor extends UntypedActor {
                 }
                 ExecResult execResult = new ExecResult();
                 Integer serviceInstanceId = serviceRoleInfo.getServiceInstanceId();
-                ClusterServiceRoleInstanceEntity serviceRoleInstance =
-                        roleInstanceService.getOneServiceRole(
-                                serviceRoleInfo.getName(),
-                                serviceRoleInfo.getHostname(),
-                                serviceRoleInfo.getClusterId());
+                ClusterServiceRoleInstanceEntity serviceRoleInstance = roleInstanceService.getOneServiceRole(
+                        serviceRoleInfo.getName(),
+                        serviceRoleInfo.getHostname(),
+                        serviceRoleInfo.getClusterId());
                 HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
-                boolean enableRangerPlugin =
-                        isEnableRangerPlugin(
-                                serviceRoleInfo.getClusterId(), serviceRoleInfo.getParentName());
+                boolean enableRangerPlugin = isEnableRangerPlugin(
+                        serviceRoleInfo.getClusterId(), serviceRoleInfo.getParentName());
                 boolean needReConfig = false;
                 if (executeServiceRoleCommand.getCommandType() == CommandType.INSTALL_SERVICE) {
-                    Integer roleGroupId =
-                            (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
-                    ClusterServiceRoleGroupConfig config =
-                            roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
+                    Integer roleGroupId = (Integer) CacheUtils.get("UseRoleGroup_" + serviceInstanceId);
+                    ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
+                    // TODO 获取角色组配置
                     ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                 } else if (serviceRoleInstance.getNeedRestart() == NeedRestart.YES) {
-                    ClusterServiceRoleGroupConfig config =
-                            roleGroupConfigService.getConfigByRoleGroupId(
-                                    serviceRoleInstance.getRoleGroupId());
+                    ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(
+                            serviceRoleInstance.getRoleGroupId());
                     ProcessUtils.generateConfigFileMap(configFileMap, config, serviceRoleInfo.getClusterId());
                     needReConfig = true;
                 }
                 logger.info("enable ranger plugin is {}", enableRangerPlugin);
                 serviceRoleInfo.setConfigFileMap(configFileMap);
                 serviceRoleInfo.setEnableRangerPlugin(enableRangerPlugin);
+
                 switch (executeServiceRoleCommand.getCommandType()) {
                     case INSTALL_SERVICE:
                         try {
@@ -207,8 +201,8 @@ public class MasterServiceActor extends UntypedActor {
                                     "stop {} in host {}",
                                     serviceRoleInfo.getName(),
                                     serviceRoleInfo.getHostname());
-//                            ServiceHandler serviceStopHandler = new ServiceStopHandler();
-//                            execResult = serviceStopHandler.handlerRequest(serviceRoleInfo);
+                            // ServiceHandler serviceStopHandler = new ServiceStopHandler();
+                            // execResult = serviceStopHandler.handlerRequest(serviceRoleInfo);
                             execResult = ProcessUtils.stopService(serviceRoleInfo);
                             if (Objects.nonNull(execResult) && execResult.getExecResult()) { // 执行成功
                                 successNum += 1;

@@ -22,7 +22,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.additional.query.impl.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.PrometheusActor;
@@ -84,7 +84,7 @@ public class ClusterAlertQuotaServiceImpl extends ServiceImpl<ClusterAlertQuotaM
                 .eq(noticeGroupId != null, ClusterAlertQuota::getNoticeGroupId, noticeGroupId)
                 .like(StringUtils.isNotBlank(quotaName), ClusterAlertQuota::getAlertQuotaName, quotaName);
 
-        int count = wrapper.count() == null ? 0 : wrapper.count();
+        long count = wrapper.count() == null ? 0 : wrapper.count();
         List<ClusterAlertQuota> alertQuotaList = wrapper.last("limit " + offset + "," + pageSize).list();
         if (CollectionUtils.isEmpty(alertQuotaList)) {
             return Result.successEmptyCount();

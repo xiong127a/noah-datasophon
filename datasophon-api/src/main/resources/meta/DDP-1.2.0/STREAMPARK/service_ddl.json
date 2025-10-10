@@ -44,7 +44,7 @@
       "externalLink": {
         "name": "StreamPark Ui",
         "label": "StreamPark Ui",
-        "url": "http://${host}:${serverPort}"
+        "url": "http://${hostname}:${serverPort}"
       }
     }
   ],

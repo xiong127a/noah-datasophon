@@ -54,8 +54,8 @@ public class ClusterServiceInstanceController {
      * 获取服务角色类型列表
      */
     @RequestMapping("/configVersionCompare")
-    public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId) {
-        return clusterServiceInstanceService.configVersionCompare(serviceInstanceId, roleGroupId);
+    public Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId,Boolean showOnlyDifferences) {
+        return clusterServiceInstanceService.configVersionCompare(serviceInstanceId, roleGroupId,showOnlyDifferences);
     }
 
     /**
@@ -103,6 +103,14 @@ public class ClusterServiceInstanceController {
     @RequestMapping("/delete")
     public Result delete(Integer serviceInstanceId) {
         return clusterServiceInstanceService.delServiceInstance(serviceInstanceId);
+    }
+
+    /**
+     * 获取服务连接信息
+     */
+    @RequestMapping("/getConnectionInfo")
+    public Result getConnectionInfo(Integer serviceInstanceId) {
+        return clusterServiceInstanceService.getConnectionInfo(serviceInstanceId);
     }
 
 }

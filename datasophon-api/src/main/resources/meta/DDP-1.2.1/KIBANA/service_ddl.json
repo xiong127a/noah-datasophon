@@ -15,7 +15,7 @@
             "label": "KibanaServer",
             "roleType": "master",
             "cardinality": "1",
-            "logFile": "logs/kibana-${host}.log",
+            "logFile": "logs/kibana-${hostname}.log",
             "runAs": {
                 "user": "elastic",
                 "group": "elastic"
@@ -55,7 +55,7 @@
             "externalLink": {
               "name": "Kibana Home",
               "label": "Kibana Home",
-              "url": "http://${host}:${kibanaPort}"
+              "url": "http://${hostname}:${kibanaPort}"
             }
         }
     ],
@@ -64,6 +64,7 @@
             {
                 "filename": "kibana.yml",
                 "configFormat": "properties3",
+                "fileDescription": "Kibana配置文件，用于定义Kibana的配置信息",
                 "outputDirectory": "config",
                 "includeParams": [
                     "server.port",
@@ -92,10 +93,10 @@
             "description": "访问地址",
             "required": true,
             "type": "input",
-            "value": "${host}",
+            "value": "${hostname}",
             "configurableInWizard": true,
             "hidden": false,
-            "defaultValue": "${host}"
+            "defaultValue": "${hostname}"
         },
         {
             "name": "elasticsearch.hosts",
@@ -109,7 +110,7 @@
             "value": " ",
             "configurableInWizard": true,
             "hidden": false,
-            "defaultValue": "${host}"
+            "defaultValue": "${hostname}"
         },
         {
             "name": "custom.kibana.yml",

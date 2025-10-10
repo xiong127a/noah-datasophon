@@ -22,10 +22,17 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
- * 集群主机表 
+ * 集群主机表
  * 
  * @author gaodayu
  * @email gaodayu2022@163.com
@@ -34,7 +41,34 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 @Mapper
 public interface ClusterHostMapper extends BaseMapper<ClusterHostDO> {
 
-    ClusterHostDO getClusterHostByHostname(@Param("hostname") String hostname);
+    /**
+     * 根据主机名获取集群主机信息
+     *
+     * @param hostname 主机名
+     * @return 集群主机信息
+     */
+    default ClusterHostDO getClusterHostByHostname(@Param("hostname") String hostname) {
+        LambdaQueryWrapper<ClusterHostDO> queryWrapper = Wrappers.lambdaQuery();
+        queryWrapper.eq(ClusterHostDO::getHostname, hostname);
+        return selectOne(queryWrapper);
+    }
 
-    void updateBatchNodeLabel(@Param("hostIds") String hostIds, @Param("nodeLabel") String nodeLabel);
+    /**
+     * 批量更新节点标签
+     *
+     * @param hostIds   主机ID列表（逗号分隔）
+     * @param nodeLabel 节点标签
+     */
+    default void updateBatchNodeLabel(@Param("hostIds") String hostIds, @Param("nodeLabel") String nodeLabel) {
+        // 将逗号分隔的主机ID转为List<Integer>
+        List<Integer> idList = Arrays.stream(hostIds.split(","))
+                .map(Integer::valueOf)
+                .collect(Collectors.toList());
+
+        LambdaUpdateWrapper<ClusterHostDO> updateWrapper = Wrappers.lambdaUpdate();
+        updateWrapper.set(ClusterHostDO::getNodeLabel, nodeLabel)
+                .in(ClusterHostDO::getId, idList);
+
+        update(updateWrapper);
+    }
 }

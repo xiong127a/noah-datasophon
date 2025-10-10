@@ -48,8 +48,10 @@
   "configWriter": {
     "generators": [
       {
-        "filename": "config.xml",
+        "filename": "ClickHouse",
+        "fileDescription": "CLICKHOUSE配置文件，定义CLICKHOUSE服务的XML格式参数",
         "configFormat": "custom",
+        "configTargetRoles": "ClickHouse",
         "outputDirectory": "etc",
         "templateName": "clickhouse-server-config.ftl",
         "includeParams": [
@@ -60,7 +62,9 @@
       },
       {
         "filename": "users.xml",
+        "fileDescription": "CLICKHOUSE配置文件，定义CLICKHOUSE服务的XML格式参数",
         "configFormat": "custom",
+        "configTargetRoles": "ClickHouse",
         "outputDirectory": "etc",
         "templateName": "clickhouse-user.ftl",
         "includeParams": [

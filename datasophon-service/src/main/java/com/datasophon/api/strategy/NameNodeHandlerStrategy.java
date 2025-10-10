@@ -24,119 +24,244 @@ import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
+import com.datasophon.common.model.ConnectionInfo;
+import com.datasophon.common.model.InfoItem;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 @Slf4j
 public class NameNodeHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
+        private static final String ENABLE_RACK = "enableRack";
 
+        private static final String ENABLE_KERBEROS = "enableKerberos";
 
-    private static final String ENABLE_RACK = "enableRack";
+        @Override
+        public void handler(Integer clusterId, List<String> hosts) {
 
-    private static final String ENABLE_KERBEROS = "enableKerberos";
+                Map<String, String> globalVariables = GlobalVariables.get(clusterId);
 
+                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nn1}", hosts.get(0));
+                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nn2}", hosts.get(1));
+        }
 
-    @Override
-    public void handler(Integer clusterId, List<String> hosts) {
+        @Override
+        public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+                Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+                ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
 
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+                boolean enableRack = false;
+                boolean enableKerberos = false;
+                Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
 
-        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nn1}", hosts.get(0));
-        ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${nn2}", hosts.get(1));
-    }
+                String key = clusterInfo.getClusterFrame() + Constants.UNDERLINE + "HDFS" + Constants.CONFIG;
+                List<ServiceConfig> configs = ServiceConfigMap.get(key);
 
-    @Override
-    public void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
-        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterInfoEntity clusterInfo = ProcessUtils.getClusterInfo(clusterId);
-
-        boolean enableRack = false;
-        boolean enableKerberos = false;
-        Map<String, ServiceConfig> map = ProcessUtils.translateToMap(list);
-
-        String key =
-                clusterInfo.getClusterFrame() + Constants.UNDERLINE + "HDFS" + Constants.CONFIG;
-        List<ServiceConfig> configs = ServiceConfigMap.get(key);
-
-        for (ServiceConfig config : list) {
-            if (ENABLE_RACK.equals(config.getName())) {
-                if ((Boolean) config.getValue()) {
-                    enableRack = isEnableRack(enableRack, config);
+                for (ServiceConfig config : list) {
+                        if (ENABLE_RACK.equals(config.getName())) {
+                                if ((Boolean) config.getValue()) {
+                                        enableRack = isEnableRack(enableRack, config);
+                                }
+                        }
+                        if (ENABLE_KERBEROS.equals(config.getName())) {
+                                enableKerberos = isEnableKerberos(
+                                                clusterId, globalVariables, enableKerberos, config, "HDFS");
+                        }
                 }
-            }
-            if (ENABLE_KERBEROS.equals(config.getName())) {
-                enableKerberos =
-                        isEnableKerberos(
-                                clusterId, globalVariables, enableKerberos, config, "HDFS");
-            }
+                List<ServiceConfig> rackConfigs = new ArrayList<>();
+                if (enableRack) {
+                        log.info("start to add rack config");
+                        addConfigWithRack(globalVariables, map, configs, rackConfigs);
+                } else {
+                        removeConfigWithRack(list, map, configs);
+                }
+                list.addAll(rackConfigs);
+
+                ArrayList<ServiceConfig> kbConfigs = new ArrayList<>();
+                if (enableKerberos) {
+                        addConfigWithKerberos(globalVariables, map, configs, kbConfigs);
+                } else {
+                        removeConfigWithKerberos(list, map, configs);
+                }
+                list.addAll(kbConfigs);
         }
-        List<ServiceConfig> rackConfigs = new ArrayList<>();
-        if (enableRack) {
-            log.info("start to add rack config");
-            addConfigWithRack(globalVariables, map, configs, rackConfigs);
-        } else {
-            removeConfigWithRack(list, map, configs);
+
+        @Override
+        public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
+                Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
+                if (hostname.equals(globalVariables.get("${nn2}"))) {
+                        log.info("set to slave namenode");
+                        serviceRoleInfo.setSlave(true);
+                        serviceRoleInfo.setSortNum(5);
+                }
         }
-        list.addAll(rackConfigs);
 
-        ArrayList<ServiceConfig> kbConfigs = new ArrayList<>();
-        if (enableKerberos) {
-            addConfigWithKerberos(globalVariables, map, configs, kbConfigs);
-        } else {
-            removeConfigWithKerberos(list, map, configs);
+        @Override
+        public void handlerServiceRoleCheck(
+                        ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                        Map<String, ClusterServiceRoleInstanceEntity> map) {
+                performServiceRoleCheck(roleInstanceEntity, "nMStateActor");
         }
-        list.addAll(kbConfigs);
-    }
 
-
-    @Override
-    public void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
-        Map<String, String> globalVariables = GlobalVariables.get(serviceRoleInfo.getClusterId());
-        if (hostname.equals(globalVariables.get("${nn2}"))) {
-            log.info("set to slave namenode");
-            serviceRoleInfo.setSlave(true);
-            serviceRoleInfo.setSortNum(5);
+        @Override
+        public void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                                                      Map<String, ClusterServiceRoleInstanceEntity> map) {
+                performServiceRoleCheck(roleInstanceEntity, "");
         }
-    }
 
-    @Override
-    public void handlerServiceRoleCheck(
-            ClusterServiceRoleInstanceEntity roleInstanceEntity,
-            Map<String, ClusterServiceRoleInstanceEntity> map) {
-        performServiceRoleCheck(roleInstanceEntity, "nMStateActor");
-    }
-
-    @Override
-    public void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity, Map<String, ClusterServiceRoleInstanceEntity> map) {
-        performServiceRoleCheck(roleInstanceEntity, "");
-    }
-
-
-
-
-    public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
-        Map<String, String> globalVariable = GlobalVariables.get(roleInstanceEntity.getClusterId());
-        String nn2 = globalVariable.get("${nn2}");
-        String commandLine =
-                globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn1";
-        if (nn2.equals(roleInstanceEntity.getHostname())) {
-            commandLine =
-                    globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn2";
+        public ExecuteCmdCommand getCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
+                Map<String, String> globalVariable = GlobalVariables.get(roleInstanceEntity.getClusterId());
+                String nn2 = globalVariable.get("${nn2}");
+                String commandLine = globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn1";
+                if (nn2.equals(roleInstanceEntity.getHostname())) {
+                        commandLine = globalVariable.get("${HADOOP_HOME}") + "/bin/hdfs haadmin -getServiceState nn2";
+                }
+                ExecuteCmdCommand cmdCommand = new ExecuteCmdCommand();
+                cmdCommand.setCommandLine(commandLine);
+                return cmdCommand;
         }
-        ExecuteCmdCommand cmdCommand = new ExecuteCmdCommand();
-        cmdCommand.setCommandLine(commandLine);
-        return cmdCommand;
-    }
 
+        @Override
+        public ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+                        Map<String, String> configMap) {
+                // 直接调用父类的getConnectionInfo方法
+                return super.getConnectionInfo(clusterId, serviceInstanceId, serviceHome, configMap);
+        }
 
+        /**
+         * 获取HDFS服务特定的连接信息
+         */
+        @Override
+        protected ConnectionInfo.ConnectionInfoBuilder getServiceSpecificConnectionInfo(
+                        Integer clusterId, Integer serviceInstanceId, Map<String, String> configMap) {
+                try {
+                        // 1. 获取全局变量
+                        Map<String, String> globalVariables = GlobalVariables.get(clusterId);
+
+                        // 2. 获取NameNode主备节点
+                        String nn1 = globalVariables.get("${nn1}");
+                        String nn2 = globalVariables.get("${nn2}");
+
+                        // 3. 获取服务角色主机列表
+                        List<String> nameNodeList = getRoleHosts(clusterId, serviceInstanceId, "NameNode");
+
+                        // 4. 判断是否启用了HA
+                        boolean enableHA = nameNodeList.size() > 1;
+
+                        // 5. 判断是否启用了Kerberos
+                        boolean enableKerberos = false;
+                        // 从configMap中获取Kerberos配置
+                        if (configMap.containsKey(ENABLE_KERBEROS)) {
+                                enableKerberos = Boolean.parseBoolean(configMap.get(ENABLE_KERBEROS));
+                        }
+
+                        // 6. 获取HDFS端口，默认为8020 (RPC端口)，9870 (HTTP端口)
+                        String rpcPort = "8020";
+                        String httpPort = "9870";
+
+                        // 7. 构建HDFS URI
+                        String hdfsUri = "hdfs://" + nn1 + ":" + rpcPort;
+
+                        // 8. 如果启用了HA，修改URI格式
+                        String nameservice = globalVariables.get("${nameservice}");
+                        // 如果globalVariables中没有nameservice，则尝试从configMap中获取
+                        if (nameservice == null && enableHA) {
+                                Object nameserviceObj = configMap.get("dfs.nameservices");
+                                if (nameserviceObj != null) {
+                                        nameservice = nameserviceObj.toString();
+                                        log.info("从configMap中获取nameservice: {}", nameservice);
+                                }
+                        }
+
+                        if (enableHA && nameservice != null) {
+                                hdfsUri = "hdfs://" + nameservice;
+                        }
+
+                        // 9. 构建WebHDFS URI
+                        String webhdfsUri = "http://" + nn1 + ":" + httpPort + "/webhdfs/v1";
+                        if (enableHA && nameservice != null) {
+                                webhdfsUri = "http://" + nameservice + "/webhdfs/v1";
+                        }
+
+                        // 10. 构建基本信息项列表
+                        List<InfoItem> basicInfoItems = new ArrayList<>();
+                        basicInfoItems.add(new InfoItem("host", "主机", nn1));
+                        basicInfoItems.add(new InfoItem("port", "RPC端口", rpcPort));
+                        basicInfoItems.add(new InfoItem("httpPort", "HTTP端口", httpPort));
+                        basicInfoItems.add(new InfoItem("highAvailability", "高可用", enableHA ? "true" : "false"));
+
+                        // 添加主节点信息（明确标识为主节点）
+                        if (nn1 != null) {
+                                basicInfoItems.add(new InfoItem("masterNode", "主节点服务器", nn1));
+                        }
+
+                        // 添加从节点信息
+                        if (enableHA && nn2 != null) {
+                                basicInfoItems.add(new InfoItem("slaveNode", "从节点服务器", nn2));
+                        }
+
+                        // 如果启用了HA，添加Nameservice信息
+                        if (enableHA && nameservice != null) {
+                                basicInfoItems.add(new InfoItem("nameservice", "Nameservice", nameservice));
+                        }
+
+                        // 11. 构建安全信息项列表
+                        List<InfoItem> securityInfoItems = new ArrayList<>();
+                        securityInfoItems.add(new InfoItem("kerberos.enabled", "启用Kerberos",
+                                        enableKerberos ? "true" : "false"));
+
+                        if (enableKerberos) {
+                                // 获取主体信息
+                                String principal = configMap.getOrDefault("dfs.namenode.kerberos.principal",
+                                                "hdfs/_HOST@HADOOP.COM");
+                                principal = principal.replace("_HOST", nn1);
+                                securityInfoItems.add(new InfoItem("principal", "服务主体", principal));
+
+                                // 将krb5配置文件路径添加到安全信息中
+                                securityInfoItems.add(new InfoItem("krb5.conf.path", "Kerberos配置文件", "/etc/krb5.conf"));
+
+                                // 如果配置中有keytab相关配置，也添加到安全信息中
+                                String keytabPath = configMap.getOrDefault("dfs.namenode.keytab.file", "");
+                                if (keytabPath != null && !keytabPath.isEmpty()) {
+                                        securityInfoItems.add(new InfoItem("keytab.path", "密钥表文件", keytabPath));
+                                }
+                        }
+
+                        // 12. 构建连接信息项列表
+                        List<InfoItem> connectInfoItems = new ArrayList<>();
+                        connectInfoItems.add(new InfoItem("hdfsUri", "HDFS URI", hdfsUri));
+                        connectInfoItems.add(new InfoItem("webhdfsUri", "WebHDFS URI", webhdfsUri));
+
+                        if (enableHA) {
+                                // 为每个namenode添加单独的连接URI
+                                connectInfoItems.add(new InfoItem("nn1Uri", "NameNode1 URI",
+                                                "hdfs://" + nn1 + ":" + rpcPort));
+                                if (nn2 != null) {
+                                        connectInfoItems.add(new InfoItem("nn2Uri", "NameNode2 URI",
+                                                        "hdfs://" + nn2 + ":" + rpcPort));
+                                }
+                        }
+
+                        // 13. 构建并返回ConnectionInfo.ConnectionInfoBuilder对象
+                        return ConnectionInfo.builder()
+                                        .basicInfoItems(basicInfoItems)
+                                        .securityInfoItems(securityInfoItems)
+                                        .connectInfoItems(connectInfoItems)
+                                        .hostName(nn1)
+                                        // 添加重要键列表，将HDFS URI和WebHDFS URI设置为高亮显示
+                                        .importantKeys(Arrays.asList("hdfsUri", "webhdfsUri"));
+                } catch (Exception e) {
+                        log.error("获取HDFS连接信息出错: {}", e.getMessage(), e);
+                        return ConnectionInfo.builder();
+                }
+        }
 
 }

@@ -19,6 +19,7 @@ package com.datasophon.api.master;
 
 import akka.actor.ActorRef;
 import akka.actor.UntypedActor;
+import cn.hutool.extra.spring.SpringUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.ClusterAlertQuotaService;
@@ -27,7 +28,6 @@ import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.api.service.ClusterServiceCommandService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.command.GenerateSRPromConfigCommand;
@@ -84,49 +84,70 @@ public class ServiceCommandActor extends UntypedActor {
         if (msg instanceof UpdateCommandHostMessage) {
             UpdateCommandHostMessage message = (UpdateCommandHostMessage) msg;
 
-            ClusterInfoService clusterInfoService =
-                    SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-            ClusterServiceCommandHostCommandService service =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceCommandHostCommandService.class);
-            ClusterServiceCommandHostService commandHostService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceCommandHostService.class);
-            ClusterServiceCommandService commandService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceCommandService.class);
+            ClusterInfoService clusterInfoService = SpringUtil
+                    .getBean(ClusterInfoService.class);
+            ClusterServiceCommandHostCommandService service = SpringUtil
+                    .getBean(ClusterServiceCommandHostCommandService.class);
+            ClusterServiceCommandHostService commandHostService = SpringUtil
+                    .getBean(ClusterServiceCommandHostService.class);
+            ClusterServiceCommandService commandService = SpringUtil
+                    .getBean(ClusterServiceCommandService.class);
 
-            ClusterServiceCommandHostEntity commandHost =
-                    commandHostService.getOne(new QueryWrapper<ClusterServiceCommandHostEntity>()
+            ClusterServiceCommandHostEntity commandHost = commandHostService
+                    .getOne(new QueryWrapper<ClusterServiceCommandHostEntity>()
                             .eq(Constants.COMMAND_HOST_ID, message.getCommandHostId()));
-            Integer size = service.getHostCommandSizeByHostnameAndCommandHostId(message.getHostname(),
+            long size = service.getHostCommandSizeByHostnameAndCommandHostId(message.getHostname(),
                     message.getCommandHostId());
             Integer totalProgress = service.getHostCommandTotalProgressByHostnameAndCommandHostId(message.getHostname(),
                     message.getCommandHostId());
-            int progress = totalProgress / size;
+            long progress = totalProgress / size;
             commandHost.setCommandProgress(progress);
 
             if (progress == 100) {
-                List<ClusterServiceCommandHostCommandEntity> list =
-                        service.findFailedHostCommand(message.getHostname(), message.getCommandHostId());
-                if (!list.isEmpty()) {
+                List<ClusterServiceCommandHostCommandEntity> failedList = service
+                        .findFailedHostCommand(message.getHostname(), message.getCommandHostId());
+                List<ClusterServiceCommandHostCommandEntity> cancelList = service
+                        .findCanceledHostCommand(message.getHostname(), message.getCommandHostId());
+
+                if (!failedList.isEmpty()) {
                     commandHost.setCommandState(CommandState.FAILED);
+                    logger.info("主机命令 {} 包含失败子命令，状态设为失败", message.getCommandHostId());
+                } else if (!cancelList.isEmpty()) {
+                    commandHost.setCommandState(CommandState.CANCEL);
+                    logger.info("主机命令 {} 包含取消子命令，状态设为取消", message.getCommandHostId());
                 } else {
                     commandHost.setCommandState(CommandState.SUCCESS);
-                }
-                List<ClusterServiceCommandHostCommandEntity> cancelList =
-                        service.findCanceledHostCommand(message.getHostname(), message.getCommandHostId());
-                if (!cancelList.isEmpty()) {
-                    commandHost.setCommandState(CommandState.CANCEL);
+                    logger.info("主机命令 {} 所有子命令成功，状态设为成功", message.getCommandHostId());
                 }
             }
+
             commandHostService.update(commandHost, new QueryWrapper<ClusterServiceCommandHostEntity>()
                     .eq(Constants.COMMAND_HOST_ID, message.getCommandHostId()));
-            Integer size1 = commandHostService.getCommandHostSizeByCommandId(message.getCommandId());
+
+            Long size1 = commandHostService.getCommandHostSizeByCommandId(message.getCommandId());
             Integer totalProgress1 = commandHostService.getCommandHostTotalProgressByCommandId(message.getCommandId());
-            int progress1 = totalProgress1 / size1;
+            Long progress1 = totalProgress1 / size1;
             ClusterServiceCommandEntity command = commandService.lambdaQuery()
                     .eq(ClusterServiceCommandEntity::getCommandId, message.getCommandId()).one();
             command.setCommandProgress(progress1);
+
             if (progress1 == 100) {
-                command.setCommandState(CommandState.SUCCESS);
+                List<ClusterServiceCommandHostEntity> failedHosts = commandHostService
+                        .findFailedCommandHost(message.getCommandId());
+                List<ClusterServiceCommandHostEntity> canceledHosts = commandHostService
+                        .findCanceledCommandHost(message.getCommandId());
+
+                if (!failedHosts.isEmpty()) {
+                    command.setCommandState(CommandState.FAILED);
+                    logger.info("命令 {} 包含失败主机命令，状态设为失败", message.getCommandId());
+                } else if (!canceledHosts.isEmpty()) {
+                    command.setCommandState(CommandState.CANCEL);
+                    logger.info("命令 {} 包含取消主机命令，状态设为取消", message.getCommandId());
+                } else {
+                    command.setCommandState(CommandState.SUCCESS);
+                    logger.info("命令 {} 所有主机命令成功，状态设为成功", message.getCommandId());
+                }
+
                 command.setEndTime(new Date());
 
                 String serviceName = command.getServiceName();
@@ -134,7 +155,7 @@ public class ServiceCommandActor extends UntypedActor {
 
                 // commandType : 1：安装服务 2：启动服务 3：停止服务 4：重启服务 5：更新配置后启动 6：更新配置后重启
                 if (command.getCommandType() == 4 && HDFS.equalsIgnoreCase(serviceName)) {
-                    //update web ui
+                    // update web ui
                     updateHDFSWebUi(clusterInfo.getId(), command.getServiceInstanceId());
                 }
 
@@ -174,19 +195,6 @@ public class ServiceCommandActor extends UntypedActor {
                     }
                     enableAlertConfig(serviceName, clusterInfo.getId());
                 }
-                List<ClusterServiceCommandHostEntity> list =
-                        commandHostService.findFailedCommandHost(message.getCommandId());
-                if (!list.isEmpty()) {
-                    command.setCommandState(CommandState.FAILED);
-                    command.setEndTime(new Date());
-                }
-
-                List<ClusterServiceCommandHostEntity> cancelList =
-                        commandHostService.findCanceledCommandHost(message.getCommandId());
-                if (!cancelList.isEmpty()) {
-                    command.setCommandState(CommandState.CANCEL);
-                    command.setEndTime(new Date());
-                }
             }
             commandService.lambdaUpdate().eq(ClusterServiceCommandEntity::getCommandId, command.getCommandId())
                     .update(command);
@@ -194,8 +202,8 @@ public class ServiceCommandActor extends UntypedActor {
     }
 
     private void enableAlertConfig(String serviceName, Integer clusterId) {
-        ClusterAlertQuotaService alertQuotaService =
-                SpringTool.getApplicationContext().getBean(ClusterAlertQuotaService.class);
+        ClusterAlertQuotaService alertQuotaService = SpringUtil
+                .getBean(ClusterAlertQuotaService.class);
         List<ClusterAlertQuota> list = alertQuotaService.listAlertQuotaByServiceName(serviceName);
         List<Integer> ids = list.stream().map(ClusterAlertQuota::getId).collect(Collectors.toList());
         String alertQuotaIds = StringUtils.join(ids, ",");
@@ -205,9 +213,10 @@ public class ServiceCommandActor extends UntypedActor {
     private void updateHDFSWebUi(Integer clusterId, Integer serviceInstanceId) {
         Map<String, String> variables = GlobalVariables.get(clusterId);
         if (variables.containsKey(ENABLE_HDFS_KERBEROS)) {
-            ClusterServiceRoleInstanceWebuisService webuisService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceWebuisService.class);
-            List<ClusterServiceRoleInstanceWebuis> webUis = webuisService.listWebUisByServiceInstanceId(serviceInstanceId);
+            ClusterServiceRoleInstanceWebuisService webuisService = SpringUtil
+                    .getBean(ClusterServiceRoleInstanceWebuisService.class);
+            List<ClusterServiceRoleInstanceWebuis> webUis = webuisService
+                    .listWebUisByServiceInstanceId(serviceInstanceId);
             for (ClusterServiceRoleInstanceWebuis webUi : webUis) {
                 if (TRUE.equals(variables.get(ENABLE_HDFS_KERBEROS)) && webUi.getWebUrl().contains("9870")) {
                     String newWebUi = webUi.getWebUrl().replace(HTTP, HTTPS).replace("9870", "9871");

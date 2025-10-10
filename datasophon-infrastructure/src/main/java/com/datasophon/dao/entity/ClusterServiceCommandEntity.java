@@ -17,15 +17,14 @@
 
 package com.datasophon.dao.entity;
 
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
 import com.datasophon.dao.enums.CommandState;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.util.Date;
-
-import lombok.Data;
-
-import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.annotation.TableName;
 
 @TableName("t_ddh_cluster_service_command")
 @Data
@@ -36,6 +35,7 @@ public class ClusterServiceCommandEntity implements Serializable {
     /**
      * 主键
      */
+    @TableId
     private String commandId;
     /**
      * 创建人
@@ -59,7 +59,7 @@ public class ClusterServiceCommandEntity implements Serializable {
     /**
      * 命令进度
      */
-    private Integer commandProgress;
+    private Long commandProgress;
     /**
      * 集群id
      */

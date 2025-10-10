@@ -18,6 +18,7 @@
 package com.datasophon.api.strategy;
 
 import akka.actor.ActorRef;
+import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
@@ -29,7 +30,6 @@ import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ServiceInstallService;
 import com.datasophon.api.utils.ProcessUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.TenantRangerCommand;
 import com.datasophon.common.enums.RangerOpType;
@@ -110,6 +110,16 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .operateType(RangerOpType.CREATE_SERVICE).build();
                 tenantActor.tell(hbaseRangerCommand, ActorRef.noSender());
             }
+            if ("enableKMSPlugin".equals(config.getName()) && ((Boolean) config.getValue()).booleanValue()) {
+                logger.info("enableKMSPlugin");
+                ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${enableKMSPlugin}", "true");
+                // enableRangerPlugin(clusterId, "HDFS", "NameNode");
+                TenantRangerCommand kmsRangerCommand = TenantRangerCommand.builder()
+                        .serviceName("KMS")
+                        .clusterId(clusterId)
+                        .operateType(RangerOpType.CREATE_SERVICE).build();
+                tenantActor.tell(kmsRangerCommand, ActorRef.noSender());
+            }
             if (config.getName().contains("Plugin") && !(Boolean) config.getValue()) {
                 String configName = config.getName();
                 ProcessUtils.generateClusterVariable(globalVariables, clusterId, "${" + configName + "}", "false");
@@ -124,34 +134,44 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         ArrayList<ServiceConfig> kbConfigs = new ArrayList<>();
         if (enableKerberos) {
             addConfigWithKerberos(globalVariables, map, configs, kbConfigs);
+            setHadoopKmsAuthenticationType(list, "kerberos");
         } else {
             removeConfigWithKerberos(list, map, configs);
+            setHadoopKmsAuthenticationType(list, "simple");
         }
         list.addAll(kbConfigs);
     }
 
+    private void setHadoopKmsAuthenticationType(List<ServiceConfig> configs, String value) {
+        for (ServiceConfig config : configs) {
+            if ("hadoopKmsAuthenticationType".equals(config.getName())) {
+                config.setValue(value);
+                config.setDefaultValue(value);
+            }
+        }
+    }
+
     private void enableRangerPlugin(Integer clusterId, String serviceName, String serviceRoleName) {
-        ClusterServiceInstanceService serviceInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceInstanceService.class);
-        ClusterServiceRoleInstanceService roleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
-        ClusterServiceRoleGroupConfigService roleGroupConfigService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleGroupConfigService.class);
-        ClusterInfoService clusterInfoService = SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
-        ServiceInstallService serviceInstallService =
-                SpringTool.getApplicationContext().getBean(ServiceInstallService.class);
+        ClusterServiceInstanceService serviceInstanceService = SpringUtil
+                .getBean(ClusterServiceInstanceService.class);
+        ClusterServiceRoleInstanceService roleInstanceService = SpringUtil
+                .getBean(ClusterServiceRoleInstanceService.class);
+        ClusterServiceRoleGroupConfigService roleGroupConfigService = SpringUtil
+                .getBean(ClusterServiceRoleGroupConfigService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
+        ServiceInstallService serviceInstallService = SpringUtil
+                .getBean(ServiceInstallService.class);
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        ClusterServiceInstanceEntity serviceInstance =
-                serviceInstanceService.getServiceInstanceByClusterIdAndServiceName(clusterId, serviceName);
+        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService
+                .getServiceInstanceByClusterIdAndServiceName(clusterId, serviceName);
         // 判断是否存在es服务
-        Boolean hasEs =
-                serviceInstanceService.hasRoleInstance(clusterId, "ELASTICSEARCH");
+        Boolean hasEs = serviceInstanceService.hasRoleInstance(clusterId, "ELASTICSEARCH");
         // 查询角色组id
-        List<ClusterServiceRoleInstanceEntity> roleList =
-                roleInstanceService.getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, serviceRoleName);
+        List<ClusterServiceRoleInstanceEntity> roleList = roleInstanceService
+                .getServiceRoleInstanceListByClusterIdAndRoleName(clusterId, serviceRoleName);
 
-        if (Objects.nonNull(roleList) && roleList.size() > 0) {
+        if (Objects.nonNull(roleList) && !roleList.isEmpty()) {
             Integer roleGroupId = roleList.get(0).getRoleGroupId();
 
             ClusterServiceRoleGroupConfig config = roleGroupConfigService.getConfigByRoleGroupId(roleGroupId);
@@ -205,7 +225,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
             }
             logger.info("Update hdfs enable ranger plugin");
             serviceInstallService.saveServiceConfig(clusterId, serviceInstance.getServiceName(), serviceConfigs,
-                    roleGroupId);
+                    roleGroupId, "(AUTO) Update hdfs enable ranger plugin",-1,"system");
         }
     }
 }

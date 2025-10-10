@@ -23,6 +23,7 @@
             {
                 "filename": "logstash.yml",
                 "configFormat": "custom",
+                "fileDescription": "Logstash配置文件，用于定义Logstash的配置信息",
                 "templateName": "logstash.yml.ftl",
                 "outputDirectory": "config",
                 "includeParams": [
@@ -150,7 +151,7 @@
             "value": " ",
             "configurableInWizard": true,
             "hidden": false,
-            "defaultValue": "${host}"
+            "defaultValue": "${hostname}"
         },
         {
             "name": "xpack.monitoring.elasticsearch.sniffing",

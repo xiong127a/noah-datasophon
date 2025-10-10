@@ -42,7 +42,7 @@ public class ServiceInstallController {
     ServiceInstallService serviceInstallService;
 
     /**
-     * 根据服务名称查询服务配置选项
+     * 根据服务角色名称查询服务配置选项
      */
     @RequestMapping("/getServiceConfigOption")
     public Result getServiceConfigOption(Integer clusterId, String serviceName) {
@@ -54,11 +54,11 @@ public class ServiceInstallController {
      */
     @RequestMapping("/saveServiceConfig")
     @UserPermission
-    public Result saveServiceConfig(Integer clusterId, String serviceName, String serviceConfig, Integer roleGroupId) {
+    public Result saveServiceConfig(Integer clusterId, String serviceName, String serviceConfig, Integer roleGroupId,
+            String description, Integer userId, String username) {
         JSONArray jsonArray = JSONArray.parseArray(serviceConfig);
         List<ServiceConfig> list = jsonArray.toJavaList(ServiceConfig.class);
-        return serviceInstallService.saveServiceConfig(clusterId, serviceName, list, roleGroupId);
-
+        return serviceInstallService.saveServiceConfig(clusterId, serviceName, list, roleGroupId, description, userId, username);
     }
 
     /**
@@ -66,7 +66,7 @@ public class ServiceInstallController {
      */
     @RequestMapping("/saveServiceRoleHostMapping/{clusterId}")
     public Result saveServiceRoleHostMapping(@RequestBody List<ServiceRoleHostMapping> list,
-                                             @PathVariable("clusterId") Integer clusterId) {
+            @PathVariable("clusterId") Integer clusterId) {
         return serviceInstallService.saveServiceRoleHostMapping(clusterId, list);
     }
 
@@ -84,10 +84,11 @@ public class ServiceInstallController {
      */
     @RequestMapping("/saveHostServiceRoleMapping/{clusterId}")
     public Result saveHostServiceRoleMapping(@PathVariable("clusterId") Integer clusterId,
-                                             @RequestBody List<HostServiceRoleMapping> list) {
+            @RequestBody List<HostServiceRoleMapping> list) {
 
         return serviceInstallService.saveHostServiceRoleMapping(clusterId, list);
     }
+
     /**
      * 服务部署总览
      */
@@ -101,7 +102,7 @@ public class ServiceInstallController {
      */
     @RequestMapping("/startInstallService/{clusterId}")
     public Result startInstallService(@PathVariable("clusterId") Integer clusterId,
-                                      @RequestBody List<String> commandIds) {
+            @RequestBody List<String> commandIds) {
 
         return serviceInstallService.startInstallService(clusterId, commandIds);
     }
@@ -111,7 +112,7 @@ public class ServiceInstallController {
      */
     @GetMapping("/downloadPackage")
     public void downloadPackage(String packageName, String cpuArchitecture,
-                                HttpServletResponse response) throws IOException {
+            HttpServletResponse response) throws IOException {
 
         serviceInstallService.downloadPackage(packageName, response);
     }

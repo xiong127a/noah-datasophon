@@ -65,6 +65,8 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
 
     void updateToNeedRestart(Integer roleGroupId);
 
+    void updateToNeedRestart(Integer roleGroupId,String serviceRoleName);
+
     void updateToNeedRestartByHost(String hostName);
 
     List<ClusterServiceRoleInstanceEntity> getObsoleteService(Integer id);
@@ -76,11 +78,14 @@ public interface ClusterServiceRoleInstanceService extends IService<ClusterServi
 
     ClusterServiceRoleInstanceEntity getKAdminRoleIns(Integer clusterId);
 
-    List<ClusterServiceRoleInstanceEntity> listServiceRoleByName(String roleName);
+    List<ClusterServiceRoleInstanceEntity> listServiceRoleByName(String serviceRoleName);
+
+    ClusterServiceRoleInstanceEntity listServiceRoleByNameAndClusterId(Integer clusterId,String serviceRoleName);
 
     ClusterServiceRoleInstanceEntity getServiceRoleInsByHostAndName(String hostName, String serviceRoleName);
 
     List<ClusterServiceRoleInstanceEntity> listRoleIns(String hostname, String serviceName);
 
 
+    List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Integer clusterId,Integer serviceInstanceId, String roleName);
 }

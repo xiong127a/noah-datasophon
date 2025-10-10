@@ -20,7 +20,9 @@ package com.datasophon.api.strategy;
 import akka.actor.ActorRef;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.ServiceInfoMap;
 import com.datasophon.api.load.ServiceRoleMap;
 import com.datasophon.api.master.ActorUtils;
@@ -30,6 +32,7 @@ import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteCmdCommand;
+import com.datasophon.common.model.ConnectionInfo;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceInfo;
 import com.datasophon.common.model.ServiceRoleInfo;
@@ -37,67 +40,84 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.enums.AlertLevel;
-import com.datasophon.k8s.util.K8sUtil;
+import com.datasophon.kubernetes.util.KubernetesUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-
 public interface ServiceRoleStrategy {
 
     Logger log = LoggerFactory.getLogger(ServiceRoleStrategy.class);
-
 
     String ACTIVE = "active";
 
     /**
      * 保存角色host映射关系时根据roleName调用
      */
-    default void handler(Integer clusterId, List<String> hosts){}
+    default void handler(Integer clusterId, List<String> hosts) {
+    }
 
     /**
      * 保存服务配置时根据ServiceName调用
      */
-    default void handlerConfig(Integer clusterId, List<ServiceConfig> list){}
+    default void handlerConfig(Integer clusterId, List<ServiceConfig> list) {
+    }
 
     /**
      * 获取服务配置时修改配置，根据ServiceName调用
      * handler之后handlerConfig之前调用
      * 提取角色本身配置和handler中自定义的变量
      */
-    default void getConfig(Integer clusterId, List<ServiceConfig> list){}
+    default void getConfig(Integer clusterId, List<ServiceConfig> list) {
+    }
 
     /**
      * 构建DAG时处理角色关系，例如设置主从角色，设置搭建顺序等。
      * <p>
      * 可以将自定义角色配置传递给worker
      */
-    default void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname){}
+    default void handlerServiceRoleInfo(ServiceRoleInfo serviceRoleInfo, String hostname) {
+    }
 
     /**
      * 定期检查角色处理
      */
     default void handlerServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                 Map<String, ClusterServiceRoleInstanceEntity> map){}
+            Map<String, ClusterServiceRoleInstanceEntity> map) {
+    }
 
     /**
-     * 定期检查角色处理（K8S）
+     * 获取组件的连接信息，包括连接地址、JDBC URL和示例代码等
+     *
+     * @param clusterId         集群ID
+     * @param serviceInstanceId 服务实例ID
+     * @return 连接信息对象
      */
-    default void handlerK8sServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
-                                            Map<String, ClusterServiceRoleInstanceEntity> map) {
+    default ConnectionInfo getConnectionInfo(Integer clusterId, Integer serviceInstanceId, String serviceHome,
+            Map<String, String> configMap) {
+        // 默认返回空对象，具体组件在各自实现中提供连接信息
+        return ConnectionInfo.builder().build();
+    }
+
+    /**
+     * 定期检查角色处理（Kubernetes）
+     */
+    default void handlerKubernetesServiceRoleCheck(ClusterServiceRoleInstanceEntity roleInstanceEntity,
+                                                   Map<String, ClusterServiceRoleInstanceEntity> map) {
         handlerServiceRoleCheck(roleInstanceEntity, map);
     }
 
     default String getKubeConfig(ClusterServiceRoleInstanceEntity roleInstanceEntity) {
-        ClusterInfoService clusterInfoService =
-                SpringTool.getApplicationContext().getBean(ClusterInfoService.class);
+        ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         return clusterInfoService.getKubeConfigByClusterId(roleInstanceEntity.getClusterId());
     }
 
@@ -108,8 +128,8 @@ public interface ServiceRoleStrategy {
         String key = frameCode + Constants.UNDERLINE + roleInstanceEntity.getServiceName() + Constants.UNDERLINE
                 + roleInstanceEntity.getServiceRoleName();
         ServiceRoleInfo serviceRoleInfo = ServiceRoleMap.get(key);
-        ServiceInfo serviceInfo =
-                ServiceInfoMap.get(frameCode + Constants.UNDERLINE + roleInstanceEntity.getServiceName());
+        ServiceInfo serviceInfo = ServiceInfoMap
+                .get(frameCode + Constants.UNDERLINE + roleInstanceEntity.getServiceName());
         ExecuteCmdCommand cmdCommand = new ExecuteCmdCommand();
         ArrayList<String> commandList = new ArrayList<>();
         commandList.add(serviceInfo.getDecompressPackageName() + Constants.SLASH
@@ -134,11 +154,9 @@ public interface ServiceRoleStrategy {
     default void handleExecResult(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecResult execResult) {
         if (StrUtil.equalsAnyIgnoreCase(roleInstanceEntity.getServiceRoleName(),
                 "NameNode",
-                "ResourceManager"
-        )) {
-            ClusterServiceRoleInstanceWebuisService webuisService =
-                    SpringTool.getApplicationContext()
-                            .getBean(ClusterServiceRoleInstanceWebuisService.class);
+                "ResourceManager")) {
+            ClusterServiceRoleInstanceWebuisService webuisService = SpringUtil
+                    .getBean(ClusterServiceRoleInstanceWebuisService.class);
             if (execResult.getExecResult()) {
                 if (execResult.getExecOut().contains(ACTIVE)) {
                     webuisService.updateWebUiToActive(roleInstanceEntity.getId());
@@ -153,8 +171,7 @@ public interface ServiceRoleStrategy {
         if (StrUtil.equalsAnyIgnoreCase(roleInstanceEntity.getServiceRoleName(),
                 "Krb5Kdc",
                 "KAdmin",
-                "Prometheus"
-        )) {
+                "Prometheus")) {
             if (execResult.getExecResult()) {
                 ProcessUtils.recoverAlert(roleInstanceEntity);
             } else {
@@ -164,15 +181,16 @@ public interface ServiceRoleStrategy {
         }
     }
 
-    default ExecResult executeCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecuteCmdCommand cmdCommand, String actorName) {
+    default ExecResult executeCommand(ClusterServiceRoleInstanceEntity roleInstanceEntity, ExecuteCmdCommand cmdCommand,
+            String actorName) {
         ExecResult execResult = new ExecResult();
 
         try {
             if (StrUtil.isBlank(actorName)) {
-                // 对于 K8s 服务，使用 K8sUtil 执行命令
-                execResult = K8sUtil.exec(roleInstanceEntity, getKubeConfig(roleInstanceEntity), cmdCommand);
+                // 对于 Kubernetes 服务，使用 KubernetesUtil 执行命令
+                execResult = KubernetesUtil.exec(roleInstanceEntity, getKubeConfig(roleInstanceEntity), cmdCommand);
             } else {
-                // 对于非 K8s 服务，使用 Actor 系统执行命令
+                // 对于非 Kubernetes 服务，使用 Actor 系统执行命令
                 Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
                 ActorRef actorRef = ActorUtils.getRemoteActor(roleInstanceEntity.getHostname(), actorName);
                 Future<Object> execFuture = Patterns.ask(actorRef, cmdCommand, timeout);
@@ -182,6 +200,38 @@ public interface ServiceRoleStrategy {
             log.error("exec command error", e);
         }
         return execResult;
+    }
+
+    default Map.Entry<String, List<ServiceConfig>> listServiceConfigByServiceInstance(Integer serviceInstanceId) {
+        return SpringTool.listServiceConfigByServiceInstance(serviceInstanceId);
+    }
+
+    default List<String> getRoleHosts(Integer clusterId, Integer serviceInstanceId, String roleName) {
+        return CollUtil.empty(List.class);
+    }
+
+    /**
+     * 获取服务配置并解析为Map
+     *
+     * @param serviceInstanceId 服务实例ID
+     * @return 包含服务主目录和配置Map的对象
+     */
+    default Map.Entry<String, Map<String, String>> getServiceConfigMap(Integer serviceInstanceId) {
+        // 1. 获取服务配置
+        Map.Entry<String, List<ServiceConfig>> pair = listServiceConfigByServiceInstance(serviceInstanceId);
+        List<ServiceConfig> serviceConfigs = pair.getValue();
+        String serviceHome = pair.getKey();
+
+        // 2. 从配置中解析配置到map，方便快速查询
+        Map<String, String> configMap = new HashMap<>();
+        for (ServiceConfig config : serviceConfigs) {
+            if (config.getValue() != null) {
+                configMap.put(config.getName(), String.valueOf(config.getValue()));
+            }
+        }
+
+        // 返回包含serviceHome和configMap的Entry
+        return new AbstractMap.SimpleEntry<>(serviceHome, configMap);
     }
 
 }

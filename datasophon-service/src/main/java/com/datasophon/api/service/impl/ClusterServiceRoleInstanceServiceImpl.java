@@ -22,10 +22,10 @@ import akka.actor.ActorSelection;
 import akka.pattern.Patterns;
 import akka.util.Timeout;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.baomidou.mybatisplus.extension.service.additional.query.impl.LambdaQueryChainWrapper;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.datasophon.api.enums.Status;
-import com.datasophon.api.k8s.handler.K8sServiceStopHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterAlertHistoryService;
@@ -36,10 +36,11 @@ import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceWebuisService;
 import com.datasophon.api.service.FrameServiceRoleService;
 import com.datasophon.api.service.FrameServiceService;
+import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.GetLogCommand;
-import com.datasophon.common.command.K8sGetLogCommand;
+import com.datasophon.common.command.KubernetesGetLogCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.CollectionUtils;
@@ -55,7 +56,8 @@ import com.datasophon.dao.enums.NeedRestart;
 import com.datasophon.dao.enums.RoleType;
 import com.datasophon.dao.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
-import com.datasophon.k8s.actor.K8sLogActor;
+import com.datasophon.kubernetes.actor.KubernetesLogActor;
+import com.datasophon.kubernetes.util.CommonUtil;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +67,12 @@ import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.TreeSet;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -158,7 +165,7 @@ public class ClusterServiceRoleInstanceServiceImpl
                         serviceRoleName)
                 .eq(Objects.nonNull(roleGroupId), ClusterServiceRoleInstanceEntity::getRoleGroupId, roleGroupId)
                 .like(StringUtils.isNotBlank(hostname), ClusterServiceRoleInstanceEntity::getHostname, hostname);
-        int count = wrapper.count() == null ? 0 : wrapper.count();
+        long count = wrapper.count() == null ? 0 : wrapper.count();
         List<ClusterServiceRoleInstanceEntity> cluServiceRoleInstList = wrapper
                 .last("limit " + offset + "," + pageSize)
                 .list();
@@ -194,17 +201,21 @@ public class ClusterServiceRoleInstanceServiceImpl
             logger.info("logFile is {}", logFile);
         }
         logger.info("start to get {} log from {}", serviceRole.getServiceRoleName(), roleInstance.getHostname());
-
+        String kubeConfig = clusterInfoService.getKubeConfigByClusterId(roleInstance.getClusterId());
         Future<Object> logFuture;
         Timeout timeout = new Timeout(Duration.create(60, TimeUnit.SECONDS));
-        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
-            K8sGetLogCommand k8sCommand = new K8sGetLogCommand();
-            k8sCommand.setLogFile(logFile);
-            k8sCommand.setDecompressPackageName(frameServiceEntity.getDecompressPackageName());
-            k8sCommand.setHostname(roleInstance.getHostname());
-            ActorRef k8sLog =
-                    ActorUtils.getLocalActor(K8sLogActor.class, ActorUtils.getActorRefName(K8sLogActor.class));
-            logFuture = Patterns.ask(k8sLog, k8sCommand, timeout);
+        if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
+            KubernetesGetLogCommand kubernetesGetLogCommand = new KubernetesGetLogCommand();
+            kubernetesGetLogCommand.setLogFile(logFile);
+            String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterInfo.getId());
+            kubernetesGetLogCommand.setNamespace(namespace);
+            kubernetesGetLogCommand.setDecompressPackageName(frameServiceEntity.getDecompressPackageName());
+            kubernetesGetLogCommand.setHostname(roleInstance.getHostname());
+            kubernetesGetLogCommand.setKubeConfig(kubeConfig);
+            kubernetesGetLogCommand.setServiceRoleFullName(CommonUtil.generateServiceRoleFullName(roleInstance.getServiceName(), roleInstance.getServiceRoleName()));
+            ActorRef kubernetesLog =
+                    ActorUtils.getLocalActor(KubernetesLogActor.class, ActorUtils.getActorRefName(KubernetesLogActor.class));
+            logFuture = Patterns.ask(kubernetesLog, kubernetesGetLogCommand, timeout);
         } else {
             GetLogCommand command = new GetLogCommand();
             command.setLogFile(logFile);
@@ -259,7 +270,7 @@ public class ClusterServiceRoleInstanceServiceImpl
             }
         }
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
-        if (Constants.K8S_MODE.equals(clusterInfo.getDepType())) {
+        if (Constants.KUBERNETES_MODE.equals(clusterInfo.getDepType())) {
             List<String> matchingRoleNames = new ArrayList<>();
             for (Map.Entry<String, Long> entry : roleNameRemoveCount.entrySet()) {
                 String roleName = entry.getKey();
@@ -269,13 +280,13 @@ public class ClusterServiceRoleInstanceServiceImpl
                 }
             }
             for (String serviceRoleName : matchingRoleNames) {
-                K8sServiceStopHandler k8sServiceStopHandler = new K8sServiceStopHandler();
+                KubernetesServiceStopHandler kubernetesServiceStopHandler = new KubernetesServiceStopHandler();
                 ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
                 serviceRoleInfo.setClusterId(clusterId);
                 serviceRoleInfo.setParentName(ServiceName);
                 serviceRoleInfo.setName(serviceRoleName);
                 try {
-                    k8sServiceStopHandler.handlerRequest(serviceRoleInfo);
+                    kubernetesServiceStopHandler.handlerRequest(serviceRoleInfo);
                     logger.info("remove {} deployment success", serviceRoleName);
                 } catch (Exception e) {
                     logger.error("remove {} deployment failed", serviceRoleName);
@@ -362,6 +373,11 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
+    public void updateToNeedRestart(Integer roleGroupId,String serviceRoleName) {
+        roleInstanceMapper.updateToNeedRestartByServiceRoleName(roleGroupId,serviceRoleName);
+    }
+
+    @Override
     public void updateToNeedRestart(Integer roleGroupId) {
         roleInstanceMapper.updateToNeedRestart(roleGroupId);
     }
@@ -404,9 +420,19 @@ public class ClusterServiceRoleInstanceServiceImpl
     }
 
     @Override
-    public List<ClusterServiceRoleInstanceEntity> listServiceRoleByName(String name) {
+    public List<ClusterServiceRoleInstanceEntity> listServiceRoleByName(String serviceRoleName) {
         return this.list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
-                .eq(Constants.SERVICE_ROLE_NAME, name));
+                .eq(Constants.SERVICE_ROLE_NAME, serviceRoleName));
+    }
+    @Override
+    public ClusterServiceRoleInstanceEntity listServiceRoleByNameAndClusterId(Integer clusterId,String serviceRoleName) {
+        List<ClusterServiceRoleInstanceEntity> list = this.list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
+                .eq(Constants.CLUSTER_ID, clusterId)
+                .eq(Constants.SERVICE_ROLE_NAME, serviceRoleName));
+        if (Objects.nonNull(list) && !list.isEmpty()) {
+            return list.get(0);
+        }
+        return null;
     }
 
     @Override
@@ -421,5 +447,14 @@ public class ClusterServiceRoleInstanceServiceImpl
         return this.lambdaQuery()
                 .eq(ClusterServiceRoleInstanceEntity::getHostname, hostname)
                 .eq(ClusterServiceRoleInstanceEntity::getServiceName, serviceName).list();
+    }
+
+    @Override
+    public List<ClusterServiceRoleInstanceEntity> getServiceRoleInstanceListByServiceInstanceIdAndRoleName(Integer clusterId,Integer serviceInstanceId, String roleName) {
+        return this.lambdaQuery()
+                .eq(ClusterServiceRoleInstanceEntity::getClusterId, clusterId)
+                .eq(ClusterServiceRoleInstanceEntity::getServiceRoleName, roleName)
+                .eq(serviceInstanceId != null, ClusterServiceRoleInstanceEntity::getServiceId, serviceInstanceId)
+                .list();
     }
 }

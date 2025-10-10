@@ -40,7 +40,7 @@
       "externalLink": {
         "name": "FE UI",
         "label": "FE UI",
-        "url": "http://${host}:8060"
+        "url": "http://${hostname}:8060"
       }
     },
     {
@@ -65,10 +65,9 @@
       },
       "statusRunner": {
         "timeout": "60",
-        "program": "fe/bin/status_observer.sh",
+        "program": "fe/bin/status_fe.sh",
         "args": [
-          "status",
-          "fe"
+          "status"
         ]
       }
     },
@@ -137,8 +136,10 @@
     "generators": [
       {
         "filename": "be.conf",
+        "fileDescription": "StarRocks BE节点配置文件，定义存储引擎和计算资源参数",
         "configFormat": "properties",
         "outputDirectory": "be/conf",
+        "configTargetRoles": "SRBE",
         "templateName": "starRocks-be.ftl",
         "includeParams": [
           "be_port",
@@ -159,8 +160,10 @@
       },
       {
         "filename": "cn.conf",
+        "fileDescription": "StarRocks CN节点配置文件，定义计算节点网络和资源参数",
         "configFormat": "properties",
         "outputDirectory": "be/conf",
+        "configTargetRoles": "SRCN",
         "templateName": "starRocks-be.ftl",
         "includeParams": [
           "be_port",
@@ -181,7 +184,9 @@
       },
       {
         "filename": "fe.conf",
+        "fileDescription": "StarRocks FE节点配置文件，定义元数据和SQL查询服务参数",
         "configFormat": "custom",
+        "configTargetRoles": "SRFE",
         "outputDirectory": "fe/conf",
         "templateName": "starRocks-fe.ftl",
         "includeParams": [
@@ -196,11 +201,46 @@
           "mysql_service_nio_enabled",
           "priority_networks",
           "qe_max_connection",
-          "run_mode",
           "enable_query_cache",
           "query_cache_entry_max_bytes",
           "query_cache_entry_max_rows",
           "enable_udf"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.persistent-volume-claims",
+        "fileDescription": "StarRocks Kubernetes存储配置",
+        "configFormat": "properties",
+        "configTargetRoles": "SRFE,SRFEObserver,SRBE,SRCN",
+        "outputDirectory": "",
+        "includeParams": [
+          "storage_classes",
+          "mount_path",
+          "storage_size"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.services",
+        "fileDescription": "StarRocks Kubernetes网络服务配置",
+        "configFormat": "properties",
+        "configTargetRoles": "SRFE,SRFEObserver,SRBE,SRCN",
+        "outputDirectory": "",
+        "includeParams": [
+          "node_port_mappings",
+          "cluster_port_mappings"
+        ]
+      },
+      {
+        "filename": "kubernetes.config.resources",
+        "fileDescription": "StarRocks Kubernetes资源配额配置",
+        "configFormat": "properties",
+        "configTargetRoles": "SRFE,SRFEObserver,SRBE,SRCN",
+        "outputDirectory": "",
+        "includeParams": [
+          "requests_memory",
+          "requests_cpu",
+          "limits_memory",
+          "limits_cpu"
         ]
       }
     ]
@@ -216,7 +256,10 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": "shared_nothing",
-      "selectValue" : ["shared_nothing", "shared_data"]
+      "selectValue": [
+        "shared_nothing",
+        "shared_data"
+      ]
     },
     {
       "name": "meta_dir",
@@ -239,7 +282,31 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "8060"
+      "defaultValue": "8060",
+      "configCategory": "file",
+      "configGroup": "fe.conf",
+      "configLevel": "advanced",
+      "bindRole": "SRFE",
+      "serviceType": "ClusterIP",
+      "portNumber": "8060",
+      "nodePort": "30860"
+    },
+    {
+      "name": "http_port1",
+      "label": "FEObserver节点http端口",
+      "description": "FEObserver节点http端口",
+      "required": true,
+      "type": "input",
+      "value": "",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "8060",
+      "configCategory": "file",
+      "configGroup": "fe.conf",
+      "configLevel": "advanced",
+      "bindRole": "SRFEObserver",
+      "serviceType": "ClusterIP",
+      "portNumber": "8060"
     },
     {
       "name": "rpc_port",
@@ -250,7 +317,13 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9020"
+      "defaultValue": "9020",
+      "configCategory": "file",
+      "configGroup": "fe.conf",
+      "configLevel": "advanced",
+      "bindRole": "SRFE",
+      "serviceType": "ClusterIP",
+      "portNumber": "9020"
     },
     {
       "name": "query_port",
@@ -261,7 +334,14 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9030"
+      "defaultValue": "9030",
+      "configCategory": "file",
+      "configGroup": "fe.conf",
+      "configLevel": "advanced",
+      "bindRole": "SRFE",
+      "serviceType": "NodePort",
+      "portNumber": "9030",
+      "nodePort": "30930"
     },
     {
       "name": "edit_log_port",
@@ -272,7 +352,13 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9010"
+      "defaultValue": "9010",
+      "configCategory": "file",
+      "configGroup": "fe.conf",
+      "configLevel": "advanced",
+      "bindRole": "SRFE",
+      "serviceType": "ClusterIP",
+      "portNumber": "9010"
     },
     {
       "name": "cloud_native_meta_port",
@@ -393,7 +479,13 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "8070"
+      "defaultValue": "8070",
+      "configCategory": "file",
+      "configGroup": "be.conf",
+      "configLevel": "advanced",
+      "bindRole": "SRBE,SRCN",
+      "serviceType": "ClusterIP",
+      "portNumber": "8070"
     },
     {
       "name": "heartbeat_service_port",
@@ -404,7 +496,13 @@
       "value": "",
       "configurableInWizard": true,
       "hidden": false,
-      "defaultValue": "9050"
+      "defaultValue": "9050",
+      "configCategory": "file",
+      "configGroup": "be.conf",
+      "configLevel": "advanced",
+      "bindRole": "SRBE",
+      "serviceType": "ClusterIP",
+      "portNumber": "9050"
     },
     {
       "name": "brpc_port",
@@ -551,6 +649,135 @@
       "configurableInWizard": true,
       "hidden": false,
       "defaultValue": ""
+    },
+    {
+      "name": "storage_classes",
+      "label": "存储类名称",
+      "description": "Kubernetes存储类名称",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "nfs-client",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "nfs-client",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims"
+    },
+    {
+      "name": "mount_path",
+      "label": "挂载路径",
+      "description": "持久卷挂载路径",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "/data",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "/data",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims"
+    },
+    {
+      "name": "storage_size",
+      "label": "存储大小",
+      "description": "持久卷存储大小",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "20",
+      "configurableInWizard": true,
+      "hidden": false,
+      "unit": "Gi",
+      "defaultValue": "20",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.persistent-volume-claims"
+    },
+    {
+      "name": "requests_memory",
+      "label": "内存请求值",
+      "description": "容器最小内存量",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources"
+    },
+    {
+      "name": "requests_cpu",
+      "label": "CPU请求值",
+      "description": "容器最小CPU核心数",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "1",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "1",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources"
+    },
+    {
+      "name": "limits_memory",
+      "label": "内存限制值",
+      "description": "容器最大内存量",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "4",
+      "unit": "Gi",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "4",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources"
+    },
+    {
+      "name": "limits_cpu",
+      "label": "CPU限制值",
+      "description": "容器最大CPU核心数",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "input",
+      "value": "2",
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": "2",
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.resources"
+    },
+    {
+      "name": "node_port_mappings",
+      "label": "NodePort端口映射",
+      "description": "容器端口到NodePort的映射",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services"
+    },
+    {
+      "name": "cluster_port_mappings",
+      "label": "集群内部端口映射",
+      "description": "集群内部通信端口映射",
+      "configType": "kubernetes",
+      "required": false,
+      "type": "multipleWithKey",
+      "value": [],
+      "configurableInWizard": true,
+      "hidden": false,
+      "defaultValue": [],
+      "configCategory": "kubernetes",
+      "configGroup": "kubernetes.config.services"
     }
   ]
 }

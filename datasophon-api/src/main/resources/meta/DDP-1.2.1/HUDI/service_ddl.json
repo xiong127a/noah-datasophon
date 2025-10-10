@@ -39,6 +39,7 @@
       {
         "filename": "install.properties",
         "configFormat": "properties",
+        "fileDescription": "Hudi安装配置文件，用于定义Hudi的安装配置信息",
         "outputDirectory": "/etc",
         "includeParams": [
           "enableSpark",

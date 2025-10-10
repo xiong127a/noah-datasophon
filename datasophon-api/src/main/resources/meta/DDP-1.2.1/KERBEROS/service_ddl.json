@@ -95,6 +95,7 @@
     "generators": [
       {
         "filename": "krb5.conf",
+        "fileDescription": "Kerberos客户端主配置文件，定义域名、KDC服务器和票据参数",
         "configFormat": "custom",
         "outputDirectory": "/etc",
         "templateName": "krb5.ftl",
@@ -108,7 +109,9 @@
       },
       {
         "filename": "kdc.conf",
+        "fileDescription": "Kerberos KDC服务器配置文件，定义加密类型和数据库参数",
         "configFormat": "custom",
+        "configTargetRoles": "Krb5Kdc",
         "outputDirectory": "/var/kerberos/krb5kdc",
         "templateName": "kdc.ftl",
         "includeParams": [
@@ -117,7 +120,9 @@
       },
       {
         "filename": "kadm5.acl",
+        "fileDescription": "Kerberos管理服务访问控制配置，定义管理员权限规则",
         "configFormat": "custom",
+        "configTargetRoles": "KAdmin",
         "outputDirectory": "/var/kerberos/krb5kdc",
         "templateName": "kadm5.ftl",
         "includeParams": [

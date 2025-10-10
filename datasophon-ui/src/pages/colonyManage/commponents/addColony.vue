@@ -50,7 +50,7 @@
           <template #title>
             <span>
               <p>PVM：适用于需要并行处理大规模计算任务的场景，支持将多个计算机资源组合成一个强大的计算集群。</p>
-              <p>K8S：适用于需要管理和部署容器化应用程序的场景，强调的是自动化、可扩展和高可用的应用程序管理</p>
+              <p>Kubernetes：适用于需要管理和部署容器化应用程序的场景，强调的是自动化、可扩展和高可用的应用程序管理</p>
             </span>
           </template>
           <a-icon type="info-circle" class="iconInfo" />
@@ -60,16 +60,6 @@
           <a-select-option :value="item" v-for="(item, index) in depTypeList" :key="index">{{ item
             }}</a-select-option>
         </a-select>
-      </a-form-item>
-      <a-form-item label="kubernetes命名空间" v-if="depType == 'K8S'">
-        <a-input v-decorator="['namespace', { rules: [{ required: true, message: 'kubernetes命名空间不能为空!' }] }]"
-          placeholder="请输入kubernetes命名空间">
-        </a-input>
-      </a-form-item>
-      <a-form-item label="kubeConfig"  v-if="depType == 'K8S'">
-        <a-textarea v-decorator="['kubeConfig', { rules: [{ required: true, message: 'kubeConfig不能为空!' }] }]"
-          placeholder="请输入kubeConfig" style="width:100%;height: 300px;">
-        </a-textarea>
       </a-form-item>
     </a-form>
     <div class="ant-modal-confirm-btns-new">
@@ -109,7 +99,7 @@ export default {
       value1: "",
       loading: false,
       frameList: [], //集群框架列表
-      depTypeList: ['K8S', 'PVM'], //部署方式列表
+      depTypeList: ['Kubernetes', 'PVM'], //部署方式列表
       depType:'',
     };
   },
@@ -132,8 +122,6 @@ export default {
             "clusterCode": values.clusterCode,
             "clusterFrame": values.clusterFrame,
             "depType": values.depType,
-            "namespace": values.namespace,
-            "kubeConfig": values.kubeConfig,
           }
           if (JSON.stringify(this.detail) !== '{}') params.id = this.detail.id
           this.loading = true;
@@ -154,14 +142,12 @@ export default {
         if (res.code === 200) {
           this.frameList = res.data
           if (JSON.stringify(this.detail) !== '{}') {
-            this.form.getFieldsValue(['clusterName', 'clusterFrame', 'clusterCode', 'depType', 'namespace', 'kubeConfig',])
+            this.form.getFieldsValue(['clusterName', 'clusterFrame', 'clusterCode', 'depType'])
             this.form.setFieldsValue({
               clusterName:this.detail.clusterName,
               clusterFrame: this.detail.clusterFrame,
               clusterCode: this.detail.clusterCode,
               depType: this.detail.depType,
-              namespace: this.detail.namespace,
-              kubeConfig: this.detail.kubeConfig,
             })
             this.depType = this.detail.depType
           }

@@ -46,7 +46,7 @@
       "externalLink": {
         "name": "Trino UI",
         "label": "Trino UI",
-        "url": "http://${host}:8086"
+        "url": "http://${hostname}:8086"
       }
     },
     {

@@ -5,7 +5,7 @@
       "description": "NameNode地址",
       "required": true,
       "type": "input",
-      "value": "hdfs://${host}:8020",
+      "value": "hdfs://${hostname}:8020",
       "configurableInWizard": true,
       "isHidden": true,
       "defaultValue": "localhost:8020"
@@ -16,7 +16,7 @@
       "description": "配置HDFS网页登录使用的静态用户",
       "required": true,
       "type": "input",
-      "value": "hdfs://${host}:8020",
+      "value": "hdfs://${hostname}:8020",
       "configurableInWizard": true,
       "isHidden": false,
       "defaultValue": "localhost:8020"

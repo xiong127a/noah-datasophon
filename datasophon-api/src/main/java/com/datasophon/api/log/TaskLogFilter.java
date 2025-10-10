@@ -21,7 +21,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.filter.Filter;
 import ch.qos.logback.core.spi.FilterReply;
-import com.datasophon.k8s.constants.Constant;
+import com.datasophon.kubernetes.constants.Constant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

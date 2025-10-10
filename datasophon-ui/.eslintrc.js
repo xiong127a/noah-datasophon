@@ -34,6 +34,7 @@ module.exports = {
     'prettier/prettier': 0,
     'no-undef': 0,// 允许未定义的变量
     'no-unused-vars': 0,// 允许未定义的变量
+    'vue/no-unused-vars': 0, // 允许Vue模板中未使用的变量
     'vue/html-self-closong': 'off'
   },
 };

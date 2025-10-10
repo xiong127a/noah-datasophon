@@ -20,12 +20,11 @@ package com.datasophon.common.command;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceConfig;
+import lombok.Data;
 
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
-
-import lombok.Data;
 
 @Data
 public class GenerateServiceConfigCommand implements Serializable {
@@ -45,4 +44,8 @@ public class GenerateServiceConfigCommand implements Serializable {
     private RunAs runAs;
 
     private String hostName;
+
+    private String kubeConfig;
+
+    private String namespace;
 }

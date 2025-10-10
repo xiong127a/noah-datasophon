@@ -77,11 +77,11 @@ public class ClusterInfoEntity implements Serializable {
      */
     private String depType;
     /**
-     * k8s配置
+     * Kubernetes配置
      */
     private String kubeConfig;
     /**
-     * k8s命令空间
+     * Kubernetes命令空间
      */
     private String namespace;
 

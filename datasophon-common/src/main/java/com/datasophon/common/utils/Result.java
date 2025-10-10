@@ -19,12 +19,11 @@
 package com.datasophon.common.utils;
 
 import com.datasophon.common.Constants;
+import lombok.Data;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
-
-import lombok.Data;
 
 @Data
 public class Result extends HashMap<String, Object> {

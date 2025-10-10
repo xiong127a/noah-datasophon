@@ -18,13 +18,11 @@
 package com.datasophon.api.master;
 
 import akka.actor.UntypedActor;
-import com.datasophon.api.master.handler.service.ServiceHandler;
-import com.datasophon.api.master.handler.service.ServiceStopHandler;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.api.utils.RollingRestartUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
 import com.datasophon.common.enums.CommandType;
@@ -54,9 +52,9 @@ public class WorkerServiceActor extends UntypedActor {
             ExecuteServiceRoleCommand executeServiceRoleCommand = (ExecuteServiceRoleCommand) message;
 
             ClusterServiceRoleGroupConfigService roleGroupConfigService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceRoleGroupConfigService.class);
+                    SpringUtil.getBean(ClusterServiceRoleGroupConfigService.class);
             ClusterServiceRoleInstanceService roleInstanceService =
-                    SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
+                    SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
 
             ServiceRoleInfo serviceRoleInfo = executeServiceRoleCommand.getWorkerRole();
             ExecResult execResult = new ExecResult();

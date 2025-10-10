@@ -81,7 +81,7 @@
       "cardinality": "1",
       "runAs": {},
       "sortNum": 2,
-      "logFile": "redis_exporter/logs/redis-${host}.out",
+      "logFile": "redis_exporter/logs/redis-${hostname}.out",
       "startRunner": {
         "timeout": "60",
         "program": "redis_exporter/control_redis_exporter.sh",

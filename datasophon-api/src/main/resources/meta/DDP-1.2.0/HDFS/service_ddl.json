@@ -20,7 +20,7 @@
       },
       "cardinality": "1+",
       "sortNum": 1,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-journalnode-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-journalnode-${hostname}.log",
       "jmxPort": 27003,
       "startRunner": {
         "timeout": "60",
@@ -57,7 +57,7 @@
       },
       "cardinality": "1+",
       "sortNum": 2,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-namenode-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-namenode-${hostname}.log",
       "jmxPort": "27001",
       "startRunner": {
         "timeout": "60",
@@ -94,7 +94,7 @@
       "externalLink": {
         "name": "NameNode Ui",
         "label": "NameNode Ui",
-        "url": "http://${host}:9870"
+        "url": "http://${hostname}:9870"
       }
     },
     {
@@ -107,7 +107,7 @@
       },
       "cardinality": "1+",
       "sortNum": 5,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-datanode-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-datanode-${hostname}.log",
       "jmxPort": "27002",
       "startRunner": {
         "timeout": "60",
@@ -144,7 +144,7 @@
       },
       "cardinality": "1+",
       "sortNum": 3,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-zkfc-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-zkfc-${hostname}.log",
       "jmxPort": 27004,
       "startRunner": {
         "timeout": "60",
@@ -181,7 +181,7 @@
       },
       "cardinality": "1+",
       "sortNum": 4,
-      "logFile": "${hadoopLogDir}/hadoop-hdfs-httpfs-${host}.log",
+      "logFile": "${hadoopLogDir}/hadoop-hdfs-httpfs-${hostname}.log",
       "jmxPort": "",
       "startRunner": {
         "timeout": "60",
@@ -1266,10 +1266,10 @@
       "required": false,
       "configType": "kb",
       "type": "input",
-      "value": "HTTP/${host}@${realm}",
+      "value": "HTTP/${hostname}@${realm}",
       "configurableInWizard": true,
       "hidden": true,
-      "defaultValue": "HTTP/${host}@${realm}"
+      "defaultValue": "HTTP/${hostname}@${realm}"
     },
     {
       "name": "custom.core.site.xml",

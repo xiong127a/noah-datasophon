@@ -13,13 +13,14 @@
       "label": "SparkClient3",
       "roleType": "client",
       "cardinality": "1+",
-      "logFile": "logs/hadoop-${user}-datanode-${host}.log"
+      "logFile": "logs/hadoop-${user}-datanode-${hostname}.log"
     }
   ],
   "configWriter": {
     "generators": [
       {
         "filename": "spark-env.sh",
+        "fileDescription": "Spark环境变量配置文件，设置Java路径、堆大小等运行环境参数",
         "configFormat": "custom",
         "templateName": "spark-env.ftl",
         "outputDirectory": "conf",
@@ -32,6 +33,7 @@
       },
       {
         "filename": "spark-defaults.conf",
+        "fileDescription": "Spark默认配置文件，设置Spark应用程序的资源分配和执行参数",
         "configFormat": "properties2",
         "outputDirectory": "conf",
         "includeParams": [

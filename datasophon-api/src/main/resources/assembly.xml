@@ -56,32 +56,6 @@
                 <include>README.md</include>
             </includes>
         </fileSet>
-        <fileSet>
-            <directory>${basedir}/../datasophon-common/src/main/resources</directory>
-            <includes>
-                <include>**/*.properties</include>
-                <include>**/*.xml</include>
-            </includes>
-            <outputDirectory>conf</outputDirectory>
-            <fileMode>0755</fileMode>
-        </fileSet>
-        <fileSet>
-            <directory>${basedir}/../datasophon-infrastructure/src/main/resources</directory>
-            <includes>
-                <include>**/*.properties</include>
-                <include>**/*.xml</include>
-            </includes>
-            <outputDirectory>conf</outputDirectory>
-            <fileMode>0755</fileMode>
-        </fileSet>
-        <fileSet>
-            <directory>${basedir}/../datasophon-infrastructure/src/main/resources/mapper</directory>
-            <includes>
-                <include>**/*.xml</include>
-            </includes>
-            <outputDirectory>conf/mapper</outputDirectory>
-            <fileMode>0755</fileMode>
-        </fileSet>
         <!--拷贝start.sh启动脚本文件到bin目录下面-->
         <fileSet>
             <directory>${basedir}/../bin</directory>
@@ -111,6 +85,7 @@
             <directoryMode>0755</directoryMode>
             <fileMode>0755</fileMode>
         </fileSet>
+        <!-- 前端资源复制 -->
         <fileSet>
             <directory>${basedir}/../datasophon-ui/dist</directory>
             <outputDirectory>/conf/front/views</outputDirectory>
@@ -121,6 +96,8 @@
             </includes>
             <directoryMode>0755</directoryMode>
             <fileMode>0755</fileMode>
+            <filtered>false</filtered>
+            <useDefaultExcludes>true</useDefaultExcludes>
         </fileSet>
         <fileSet>
             <directory>${basedir}/../datasophon-ui/dist</directory>
@@ -131,6 +108,7 @@
                 <include>css/**</include>
                 <include>static/**</include>
             </includes>
+            <useDefaultExcludes>true</useDefaultExcludes>
         </fileSet>
         <fileSet>
             <directory>${basedir}/../conf</directory>
@@ -179,16 +157,16 @@
         </fileSet>
 
         <fileSet>
-            <directory>${basedir}/../datasophon-worker/src/main/resources/templates</directory>
+            <directory>${basedir}/src/main/resources/worker/templates</directory>
             <includes>
-                <include>**/*.ftl</include>
-                <include>**/*.yml</include>
+                <include>**/*</include>
             </includes>
-            <outputDirectory>conf/templates</outputDirectory>
+            <outputDirectory>conf/worker/templates</outputDirectory>
+            <fileMode>0755</fileMode>
             <lineEnding>unix</lineEnding>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../datasophon-k8s/src/main/resources</directory>
+            <directory>${basedir}/../datasophon-kubernetes/src/main/resources</directory>
             <includes>
                 <include>**/*.properties</include>
             </includes>
@@ -196,10 +174,37 @@
             <fileMode>0755</fileMode>
         </fileSet>
         <fileSet>
-            <directory>${basedir}/../datasophon-k8s/src/main/resources/k8s</directory>
-            <outputDirectory>conf/k8s</outputDirectory>
+            <directory>${basedir}/../datasophon-kubernetes/src/main/resources/kubernetes</directory>
+            <outputDirectory>conf/kubernetes</outputDirectory>
             <lineEnding>unix</lineEnding>
         </fileSet>
-
+        <fileSet>
+            <directory>${basedir}/../arthas</directory>
+            <outputDirectory>arthas</outputDirectory>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0755</fileMode>
+        </fileSet>
+        <fileSet>
+            <directory>${basedir}/src/main/resources</directory>
+            <includes>
+                <include>**/*.properties</include>
+                <include>**/*.xml</include>
+                <include>**/*.yml</include>
+                <include>init-scripts.properties</include>
+            </includes>
+            <outputDirectory>conf</outputDirectory>
+            <fileMode>0755</fileMode>
+        </fileSet>
+        
+        <!-- 添加datasophon-api/src/main/resources/docs目录 -->
+        <fileSet>
+            <directory>${basedir}/src/main/resources/docs</directory>
+            <includes>
+                <include>**/*</include>
+            </includes>
+            <outputDirectory>conf/docs</outputDirectory>
+            <directoryMode>0755</directoryMode>
+            <fileMode>0644</fileMode>
+        </fileSet>
     </fileSets>
 </assembly>

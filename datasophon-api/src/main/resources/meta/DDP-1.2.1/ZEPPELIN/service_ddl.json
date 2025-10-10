@@ -13,7 +13,7 @@
       "label": "ZeppelinServer",
       "roleType": "master",
       "cardinality": "1",
-      "logFile": "logs/zeppelin-root-${host}.log",
+      "logFile": "logs/zeppelin-root-${hostname}.log",
       "jmxPort": 8889,
       "startRunner": {
         "timeout": "60",
@@ -39,7 +39,7 @@
       "externalLink": {
         "name": "ZeppelinServer UI",
         "label": "ZeppelinServer UI",
-        "url": "http://${host}:8889"
+        "url": "http://${hostname}:8889"
       }
     }
   ],
@@ -47,8 +47,10 @@
     "generators": [
       {
         "filename": "zeppelin-env.sh",
+        "fileDescription": "Zeppelin环境变量脚本，设置运行环境和资源参数",
         "configFormat": "custom",
         "outputDirectory": "conf",
+        "configTargetRoles": "ZeppelinServer",
         "templateName": "zeppelin-env.ftl",
         "includeParams": [
           "custom.zeppelin.env"
@@ -56,8 +58,10 @@
       },
       {
         "filename": "zeppelin-site.xml",
+        "fileDescription": "Zeppelin核心配置文件，定义服务端口、解释器设置和安全参数",
         "configFormat": "custom",
         "outputDirectory": "conf",
+        "configTargetRoles": "ZeppelinServer",
         "templateName": "zeppelin-site.ftl",
         "includeParams": [
           "jobmanagerEnable",

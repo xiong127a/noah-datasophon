@@ -18,6 +18,7 @@
  *
  */
 
+
 import Vue from 'vue'
 import App from './App.vue'
 import {initRouter} from './router'
@@ -26,7 +27,7 @@ import './assets/less/index.less'
 import Antd from 'ant-design-vue'
 import Viser from 'viser-vue'
 import '@/mock'
-import '@/api'
+
 import store from './store'
 import {initI18n} from '@/utils/i18n'
 import 'animate.css/source/animate.css'
@@ -34,6 +35,9 @@ import Plugins from '@/plugins'
 import bootstrap from '@/bootstrap'
 import 'moment/locale/zh-cn'
 import '@/assets/fonts/font.css'
+
+// 导入API初始化文件
+import '@/api/index'
 
 const router = initRouter(store.state.setting.asyncRoutes)
 const i18n = initI18n('CN', 'US')

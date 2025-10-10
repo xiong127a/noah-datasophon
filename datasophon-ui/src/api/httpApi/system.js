@@ -62,4 +62,11 @@ export default {
   saveNotice: path + '/notice/group/save',
   updateNotice: path + '/notice/group/update',
   deleteNotice: path + '/notice/group/delete',
+
+  // 自动伸缩模块
+  getAutoScaleTasks: path + '/autoScale/getAutoScaleTasks', // 获取自动伸缩任务列表
+  createAutoScaleTask: path + '/autoScale/createAutoScaleTask', // 创建自动伸缩任务
+  updateAutoScaleTask: path + '/autoScale/updateAutoScaleTask', // 更新自动伸缩任务
+  deleteAutoScaleTask: path + '/autoScale/deleteAutoScaleTask', // 删除自动伸缩任务
+
 }

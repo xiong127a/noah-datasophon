@@ -138,7 +138,7 @@
             "externalLink": {
                 "name": "NebulaGraph Studio UI",
                 "label": "Studio UI",
-                "url": "http://${host}:7002"
+                "url": "http://${hostname}:7002"
             }
         }
     ],
@@ -146,7 +146,9 @@
         "generators": [
             {
                 "filename": "nebula-metad.conf",
+                "fileDescription": "NebulaGraph元数据服务配置文件，定义Meta节点的存储和网络参数",
                 "configFormat": "custom",
+                "configTargetRoles": "Meta",
                 "templateName": "nebula-metad.ftl",
                 "outputDirectory": "etc",
                 "includeParams": [
@@ -160,7 +162,9 @@
             },
             {
                 "filename": "nebula-graphd.conf",
+                "fileDescription": "NebulaGraph图服务配置文件，定义Graph节点的查询和内存参数",
                 "configFormat": "custom",
+                "configTargetRoles": "Graph",
                 "outputDirectory": "etc",
                 "templateName": "nebula-graphd.ftl",
                 "includeParams": [
@@ -190,7 +194,9 @@
             },
             {
                 "filename": "nebula-storaged.conf",
+                "fileDescription": "NebulaGraph存储服务配置文件，定义Storage节点的数据管理参数",
                 "configFormat": "custom",
+                "configTargetRoles": "Storage",
                 "templateName": "nebula-storaged.ftl",
                 "outputDirectory": "etc",
                 "includeParams": [
@@ -289,10 +295,10 @@
             "required": true,
             "configType": "map",
             "type": "input",
-            "value": "${host}",
+            "value": "${hostname}",
             "configurableInWizard": true,
             "hidden": true,
-            "defaultValue": "${host}"
+            "defaultValue": "${hostname}"
         },
         {
             "name": "logDir",

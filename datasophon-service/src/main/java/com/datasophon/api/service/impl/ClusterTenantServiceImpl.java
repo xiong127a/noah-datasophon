@@ -52,7 +52,7 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                 .like(StrUtil.isNotBlank(tenantName), "tenant_name", tenantName)
                 .last("limit " + offset + "," + size);
         List<ClusterTenant> list = this.list(queryWrapper);
-        int total = this.count(new QueryWrapper<ClusterTenant>()
+        long total = this.count(new QueryWrapper<ClusterTenant>()
                 .eq(Constants.CLUSTER_ID, clusterId));
         return Result.success(list).put(Constants.TOTAL, total);
     }

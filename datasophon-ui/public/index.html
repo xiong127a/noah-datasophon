@@ -29,7 +29,55 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <meta name="renderer" content="webkit">
     <link rel="icon" href="<%= BASE_URL %>favicon.ico">
+    <link rel="stylesheet" href="<%= BASE_URL %>assets/file-icons/file-icons.css">
+    <script>
+      // 清除缓存
+      var menuData = localStorage.getItem('menuData');
+      if (menuData) {
+        try {
+          var data = JSON.parse(menuData);
+          
+          // 找到Datasophon总览和集群总览菜单项
+          var datasophonOverviewItem = null;
+          var clusterOverviewItem = null;
+          var datasophonIndex = -1;
+          var clusterIndex = -1;
+          
+          // 更新菜单名称和图标
+          data.forEach(function(item, index) {
+            if (item.path === 'overview') {
+              item.name = '集群总览';
+              clusterOverviewItem = item;
+              clusterIndex = index;
+            }
+            if (item.path === 'datasophon-overview') {
+              item.name = 'Datasophon总览';
+              if (item.meta) {
+                item.meta.icon = 'datasophon-overview';
+              }
+              datasophonOverviewItem = item;
+              datasophonIndex = index;
+            }
+          });
+          
+          // 调整菜单顺序，确保Datasophon总览在第一位
+          if (datasophonIndex > 0 && clusterIndex >= 0 && datasophonIndex > clusterIndex) {
+            // 移除Datasophon总览
+            data.splice(datasophonIndex, 1);
+            // 在集群总览前插入
+            data.splice(clusterIndex, 0, datasophonOverviewItem);
+            console.log('已调整菜单顺序，Datasophon总览现在在第一位');
+          }
+          
+          // 保存回localStorage
+          localStorage.setItem('menuData', JSON.stringify(data));
+        } catch (e) {
+          console.error('菜单数据解析错误', e);
+        }
+      }
+    </script>
     <title><%= process.env.VUE_APP_NAME %></title>
     <!-- require cdn assets css -->
     <% for (var i in htmlWebpackPlugin.options.cdn && htmlWebpackPlugin.options.cdn.css) { %>
@@ -48,5 +96,7 @@
       <script type="text/javascript" src="<%= htmlWebpackPlugin.options.cdn.js[i] %>"></script>
     <% } %>
     <!-- built files will be auto injected -->
+    <script src="<%= BASE_URL %>helpMenuFix.js"></script>
+    <script src="<%= BASE_URL %>datasophonMenuFix.js"></script>
   </body>
 </html>

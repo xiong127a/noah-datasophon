@@ -34,7 +34,7 @@
       "externalLink": {
         "name": "minio Ui",
         "label": "minio Ui",
-        "url": "http://${host}:${minioConsolePort}"
+        "url": "http://${hostname}:${minioConsolePort}"
       }
     }
   ],
@@ -43,6 +43,7 @@
       {
         "filename": "start.sh",
         "configFormat": "custom",
+        "fileDescription": "MINIO启动脚本，用于启动MINIO服务",
         "outputDirectory": "bin",
         "templateName": "minio-run.ftl",
         "includeParams": [

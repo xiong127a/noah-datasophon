@@ -26,77 +26,55 @@
 -->
 <template>
   <div class="service-setting steps">
-    <div class="flex-bewteen-container" style="flex-direction:row-reverse;">
-      <div class="w180" style="margin-right:23px;">
-        版本：
-        <a-select placeholder="请选择" :value="currentVersion" @change="changeVersion" style="width:180px">
-          <a-select-option v-for="(child, childIndex) in verSionList" :key="childIndex" :value="child">{{child}}</a-select-option>
-        </a-select>
-      </div>
-    </div>
-    <div class="flex-bewteen-container" style="align-items: baseline; margin-top:10px;">
-      <a-spin :spinning="false" class=" w180  setting" style="display: grid;height:300px;">
-       <!-- <a-radio-group :default-value="currentId"  @change="changeCasting" style="margin-left:1px;" >
-         <a-radio-button :value="item.id" v-for="(item, childIndex) in GroupList" :key="childIndex" :style="radioStyle" >
-          {{item.roleGroupName}}
-          </a-radio-button>
-       </a-radio-group> -->
-        <div  v-for="(item, childIndex) in GroupList" :key="childIndex" @click="handlerClick(item,childIndex)" :class="[currentId==item.id ? 'active':'','system']">
-          <div :class="[currentId==item.id ? 'active':'','system']">
-            {{item.roleGroupName}}
-                <!-- <a-icon  type="sync" class="menu-sub-icon" @click="textCompare" /> -->
-            <a-popover trigger="hover" placement="rightTop" class="popover-index" overlayClassName="popover-index" :content="()=> getMoreMenu(item)">
-                <a-icon type="more" class="fr" />
-              </a-popover>
-          </div>
-        </div>
-      </a-spin>
-      <a-spin :spinning="loading" class="steps-body" style="position: relative; flex:1; margin:0 20px">
-      <CommonTemplate :ref="'CommonTemplateRef'" :class="['']" :steps4Data="steps4Data" :templateData="templateData" />
-      <div class="footer">
-        <a-button class="mgr10" type="primary" @click="handleSubmit">保存</a-button>
-      </div>
-     </a-spin>
-
-    </div>
+    <!-- 添加Tab页签 -->
+    <a-tabs :activeKey="activeTabKey" @change="handleTabChange">
+      <a-tab-pane key="service-config" tab="配置参数" :forceRender="true">
+        <ServiceConfig 
+          ref="serviceConfigRef"
+          :steps4Data="steps4Data" 
+          :serviceId="serviceId" 
+          :serviceName="serviceName"
+        />
+      </a-tab-pane>
+      
+      <a-tab-pane key="Kubernetes-config" tab="Kubernetes 仪表盘" :forceRender="true">
+        <KubernetesConfig
+          ref="kubernetesConfigRef"
+          :serviceId="serviceId" 
+          :serviceName="serviceName" 
+          :clusterId="clusterId"
+        />
+      </a-tab-pane>
+      
+      <a-tab-pane key="config-download" tab="配置导出" :forceRender="true">
+        <ConfigDownload 
+          ref="configDownloadRef"
+          :serviceId="serviceId" 
+          :serviceName="serviceName" 
+        />
+      </a-tab-pane>
+    </a-tabs>
 
   </div>
 </template>
 <script>
-import CommonTemplate from "@/components/commonTemplate/index";
-import { mapActions, mapState } from "vuex";
-import RenameGroup from "./renameGroup.vue";
+import {mapActions, mapState} from "vuex";
 import {getServiceName} from "@/utils/util";
+import ConfigDownload from "./config/components/ConfigDownload.vue";
+import KubernetesDashboard from "./config/kubernetes/dashboard/KubernetesDashboard.vue";
+import ServiceConfig from "./components/ServiceConfig.vue";
 
 export default {
-  components: { CommonTemplate },
+  components: {ServiceConfig, ConfigDownload, KubernetesConfig: KubernetesDashboard},
   props: {
     steps4Data: Object,
   },
   data() {
     return {
-      loading: false,
-      templateData: [],
-      verSionList: [],
-      GroupList:[],
-      currentId:undefined,
-      currentVersion: undefined,
       clusterId: Number(localStorage.getItem("clusterId") || -1),
-      labelCol: {
-        xs: { span: 24 },
-        sm: { span: 5 },
-      },
-      wrapperCol: {
-        xs: { span: 24 },
-        sm: { span: 19 },
-      },
-      radioStyle: {
-        display: 'block',
-        height: '30px',
-        lineHeight: '30px',
-        marginTop:'5px' ,
-      },
-      value:0
+      activeTabKey: 'service-config',
+      serviceId: '',
+      serviceName: ''
     };
   },
   computed: {
@@ -106,319 +84,115 @@ export default {
   },
   methods: {
     ...mapActions("steps", ["setCommandType", "setCommandIds"]),
-    getMoreMenu(props) {
-      let arr = [
-        { name: "重命名", key: "rename" },
-        { name: "删除", key: "del" },
-      ];
-      // if (props.meta.obj.needRestart) arr.splice(2, 0, { name: "重启", key: "restart" })
-      return arr.map((item, index) => {
-        return (
-          <div key={index}>
-            <a
-              class="more-menu-btn"
-              style="border-width:0px;min-width:100px;color: #333;"
-              onClick={() => this.batchOpt(item, props)}
-            >
-              {item.name}
-            </a>
-          </div>
-        );
-      });
-    },
-    changeName (params) {
-      this.GroupList.forEach(item => {
-        if(item.id === params.roleGroupId) {
-          item.roleGroupName = params.roleGroupName
-        }
-      })
-    },
-    renameCharacter(props) {
-      const self = this;
-      let width = 520;
-      let title =  "重命名";
-      let content = (
-        <RenameGroup grouopObj={props} callBack={(params) => self.changeName(params)} />
-      );
-      this.$confirm({
-        width: width,
-        title: title,
-        content: content,
-        closable: true,
-        icon: () => {
-          return <div />;
-        },
-      });
-    },
-    batchOpt (item, props) {
-      if (item.key === 'rename') {
-        this.renameCharacter(props)
-        return false
-      }
-      this.$confirm({
-        width: 450,
-        title: () => {
-          return (
-            <div style="font-size: 22px;">
-              <a-icon
-                type="question-circle"
-                style="color:#2F7FD1 !important;margin-right:10px"
-              />
-              提示
-            </div>
-          );
-        },
-        content: (
-          <div style="margin-top:20px">
-            <div style="padding:0 65px;font-size: 16px;color: #555555;">
-              {'确认删除吗？'}
-            </div>
-            <div style="margin-top:20px;text-align:right;padding:0 30px 30px 30px">
-              <a-button
-                style="margin-right:10px;"
-                type="primary"
-                onClick={() => this.confirmDel(item, props)}
-              >
-                确定
-              </a-button>
-              <a-button
-                style="margin-right:10px;"
-                onClick={() => this.$destroyAll()}
-              >
-                取消
-              </a-button>
-            </div>
-          </div>
-        ),
-        icon: () => {
-          return <div />;
-        },
-        closable: true,
-      });
-    },
-    confirmDel(item, props) {
-      let serviceName = getServiceName(this.$route.params.serviceId);
-
-      let params = {
-        roleGroupId: props.id,
-        serviceName:serviceName
-      };
-      this.$axiosPost(global.API.delGroup, params).then((res) => {
-        this.$destroyAll();
-        if (res.code === 200) {
-          this.$message.success("操作成功");
-          this.GroupList = this.GroupList.filter(item => item.id !== props.id)
-          if (this.GroupList.length > 0 && this.currentId===props.id) {
-            this.currentId = this.GroupList[0].id;
-          }
-        }
-      });
-    },
-    handlerClick(item,childIndex){
-      console.log(item);
-      this.currentId = item.id
-      this.getConfigVersion()
-    },
-    handlearrayWithData(a) {
-      let obj = {};
-      let arr = [];
-      for (let k in a) {
-        if (k.includes("arrayWith")) {
-          let key = "";
-          if (k.includes("arrayWithKey")) {
-            key = k.split("arrayWithKey")[0];
-            arr.push(key);
-          }
-          if (k.includes("arrayWithVal")) {
-            key = k.split("arrayWithVal")[0];
-            arr.push(key);
-          }
-          arr = [...new Set(arr)];
-        }
-      }
-      arr.map((item) => {
-        obj[item] = [];
-      });
-      for (let f in obj) {
-        let keys = [];
-        let vals = [];
-        for (let i in a) {
-          if (i.includes(f)) {
-            if (i.includes("arrayWithKey")) {
-              keys.push(i);
+    handleTabChange(key) {
+      this.activeTabKey = key;
+      
+      // 确保serviceName有值
+      if (!this.serviceName && this.$route.params.serviceId) {
+        // 从菜单数据中获取服务名称
+        const serviceId = this.$route.params.serviceId;
+        const menuData = JSON.parse(localStorage.getItem('menuData')) || [];
+        const arr = menuData.filter(item => item.path === 'service-manage');
+        if (arr.length > 0) {
+          arr[0].children.forEach(item => {
+            if (item.meta.params.serviceId == serviceId) {
+              this.serviceName = item.name;
             }
-            if (i.includes("arrayWithVal")) {
-              vals.push(i);
-            }
-          }
-        }
-        keys.map((item, index) => {
-          obj[f].push({
-            [`${a[item]}`]: a[vals[index]],
           });
-        });
-      }
-      return obj;
-    },
-    handleMultipleData(a) {
-      let obj = {};
-      let arr = [];
-      for (let k in a) {
-        if (k.includes("multiple")) {
-          let key = k.split("multiple")[0];
-          arr.push(key);
-          arr = [...new Set(arr)];
+        }
+        
+        // 如果还是没有找到，则使用默认值
+        if (!this.serviceName) {
+          this.serviceName = "未知服务";
+          console.warn('无法获取服务名称，使用默认值');
         }
       }
-      arr.map((item) => {
-        obj[item] = [];
-      });
-      // obj{ a: , b: }
-      for (let f in obj) {
-        let vals = [];
-        for (let i in a) {
-          if (i.includes(f)) {
-            if (i.includes("multiple")) {
-              vals.push(i);
+      
+      // 在标签页切换后加载对应组件的数据
+      this.$nextTick(() => {
+        // 根据激活的标签页调用对应组件的数据加载方法
+        switch (key) {
+          case 'service-config':
+            if (this.$refs.serviceConfigRef) {
+              console.log('调用配置参数组件的loadData方法');
+              this.$refs.serviceConfigRef.loadData();
             }
-          }
-        }
-        vals.map((item, index) => {
-          obj[f].push(a[vals[index]]);
-        });
-      }
-      return obj;
-    },
-    // 单个标签页的保存
-    handleSubmit() {
-      const self = this
-      this.$refs[`CommonTemplateRef`].form.validateFields(
-        async (err, values) => {
-          if (!err) {
-            let param = _.cloneDeep(this.templateData);
-            const arrayWithData = this.handlearrayWithData(values);
-            const multipleData = this.handleMultipleData(values);
-            const formData = { ...values, ...arrayWithData, ...multipleData };
-            console.log(formData, "formDataformData");
-            for (let name in formData) {
-              param.forEach((item) => {
-                if (item.name === name) {
-                  item.value = formData[name];
-                }
-              });
+            break;
+            
+          case 'kubernetes-config':
+            if (this.$refs.kubernetesConfigRef) {
+              console.log('调用Kubernetes仪表盘组件的loadData方法');
+              this.$refs.kubernetesConfigRef.loadData();
             }
-            param.forEach((item) => {
-              item.name = item.name.replaceAll("!", ".");
-            });
-            let filterParam = param.filter(
-              (item) => !(!item.required && item.hidden)
-            );
-            console.log(arrayWithData, "arrayWithData", filterParam);
-            let serviceName = ''
-            const serviceId = this.$route.params.serviceId || ''
-            const menuData = JSON.parse(localStorage.getItem('menuData')) || []
-            const arr = menuData.filter(item => item.path === 'service-manage')
-            if (arr.length > 0) {
-              arr[0].children.map(item => {
-                if (item.meta.params.serviceId == serviceId) serviceName = item.name
-              })
+            break;
+            
+          case 'config-download':
+            if (this.$refs.configDownloadRef) {
+              console.log('调用配置导出组件的loadData方法');
+              this.$refs.configDownloadRef.loadData();
             }
-            // 处理表单数据 将相同的key处理成数组
-            let saveParam = {
-              clusterId: this.clusterId,
-              serviceName,
-              serviceConfig: JSON.stringify(filterParam),
-              roleGroupId:this.currentId
-            };
-            // // 等待网络请求结束
-            let res = await this.$axiosPost(
-              global.API.saveServiceConfig,
-              saveParam
-            );
-            if (res.code === 200) {
-              this.$message.success("保存成功");
-              this.getConfigVersion()
-              // this.getServiceRoleType()
-            } else {
-              // this.$message.error(res.msg || "保存失败");
-            }
-          }
-        }
-      );
-    },
-    changeVersion(val) {
-      this.currentVersion = val;
-      this.getServiceConfigOption();
-    },
-    changeCasting(val){
-      console.log(val.target.value);
-      this.currentId = val.target.value
-      this.getConfigVersion()
-    },
-
-    //获取角色组
-    getServiceRoleType() {
-      this.loading = true;
-      const params={
-        serviceInstanceId: this.$route.params.serviceId,
-      }
-      this.$axiosPost(global.API.getRoleGroupList, params).then((res) => {
-        if (res.code !== 200) return  //this.$message.error('获取角色组列表失败')
-        this.GroupList = res.data
-        if (this.GroupList.length > 0) {
-          this.currentId = this.GroupList[0].id;
-          //this.getServiceConfigOption( true);
-        }
-        this.getConfigVersion()
-      })
-    },
-    // 获取服务版本
-    getConfigVersion() {
-      this.loading = true;
-      const params = {
-        serviceInstanceId: this.$route.params.serviceId,
-        roleGroupId: JSON.stringify(this.currentId)||'',
-      };
-      this.$axiosPost(global.API.getConfigVersion, params).then((res) => {
-        if (res.code === 200) {
-          this.verSionList = res.data;
-          if (this.verSionList.length > 0) {
-            this.currentVersion = this.verSionList[0];
-            this.getServiceConfigOption( true);
-          }
+            break;
+            
+          default:
+            console.warn('未知的标签页:', key);
         }
       });
-    },
-    getServiceConfigOption(loading) {
-      if (!loading) this.loading = true;
-      const self = this;
-      const params = {
-        serviceInstanceId: this.$route.params.serviceId,
-        page: 1,
-        pageSize: 10000,
-        "version":this.currentVersion||'',
-        "roleGroupId": JSON.stringify(this.currentId)||'',
-      };
-      this.$axiosPost(global.API.getConfigInfo, params).then((res) => {
-        if (res.code === 200) {
-          self.templateData = self.handlerTemplate(res.data);
-          self.loading = false;
-        }
-      });
-    },
-    handlerTemplate(data) {
-      data.forEach((item) => {
-        item.name = item.name.replaceAll(".", "!");
-      });
-      return data;
     },
   },
-  created() {},
-  mounted() {
-    this.getServiceRoleType()
-    // setTimeout(()=>{
-    //   this.getConfigVersion()
-    // },1000)
+  created() {
+    // 从query和params中获取参数
+    const queryParams = this.$route.query;
+    const routeParams = this.$route.params;
+    
+    console.log('setting.vue创建, 查询参数:', queryParams);
+    console.log('路由参数:', routeParams);
+    
+    // 优先使用query中的参数，如果没有则使用params中的
+    const serviceInstanceId = queryParams.serviceInstanceId || routeParams.serviceId;
+    const serviceName = queryParams.serviceName;
+    const serviceType = queryParams.serviceType;
+    
+    console.log('合并后serviceInstanceId:', serviceInstanceId);
+    console.log('serviceName:', serviceName);
+    console.log('serviceType:', serviceType);
+    
+    this.serviceId = serviceInstanceId;
+    
+    // 设置serviceName
+    if (serviceName) {
+      this.serviceName = serviceName;
+    } else if (serviceType) {
+      this.serviceName = getServiceName(serviceType);
+    } else {
+      // 从菜单数据中获取服务名称
+      const menuData = JSON.parse(localStorage.getItem('menuData')) || [];
+      const arr = menuData.filter(item => item.path === 'service-manage');
+      if (arr.length > 0 && arr[0].children) {
+        arr[0].children.forEach(item => {
+          if (item.meta && item.meta.params && item.meta.params.serviceId == serviceInstanceId) {
+            this.serviceName = item.name;
+          }
+        });
+      }
+      
+      // 如果还是没有找到，使用默认值
+      if (!this.serviceName) {
+        this.serviceName = "未知服务";
+        console.warn('无法获取服务名称，使用默认值');
+      }
+    }
+    
+    console.log('设置后的serviceId:', this.serviceId);
+    console.log('设置后的serviceName:', this.serviceName);
+    
+    // 在组件创建完成后，确保加载默认标签页(配置参数)的数据
+    this.$nextTick(() => {
+      // 加载默认标签页的数据
+      if (this.activeTabKey === 'service-config' && this.$refs.serviceConfigRef) {
+        console.log('初始化加载配置参数数据');
+        this.$refs.serviceConfigRef.loadData();
+      }
+    });
   },
 };
 </script>
@@ -426,76 +200,6 @@ export default {
 .service-setting {
   /deep/ .ant-spin-container {
     position: relative;
-  }
-  .setting{
-     overflow-y: auto;
-     font-size: 12px;
-     padding-left: 20px;
-     color: #000;
-     .active{
-      color: #fff !important;
-      background-color: #2872e0;
-      &.ant-form-item{
-        color: #fff;
-      }
-     }
-     .system{
-        padding: 4px 0 ;
-        text-align: center;
-        cursor: pointer;
-        font-size: 14px;
-        .fr {
-          float: right;
-          position: relative;
-          top: 4px;
-          right: 4px;
-          visibility: hidden;
-        }
-        &:hover {
-          .fr {
-            visibility: visible;
-          }
-        }
-     }
-      &::-webkit-scrollbar {
-      width: 3px;
-      height: 1px;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      border-radius: 3px;
-      background: @primary-color;
-    }
-
-    &::-webkit-scrollbar-track {
-      -webkit-box-shadow: inset 0 0 1px rgba(0, 0, 0, 0);
-      border-radius: 3px;
-      background: @primary-3;
-    }
-  }
-  .steps-body {
-   max-height: calc(100vh - 240px);
-   height: calc(100vh - 240px);
-
-    border: 1px solid #e5e6e8;
-    margin: 10px 0;
-    padding: 20px 6% 0;
-    .footer {
-      // margin: 0 32px 0 auto;
-      // margin: 0 32px 0 0;
-      // margin: 0 auto;
-      height: 64px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      button {
-        width: 86px;
-      }
-      /deep/
-        .ant-btn.ant-btn-loading:not(.ant-btn-circle):not(.ant-btn-circle-outline):not(.ant-btn-icon-only) {
-        padding-left: 20px;
-      }
-    }
   }
 }
 </style>

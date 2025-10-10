@@ -87,7 +87,9 @@ export default {
     return {
       selectedKeys: [],
       sOpenKeys: [],
-      cachedOpenKeys: []
+      cachedOpenKeys: [],
+      rootSubmenuKeys: [],
+      selectedKeysMap: {}
     }
   },
   computed: {
@@ -103,6 +105,10 @@ export default {
     if (this.options.length > 0 && !this.options[0].fullPath) {
       this.formatOptions(this.options, '')
     }
+    
+    // 检查并添加帮助菜单项
+    this.ensureHelpMenuExists()
+    
     // 自定义国际化配置
     if (this.i18n && this.i18n.messages) {
       const messages = this.i18n.messages
@@ -151,6 +157,20 @@ export default {
         })
         return vnodes
       }
+      
+      // 检查是否是SVG图标
+      if (icon && icon !== 'none' && icon.includes('-')) {
+        return h('svg-icon', { 
+          props: { 
+            'icon-class': icon 
+          },
+          style: {
+            marginRight: '8px',
+            fontSize: '16px'
+          }
+        })
+      }
+      
       return !icon || icon == 'none' ? null : h(Icon, { props: { type: icon } })
     },
     renderClusterMenu: function (h, menu) {
@@ -267,14 +287,42 @@ export default {
       })
     },
     updateMenu() {
-      this.selectedKeys = this.getSelectedKeys()
-      let openKeys = this.selectedKeys.filter(item => item !== '')
-      openKeys = openKeys.slice(0, openKeys.length - 1)
-      if (!fastEqual(openKeys, this.sOpenKeys)) {
-        this.collapsed || this.mode === 'horizontal' ? this.cachedOpenKeys = openKeys : this.sOpenKeys = openKeys
+      this.selectedKeys = this.getSelectedKeys(this.options)
+      this.rootSubmenuKeys = this.getRootSubmenuKeys(this.options)
+      this.selectedKeysMap = {}
+      // selectedKeys已经是数组，直接遍历即可
+      this.selectedKeys.forEach(key => {
+        this.selectedKeysMap[key] = true
+      })
+      // 设置openKeys为除最后一项外的所有key，用于展开菜单
+      this.sOpenKeys = this.selectedKeys.slice(0, -1)
+      
+      // 强制更新menuData
+      let menuData = JSON.parse(localStorage.getItem('menuData')) || []
+      if(menuData.length > 0) {
+        // 查找并更新菜单名称和图标
+        menuData.forEach(item => {
+          if(item.path === 'overview') {
+            item.name = '集群总览'
+          }
+          if(item.path === 'datasophon-overview') {
+            item.name = 'Datasophon总览'
+            if(item.meta) {
+              item.meta.icon = 'datasophon-overview'
+            }
+          }
+        })
+        // 保存修改后的菜单数据
+        localStorage.setItem('menuData', JSON.stringify(menuData))
+        // 通知Vuex更新菜单数据
+        if(this.$store) {
+          this.$store.commit('setting/setMenuData', menuData)
+        }
       }
+      
+      this.ensureHelpMenuExists()
     },
-    getSelectedKeys() {
+    getSelectedKeys(options) {
       let matches = this.$route.matched
       const route = matches[matches.length - 1]
       let chose = this.routesMap[route.path]
@@ -284,7 +332,60 @@ export default {
         matches = (resolve.resolved && resolve.resolved.matched) || matches
       }
       return matches.map(item => item.path)
-    }
+    },
+    getRootSubmenuKeys(options) {
+      const rootKeys = []
+      const visited = new Set()
+      const stack = [...options]
+
+      while (stack.length > 0) {
+        const current = stack.pop()
+        if (!visited.has(current.fullPath)) {
+          visited.add(current.fullPath)
+          if (current.children && current.children.length > 0) {
+            stack.push(...current.children)
+          }
+          rootKeys.push(current.fullPath)
+        }
+      }
+
+      return rootKeys
+    },
+    ensureHelpMenuExists() {
+      try {
+        // 从localStorage获取菜单数据
+        const menuDataStr = localStorage.getItem('menuData');
+        if (!menuDataStr) return;
+        
+        const menuData = JSON.parse(menuDataStr);
+        
+        // 找到告警管理模块
+        const alarmManageModule = menuData.find(item => item.path === 'alarm-manage');
+        if (!alarmManageModule) return;
+        
+        // 检查是否已存在帮助菜单项
+        const hasHelpMenu = alarmManageModule.children.some(item => item.path === 'help');
+        if (hasHelpMenu) return;
+        
+        // 添加帮助菜单项
+        alarmManageModule.children.unshift({
+          path: 'help',
+          name: '使用帮助',
+          label: '使用帮助',
+          fullPath: '/alarm-manage/help',
+          meta: {
+            notAlive: false,
+            invisible: false
+          }
+        });
+        
+        // 更新localStorage
+        localStorage.setItem('menuData', JSON.stringify(menuData));
+        console.log('已自动添加告警管理帮助菜单项');
+      } catch (error) {
+        console.error('检查/添加帮助菜单项出错:', error);
+      }
+    },
   },
   render(h) {
     return h(

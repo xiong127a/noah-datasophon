@@ -3,6 +3,7 @@ package com.datasophon.api.interceptor;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.map.MapUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
@@ -12,7 +13,6 @@ import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.OperationLogService;
 import com.datasophon.api.utils.SecurityUtils;
-import com.datasophon.api.utils.SpringTool;
 import com.datasophon.common.model.OperationLogProp;
 import com.datasophon.common.utils.Result;
 import com.datasophon.dao.entity.OperationLog;
@@ -39,7 +39,14 @@ import java.io.FileNotFoundException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -190,7 +197,7 @@ public class OperationLogAspect {
                 op.setEndTime(new Date());
             }
             //将该对象insert到数据库中，这里使用log打印该对象数据
-            log.info("api-log :{}", JSONObject.toJSONString(op));
+            log.debug("api-log :{}", JSONObject.toJSONString(op));
             operationLogService.save(op);
         }
         return object;
@@ -419,7 +426,7 @@ public class OperationLogAspect {
 
             try {
                 Method findMethod = service.getMethod("listByIds", Collection.class);
-                Object bean = SpringTool.getApplicationContext().getBean(service);
+                Object bean = SpringUtil.getBean(service);
                 List<Object> oldObjs = (List<Object>) findMethod.invoke(bean, ids);
                 Object oldObj = oldObjs.stream().findFirst().orElse(null);
                 if (Objects.nonNull(oldObj)) {

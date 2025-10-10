@@ -52,6 +52,8 @@ import com.datasophon.dao.mapper.ClusterHostMapper;
 import com.datasophon.domain.host.enums.MANAGED;
 import org.apache.commons.lang.StringUtils;
 import org.apache.sshd.client.session.ClientSession;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -72,6 +74,8 @@ import java.util.stream.Collectors;
 public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, ClusterHostDO>
         implements
         ClusterHostService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ClusterHostServiceImpl.class);
 
     @Autowired
     ClusterHostMapper hostMapper;
@@ -94,19 +98,18 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public Result listByPage(Integer clusterId, String hostname, String ip, String cpuArchitecture, Integer hostState,
-                             String orderField, String orderType, Integer page, Integer pageSize) {
+            String orderField, String orderType, Integer page, Integer pageSize) {
         List<QueryHostListPageDTO> hostListPageDTOS = new ArrayList<>();
         int offset = (page - 1) * pageSize;
-        List<ClusterHostDO> list =
-                this.list(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
-                        .eq(Constants.MANAGED, 1)
-                        .eq(StringUtils.isNotBlank(cpuArchitecture), Constants.CPU_ARCHITECTURE, cpuArchitecture)
-                        .eq(hostState != null, Constants.HOST_STATE, hostState)
-                        .like(StringUtils.isNotBlank(ip), IP, ip)
-                        .like(StringUtils.isNotBlank(hostname), Constants.HOSTNAME, hostname)
-                        .orderByAsc("asc".equals(orderType), orderField)
-                        .orderByDesc("desc".equals(orderType), orderField)
-                        .last("limit " + offset + "," + pageSize));
+        List<ClusterHostDO> list = this.list(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
+                .eq(Constants.MANAGED, 1)
+                .eq(StringUtils.isNotBlank(cpuArchitecture), Constants.CPU_ARCHITECTURE, cpuArchitecture)
+                .eq(hostState != null, Constants.HOST_STATE, hostState)
+                .like(StringUtils.isNotBlank(ip), IP, ip)
+                .like(StringUtils.isNotBlank(hostname), Constants.HOSTNAME, hostname)
+                .orderByAsc("asc".equals(orderType), orderField)
+                .orderByDesc("desc".equals(orderType), orderField)
+                .last("limit " + offset + "," + pageSize));
 
         // 回显rack的名称 而不是ID
         Map<String, String> rackMap = clusterRackService.queryClusterRack(clusterId).stream()
@@ -115,14 +118,14 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             QueryHostListPageDTO queryHostListPageDTO = new QueryHostListPageDTO();
             BeanUtils.copyProperties(clusterHostDO, queryHostListPageDTO);
             // 查询主机上服务角色数
-            int serviceRoleNum = roleInstanceService.count(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
+            long serviceRoleNum = roleInstanceService.count(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
                     .eq(Constants.HOSTNAME, clusterHostDO.getHostname()));
             queryHostListPageDTO.setServiceRoleNum(serviceRoleNum);
             queryHostListPageDTO.setHostState(clusterHostDO.getHostState().getValue());
             queryHostListPageDTO.setRack(rackMap.getOrDefault(queryHostListPageDTO.getRack(), "/default-rack"));
             hostListPageDTOS.add(queryHostListPageDTO);
         }
-        int count = this.count(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
+        long count = this.count(new QueryWrapper<ClusterHostDO>().eq(Constants.CLUSTER_ID, clusterId)
                 .eq(Constants.MANAGED, 1)
                 .eq(StringUtils.isNotBlank(cpuArchitecture), Constants.CPU_ARCHITECTURE, cpuArchitecture)
                 .eq(hostState != null, Constants.HOST_STATE, hostState)
@@ -139,14 +142,13 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
 
     @Override
     public Result getRoleListByHostname(Integer clusterId, String hostname) {
-        List<ClusterServiceRoleInstanceEntity> list =
-                roleInstanceService.getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
+        List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
+                .getServiceRoleListByHostnameAndClusterId(hostname, clusterId);
         for (ClusterServiceRoleInstanceEntity roleInstanceEntity : list) {
             roleInstanceEntity.setServiceRoleStateCode(roleInstanceEntity.getServiceRoleState().getValue());
         }
         return Result.success(list);
     }
-
 
     /**
      * 批量删除主机。
@@ -165,13 +167,14 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         for (String hostId : ids) {
             ClusterHostDO host = this.getById(hostId);
             // 获取主机上安装的服务
-            List<ClusterServiceRoleInstanceEntity> list =
-                    roleInstanceService.list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
+            List<ClusterServiceRoleInstanceEntity> list = roleInstanceService
+                    .list(new QueryWrapper<ClusterServiceRoleInstanceEntity>()
                             .eq(Constants.CLUSTER_ID, host.getClusterId())
                             .eq(Constants.HOSTNAME, host.getHostname())
                             .eq(Constants.SERVICE_ROLE_STATE, ServiceRoleState.RUNNING)
                             .ne(Constants.ROLE_TYPE, RoleType.CLIENT));
-            List<String> roles = list.stream().map(ClusterServiceRoleInstanceEntity::getServiceRoleName).collect(Collectors.toList());
+            List<String> roles = list.stream().map(ClusterServiceRoleInstanceEntity::getServiceRoleName)
+                    .collect(Collectors.toList());
             if (!list.isEmpty()) {
                 return Result.error(host.getHostname() + Status.HOST_EXIT_ONE_RUNNING_ROLE.getMsg() + roles);
             }
@@ -185,7 +188,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             this.removeById(hostId);
 
             if (host.getHostState() != HostState.OFFLINE) {
-                //stop the worker on this host
+                // stop the worker on this host
                 ActorRef execCmdActor = ActorUtils.getRemoteActor(host.getHostname(), "executeCmdActor");
                 ExecuteCmdCommand command = new ExecuteCmdCommand();
                 ArrayList<String> commands = new ArrayList<>();
@@ -196,9 +199,9 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 command.setCommands(commands);
                 execCmdActor.tell(command, ActorRef.noSender());
             }
-            //remove host from prometheus
-            ActorRef prometheusActor =
-                    ActorUtils.getLocalActor(PrometheusActor.class, ActorUtils.getActorRefName(PrometheusActor.class));
+            // remove host from prometheus
+            ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
+                    ActorUtils.getActorRefName(PrometheusActor.class));
 
             // Prometheus 移除 hosts 信息
             GenerateHostPrometheusConfig prometheusConfigCommand = new GenerateHostPrometheusConfig();
@@ -212,8 +215,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                     ActorRef.noSender());
 
             // remove the host from the cache
-            Map<String, HostInfo> map =
-                    (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
             String md5 = SecureUtil.md5(host.getHostname());
             if (Objects.nonNull(map)) {
                 map.remove(host.getHostname());
@@ -225,7 +227,6 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         }
         return Result.success();
     }
-
 
     @Override
     public Result getRack(Integer clusterId) {
@@ -278,7 +279,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 .eq(Constants.RACK, rack));
     }
 
-    public Result saveK8sHost(List<HostInfo> hostInfoList, Integer clusterId) {
+    public Result saveKubernetesHost(List<HostInfo> hostInfoList, Integer clusterId) {
         for (HostInfo hostInfo : hostInfoList) {
             ClusterHostDO hostEntity = this.getClusterHostByHostname(hostInfo.getHostname());
             if (ObjectUtil.isNull(hostEntity)) {
@@ -290,19 +291,21 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
                 clusterHostDO.setRack("/default-rack");
                 clusterHostDO.setHostState(HostState.RUNNING);
                 clusterHostDO.setManaged(MANAGED.YES);
-                clusterHostDO.setNodeLabel("default");
 
-                ClientSession session = MinaUtils.openConnection(hostInfo.getHostname(), hostInfo.getSshPort(), hostInfo.getSshUser());
-                String arch;
-                try {
-                    arch = MinaUtils.executeCommandAndGetResult(session, "arch");
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                } finally {
-                    MinaUtils.closeConnection(session);
+                // K8S模式下使用HostInfo中的架构信息，无需SSH连接
+                String arch = hostInfo.getCpuArchitecture();
+                if (StringUtils.isBlank(arch)) {
+                    // 如果架构信息为空，使用默认值
+                    arch = "x86_64";
+                    logger.warn("Host {} architecture is empty, using default: {}", hostInfo.getHostname(), arch);
+                } else {
+                    logger.info("Host {} architecture from K8S API: {}", hostInfo.getHostname(), arch);
                 }
                 clusterHostDO.setCpuArchitecture(arch);
+
                 this.save(clusterHostDO);
+                logger.info("Successfully saved Kubernetes host {} with architecture {}",
+                        hostInfo.getHostname(), arch);
             }
         }
         return Result.success();

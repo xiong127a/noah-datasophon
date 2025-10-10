@@ -18,9 +18,6 @@ package com.datasophon.api.enums;
 
 import com.alibaba.fastjson.JSONObject;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * status enum
  */
@@ -92,7 +89,9 @@ public enum Status {
     NO_SERVICE_ROLE_SELECTED(10041, "No service role selected", "未选择需要安装的服务实例"),
     TWO_KYUUBISERVERS_NEED_TO_BE_DEPLOYED(10042, "two kyuubiServer deployments are required", "KyuubiServer需要两个节点"),
 
-    K8S_NAMESPACE_NOT_EXIST(80001, "k8s namespace not exist", "k8s命令空间不存在");
+    SERVICE_NOT_FOUND(10043, "service not found", "未找到服务"),
+
+    KUBERNETES_NAMESPACE_NOT_EXIST(80001, "kubernetes namespace not exist", "Kubernetes命令空间不存在");
 
     private final int code;
     private final String enMsg;

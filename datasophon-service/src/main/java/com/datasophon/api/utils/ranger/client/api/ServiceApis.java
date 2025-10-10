@@ -28,7 +28,15 @@ public class ServiceApis {
         return client.searchServices(stringSearch);
     }
 
-    public Service getServiceByName(@Param("name") final String name) throws RangerClientException {
-        return client.getServiceByName(name);
+    public Service getServiceByName(@Param("name") final String name) {
+        try {
+            return client.getServiceByName(name);
+        } catch (RangerClientException e) {
+            log.warn("Failed to get service by name: {}. Error: {}", name, e.getMessage(), e);
+            return null;
+        } catch (Exception e) {
+            log.error("Unexpected error occurred while getting service by name: {}. Error: {}", name, e.getMessage(), e);
+            throw new RuntimeException("Unexpected error occurred", e);
+        }
     }
 }

@@ -39,6 +39,7 @@ import com.datasophon.worker.actor.RemoteEventActor;
 import com.datasophon.worker.actor.WorkerActor;
 import com.datasophon.worker.utils.ActorUtils;
 import com.datasophon.worker.utils.UnixUtils;
+import com.datasophon.worker.utils.WorkerFreemarkerUtils;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
 import org.slf4j.Logger;
@@ -108,7 +109,7 @@ public class WorkerApplicationServer {
         userMap.put("hive", HADOOP);
         userMap.put("mapred", HADOOP);
         userMap.put("hbase", HADOOP);
-        userMap.put("kyuubi",HADOOP);
+        userMap.put("kyuubi", HADOOP);
         userMap.put("elastic", "elastic");
         userMap.put("hue", "hue");
         userMap.put("postgres", "postgres");
@@ -128,15 +129,17 @@ public class WorkerApplicationServer {
 
     private static ActorSystem initActor(String hostname) {
         Config config = ConfigFactory.parseString("akka.remote.netty.tcp.hostname=" + hostname);
-        ActorSystem system =
-                ActorSystem.create(Constants.DATASOPHON, config.withFallback(ConfigFactory.load()));
+        ActorSystem system = ActorSystem.create("datasophon", config.withFallback(ConfigFactory.load()));
         system.actorOf(Props.create(WorkerActor.class), WORKER);
+
+        // 设置ActorSystem到FreemakerUtils，用于模板获取
+        WorkerFreemarkerUtils.setActorSystem(system);
+
         return system;
     }
 
     private static void subscribeRemoteEvent(ActorSystem system) {
-        ActorRef remoteEventActor =
-                system.actorOf(Props.create(RemoteEventActor.class), "remoteEventActor");
+        ActorRef remoteEventActor = system.actorOf(Props.create(RemoteEventActor.class), "remoteEventActor");
         EventStream eventStream = system.eventStream();
         eventStream.subscribe(remoteEventActor, AssociationErrorEvent.class);
         eventStream.subscribe(remoteEventActor, AssociatedEvent.class);
@@ -149,13 +152,11 @@ public class WorkerApplicationServer {
             String masterHost,
             String cpuArchitecture,
             ActorSystem system) {
-        ActorSelection workerStartActor =
-                system.actorSelection(
-                        "akka.tcp://datasophon@" + masterHost + ":2551/user/workerStartActor");
+        ActorSelection workerStartActor = system.actorSelection(
+                "akka.tcp://datasophon@" + masterHost + ":2551/user/workerStartActor");
         ExecResult result = ShellUtils.exceShell(workDir + "/script/host-info-collect.sh");
         logger.info("host info collect result:{}", result);
-        StartWorkerMessage startWorkerMessage =
-                JSONObject.parseObject(result.getExecOut(), StartWorkerMessage.class);
+        StartWorkerMessage startWorkerMessage = JSONObject.parseObject(result.getExecOut(), StartWorkerMessage.class);
         startWorkerMessage.setCpuArchitecture(cpuArchitecture);
         startWorkerMessage.setClusterId(PropertyUtils.getInt("clusterId"));
         startWorkerMessage.setHostname(hostname);

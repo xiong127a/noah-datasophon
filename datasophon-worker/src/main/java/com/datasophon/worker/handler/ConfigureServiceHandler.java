@@ -30,8 +30,8 @@ import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.PlaceholderUtils;
 import com.datasophon.common.utils.ShellUtils;
-import com.datasophon.worker.utils.FreemakerUtils;
 import com.datasophon.worker.utils.TaskConstants;
+import com.datasophon.worker.utils.WorkerFreemarkerUtils;
 import lombok.Data;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
@@ -79,7 +79,7 @@ public class ConfigureServiceHandler {
             String hostName = InetAddress.getLocalHost().getHostName();
             String ip = NetUtil.getIpByHost(hostName);
             HashMap<String, String> paramMap = new HashMap<>();
-            paramMap.put("${host}", hostName);
+            paramMap.put("${hostname}", hostName);
             paramMap.put("${ip}", ip);
             paramMap.put("${user}", "root");
             paramMap.put("${myid}", myid + "");
@@ -117,7 +117,7 @@ public class ConfigureServiceHandler {
                     if (!config.isRequired() && !Constants.CUSTOM.equals(config.getConfigType())) {
                         if (StrUtil.equals("map2", config.getConfigType())) {
                             config.setConfigType("map");
-                        }else {
+                        } else {
                             iterator.remove();
                         }
                     }
@@ -208,14 +208,9 @@ public class ConfigureServiceHandler {
                     // extra app, package: META, templates
                     File extTemplateDir =
                             new File(Constants.INSTALL_PATH + File.separator + decompressPackageName, "templates");
-                    if (extTemplateDir.exists() && extTemplateDir.isDirectory()) {
-                        // 3rd app, load ext templates
-                        logger.info("Add ext app template path: {} to loader path.", extTemplateDir.getAbsolutePath());
-                        FreemakerUtils.generateConfigFile(generators, configs, decompressPackageName,
-                                extTemplateDir.getAbsolutePath());
-                    } else {
-                        FreemakerUtils.generateConfigFile(generators, configs, decompressPackageName);
-                    }
+                    // 3rd app, load ext templates
+                    logger.info("Add ext app template path: {} to loader path.", extTemplateDir.getAbsolutePath());
+                    WorkerFreemarkerUtils.generateConfigFile(generators, configs, decompressPackageName);
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;
                     String outputFile =
@@ -241,7 +236,7 @@ public class ConfigureServiceHandler {
         ArrayList<String> commands = new ArrayList<>();
         commands.add(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH + "setup.sh");
         ExecResult execResult = ShellUtils
-                .execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, commands, 300L,logger);
+                .execWithStatus(Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName, commands, 300L, logger);
 
         ArrayList<String> globalCommand = new ArrayList<>();
         globalCommand.add(

@@ -46,7 +46,7 @@ import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterUser;
 import com.datasophon.dao.entity.ClusterUserGroup;
 import com.datasophon.dao.mapper.ClusterUserMapper;
-import com.datasophon.k8s.util.K8sMinaUtils;
+import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -197,7 +197,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
     }
 
     @Override
-    public Result createOnK8s(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
+    public Result createOnKubernetes(Integer clusterId, String username, Integer mainGroupId, String groupIds) {
 
         // 用户名校验
         NotEmptyValidator notEmptyValidator = new NotEmptyValidator();
@@ -242,7 +242,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         for (ClusterHostDO clusterHost : hostList) {
             // 执行命令获取当前主机的最大 UID
-            String result = K8sMinaUtils.execCmdWithResult(clusterHost.getHostname(),
+            String result = KubernetesMinaUtils.execCmdWithResult(clusterHost.getHostname(),
                     "awk -F: 'BEGIN { max = 0 } { if ($3 < 65000 && $3 > max) max=$3 } END { print max }' /etc/passwd");
 
             // 将返回结果转换为 Integer 类型
@@ -349,7 +349,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             }
             clusterUser.setMainGroup(mainGroup.getGroupName());
         }
-        int total = this.count(new QueryWrapper<ClusterUser>()
+        long total = this.count(new QueryWrapper<ClusterUser>()
                 .like(StringUtils.isNotBlank(username), Constants.USERNAME, username)
                 .eq(Constants.CLUSTER_ID, clusterId));
         return Result.success(list).put(Constants.TOTAL, total);
@@ -416,7 +416,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         return Result.success();
     }
     @Override
-    public Result deleteClusterUserOnK8s(Integer id) {
+    public Result deleteClusterUserOnkubernetes(Integer id) {
         ClusterUser clusterUser = this.getById(id);
         // delete user and group
         userGroupService.deleteByUser(id);
@@ -518,13 +518,13 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
             commands.add(String.valueOf(createUnixUserUid));
         }
 
-        return K8sMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
+        return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ", commands));
     }
     public static String isUserExists(String username,String hostname) {
         ArrayList<String> commands = new ArrayList<>();
         commands.add("id");
         commands.add(username);
-        String result =K8sMinaUtils.execCmdWithResult(hostname, String.join(" ",commands));
+        String result = KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ",commands));
         return result;
     }
 
@@ -533,7 +533,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         commands.add("userdel");
         commands.add("-r");
         commands.add(username);
-        return K8sMinaUtils.execCmdWithResult(hostname, String.join(" ",commands));
+        return KubernetesMinaUtils.execCmdWithResult(hostname, String.join(" ",commands));
     }
 
 }

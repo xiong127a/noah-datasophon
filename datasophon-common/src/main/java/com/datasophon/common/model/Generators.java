@@ -55,6 +55,8 @@ public class Generators implements Serializable {
 
     private boolean needMount = true;
 
+    private String configTargetRoles;
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -64,10 +66,7 @@ public class Generators implements Serializable {
             return false;
         }
         Generators generators = (Generators) o;
-        if (generators.getFilename().equals(filename)) {
-            return true;
-        }
-        return false;
+        return generators.getFilename().equals(filename);
     }
 
     @Override

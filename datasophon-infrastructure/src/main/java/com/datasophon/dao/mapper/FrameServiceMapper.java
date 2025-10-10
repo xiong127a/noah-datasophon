@@ -21,7 +21,7 @@ import com.datasophon.dao.entity.FrameServiceEntity;
 
 import org.apache.ibatis.annotations.Mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.github.yulichang.base.MPJBaseMapper;
 
 /**
  * 集群框架版本服务表
@@ -31,6 +31,6 @@ import com.baomidou.mybatisplus.core.mapper.BaseMapper;
  * @date 2022-03-15 17:36:08
  */
 @Mapper
-public interface FrameServiceMapper extends BaseMapper<FrameServiceEntity> {
+public interface FrameServiceMapper extends MPJBaseMapper<FrameServiceEntity> {
 
 }

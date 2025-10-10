@@ -17,17 +17,22 @@
 
 package com.datasophon.api.master.handler.service;
 
+import akka.actor.ActorSelection;
+import akka.pattern.Patterns;
+import akka.util.Timeout;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
-import com.datasophon.api.utils.SpringTool;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.InstallServiceRoleCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostDO;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
@@ -36,22 +41,14 @@ import java.nio.charset.Charset;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import akka.actor.ActorSelection;
-import akka.pattern.Patterns;
-import akka.util.Timeout;
-import cn.hutool.core.io.FileUtil;
-
 public class ServiceInstallHandler extends ServiceHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceInstallHandler.class);
     @Override
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
         ClusterServiceRoleInstanceService roleInstanceService =
-                SpringTool.getApplicationContext().getBean(ClusterServiceRoleInstanceService.class);
-        ClusterHostService clusterHostService = SpringTool.getApplicationContext().getBean(ClusterHostService.class);
+                SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
+        ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
         ClusterServiceRoleInstanceEntity serviceRole = roleInstanceService.getOneServiceRole(serviceRoleInfo.getName(),
                 serviceRoleInfo.getHostname(), serviceRoleInfo.getClusterId());
         ClusterHostDO hostEntity = clusterHostService.getClusterHostByHostname(serviceRoleInfo.getHostname());

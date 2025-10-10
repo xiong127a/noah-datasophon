@@ -42,7 +42,7 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
 
     Result getServiceRoleType(Integer serviceInstanceId);
 
-    Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId);
+    Result configVersionCompare(Integer serviceInstanceId, Integer roleGroupId, Boolean showOnlyDifferences);
 
     Result delServiceInstance(Integer serviceInstanceId);
 
@@ -51,4 +51,12 @@ public interface ClusterServiceInstanceService extends IService<ClusterServiceIn
     boolean hasRunningRoleInstance(Integer serviceInstanceId);
 
     Boolean hasRoleInstance(Integer clusterId, String serviceName);
+
+    /**
+     * 获取服务连接信息
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @return 连接信息
+     */
+    Result getConnectionInfo(Integer serviceInstanceId);
 }

@@ -29,7 +29,6 @@ import com.datasophon.common.command.ServiceRoleCheckCommand;
 import com.datasophon.common.enums.ClusterCommandType;
 import com.typesafe.config.Config;
 import com.typesafe.config.ConfigFactory;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -46,14 +45,11 @@ import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-
 public class ActorUtils {
 
     private static final Logger logger = LoggerFactory.getLogger(ActorUtils.class);
 
     public static ActorSystem actorSystem;
-
-    public static final String DATASOPHON = "datasophon";
 
     public static final String AKKA_REMOTE_NETTY_TCP_HOSTNAME = "akka.remote.netty.tcp.hostname";
 
@@ -64,23 +60,32 @@ public class ActorUtils {
 
     /**
      * 1、创建名为 datasophon 的 system
-     * 2、初始化 WorkerStartActor ServiceRoleCheckActor HostCheckActor MasterNodeProcessingActor ClusterActor
-     * 3、创建定时任务  5m 检测一次 指定组件状态、集群状态等
+     * 2、初始化 WorkerStartActor ServiceRoleCheckActor HostCheckActor
+     * MasterNodeProcessingActor ClusterActor
+     * 3、创建定时任务 5m 检测一次 指定组件状态、集群状态等
      */
     public static void init() throws UnknownHostException, NoSuchAlgorithmException {
         String hostname = InetAddress.getLocalHost().getHostName();
         Config config = ConfigFactory.parseString(AKKA_REMOTE_NETTY_TCP_HOSTNAME + "=" + hostname);
-        actorSystem = ActorSystem.create(DATASOPHON, config.withFallback(ConfigFactory.load()));
+        actorSystem = ActorSystem.create("datasophon", config.withFallback(ConfigFactory.load()));
         actorSystem.actorOf(Props.create(WorkerStartActor.class), getActorRefName(WorkerStartActor.class));
         ActorRef serviceRoleCheckActor = actorSystem.actorOf(Props.create(ServiceRoleCheckActor.class),
                 getActorRefName(ServiceRoleCheckActor.class));
-        ActorRef hostCheckActor =
-                actorSystem.actorOf(Props.create(HostCheckActor.class), getActorRefName(HostCheckActor.class));
+        ActorRef hostCheckActor = actorSystem.actorOf(Props.create(HostCheckActor.class),
+                getActorRefName(HostCheckActor.class));
         actorSystem.actorOf(Props.create(MasterNodeProcessingActor.class),
                 getActorRefName(MasterNodeProcessingActor.class));
 
-        ActorRef clusterCheckActor =
-                actorSystem.actorOf(Props.create(ClusterActor.class), getActorRefName(ClusterActor.class));
+        actorSystem.actorOf(Props.create(GrafanaProcessingActor.class),
+                getActorRefName(GrafanaProcessingActor.class));
+        ActorRef clusterCheckActor = actorSystem.actorOf(Props.create(ClusterActor.class),
+                getActorRefName(ClusterActor.class));
+
+        // 注册模板服务Actor
+        ActorRef templateServiceActor = actorSystem.actorOf(
+                Props.create(TemplateServiceActor.class),
+                getActorRefName(TemplateServiceActor.class));
+        logger.info("已注册模板服务Actor: {}", templateServiceActor.path());
 
         // 节点检测 5m 检测一次
         actorSystem.scheduler().schedule(
@@ -108,7 +113,6 @@ public class ActorUtils {
                 actorSystem.dispatcher(),
                 ActorRef.noSender());
 
-
         rand = SecureRandom.getInstanceStrong();
     }
 
@@ -126,7 +130,7 @@ public class ActorUtils {
             logger.info("create actor {}", actorName);
             actorRef = createActor(actorClass, actorName);
         } else {
-            //logger.info("find actor {}", actorName);
+            // logger.info("find actor {}", actorName);
         }
         return actorRef;
     }
@@ -134,8 +138,8 @@ public class ActorUtils {
     private static ActorRef createActor(Class actorClass, String actorName) {
         ActorRef actorRef;
         try {
-            actorRef =
-                    actorSystem.actorOf(Props.create(actorClass).withDispatcher("my-forkjoin-dispatcher"), actorName);
+            actorRef = actorSystem.actorOf(Props.create(actorClass).withDispatcher("my-forkjoin-dispatcher"),
+                    actorName);
         } catch (Exception e) {
             int num = rand.nextInt(1000);
             actorRef = actorSystem.actorOf(Props.create(actorClass).withDispatcher("my-forkjoin-dispatcher"),

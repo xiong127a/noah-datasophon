@@ -18,8 +18,10 @@
 package com.datasophon.common.model;
 
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 public class CheckResult {
 
     private Integer code;

@@ -34,11 +34,27 @@ public interface ClusterServiceCommandHostService extends IService<ClusterServic
 
     Result getCommandHostList(Integer clusterId, String commandId, Integer page, Integer pageSize);
 
-    Integer getCommandHostSizeByCommandId(String commandId);
+    Long getCommandHostSizeByCommandId(String commandId);
 
     Integer getCommandHostTotalProgressByCommandId(String commandId);
 
     List<ClusterServiceCommandHostEntity> findFailedCommandHost(String commandId);
 
     List<ClusterServiceCommandHostEntity> findCanceledCommandHost(String commandId);
+
+    /**
+     * 计算主机命令的实际进度
+     * 
+     * @param commandHostEntity 主机命令实体
+     * @param updateDb          是否更新数据库
+     */
+    void calculateHostCommandActualProgress(ClusterServiceCommandHostEntity commandHostEntity, boolean updateDb);
+
+    /**
+     * 实时计算主机命令状态
+     * 
+     * @param hostCommandEntity 主机命令实体
+     * @param updateDb          是否更新数据库
+     */
+    void calculateRealTimeHostCommandState(ClusterServiceCommandHostEntity hostCommandEntity, boolean updateDb);
 }

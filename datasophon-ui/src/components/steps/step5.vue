@@ -31,17 +31,17 @@
         <span>分配服务Master角色</span>
       </div>
       <div class="mgt16 steps-body">
-        <CommonTemplate ref="commonTemplateRef" :steps4Data="steps4Data" :templateData="templateData" />
+        <FixedCommonTemplate ref="commonTemplateRef" :steps4Data="steps4Data" :templateData="templateData" />
       </div>
     </div>
   </a-spin>
 </template>
 <script>
-import CommonTemplate from "@/components/commonTemplate/index";
+import FixedCommonTemplate from "@/components/steps/FixedCommonTemplate.vue";
 
 export default {
   inject: ["handleCancel", "currentStepsAdd", "currentStepsSub", "clusterId"],
-  components: { CommonTemplate },
+  components: { FixedCommonTemplate },
   props: {
     steps4Data: Object,
   },
@@ -50,7 +50,7 @@ export default {
       loading: false,
       templateData: [],
       saveData: [],
-      hostList: [],
+      hostList: []
     };
   },
   methods: {

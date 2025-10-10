@@ -28,8 +28,19 @@ const options = {
       redirect: '/login',
       children: [
         {
+          path: 'datasophon-overview',
+          name: 'Datasophon总览',
+          meta: {
+            notAlive: true,
+            icon: 'datasophon-overview',
+            isCluster: 'isCluster',
+          },
+          component: () => import('@/pages/overview/datasophon'),
+          children: [],
+        },
+        {
           path: 'overview',
-          name: '总览',
+          name: '集群总览',
           meta: {
             notAlive: true,
             icon: 'over-view',
@@ -150,6 +161,15 @@ const options = {
               name: '告警指标管理',
               label: '告警指标管理',
               component: () => import('@/pages/alarmManage/metric'),
+            },
+            {
+              path: 'help',
+              meta: {
+                notAlive: false,
+              },
+              name: '使用帮助',
+              label: '使用帮助',
+              component: () => import('@/pages/alarmManage/helpInfo/alarmManagementHelp'),
             },
             // {
             //   path: 'user',

@@ -107,6 +107,9 @@ export default {
     getVal (val, filed) {
       this.params[`${filed}`] = val
       this.getListWithRequired()
+      
+      // 同步服务类型到steps4Data以便后续步骤使用
+      this.steps4Data.serviceType = val
     },
     tableChange (pagination) {
       this.pagination.current = pagination.current;
@@ -151,7 +154,7 @@ export default {
     getCheckboxProps (record) {
       return {
         props: {
-          disabled: this.depType == 'K8S' ? false : record.installed || record.isRequired //临时
+          disabled: this.depType === 'Kubernetes' ? false : record.installed || record.isRequired //临时
         }
       }
     },
@@ -160,8 +163,7 @@ export default {
       this.selectedRowNamesArr = [] 
       this.selectedRowKeys = selectedRowKeys
       this.selectedRowKeysArr = selectedRowKeys
-      // this.selectedRowKeys = this.selectedRowKeys.concat(selectedRowKeys);
-      // this.selectedRowKeysArr = this.selectedRowKeysArr.concat(selectedRowKeys) ;
+      
       let arr = [];
       row.map((item) => {
         arr.push({
@@ -170,23 +172,35 @@ export default {
         });
       });
       this.selectedRowNames = arr;
-      if (this.depType == 'K8S') { //k8s模式下 配置服务只传重新勾选的serviceName
+      
+      if (this.depType == 'Kubernetes') { //kubernetes模式下 配置服务只传重新勾选的serviceName
         row.forEach(e => {
           this.selectedRowNamesArr.push({
             serviceId: e.id,
             serviceName: e.serviceName
           })
         });
+      } else {
+        // 非Kubernetes模式下，确保选中的服务被正确记录
+        this.selectedRowNamesArr = arr;
       }
+      
+      // 同步到steps4Data以确保数据一致性
+      this.steps4Data.serviceIds = [...new Set(this.selectedRowKeysArr)];
+      this.steps4Data.serviceNames = this.selectedRowNamesArr;
     },
     getListWithRequired () {
       const self = this;
-      this.$axiosGet('/ddh/api/frame/service/listWithRequired', { type: this.params.type || '', clusterId: this.clusterId }).then((res) => {
+      this.$axiosGet('/ddh/api/frame/service/listWithRequired', { 
+        type: this.params.type || '', 
+        clusterId: this.clusterId 
+      }).then((res) => {
         this.dataSource = res.data;
         let arr = this.dataSource.filter(item => item.installed == false && item.isRequired == true)
+        
         if (arr.length > 0) {
           arr.map(childItem => {
-            if (this.depType !== 'K8S') {
+            if (this.depType !== 'Kubernetes') {
               this.selectedRowKeysArr.push(childItem.id)
               this.selectedRowNamesArr.push({
                 serviceId: childItem.id,
@@ -195,20 +209,27 @@ export default {
             }
           })
         }
+        
+        // 确保之前选中的服务保持选中状态
         self.steps4Data.serviceIds.map(item => {
-          if (this.depType !== 'K8S') {
+          if (this.depType !== 'Kubernetes' && !this.selectedRowKeysArr.includes(item)) {
             this.selectedRowKeysArr.push(item)
           }
         })
 
         self.steps4Data.serviceNames.map(item => {
-          if (this.depType !== 'K8S') {
-          this.selectedRowNamesArr.push({
-            serviceId: item.id,
-            serviceName: item.serviceName
-          })
-        }
+          if (this.depType !== 'Kubernetes' && !this.selectedRowNamesArr.some(x => x.serviceId === item.serviceId)) {
+            this.selectedRowNamesArr.push({
+              serviceId: item.serviceId || item.id,
+              serviceName: item.serviceName
+            })
+          }
         })
+        
+        // 更新steps4Data以确保数据同步
+        self.steps4Data.serviceIds = [...new Set(this.selectedRowKeysArr)];
+        self.steps4Data.serviceNames = this.selectedRowNamesArr;
+        self.steps4Data.serviceType = this.params.type || '';
       });
     },
   },

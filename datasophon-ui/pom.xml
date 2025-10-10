@@ -27,8 +27,10 @@
     <artifactId>datasophon-ui</artifactId>
 
     <properties>
-        <build.node.version>v12.16.3</build.node.version>
-        <build.npm.version>6.14.4</build.npm.version>
+        <!--        <build.node.version>v12.16.3</build.node.version>-->
+        <!--        <build.npm.version>6.14.4</build.npm.version>-->
+        <build.node.version>v18.20.8</build.node.version>
+        <build.npm.version>10.8.2</build.npm.version>
         <deployed.dir>.deployed</deployed.dir>
         <dist.dir>dist</dist.dir>
         <nodemodules.dir>node_modules</nodemodules.dir>
@@ -58,61 +60,86 @@
                     </filesets>
                 </configuration>
             </plugin>
-
+            <!-- 禁用spring-boot-maven-plugin以避免重复构建 -->
             <plugin>
-                <groupId>com.github.eirslett</groupId>
-                <artifactId>frontend-maven-plugin</artifactId>
-                <version>1.10.3</version>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>2.5.4</version>
                 <configuration>
-                    <nodeVersion>${build.node.version}</nodeVersion>
-                    <npmVersion>${build.npm.version}</npmVersion>
-
-                    <nodeDownloadRoot>https://nodejs.org/dist/</nodeDownloadRoot>
-                    <npmDownloadRoot>https://registry.npmjs.org/npm/-/</npmDownloadRoot>
+                    <skip>true</skip>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>install node and npm</id>
                         <goals>
-                            <goal>install-node-and-npm</goal>
+                            <goal>build-image</goal>
                         </goals>
-                        <phase>generate-resources</phase>
-                    </execution>
-                    <execution>
-                        <id>npm install</id>
-                        <goals>
-                            <goal>npm</goal>
-                        </goals>
-                        <phase>generate-resources</phase>
-                        <configuration>
-                            <arguments>install --registry=https://registry.npmmirror.com --sass-binary-site=https://repo.huaweicloud.com/node-sass/</arguments>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>npm run build</id>
-                        <goals>
-                            <goal>npm</goal>
-                        </goals>
-                        <phase>package</phase>
-                        <configuration>
-                            <arguments>run build</arguments>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>npm run deploy</id>
-                        <goals>
-                            <goal>npm</goal>
-                        </goals>
-                        <phase>install</phase>
-                        <configuration>
-                            <arguments>run deploy</arguments>
-                        </configuration>
+                        <phase>none</phase>
                     </execution>
                 </executions>
             </plugin>
         </plugins>
     </build>
     <profiles>
+        <!-- 前端构建 profile -->
+        <profile>
+            <id>frontend-build</id>
+            <activation>
+                <!-- 使用pom 中定义的属性来控制是否激活此 profile -->
+                <property>
+                    <name>skip.frontend.build</name>
+                    <value>false</value>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>1.10.3</version>
+                        <configuration>
+                            <nodeVersion>${build.node.version}</nodeVersion>
+                            <npmVersion>${build.npm.version}</npmVersion>
+                            <installDirectory>target</installDirectory>
+
+                            <nodeDownloadRoot>https://nodejs.org/dist/</nodeDownloadRoot>
+                            <npmDownloadRoot>https://registry.npmjs.org/npm/-/</npmDownloadRoot>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>install node and npm</id>
+                                <goals>
+                                    <goal>install-node-and-npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                            </execution>
+                            <execution>
+                                <id>npm install</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <arguments>install</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>npm build</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <phase>prepare-package</phase>
+                                <configuration>
+                                    <arguments>run build</arguments>
+                                    <environmentVariables>
+                                        <NODE_OPTIONS>--openssl-legacy-provider</NODE_OPTIONS>
+                                    </environmentVariables>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
         <profile>
             <id>windows</id>
             <activation>
@@ -146,11 +173,11 @@
                 </os>
             </activation>
             <properties>
-                <args.brunch />
-                <args.mkdir />
-                <args.npm />
+                <args.brunch/>
+                <args.mkdir/>
+                <args.npm/>
                 <args.rm.clean>-rf</args.rm.clean>
-                <args.shell />
+                <args.shell/>
                 <dirsep>/</dirsep>
                 <envClassifier>linux</envClassifier>
                 <executable.brunch>brunch</executable.brunch>
@@ -162,6 +189,132 @@
                 <fileextension.shell>sh</fileextension.shell>
                 <node.executable>node</node.executable>
             </properties>
+        </profile>
+        
+        <!-- Docker镜像构建 - UI -->
+        <profile>
+            <id>docker</id>
+            <activation>
+                <!-- 检查前端构建是否被跳过，如果被跳过，则不构建UI镜像 -->
+                <property>
+                    <name>skip.frontend.build</name>
+                    <value>false</value>
+                </property>
+            </activation>
+            <properties>
+                <docker.skip>${skip.frontend.build}</docker.skip>
+                <docker.registry>harbor.norintech.com</docker.registry>
+                <docker.host>tcp://localhost:2375</docker.host>
+                <docker.tag>latest</docker.tag>
+            </properties>
+            <build>
+                <plugins>
+                    <!-- 准备 Docker 构建上下文 -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-resources-plugin</artifactId>
+                        <version>3.3.1</version>
+                        <executions>
+                            <execution>
+                                <id>prepare-docker-context</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>copy-resources</goal>
+                                </goals>
+                                <configuration>
+                                    <outputDirectory>${project.build.directory}/docker-context</outputDirectory>
+                                    <resources>
+                                        <resource>
+                                            <directory>${project.basedir}</directory>
+                                            <includes>
+                                                <include>dist/**</include>
+                                            </includes>
+                                            <excludes>
+                                                <exclude>dist/maven/**</exclude>
+                                                <exclude>maven/**</exclude>
+                                            </excludes>
+                                            <targetPath>datasophon-ui</targetPath>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                        <!-- 复制nginx配置 -->
+                                        <resource>
+                                            <directory>${project.parent.basedir}/deploy/docker</directory>
+                                            <includes>
+                                                <include>nginx.conf</include>
+                                            </includes>
+                                            <targetPath>deploy/docker</targetPath>
+                                            <filtering>false</filtering>
+                                        </resource>
+                                    </resources>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                    <!-- 使用ant插件复制Dockerfile-ui -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <version>3.1.0</version>
+                        <executions>
+                            <execution>
+                                <id>copy-dockerfile</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                                <configuration>
+                                    <target>
+                                        <copy file="../Dockerfile-ui" 
+                                              tofile="${project.build.directory}/docker-context/Dockerfile-ui" />
+                                        <echo>Copied Dockerfile-ui to ${project.build.directory}/docker-context/</echo>
+                                    </target>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                    
+                    <!-- Docker 构建插件 -->
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <version>${docker-maven-plugin.version}</version>
+                        <configuration>
+                            <skip>${docker.skip}</skip>
+                            <registry>${docker.registry}</registry>
+                            <dockerHost>${docker.host}</dockerHost>
+                            <authConfig>
+                                <push>
+                                    <username>noah</username>
+                                    <password>Jd2019@123</password>
+                                </push>
+                            </authConfig>
+                            <images>
+                                <image>
+                                    <name>${docker.registry}/bdp/datasophon-ui:${docker.tag}</name>
+                                    <build>
+                                        <contextDir>${project.build.directory}/docker-context</contextDir>
+                                        <dockerFile>Dockerfile-ui</dockerFile>
+                                        <nocache>true</nocache>
+                                        <optimise>true</optimise>
+                                        <cleanup>true</cleanup>
+                                    </build>
+                                </image>
+                            </images>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>build-ui-image</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                    <goal>push</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
         </profile>
     </profiles>
 </project>
