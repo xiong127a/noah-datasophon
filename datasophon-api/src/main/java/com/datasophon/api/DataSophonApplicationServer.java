@@ -19,8 +19,11 @@ package com.datasophon.api;
 
 import cn.hutool.extra.spring.EnableSpringUtil;
 import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.utils.NodeExportUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.utils.PromInfoUtils;
+import com.datasophon.k8s.util.K8sUtil;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -33,6 +36,7 @@ import javax.annotation.PostConstruct;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.NoSuchAlgorithmException;
+
 
 @SpringBootApplication
 @ServletComponentScan
@@ -62,5 +66,6 @@ public class DataSophonApplicationServer extends SpringBootServletInitializer {
      */
     public static void shutdown() {
         ActorUtils.shutdown();
+        NodeExportUtils.stopNodeExporter();
     }
 }
