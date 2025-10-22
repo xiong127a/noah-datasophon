@@ -24,6 +24,7 @@ import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -52,4 +53,10 @@ public class GenerateServiceConfigCommand implements Serializable {
     private String namespace;
     
     private Long clusterId;
+    
+    /**
+     * 模板内容映射：templateName -> templateContent
+     * API 端将模板内容预先打包在命令中，避免 Worker 回连 API 获取
+     */
+    private Map<String, String> templateContents = new HashMap<>();
 }

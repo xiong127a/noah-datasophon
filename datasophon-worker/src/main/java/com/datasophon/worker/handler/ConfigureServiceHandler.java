@@ -81,7 +81,8 @@ public class ConfigureServiceHandler {
                                 String decompressPackageName,
                                 Integer myid,
                                 String serviceRoleName,
-                                RunAs runAs) {
+                                RunAs runAs,
+                                Map<String, String> templateContents) {
         ExecResult execResult = new ExecResult();
         try {
 
@@ -207,7 +208,7 @@ public class ConfigureServiceHandler {
                             new File(Constants.INSTALL_PATH + File.separator + decompressPackageName, "templates");
                     // 3rd app, load ext templates
                     logger.info("Add ext app template path: {} to loader path.", extTemplateDir.getAbsolutePath());
-                    WorkerFreemarkerUtils.generateConfigFile(generators, configs, decompressPackageName);
+                    WorkerFreemarkerUtils.generateConfigFile(generators, configs, decompressPackageName, templateContents);
                 } else if (!generators.getFilename().endsWith(SH)) {
                     String packagePath = Constants.INSTALL_PATH + Constants.SLASH + decompressPackageName + Constants.SLASH;
                     String outputFile =

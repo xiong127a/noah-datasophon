@@ -23,17 +23,27 @@ import org.apache.pekko.util.Timeout;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateServiceConfigCommand;
+import com.datasophon.common.model.Generators;
+import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.utils.FreemarkerUtils;
+import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.api.utils.ClusterInfoUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import scala.concurrent.Await;
 import scala.concurrent.Future;
 import scala.concurrent.duration.Duration;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 public class ServiceConfigureHandler extends ServiceHandler {
+
+    private static final Logger logger = LoggerFactory.getLogger(ServiceConfigureHandler.class);
 
     @Override
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
@@ -50,6 +60,10 @@ public class ServiceConfigureHandler extends ServiceHandler {
             generateServiceConfigCommand.setMyid((Integer) CacheUtils.get("zkserver_" + serviceRoleInfo.getHostname()));
         }
         generateServiceConfigCommand.setServiceRoleName(serviceRoleInfo.getName());
+        
+        // 打包模板内容到命令中，避免 Worker 回连 API 获取
+        packTemplateContents(generateServiceConfigCommand, serviceRoleInfo.getConfigFileMap());
+        
         ActorSelection configActor = ActorUtils.actorSystem.actorSelection(
                 "akka.tcp://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/configureServiceActor");
 
@@ -64,7 +78,35 @@ public class ServiceConfigureHandler extends ServiceHandler {
             }
             return configResult;
         } catch (Exception e) {
+            logger.error("配置服务失败", e);
             return new ExecResult();
         }
+    }
+    
+    /**
+     * 打包所有需要的模板内容到命令中
+     */
+    private void packTemplateContents(GenerateServiceConfigCommand command, 
+                                      Map<Generators, List<ServiceConfig>> configFileMap) {
+        if (configFileMap == null || configFileMap.isEmpty()) {
+            return;
+        }
+        
+        for (Generators generators : configFileMap.keySet()) {
+            // 获取模板名称
+            String templateName = FreemarkerUtils.determineTemplateName(generators);
+            if (templateName != null && !command.getTemplateContents().containsKey(templateName)) {
+                // 从本地读取模板内容
+                String templateContent = TemplatePathUtils.getTemplateContent(templateName);
+                if (templateContent != null) {
+                    command.getTemplateContents().put(templateName, templateContent);
+                    logger.info("打包模板 {} 到配置命令，内容长度: {}", templateName, templateContent.length());
+                } else {
+                    logger.warn("无法获取模板内容: {}", templateName);
+                }
+            }
+        }
+        
+        logger.info("共打包 {} 个模板到配置命令", command.getTemplateContents().size());
     }
 }

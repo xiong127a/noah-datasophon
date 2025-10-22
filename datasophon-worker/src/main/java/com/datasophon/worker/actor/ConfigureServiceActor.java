@@ -44,7 +44,8 @@ public class ConfigureServiceActor extends AbstractActor {
                             command.getDecompressPackageName(),
                             command.getMyid(),
                             command.getServiceRoleName(),
-                            command.getRunAs());
+                            command.getRunAs(),
+                            command.getTemplateContents());
                     getSender().tell(startResult, getSelf());
 
                     logger.info("{} configure result {}", command.getServiceName(),

@@ -54,38 +54,37 @@ public class WorkerFreemarkerUtils {
     private static ActorSystem actorSystem;
 
     /**
-     * 生成配置文件（从Akka获取模板，支持扩展路径）
+     * 生成配置文件（从命令对象获取模板）
      *
      * @param generators            配置文件生成器
      * @param configs               配置项列表
      * @param decompressPackageName 解压后的包名
+     * @param templateContents      模板内容映射 (templateName -> templateContent)
      * @throws IOException IO异常
      */
     public static void generateConfigFile(Generators generators,
             List<ServiceConfig> configs,
-            String decompressPackageName) throws IOException {
+            String decompressPackageName,
+            Map<String, String> templateContents) throws IOException {
 
         // 获取模板名称
         String templateName = FreemarkerUtils.determineTemplateName(generators);
 
-        if (templateName != null && actorSystem != null) {
-            try {
-                // 从Akka获取模板内容
-                String templateContent = AkkaUtils.getTemplateContent(actorSystem, MASTER_HOST, templateName);
-                if (templateContent != null) {
-                    // 使用字符串模板生成配置，使用直接模式，避免prepareTemplateData处理
-                    FreemarkerUtils.generateConfigFileFromString(generators, configs, templateContent, templateName,
-                            decompressPackageName);
-                    return;
-                } else {
-                    // 获取失败时直接抛出异常，不再回退到本地模板
-                    String errorMsg = "从Akka获取模板失败: " + templateName;
-                    logger.error(errorMsg);
-                    throw new IOException(errorMsg);
-                }
-            } catch (Exception e) {
-                logger.error("通过Akka获取模板时发生异常: {}", templateName, e);
-                throw new IOException("通过Akka获取模板时发生异常: " + templateName, e);
+        if (templateName != null) {
+            // 从命令对象中获取模板内容
+            String templateContent = templateContents != null ? templateContents.get(templateName) : null;
+            
+            if (templateContent != null) {
+                // 使用字符串模板生成配置，使用直接模式，避免prepareTemplateData处理
+                FreemarkerUtils.generateConfigFileFromString(generators, configs, templateContent, templateName,
+                        decompressPackageName);
+                logger.info("成功从命令对象获取模板: {}, 内容长度: {}", templateName, templateContent.length());
+                return;
+            } else {
+                // 获取失败时抛出异常
+                String errorMsg = "从命令对象获取模板失败: " + templateName;
+                logger.error(errorMsg);
+                throw new IOException(errorMsg);
             }
         }
 
@@ -96,39 +95,34 @@ public class WorkerFreemarkerUtils {
     }
 
     /**
-     * 生成Prometheus告警规则文件（从Akka获取模板）
+     * 生成Prometheus告警规则文件（从命令对象获取模板）
      *
-     * @param generators  配置文件生成器
-     * @param configs     告警项列表
-     * @param serviceName 服务名称
+     * @param generators       配置文件生成器
+     * @param configs          告警项列表
+     * @param serviceName      服务名称
+     * @param templateContents 模板内容映射
      * @throws IOException IO异常
      */
     public static void generatePromAlertFile(Generators generators, List<AlertItem> configs,
-            String serviceName) throws IOException {
+            String serviceName, Map<String, String> templateContents) throws IOException {
 
-        if (actorSystem != null && Constants.PROMETHEUS.equals(generators.getConfigFormat())) {
-            try {
-                // 从Akka获取模板内容
-                String templateContent = AkkaUtils.getTemplateContent(actorSystem, MASTER_HOST, "alert.yml");
-                if (templateContent != null) {
-                    // 使用字符串模板处理告警项
-                    FreemarkerUtils.generatePromAlertFileFromString(generators, configs, serviceName, templateContent);
-                    return;
-                } else {
-                    // 获取失败时直接抛出异常，不再回退到本地模板
-                    String errorMsg = "从Akka获取告警模板失败: alert.yml";
-                    logger.error(errorMsg);
-                    throw new IOException(errorMsg);
-                }
-            } catch (Exception e) {
-                logger.error("通过Akka获取告警模板时发生异常", e);
-                throw new IOException("通过Akka获取告警模板时发生异常", e);
+        if (Constants.PROMETHEUS.equals(generators.getConfigFormat())) {
+            // 从命令对象中获取模板内容
+            String templateContent = templateContents != null ? templateContents.get("alert.yml") : null;
+            
+            if (templateContent != null) {
+                // 使用字符串模板处理告警项
+                FreemarkerUtils.generatePromAlertFileFromString(generators, configs, serviceName, templateContent);
+                logger.info("成功从命令对象获取alert.yml模板");
+                return;
+            } else {
+                String errorMsg = "从命令对象获取alert.yml模板失败";
+                logger.error(errorMsg);
+                throw new IOException(errorMsg);
             }
         }
 
-        // 不符合条件时抛出异常
-        String errorMsg = "ActorSystem未初始化或非Prometheus配置格式";
-        logger.error(errorMsg);
-        throw new IOException(errorMsg);
+        // 不是Prometheus格式时抛出异常
+        throw new IOException("生成告警规则文件失败：配置格式不正确");
     }
 }
