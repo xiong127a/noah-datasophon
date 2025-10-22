@@ -177,7 +177,7 @@ datasophon:
     # 开发模式配置
     development:
       # 是否启用开发模式（开发时设为true，生产时设为false）
-      enabled: true
+      enabled: false
       # 开发模式下的插件路径（指向编译后的classes目录）
       plugin-paths:
         - datasophon-plugins/ssh-connector/target/classes
