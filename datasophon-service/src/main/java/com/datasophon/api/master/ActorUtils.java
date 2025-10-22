@@ -65,8 +65,7 @@ public class ActorUtils {
 
     /**
      * 1、创建名为 datasophon 的 system
-     * 2、初始化 WorkerStartActor ServiceRoleCheckActor HostCheckActor
-     * MasterNodeProcessingActor ClusterActor
+     * 2、初始化 ServiceRoleCheckActor HostCheckActor MasterNodeProcessingActor ClusterActor
      * 3、创建定时任务 5m 检测一次 指定组件状态、集群状态等
      */
     public static void init() throws UnknownHostException, NoSuchAlgorithmException {

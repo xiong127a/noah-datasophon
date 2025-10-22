@@ -18,11 +18,13 @@
 package com.datasophon.api.master;
 
 import com.datasophon.api.service.host.ClusterHostService;
+import com.datasophon.api.service.ServiceInstallationService;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.common.command.PingCommand;
 import com.datasophon.common.model.StartWorkerMessage;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostEntity;
+import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.common.enums.ManagementStatus;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.actor.ActorRef;
@@ -146,16 +148,25 @@ public class WorkerDiscoveryActor extends AbstractActor {
                     logger.info("收集到Worker节点{}的系统信息: {}", hostname, systemInfo);
                     
                     // 构造StartWorkerMessage用于更新数据库
-                    StartWorkerMessage workerMessage = new StartWorkerMessage();
+                    var workerMessage = new StartWorkerMessage();
                     workerMessage.setHostname(hostname);
                     workerMessage.setIp(systemInfo.getIpAddress());
                     workerMessage.setCpuArchitecture(systemInfo.getCpuArchitecture());
                     workerMessage.setClusterId(clusterId);
                     
-                    // 发送给WorkerStartActor处理（复用现有逻辑）
-                    ActorRef workerStartActor = ActorUtils.getLocalActor(WorkerStartActor.class,
-                            ActorUtils.getActorRefName(WorkerStartActor.class));
-                    workerStartActor.tell(workerMessage, getSelf());
+                    // 直接调用Service保存主机安装信息
+                    try {
+                        var serviceInstallationService = SpringUtil.getBean(ServiceInstallationService.class);
+                        var clusterHostService = SpringUtil.getBean(ClusterHostService.class);
+                        var clusterHost = clusterHostService.getClusterHostByHostname(hostname);
+                        if (clusterHost != null && clusterHost.getClusterEntity() != null) {
+                            var clusterCode = clusterHost.getClusterEntity().getClusterCode();
+                            serviceInstallationService.saveHostInstallInfo(workerMessage, clusterCode);
+                            logger.info("保存Worker节点{}的安装信息成功", hostname);
+                        }
+                    } catch (Exception e) {
+                        logger.error("保存Worker节点{}安装信息失败", hostname, e);
+                    }
                 }
                 return null;
             }, getContext().getDispatcher());

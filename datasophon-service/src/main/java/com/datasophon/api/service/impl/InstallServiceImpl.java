@@ -24,7 +24,6 @@ import java.time.temporal.ChronoUnit;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.DispatcherWorkerActor;
-import com.datasophon.api.master.WorkerStartActor;
 import com.datasophon.api.converter.InstallStepConverter;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.InstallService;
@@ -364,16 +363,18 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 : CommandType.STOP_SERVICE;
 
         for (ClusterHostEntity clusterHostEntity : clusterHostList) {
-            Map<String, Object> result = new HashMap<>();
+            var result = new HashMap<String, Object>();
             result.put("hostname", clusterHostEntity.getHostname());
             result.put("ip", clusterHostEntity.getIp());
             result.put("commandType", serviceCommandType.toString());
 
-            WorkerServiceMessage serviceMessage = new WorkerServiceMessage(clusterHostEntity.getHostname(),
+            var serviceMessage = new WorkerServiceMessage(clusterHostEntity.getHostname(),
                     clusterHostEntity.getClusterId(), serviceCommandType);
             try {
-                ActorRef actor = ActorUtils.getLocalActor(WorkerStartActor.class, "workerStartActor");
-                actor.tell(serviceMessage, ActorRef.noSender());
+                // 向 Worker 远程 Actor 发送服务命令
+                var workerActorPath = "pekko://datasophon@" + clusterHostEntity.getHostname() + ":2552/user/worker";
+                var workerActor = ActorUtils.actorSystem.actorSelection(workerActorPath);
+                workerActor.tell(serviceMessage, ActorRef.noSender());
                 result.put("success", true);
                 result.put("message", "服务命令已发送");
                 log.info("Service command sent successfully to {}: {}", clusterHostEntity.getHostname(),
