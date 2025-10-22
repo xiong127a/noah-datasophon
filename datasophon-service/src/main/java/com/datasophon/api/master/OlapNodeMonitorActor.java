@@ -161,13 +161,16 @@ public class OlapNodeMonitorActor extends AbstractActor {
      * 确定操作类型
      */
     private OlapOpsType determineOpsType(String roleName) {
-        return switch (roleName) {
-            case DORIS_BE, STARROCKS_BE -> OlapOpsType.ADD_BE;
-            case DORIS_FE, STARROCKS_FE -> OlapOpsType.ADD_FE_FOLLOWER;
-            case DORIS_FE_OBSERVER, STARROCKS_FE_OBSERVER -> OlapOpsType.ADD_FE_OBSERVER;
-            case STARROCKS_CN -> OlapOpsType.ADD_CN;
-            default -> null;
-        };
+        if (DORIS_BE.equals(roleName) || STARROCKS_BE.equals(roleName)) {
+            return OlapOpsType.ADD_BE;
+        } else if (DORIS_FE.equals(roleName) || STARROCKS_FE.equals(roleName)) {
+            return OlapOpsType.ADD_FE_FOLLOWER;
+        } else if (DORIS_FE_OBSERVER.equals(roleName) || STARROCKS_FE_OBSERVER.equals(roleName)) {
+            return OlapOpsType.ADD_FE_OBSERVER;
+        } else if (STARROCKS_CN.equals(roleName)) {
+            return OlapOpsType.ADD_CN;
+        }
+        return null;
     }
 
     /**
@@ -175,22 +178,41 @@ public class OlapNodeMonitorActor extends AbstractActor {
      */
     private ExecResult executeAddNode(String feMasterHost, String hostname, OlapOpsType opsType) {
         try {
-            ExecResult result = switch (opsType) {
-                case ADD_BE -> OlapUtils.addBackend(feMasterHost, hostname);
-                case ADD_FE_FOLLOWER -> OlapUtils.addFollower(feMasterHost, hostname);
-                case ADD_FE_OBSERVER -> OlapUtils.addObserver(feMasterHost, hostname);
-                case ADD_CN -> OlapUtils.addCn(feMasterHost, hostname);
-            };
+            ExecResult result;
+            switch (opsType) {
+                case ADD_BE:
+                    result = OlapUtils.addBackend(feMasterHost, hostname);
+                    break;
+                case ADD_FE_FOLLOWER:
+                    result = OlapUtils.addFollower(feMasterHost, hostname);
+                    break;
+                case ADD_FE_OBSERVER:
+                    result = OlapUtils.addObserver(feMasterHost, hostname);
+                    break;
+                case ADD_CN:
+                    result = OlapUtils.addCn(feMasterHost, hostname);
+                    break;
+                default:
+                    return null;
+            }
             
             // 如果第一次失败，使用 SQL 客户端重试
             if (result != null && !result.getExecResult()) {
                 logger.info("使用 SQL 客户端重试添加节点: {}", hostname);
-                result = switch (opsType) {
-                    case ADD_BE -> OlapUtils.addBackendBySqlClient(feMasterHost, hostname);
-                    case ADD_FE_FOLLOWER -> OlapUtils.addFollowerBySqlClient(feMasterHost, hostname);
-                    case ADD_FE_OBSERVER -> OlapUtils.addObserverBySqlClient(feMasterHost, hostname);
-                    case ADD_CN -> OlapUtils.addCnBySqlClient(feMasterHost, hostname);
-                };
+                switch (opsType) {
+                    case ADD_BE:
+                        result = OlapUtils.addBackendBySqlClient(feMasterHost, hostname);
+                        break;
+                    case ADD_FE_FOLLOWER:
+                        result = OlapUtils.addFollowerBySqlClient(feMasterHost, hostname);
+                        break;
+                    case ADD_FE_OBSERVER:
+                        result = OlapUtils.addObserverBySqlClient(feMasterHost, hostname);
+                        break;
+                    case ADD_CN:
+                        result = OlapUtils.addCnBySqlClient(feMasterHost, hostname);
+                        break;
+                }
             }
             
             return result;
