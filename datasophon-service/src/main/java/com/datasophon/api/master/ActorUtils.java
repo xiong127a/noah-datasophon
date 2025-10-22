@@ -73,7 +73,6 @@ public class ActorUtils {
         String hostname = InetAddress.getLocalHost().getHostName();
         Config config = ConfigFactory.parseString(AKKA_REMOTE_NETTY_TCP_HOSTNAME + "=" + hostname);
         actorSystem = ActorSystem.create("datasophon", config.withFallback(ConfigFactory.load()));
-        actorSystem.actorOf(Props.create(WorkerStartActor.class), getActorRefName(WorkerStartActor.class));
         ActorRef serviceRoleCheckActor = actorSystem.actorOf(Props.create(ServiceRoleCheckActor.class),
                 getActorRefName(ServiceRoleCheckActor.class));
         ActorRef hostCheckActor = actorSystem.actorOf(Props.create(HostCheckActor.class),
@@ -86,11 +85,6 @@ public class ActorUtils {
         ActorRef clusterCheckActor = actorSystem.actorOf(Props.create(ClusterActor.class),
                 getActorRefName(ClusterActor.class));
 
-        // 注册模板服务Actor
-        ActorRef templateServiceActor = actorSystem.actorOf(
-                Props.create(TemplateServiceActor.class),
-                getActorRefName(TemplateServiceActor.class));
-        logger.info("已注册模板服务Actor: {}", templateServiceActor.path());
 
         // 注册 OLAP 节点监控 Actor
         ActorRef olapNodeMonitorActor = actorSystem.actorOf(Props.create(OlapNodeMonitorActor.class),
