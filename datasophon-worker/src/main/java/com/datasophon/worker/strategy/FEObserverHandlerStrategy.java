@@ -59,20 +59,9 @@ public class FEObserverHandlerStrategy extends AbstractHandlerStrategy implement
             startResult = serviceHandler.start(startRunner, command.getStatusRunner(),
                     command.getDecompressPackageName(), command.getRunAs());
             if (startResult.getExecResult()) {
-                // add observer
-                try {
-                    OlapSqlExecCommand sqlExecCommand = new OlapSqlExecCommand();
-                    sqlExecCommand.setFeMaster(command.getMasterHost());
-                    sqlExecCommand.setHostName(CacheUtils.getString(Constants.HOSTNAME));
-                    sqlExecCommand.setOpsType(OlapOpsType.ADD_FE_OBSERVER);
-                    ActorUtils.getRemoteActor(command.getManagerHost(), "masterNodeProcessingActor")
-                            .tell(sqlExecCommand, ActorRef.noSender());
-                } catch (Exception e) {
-                    logger.error("add fe observer failed {}", ThrowableUtils.getStackTrace(e));
-                }
-                logger.info("fe observer start success");
+                logger.info("FE observer start success, will be added to cluster automatically by API");
             } else {
-                logger.error("fe observer start failed");
+                logger.error("FE observer start failed");
             }
         } else {
             startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),

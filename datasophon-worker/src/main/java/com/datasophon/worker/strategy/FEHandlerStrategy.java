@@ -47,7 +47,7 @@ public class FEHandlerStrategy extends AbstractHandlerStrategy implements Servic
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
         if (command.getCommandType() == CommandType.INSTALL_SERVICE) {
             if (command.isSlave()) {
-                logger.info("first start  fe");
+                logger.info("first start  fe follower");
                 ArrayList<String> commands = new ArrayList<>();
                 commands.add("--helper");
                 commands.add(command.getMasterHost() + ":9010");
@@ -60,20 +60,9 @@ public class FEHandlerStrategy extends AbstractHandlerStrategy implements Servic
                 startResult = serviceHandler.start(startRunner, command.getStatusRunner(),
                         command.getDecompressPackageName(), command.getRunAs());
                 if (startResult.getExecResult()) {
-                    // add follower
-                    try {
-                        OlapSqlExecCommand sqlExecCommand = new OlapSqlExecCommand();
-                        sqlExecCommand.setFeMaster(command.getMasterHost());
-                        sqlExecCommand.setHostName(CacheUtils.getString(Constants.HOSTNAME));
-                        sqlExecCommand.setOpsType(OlapOpsType.ADD_FE_FOLLOWER);
-                        ActorUtils.getRemoteActor(command.getManagerHost(), "masterNodeProcessingActor")
-                                .tell(sqlExecCommand, ActorRef.noSender());
-                        logger.info("slave fe start success");
-                    } catch (Exception e) {
-                        logger.error("add slave fe failed {}", ThrowableUtils.getStackTrace(e));
-                    }
+                    logger.info("FE follower start success, will be added to cluster automatically by API");
                 } else {
-                    logger.error("slave fe start failed");
+                    logger.error("FE follower start failed");
                 }
             } else {
                 startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),

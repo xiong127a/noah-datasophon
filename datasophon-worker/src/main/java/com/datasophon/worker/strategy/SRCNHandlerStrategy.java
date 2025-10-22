@@ -43,30 +43,18 @@ public class SRCNHandlerStrategy extends AbstractHandlerStrategy implements Serv
         ExecResult startResult;
         ServiceHandler serviceHandler = new ServiceHandler(command.getServiceName(), command.getServiceRoleName());
 
+        // 启动服务（添加到集群的操作已由 API 端的 OlapNodeMonitorActor 自动处理）
+        startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
+                command.getDecompressPackageName(), command.getRunAs());
+        
         if (command.getCommandType().equals(CommandType.INSTALL_SERVICE)) {
-            logger.info("add cn to cluster");
-
-            startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
-                    command.getDecompressPackageName(), command.getRunAs());
             if (startResult.getExecResult()) {
-                try {
-                    OlapSqlExecCommand sqlExecCommand = new OlapSqlExecCommand();
-                    sqlExecCommand.setFeMaster(command.getMasterHost());
-                    sqlExecCommand.setHostName(CacheUtils.getString(Constants.HOSTNAME));
-                    sqlExecCommand.setOpsType(OlapOpsType.ADD_CN);
-                    ActorUtils.getRemoteActor(command.getManagerHost(), "masterNodeProcessingActor")
-                            .tell(sqlExecCommand, ActorRef.noSender());
-                } catch (Exception e) {
-                    logger.error("add compute failed {}", ThrowableUtils.getStackTrace(e));
-                }
-                logger.info("slave cn start success");
+                logger.info("StarRocks CN start success, will be added to cluster automatically by API");
             } else {
-                logger.error("slave cn start failed");
+                logger.error("StarRocks CN start failed");
             }
-        } else {
-            startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
-                    command.getDecompressPackageName(), command.getRunAs());
         }
+        
         return startResult;
     }
 }

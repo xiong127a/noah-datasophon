@@ -58,19 +58,10 @@ public class GrafanaHandlerStrategy extends AbstractHandlerStrategy implements S
             startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
                     command.getDecompressPackageName(), command.getRunAs());
             if (startResult.getExecResult()) {
-                // add observer
-                try {
-                    Sqlite3ExecCommand sqlExecCommand = new Sqlite3ExecCommand();
-                    sqlExecCommand.setGrafanaIp(command.getMasterHost());
-                    sqlExecCommand.setUrl(command.getExtendConfig());
-                    ActorUtils.getRemoteActor(command.getManagerHost(), "grafanaProcessingActor")
-                            .tell(sqlExecCommand, ActorRef.noSender());
-                } catch (Exception e) {
-                    logger.error("grafana update mysql datasource failed {}", ThrowableUtils.getStackTrace(e));
-                }
-                logger.info("grafana start success");
+                // Note: Grafana 数据源配置需要在 API 端手动配置或通过其他方式同步
+                logger.info("Grafana start success");
             } else {
-                logger.error("grafana start failed");
+                logger.error("Grafana start failed");
             }
         } else {
             startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),

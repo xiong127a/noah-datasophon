@@ -65,20 +65,9 @@ public class SRFEHandlerStrategy extends AbstractHandlerStrategy implements Serv
                 startResult = serviceHandler.start(startRunner, statusRunner,
                         command.getDecompressPackageName(), command.getRunAs());
                 if (startResult.getExecResult()) {
-                    // add follower
-                    try {
-                        OlapSqlExecCommand sqlExecCommand = new OlapSqlExecCommand();
-                        sqlExecCommand.setFeMaster(command.getMasterHost());
-                        sqlExecCommand.setHostName(CacheUtils.getString(Constants.HOSTNAME));
-                        sqlExecCommand.setOpsType(OlapOpsType.ADD_FE_FOLLOWER);
-                        ActorUtils.getRemoteActor(command.getManagerHost(), "masterNodeProcessingActor")
-                                .tell(sqlExecCommand, ActorRef.noSender());
-                        logger.info("slave fe start success");
-                    } catch (Exception e) {
-                        logger.error("add slave fe failed {}", ThrowableUtils.getStackTrace(e));
-                    }
+                    logger.info("StarRocks FE follower start success, will be added to cluster automatically by API");
                 } else {
-                    logger.error("slave fe start failed");
+                    logger.error("StarRocks FE follower start failed");
                 }
             } else {
                 startResult = serviceHandler.start(command.getStartRunner(), command.getStatusRunner(),
