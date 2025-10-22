@@ -21,6 +21,7 @@ package com.datasophon.api.master;
 import com.datasophon.api.master.alert.ServiceRoleCheckActor;
 import com.datasophon.common.command.ClusterCommand;
 import com.datasophon.common.command.HostCheckCommand;
+import com.datasophon.common.command.OlapNodeCheckCommand;
 import com.datasophon.common.command.ServiceRoleCheckCommand;
 import com.datasophon.common.enums.ClusterCommandType;
 import com.typesafe.config.Config;
@@ -91,6 +92,11 @@ public class ActorUtils {
                 getActorRefName(TemplateServiceActor.class));
         logger.info("已注册模板服务Actor: {}", templateServiceActor.path());
 
+        // 注册 OLAP 节点监控 Actor
+        ActorRef olapNodeMonitorActor = actorSystem.actorOf(Props.create(OlapNodeMonitorActor.class),
+                getActorRefName(OlapNodeMonitorActor.class));
+        logger.info("已注册 OLAP 节点监控 Actor: {}", olapNodeMonitorActor.path());
+
         // 节点检测 5m 检测一次
         actorSystem.scheduler().scheduleWithFixedDelay(
                 FiniteDuration.apply(30L, TimeUnit.SECONDS),
@@ -114,6 +120,15 @@ public class ActorUtils {
                 FiniteDuration.apply(60L, TimeUnit.SECONDS),
                 clusterCheckActor,
                 new ClusterCommand(ClusterCommandType.CHECK),
+                actorSystem.dispatcher(),
+                ActorRef.noSender());
+
+        // OLAP 节点监控 30s 检测一次
+        actorSystem.scheduler().scheduleWithFixedDelay(
+                FiniteDuration.apply(10L, TimeUnit.SECONDS),
+                FiniteDuration.apply(30L, TimeUnit.SECONDS),
+                olapNodeMonitorActor,
+                new OlapNodeCheckCommand(),
                 actorSystem.dispatcher(),
                 ActorRef.noSender());
 

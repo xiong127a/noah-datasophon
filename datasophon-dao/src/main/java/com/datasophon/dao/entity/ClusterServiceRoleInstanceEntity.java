@@ -23,6 +23,7 @@ import com.datasophon.common.enums.RoleType;
 import com.datasophon.common.enums.ServiceRoleState;
 
 import java.io.Serial;
+import java.time.LocalDateTime;
 
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -101,5 +102,16 @@ public class ClusterServiceRoleInstanceEntity extends BaseEntity {
 
     @Column(ignore = true)
     private String roleGroupName;
+
+    /**
+     * 是否已添加到集群（用于 OLAP 类服务的节点管理）
+     * 0: 未添加, 1: 已添加
+     */
+    private Boolean addedToCluster;
+
+    /**
+     * 添加到集群的时间
+     */
+    private LocalDateTime addToClusterTime;
 
 }
