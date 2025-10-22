@@ -19,12 +19,13 @@ package com.datasophon.api.master;
 
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ServiceInstallationService;
+import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.common.dto.ClusterInfoDTO;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.common.command.PingCommand;
 import com.datasophon.common.model.StartWorkerMessage;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostEntity;
-import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.common.enums.ManagementStatus;
 import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.actor.ActorRef;
@@ -157,12 +158,15 @@ public class WorkerDiscoveryActor extends AbstractActor {
                     // 直接调用Service保存主机安装信息
                     try {
                         var serviceInstallationService = SpringUtil.getBean(ServiceInstallationService.class);
+                        var clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
                         var clusterHostService = SpringUtil.getBean(ClusterHostService.class);
                         var clusterHost = clusterHostService.getClusterHostByHostname(hostname);
-                        if (clusterHost != null && clusterHost.getClusterEntity() != null) {
-                            var clusterCode = clusterHost.getClusterEntity().getClusterCode();
-                            serviceInstallationService.saveHostInstallInfo(workerMessage, clusterCode);
-                            logger.info("保存Worker节点{}的安装信息成功", hostname);
+                        if (clusterHost != null && clusterHost.getClusterId() != null) {
+                            var cluster = clusterInfoService.getClusterById(clusterHost.getClusterId());
+                            if (cluster != null && cluster.getClusterCode() != null) {
+                                serviceInstallationService.saveHostInstallInfo(workerMessage, cluster.getClusterCode());
+                                logger.info("保存Worker节点{}的安装信息成功", hostname);
+                            }
                         }
                     } catch (Exception e) {
                         logger.error("保存Worker节点{}安装信息失败", hostname, e);
