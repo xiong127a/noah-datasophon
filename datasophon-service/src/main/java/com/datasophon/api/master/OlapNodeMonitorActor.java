@@ -70,10 +70,10 @@ public class OlapNodeMonitorActor extends AbstractActor {
         try {
             logger.debug("开始检查需要添加到集群的 OLAP 节点");
             
-            ClusterServiceRoleInstanceMapper mapper = SpringUtil.getBean(ClusterServiceRoleInstanceMapper.class);
+            var mapper = SpringUtil.getBean(ClusterServiceRoleInstanceMapper.class);
             
             // 查询所有运行中但未添加到集群的 OLAP 节点
-            QueryWrapper wrapper = QueryWrapper.create()
+            var wrapper = QueryWrapper.create()
                     .where(CLUSTER_SERVICE_ROLE_INSTANCE_ENTITY.SERVICE_ROLE_STATE.eq(ServiceRoleState.RUNNING.getValue()))
                     .and(CLUSTER_SERVICE_ROLE_INSTANCE_ENTITY.ADDED_TO_CLUSTER.eq(0))
                     .and(CLUSTER_SERVICE_ROLE_INSTANCE_ENTITY.SERVICE_ROLE_NAME.in(
@@ -81,7 +81,7 @@ public class OlapNodeMonitorActor extends AbstractActor {
                             STARROCKS_BE, STARROCKS_FE, STARROCKS_FE_OBSERVER, STARROCKS_CN
                     ));
             
-            List<ClusterServiceRoleInstanceEntity> needAddNodes = mapper.selectListByQuery(wrapper);
+            var needAddNodes = mapper.selectListByQuery(wrapper);
             
             if (needAddNodes.isEmpty()) {
                 logger.debug("没有发现需要添加到集群的 OLAP 节点");
@@ -91,7 +91,7 @@ public class OlapNodeMonitorActor extends AbstractActor {
             logger.info("发现 {} 个需要添加到集群的 OLAP 节点", needAddNodes.size());
             
             // 处理每个节点
-            for (ClusterServiceRoleInstanceEntity node : needAddNodes) {
+            for (var node : needAddNodes) {
                 try {
                     addNodeToCluster(node, mapper);
                 } catch (Exception e) {
@@ -108,27 +108,27 @@ public class OlapNodeMonitorActor extends AbstractActor {
      * 将节点添加到集群
      */
     private void addNodeToCluster(ClusterServiceRoleInstanceEntity node, ClusterServiceRoleInstanceMapper mapper) {
-        String roleName = node.getServiceRoleName();
-        String hostname = node.getHostname();
+        var roleName = node.getServiceRoleName();
+        var hostname = node.getHostname();
         
         logger.info("准备将节点 {} ({}) 添加到集群", hostname, roleName);
         
         // 获取 FE Master 地址
-        String feMasterHost = getFeMasterHost(node.getClusterId(), node.getServiceId(), mapper);
+        var feMasterHost = getFeMasterHost(node.getClusterId(), node.getServiceId(), mapper);
         if (feMasterHost == null) {
             logger.warn("无法获取 FE Master 地址，跳过节点 {}", hostname);
             return;
         }
         
         // 确定操作类型
-        OlapOpsType opsType = determineOpsType(roleName);
+        var opsType = determineOpsType(roleName);
         if (opsType == null) {
             logger.warn("未知的角色类型: {}", roleName);
             return;
         }
         
         // 执行添加操作
-        ExecResult result = executeAddNode(feMasterHost, hostname, opsType);
+        var result = executeAddNode(feMasterHost, hostname, opsType);
         
         if (result != null && result.getExecResult()) {
             // 更新数据库标记
@@ -146,14 +146,14 @@ public class OlapNodeMonitorActor extends AbstractActor {
      */
     private String getFeMasterHost(Long clusterId, Long serviceId, ClusterServiceRoleInstanceMapper mapper) {
         // 查找同服务的 FE/StarRocksFE 角色作为 Master
-        QueryWrapper wrapper = QueryWrapper.create()
+        var wrapper = QueryWrapper.create()
                 .where(CLUSTER_SERVICE_ROLE_INSTANCE_ENTITY.CLUSTER_ID.eq(clusterId))
                 .and(CLUSTER_SERVICE_ROLE_INSTANCE_ENTITY.SERVICE_ID.eq(serviceId))
                 .and(CLUSTER_SERVICE_ROLE_INSTANCE_ENTITY.SERVICE_ROLE_NAME.in(DORIS_FE, STARROCKS_FE))
                 .and(CLUSTER_SERVICE_ROLE_INSTANCE_ENTITY.SERVICE_ROLE_STATE.eq(ServiceRoleState.RUNNING.getValue()))
                 .limit(1);
         
-        ClusterServiceRoleInstanceEntity feMaster = mapper.selectOneByQuery(wrapper);
+        var feMaster = mapper.selectOneByQuery(wrapper);
         return feMaster != null ? feMaster.getHostname() : null;
     }
 
@@ -161,16 +161,13 @@ public class OlapNodeMonitorActor extends AbstractActor {
      * 确定操作类型
      */
     private OlapOpsType determineOpsType(String roleName) {
-        if (DORIS_BE.equals(roleName) || STARROCKS_BE.equals(roleName)) {
-            return OlapOpsType.ADD_BE;
-        } else if (DORIS_FE.equals(roleName) || STARROCKS_FE.equals(roleName)) {
-            return OlapOpsType.ADD_FE_FOLLOWER;
-        } else if (DORIS_FE_OBSERVER.equals(roleName) || STARROCKS_FE_OBSERVER.equals(roleName)) {
-            return OlapOpsType.ADD_FE_OBSERVER;
-        } else if (STARROCKS_CN.equals(roleName)) {
-            return OlapOpsType.ADD_CN;
-        }
-        return null;
+        return switch (roleName) {
+            case DORIS_BE, STARROCKS_BE -> OlapOpsType.ADD_BE;
+            case DORIS_FE, STARROCKS_FE -> OlapOpsType.ADD_FE_FOLLOWER;
+            case DORIS_FE_OBSERVER, STARROCKS_FE_OBSERVER -> OlapOpsType.ADD_FE_OBSERVER;
+            case STARROCKS_CN -> OlapOpsType.ADD_CN;
+            default -> null;
+        };
     }
 
     /**
@@ -178,41 +175,22 @@ public class OlapNodeMonitorActor extends AbstractActor {
      */
     private ExecResult executeAddNode(String feMasterHost, String hostname, OlapOpsType opsType) {
         try {
-            ExecResult result;
-            switch (opsType) {
-                case ADD_BE:
-                    result = OlapUtils.addBackend(feMasterHost, hostname);
-                    break;
-                case ADD_FE_FOLLOWER:
-                    result = OlapUtils.addFollower(feMasterHost, hostname);
-                    break;
-                case ADD_FE_OBSERVER:
-                    result = OlapUtils.addObserver(feMasterHost, hostname);
-                    break;
-                case ADD_CN:
-                    result = OlapUtils.addCn(feMasterHost, hostname);
-                    break;
-                default:
-                    return null;
-            }
+            var result = switch (opsType) {
+                case ADD_BE -> OlapUtils.addBackend(feMasterHost, hostname);
+                case ADD_FE_FOLLOWER -> OlapUtils.addFollower(feMasterHost, hostname);
+                case ADD_FE_OBSERVER -> OlapUtils.addObserver(feMasterHost, hostname);
+                case ADD_CN -> OlapUtils.addCn(feMasterHost, hostname);
+            };
             
             // 如果第一次失败，使用 SQL 客户端重试
             if (result != null && !result.getExecResult()) {
                 logger.info("使用 SQL 客户端重试添加节点: {}", hostname);
-                switch (opsType) {
-                    case ADD_BE:
-                        result = OlapUtils.addBackendBySqlClient(feMasterHost, hostname);
-                        break;
-                    case ADD_FE_FOLLOWER:
-                        result = OlapUtils.addFollowerBySqlClient(feMasterHost, hostname);
-                        break;
-                    case ADD_FE_OBSERVER:
-                        result = OlapUtils.addObserverBySqlClient(feMasterHost, hostname);
-                        break;
-                    case ADD_CN:
-                        result = OlapUtils.addCnBySqlClient(feMasterHost, hostname);
-                        break;
-                }
+                result = switch (opsType) {
+                    case ADD_BE -> OlapUtils.addBackendBySqlClient(feMasterHost, hostname);
+                    case ADD_FE_FOLLOWER -> OlapUtils.addFollowerBySqlClient(feMasterHost, hostname);
+                    case ADD_FE_OBSERVER -> OlapUtils.addObserverBySqlClient(feMasterHost, hostname);
+                    case ADD_CN -> OlapUtils.addCnBySqlClient(feMasterHost, hostname);
+                };
             }
             
             return result;

@@ -92,12 +92,12 @@ public class ServiceConfigureHandler extends ServiceHandler {
             return;
         }
         
-        for (Generators generators : configFileMap.keySet()) {
+        for (var generators : configFileMap.keySet()) {
             // 获取模板名称
-            String templateName = FreemarkerUtils.determineTemplateName(generators);
+            var templateName = FreemarkerUtils.determineTemplateName(generators);
             if (templateName != null && !command.getTemplateContents().containsKey(templateName)) {
                 // 从本地读取模板内容
-                String templateContent = TemplatePathUtils.getTemplateContent(templateName);
+                var templateContent = TemplatePathUtils.getTemplateContent(templateName);
                 if (templateContent != null) {
                     command.getTemplateContents().put(templateName, templateContent);
                     logger.info("打包模板 {} 到配置命令，内容长度: {}", templateName, templateContent.length());

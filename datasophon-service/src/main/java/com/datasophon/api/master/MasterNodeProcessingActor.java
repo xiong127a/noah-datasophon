@@ -26,10 +26,8 @@ public class MasterNodeProcessingActor extends AbstractActor {
     private void processOlapSqlCommand(OlapSqlExecCommand command) {
         try {
             logger.info("MasterNodeProcessingActor receive message: {}", JSONUtil.toJsonStr(command));
-            new ExecResult();
-            ExecResult execResult;
-            String tip = command.getOpsType().getDesc();
-            execResult = switch (command.getOpsType()) {
+            var tip = command.getOpsType().getDesc();
+            var execResult = switch (command.getOpsType()) {
                 case ADD_BE -> OlapUtils.addBackend(command.getFeMaster(), command.getHostName());
                 case ADD_FE_FOLLOWER -> OlapUtils.addFollower(command.getFeMaster(), command.getHostName());
                 case ADD_FE_OBSERVER -> OlapUtils.addObserver(command.getFeMaster(), command.getHostName());
@@ -40,7 +38,7 @@ public class MasterNodeProcessingActor extends AbstractActor {
             } else {
                 logger.info("{} {} added failed", command.getHostName(), tip);
             }
-            int tryTimes = 0;
+            var tryTimes = 0;
             while (!execResult.getExecResult() && tryTimes < 3) {
                 try {
                     TimeUnit.SECONDS.sleep(10L);

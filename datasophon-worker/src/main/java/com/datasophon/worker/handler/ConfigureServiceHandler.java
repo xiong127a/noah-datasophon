@@ -83,28 +83,28 @@ public class ConfigureServiceHandler {
                                 String serviceRoleName,
                                 RunAs runAs,
                                 Map<String, String> templateContents) {
-        ExecResult execResult = new ExecResult();
+        var execResult = new ExecResult();
         try {
 
-            String hostName = InetAddress.getLocalHost().getHostName();
-            String ip = NetUtil.getIpByHost(hostName);
-            HashMap<String, String> paramMap = new HashMap<>();
+            var hostName = InetAddress.getLocalHost().getHostName();
+            var ip = NetUtil.getIpByHost(hostName);
+            var paramMap = new HashMap<String, String>();
             paramMap.put("${hostname}", hostName);
             paramMap.put("${ip}", ip);
             paramMap.put("${user}", "root");
             paramMap.put("${myid}", myid + "");
             logger.info("Start to configure service role {}", serviceRoleName);
-            for (Generators generators : cofigFileMap.keySet()) {
-                List<ServiceConfig> configs = cofigFileMap.get(generators);
-                String dataDir = "";
-                Iterator<ServiceConfig> iterator = configs.iterator();
-                ArrayList<ServiceConfig> customConfList = new ArrayList<>();
+            for (var generators : cofigFileMap.keySet()) {
+                var configs = cofigFileMap.get(generators);
+                var dataDir = "";
+                var iterator = configs.iterator();
+                var customConfList = new ArrayList<ServiceConfig>();
                 while (iterator.hasNext()) {
-                    ServiceConfig config = iterator.next();
+                    var config = iterator.next();
                     if (StringUtils.isNotBlank(config.getType())) {
                         switch (config.getType()) {
                             case Constants.INPUT:
-                                String value = PlaceholderUtils.replacePlaceholders((String) config.getValue(),
+                                var value = PlaceholderUtils.replacePlaceholders((String) config.getValue(),
                                         paramMap, Constants.REGEX_VARIABLE);
                                 config.setValue(value);
                                 break;
@@ -143,7 +143,7 @@ public class ConfigureServiceHandler {
                     if ("TrinoCoordinator".equals(serviceRoleName) && "coordinator".equals(config.getName())) {
                         logger.info("Start config trino coordinator");
                         config.setValue("true");
-                        ServiceConfig serviceConfig = new ServiceConfig();
+                        var serviceConfig = new ServiceConfig();
                         serviceConfig.setName("node-scheduler.include-coordinator");
                         serviceConfig.setValue("false");
                         customConfList.add(serviceConfig);
@@ -151,10 +151,10 @@ public class ConfigureServiceHandler {
                     if ("PrestoCoordinator".equals(serviceRoleName) && "coordinator".equals(config.getName())) {
                         logger.info("Start config presto coordinator");
                         config.setValue("true");
-                        ServiceConfig serviceConfig = new ServiceConfig();
+                        var serviceConfig = new ServiceConfig();
                         serviceConfig.setName("node-scheduler.include-coordinator");
                         serviceConfig.setValue("false");
-                        ServiceConfig serviceConfig1 = new ServiceConfig();
+                        var serviceConfig1 = new ServiceConfig();
                         serviceConfig1.setName("discovery-server.enabled");
                         serviceConfig1.setValue("true");
                         customConfList.add(serviceConfig);

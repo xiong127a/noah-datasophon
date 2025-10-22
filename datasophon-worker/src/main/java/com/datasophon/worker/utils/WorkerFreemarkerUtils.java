@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 /**
@@ -68,11 +69,11 @@ public class WorkerFreemarkerUtils {
             Map<String, String> templateContents) throws IOException {
 
         // 获取模板名称
-        String templateName = FreemarkerUtils.determineTemplateName(generators);
+        var templateName = FreemarkerUtils.determineTemplateName(generators);
 
         if (templateName != null) {
             // 从命令对象中获取模板内容
-            String templateContent = templateContents != null ? templateContents.get(templateName) : null;
+            var templateContent = templateContents != null ? templateContents.get(templateName) : null;
             
             if (templateContent != null) {
                 // 使用字符串模板生成配置，使用直接模式，避免prepareTemplateData处理
@@ -82,14 +83,14 @@ public class WorkerFreemarkerUtils {
                 return;
             } else {
                 // 获取失败时抛出异常
-                String errorMsg = "从命令对象获取模板失败: " + templateName;
+                var errorMsg = "从命令对象获取模板失败: " + templateName;
                 logger.error(errorMsg);
                 throw new IOException(errorMsg);
             }
         }
 
         // 模板名称未确定时抛出异常
-        String errorMsg = "模板名称未确定";
+        var errorMsg = "模板名称未确定";
         logger.error(errorMsg);
         throw new IOException(errorMsg);
     }
@@ -108,7 +109,7 @@ public class WorkerFreemarkerUtils {
 
         if (Constants.PROMETHEUS.equals(generators.getConfigFormat())) {
             // 从命令对象中获取模板内容
-            String templateContent = templateContents != null ? templateContents.get("alert.yml") : null;
+            var templateContent = templateContents != null ? templateContents.get("alert.yml") : null;
             
             if (templateContent != null) {
                 // 使用字符串模板处理告警项
@@ -116,7 +117,7 @@ public class WorkerFreemarkerUtils {
                 logger.info("成功从命令对象获取alert.yml模板");
                 return;
             } else {
-                String errorMsg = "从命令对象获取alert.yml模板失败";
+                var errorMsg = "从命令对象获取alert.yml模板失败";
                 logger.error(errorMsg);
                 throw new IOException(errorMsg);
             }
