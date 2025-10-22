@@ -25,6 +25,27 @@
             <artifactId>pf4j-spring</artifactId>
             <scope>provided</scope>
         </dependency>
+        
+        <!-- SSH库：Apache SSHJ - 现代化的SSH客户端 -->
+        <dependency>
+            <groupId>com.hierynomus</groupId>
+            <artifactId>sshj</artifactId>
+            <version>0.38.0</version>
+        </dependency>
+        
+        <!-- 连接池：Apache Commons Pool2 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-pool2</artifactId>
+            <version>2.12.0</version>
+        </dependency>
+        
+        <!-- SLF4J API (provided by parent) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
