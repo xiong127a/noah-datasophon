@@ -29,6 +29,8 @@ import com.datasophon.common.model.AlertItem;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.PageResult;
 import com.datasophon.common.utils.CollectionUtils;
+import com.datasophon.common.utils.FreemarkerUtils;
+import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.dao.entity.AlertGroupEntity;
 import com.datasophon.dao.entity.ClusterAlertQuotaEntity;
 import com.datasophon.dao.entity.NoticeGroupEntity;
@@ -193,9 +195,13 @@ public class ClusterAlertQuotaServiceImpl
                 PrometheusActor.class,
                 ActorUtils.getActorRefName(PrometheusActor.class));
 
-        GenerateAlertConfigCommand alertConfigCommand = new GenerateAlertConfigCommand();
+        var alertConfigCommand = new GenerateAlertConfigCommand();
         alertConfigCommand.setClusterId(clusterId);
         alertConfigCommand.setConfigFileMap(configFileMap);
+        
+        // 打包模板内容到命令对象
+        packAlertTemplateContents(alertConfigCommand, configFileMap);
+        
         prometheusActor.tell(alertConfigCommand, ActorRef.noSender());
     }
 
@@ -307,6 +313,30 @@ public class ClusterAlertQuotaServiceImpl
             return new ArrayList<>();
         }
         return this.getMapper().selectByAlertGroupIds(alertGroupIds);
+    }
+
+    /**
+     * 打包告警模板内容到命令对象
+     */
+    private void packAlertTemplateContents(GenerateAlertConfigCommand command,
+                                           Map<Generators, List<AlertItem>> configFileMap) {
+        if (configFileMap == null || configFileMap.isEmpty()) {
+            return;
+        }
+
+        for (var generators : configFileMap.keySet()) {
+            var templateName = FreemarkerUtils.determineTemplateName(generators);
+            if (templateName != null && !command.getTemplateContents().containsKey(templateName)) {
+                var templateContent = TemplatePathUtils.getTemplateContent(templateName);
+                if (templateContent != null) {
+                    command.getTemplateContents().put(templateName, templateContent);
+                    logger.info("打包告警模板 {} 到配置命令，内容长度: {}", templateName, templateContent.length());
+                } else {
+                    logger.warn("无法获取告警模板内容: {}", templateName);
+                }
+            }
+        }
+        logger.info("共打包 {} 个告警模板到配置命令", command.getTemplateContents().size());
     }
 
     // 注意：继承ServiceImpl后，基础CRUD方法已自动提供，无需重复实现

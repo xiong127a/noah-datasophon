@@ -29,8 +29,6 @@ import com.datasophon.common.model.ServiceRoleRunner;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.worker.handler.ServiceHandler;
-import com.datasophon.worker.utils.ActorUtils;
-
 import java.util.ArrayList;
 
 public class SRFEObserverHandlerStrategy extends AbstractHandlerStrategy implements ServiceRoleStrategy {

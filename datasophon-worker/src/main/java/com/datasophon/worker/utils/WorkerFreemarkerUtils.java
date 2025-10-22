@@ -62,11 +62,12 @@ public class WorkerFreemarkerUtils {
      * @param decompressPackageName 解压后的包名
      * @param templateContents      模板内容映射 (templateName -> templateContent)
      * @throws IOException IO异常
+     * @throws freemarker.template.TemplateException 模板处理异常
      */
     public static void generateConfigFile(Generators generators,
             List<ServiceConfig> configs,
             String decompressPackageName,
-            Map<String, String> templateContents) throws IOException {
+            Map<String, String> templateContents) throws IOException, freemarker.template.TemplateException {
 
         // 获取模板名称
         var templateName = FreemarkerUtils.determineTemplateName(generators);
@@ -103,9 +104,10 @@ public class WorkerFreemarkerUtils {
      * @param serviceName      服务名称
      * @param templateContents 模板内容映射
      * @throws IOException IO异常
+     * @throws freemarker.template.TemplateException 模板处理异常
      */
     public static void generatePromAlertFile(Generators generators, List<AlertItem> configs,
-            String serviceName, Map<String, String> templateContents) throws IOException {
+            String serviceName, Map<String, String> templateContents) throws IOException, freemarker.template.TemplateException {
 
         if (Constants.PROMETHEUS.equals(generators.getConfigFormat())) {
             // 从命令对象中获取模板内容

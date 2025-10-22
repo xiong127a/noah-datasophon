@@ -29,7 +29,6 @@ import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.common.utils.ShellUtils;
 import com.datasophon.worker.actor.RemoteEventActor;
 import com.datasophon.worker.actor.WorkerActor;
-import com.datasophon.worker.utils.ActorUtils;
 import com.datasophon.worker.utils.UnixUtils;
 import com.datasophon.worker.utils.WorkerFreemarkerUtils;
 import com.typesafe.config.Config;
@@ -77,7 +76,6 @@ public class WorkerApplicationServer {
         CacheUtils.put(Constants.HOSTNAME, hostname);
         // init actor
         ActorSystem system = initActor(hostname);
-        ActorUtils.setActorSystem(system);
 
         subscribeRemoteEvent(system);
 

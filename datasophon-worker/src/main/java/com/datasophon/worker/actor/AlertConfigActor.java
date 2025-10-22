@@ -34,12 +34,13 @@ public class AlertConfigActor extends AbstractActor {
     public Receive createReceive() {
         return ReceiveBuilder.create()
                 .match(GenerateAlertConfigCommand.class, command -> {
-                    ExecResult execResult = new ExecResult();
-                    Map<Generators, List<AlertItem>> configFileMap = command.getConfigFileMap();
-                    for (Generators generators : configFileMap.keySet()) {
-                        List<AlertItem> alertItems = configFileMap.get(generators);
+                    var execResult = new ExecResult();
+                    var configFileMap = command.getConfigFileMap();
+                    for (var generators : configFileMap.keySet()) {
+                        var alertItems = configFileMap.get(generators);
                         WorkerFreemarkerUtils.generatePromAlertFile(generators, alertItems,
-                                generators.getFilename().replace(".yml", "").toUpperCase());
+                                generators.getFilename().replace(".yml", "").toUpperCase(),
+                                command.getTemplateContents());
                     }
                     execResult.setExecResult(true);
                     getSender().tell(execResult, getSelf());
