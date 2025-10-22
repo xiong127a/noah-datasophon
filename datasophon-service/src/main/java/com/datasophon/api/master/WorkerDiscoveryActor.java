@@ -163,8 +163,8 @@ public class WorkerDiscoveryActor extends AbstractActor {
                         var clusterHost = clusterHostService.getClusterHostByHostname(hostname);
                         if (clusterHost != null && clusterHost.getClusterId() != null) {
                             var cluster = clusterInfoService.getClusterById(clusterHost.getClusterId());
-                            if (cluster != null && cluster.getClusterCode() != null) {
-                                serviceInstallationService.saveHostInstallInfo(workerMessage, cluster.getClusterCode());
+                            if (cluster != null && cluster.clusterCode() != null) {
+                                serviceInstallationService.saveHostInstallInfo(workerMessage, cluster.clusterCode());
                                 logger.info("保存Worker节点{}的安装信息成功", hostname);
                             }
                         }

@@ -215,7 +215,9 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven-compiler-plugin.version}</version>
                 <configuration>
-                    <release>${maven.compiler.source}</release>
+                    <source>21</source>
+                    <target>21</target>
+                    <release>21</release>
                     <encoding>UTF-8</encoding>
                     <!-- 🔧 强化编码配置 -->
                     <fork>true</fork>
