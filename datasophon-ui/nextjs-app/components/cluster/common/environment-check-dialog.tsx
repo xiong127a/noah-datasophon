@@ -1,7 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -22,6 +21,8 @@ import {
 } from 'lucide-react'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { API_BASE_URL, API_PATHS_V1 } from '@/lib/api-config-v1'
+import ClusterWizardLayout from './cluster-wizard-layout'
+import ClusterWizardActionBar from './cluster-wizard-action-bar'
 
 interface EnvironmentCheckDialogProps {
   open: boolean
@@ -271,14 +272,47 @@ export default function EnvironmentCheckDialog({
     ? Math.round((overallProgress.completed / overallProgress.total) * 100)
     : 0
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-        <DialogHeader>
-          <DialogTitle className="text-2xl">Step 3: 环境检查</DialogTitle>
-        </DialogHeader>
+  // 创建统一的ActionBar
+  const actionBar = (
+    <ClusterWizardActionBar
+      statusInfo={{
+        text: `环境检查进度 (${overallProgress.completed}/${overallProgress.total})`,
+        value: overallProgress.completed,
+        total: overallProgress.total,
+        pulse: isChecking
+      }}
+      buttons={[
+        {
+          text: "上一步",
+          onClick: onPrevious,
+          variant: 'secondary' as const,
+          disabled: isChecking
+        },
+        {
+          text: "下一步：Agent分发",
+          onClick: onNext,
+          disabled: !canProceed(),
+          loading: false
+        }
+      ]}
+    />
+  )
 
-        <div className="flex-1 overflow-y-auto space-y-4">
+  return (
+    <ClusterWizardLayout
+      open={open}
+      onClose={() => onOpenChange(false)}
+      clusterName={cluster?.clusterName || ''}
+      clusterType={cluster?.depType || 'PVM'}
+      stepTitle="环境检查"
+      stepDescription="环境检查 - 检查主机CPU、内存、JDK、防火墙等环境配置，确保满足大数据服务部署要求"
+      currentStep={3}
+      dialogTitle={`环境检查 - ${cluster?.clusterName || ''}`}
+      actionBar={actionBar}
+    >
+      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-slate-50/50 min-h-0 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-indigo-200/60 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb:hover]:bg-indigo-300/80 [&::-webkit-scrollbar]:transition-all">
+        <div className="p-6 sm:p-8 lg:p-10">
+          <div className="space-y-6">
           {/* 整体进度卡片 */}
           <Card>
             <CardHeader>
@@ -447,22 +481,10 @@ export default function EnvironmentCheckDialog({
               )}
             </Card>
           ))}
+          </div>
         </div>
-
-        {/* 底部操作按钮 */}
-        <div className="flex justify-between pt-4 border-t">
-          <Button onClick={onPrevious} variant="outline">
-            上一步
-          </Button>
-          <Button 
-            onClick={onNext} 
-            disabled={!canProceed()}
-          >
-            下一步：Agent分发
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ClusterWizardLayout>
   )
 }
 
