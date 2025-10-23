@@ -41,6 +41,9 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
         var hostIps = request.getHostIps();
         var connectionParams = request.getConnectionParams();
         
+        log.info("====== [环境检查服务] 开始执行 ======");
+        log.info("====== 集群ID: {}, 主机列表: {} ======", clusterId, hostIps);
+        
         log.info("启动环境检查: 集群={}, 主机数={}", clusterId, hostIps.size());
         
         // 生成任务ID

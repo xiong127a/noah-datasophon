@@ -24,10 +24,16 @@ import java.util.List;
  */
 @Slf4j
 @ApiVersion(path = "environment-check")
-@RequiredArgsConstructor
 public class EnvironmentCheckController {
     
     private final EnvironmentCheckService environmentCheckService;
+    
+    // 构造器日志，确认控制器是否被实例化
+    public EnvironmentCheckController(EnvironmentCheckService environmentCheckService) {
+        this.environmentCheckService = environmentCheckService;
+        log.info("====== EnvironmentCheckController 已初始化 ======");
+        log.info("====== API路径应为: /ddh/api/v1/environment-check ======");
+    }
     
     /**
      * 启动环境检查
@@ -36,6 +42,10 @@ public class EnvironmentCheckController {
     public Result<String> startCheck(
             @RequestBody EnvironmentCheckRequest request,
             @ClusterId Long clusterId) {
+        
+        log.info("====== [环境检查控制器] 收到启动请求 ======");
+        log.info("====== 集群ID: {}, 主机列表: {} ======", clusterId, request.getHostIps());
+        log.info("====== 连接参数: {} ======", request.getConnectionParams());
         
         log.info("启动环境检查: clusterId={}, 主机数量={}", 
                 clusterId, request.getHostIps().size());
