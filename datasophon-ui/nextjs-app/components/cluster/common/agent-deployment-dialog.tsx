@@ -33,7 +33,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from 'sonner'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar, { type ActionButton, type StatusInfo } from './cluster-wizard-action-bar'
-import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { ClusterTypeUtil } from '@/types'
 import { CARD_STYLES, BADGE_STYLES } from './shared-styles'
 
@@ -78,14 +77,18 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
     setError(null)
     
     try {
-      const headers = createClusterHeaders(cluster.id)
+      // fetch API不使用拦截器，直接从localStorage获取集群ID
+      const clusterId = localStorage.getItem('clusterId')
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json'
+      }
+      if (clusterId && clusterId !== '-1') {
+        headers['X-Cluster-Id'] = clusterId
+      }
       // 这里使用假的API端点，实际需要根据后端接口调整
       const response = await fetch('/ddh/api/v1/cluster/host/all', {
         method: 'GET',
-        headers: {
-          ...headers,
-          'Content-Type': 'application/json'
-        }
+        headers: headers
       })
 
       if (response.ok) {
@@ -127,8 +130,6 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
     setOverallStatus('IN_PROGRESS')
     
     try {
-      const headers = createClusterHeaders(cluster.id)
-      
       // 初始化分发任务
       const tasks: AgentDistributionTask[] = hosts.map(host => ({
         taskId: `agent-${host.id}-${Date.now()}`,

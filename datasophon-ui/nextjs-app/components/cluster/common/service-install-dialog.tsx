@@ -26,7 +26,6 @@ import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
 import { useLogSSE } from '@/hooks/useLogSSE'
 import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
-import { createClusterHeaders } from '@/lib/cluster-id-header'
 
 // 时间格式化工具函数
 const formatRelativeTime = (dateString: string): string => {
@@ -282,15 +281,13 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         throw new Error('没有找到要安装的服务');
       }
 
-      const headers = createClusterHeaders(cluster.id.toString());
-
+      // 拦截器自动注入集群ID
       // 1. 生成安装命令
       console.log('正在生成安装命令...');
       const generateResponse = await apiV1.post(
         `${API_PATHS_V1.GENERATE_SERVICE_INSTALL_COMMAND}?commandType=INSTALL_SERVICE`,
-        serviceNames, // 直接传递数组，不用包装成对象
-        { headers }
-      );
+        serviceNames // 直接传递数组，不用包装成对象
+      )
 
       // 统一错误处理会自动处理业务错误，这里直接获取数据
       const commandIds = generateResponse.data.data;
@@ -409,13 +406,12 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
       : API_PATHS_V1.GET_SERVICE_ROLE_ORDER_LIST
 
     try {
-      const headers = createClusterHeaders(cluster.id.toString())
-      
+      // 拦截器自动注入集群ID
       // 所有页面都使用GET方法，参数作为查询参数
       // 第1页: /cluster/service/command/list
       // 第2页: /cluster/service/command/host/list  
       // 第3页: /cluster/service/command/host/command/list
-      const response = await apiV1.get(apiPath, { headers, params })
+      const response = await apiV1.get(apiPath, params)
       
       if (response.data?.code === 200) {
         // API返回的数据结构：{ code: 200, data: { records: [...], total: "4", ... } }

@@ -17,7 +17,6 @@ import { ScrollArea } from '@/components/ui/scroll-area'
 import { toast } from 'sonner'
 
 import ConfigParameterForm from '@/components/config/ConfigParameterForm'
-import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { apiV1, API_PATHS_V1, API_BASE_URL } from '@/lib/api-config-v1'
 
 interface ConfigItem {
@@ -128,8 +127,8 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
     if (!serviceId || !clusterId || !currentRoleGroup) return
     
     try {
-      const headers = createClusterHeaders(clusterId)
-      const response = await apiV1.get(`${API_PATHS_V1.GET_CONFIG_VERSION}?serviceInstanceId=${serviceId}&roleGroupId=${currentRoleGroup}`, { headers })
+      // 拦截器自动注入集群ID
+      const response = await apiV1.get(`${API_PATHS_V1.GET_CONFIG_VERSION}?serviceInstanceId=${serviceId}&roleGroupId=${currentRoleGroup}`)
       
       if (response.data.code === 200) {
         setConfigVersions(response.data.data || [])
@@ -152,8 +151,8 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
     if (!serviceId || !clusterId) return
     
     try {
-      const headers = createClusterHeaders(clusterId)
-      const response = await apiV1.get(`${API_PATHS_V1.GET_ROLE_GROUP_LIST}?serviceInstanceId=${serviceId}`, { headers })
+      // 拦截器自动注入集群ID
+      const response = await apiV1.get(`${API_PATHS_V1.GET_ROLE_GROUP_LIST}?serviceInstanceId=${serviceId}`)
       
       if (response.data.code === 200) {
         setRoleGroups(response.data.data || [])
@@ -201,10 +200,10 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
     
     setLoading(true)
     try {
-      const headers = createClusterHeaders(clusterId)
+      // 拦截器自动注入集群ID
       const response = await apiV1.post(API_PATHS_V1.GET_SERVICE_CONFIG_FILES, {
         serviceInstanceId: serviceId
-      }, { headers })
+      })
       
       if (response.data.code === 200) {
         setConfigFiles(response.data.data || [])
@@ -232,11 +231,11 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
     setPreviewContent('正在加载...')
     
     try {
-      const headers = createClusterHeaders(clusterId)
+      // 拦截器自动注入集群ID
       const response = await apiV1.post(API_PATHS_V1.PREVIEW_SERVICE_CONFIG_FILE, {
         serviceInstanceId: serviceId,
         fileName: file.fileName
-      }, { headers })
+      })
       
       if (response.data.code === 200) {
         setPreviewContent(response.data.data || '')
@@ -254,12 +253,16 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
     if (!serviceId || !clusterId) return
     
     try {
-      // 使用fetch API并添加认证头
+      // 使用fetch API并添加认证头 - 拦截器不适用于fetch，需手动添加
       const token = localStorage.getItem('jwt_token')
-      const headers = createClusterHeaders(clusterId, {
+      const clusterId = localStorage.getItem('clusterId')
+      const headers: Record<string, string> = {
         'Authorization': token ? `Bearer ${token}` : '',
         'Content-Type': 'application/json'
-      })
+      }
+      if (clusterId && clusterId !== '-1') {
+        headers['X-Cluster-Id'] = clusterId
+      }
       const response = await fetch(`${API_BASE_URL}${API_PATHS_V1.DOWNLOAD_SINGLE_CONFIG_FILE}?serviceInstanceId=${serviceId}&fileName=${encodeURIComponent(file.fileName)}`, {
         method: 'GET',
         headers: headers,
@@ -316,12 +319,16 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
         downloadUrl += `&password=${encodeURIComponent(password)}`
       }
       
-      // 使用fetch API并添加认证头
+      // 使用fetch API并添加认证头 - 拦截器不适用于fetch，需手动添加
       const token = localStorage.getItem('jwt_token')
-      const headers = createClusterHeaders(clusterId, {
+      const clusterIdFromStorage = localStorage.getItem('clusterId')
+      const headers: Record<string, string> = {
         'Authorization': token ? `Bearer ${token}` : '',
         'Content-Type': 'application/json'
-      })
+      }
+      if (clusterIdFromStorage && clusterIdFromStorage !== '-1') {
+        headers['X-Cluster-Id'] = clusterIdFromStorage
+      }
       
       // 模拟下载进度
       const progressInterval = setInterval(() => {
@@ -396,8 +403,7 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
     }
 
     try {
-      // 前端不做任何过滤，把所有配置数据原样传给后端
-      const headers = createClusterHeaders(clusterId)
+      // 前端不做任何过滤，把所有配置数据原样传给后端 - 拦截器自动注入集群ID
       const userStr = typeof window !== 'undefined' ? localStorage.getItem('jwt_token') : null
       const currentUser = userStr ? JSON.parse(atob(userStr.split('.')[1])) : {}
 
@@ -412,7 +418,6 @@ export default function ConfigTab({ serviceId, serviceName }: ConfigTabProps) {
 
       const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_CONFIG, params, { 
         headers: {
-          ...headers,
           'Content-Type': 'application/x-www-form-urlencoded'
         }
       })

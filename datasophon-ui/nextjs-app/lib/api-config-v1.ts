@@ -287,7 +287,11 @@ apiClientV1.interceptors.request.use(config => {
     }
     
     // 添加集群ID到请求头（优先使用已设置的，避免覆盖组件传递的clusterId）
-    if (!config.headers['X-Cluster-Id']) {
+    // 更健壮的判断：处理 AxiosHeaders 对象
+    const existingClusterId = config.headers?.['X-Cluster-Id'] || 
+                              config.headers?.get?.('X-Cluster-Id');
+    
+    if (!existingClusterId) {
       const clusterId = localStorage.getItem('clusterId');
       if (clusterId && clusterId !== '-1') {
         config.headers['X-Cluster-Id'] = clusterId;

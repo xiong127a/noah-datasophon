@@ -29,7 +29,6 @@ import {
 import { useCluster } from '@/hooks/useCluster'
 import FinalNavbar from '@/components/layout/navbar-final'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
-import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { SvgIcon } from '@/components/ui/svg-icon'
 
 // 导入页签组件
@@ -311,8 +310,8 @@ export default function ServiceLayout() {
 
     setServiceLoading(true)
     try {
-      const config = createClusterHeaders(currentCluster.id)
-      const response = await clusterApiV1.service.list(config)
+      // 拦截器自动注入集群ID
+      const response = await clusterApiV1.service.list()
       
       if (response.data.code === 200 && response.data.data) {
         const apiServices = response.data.data

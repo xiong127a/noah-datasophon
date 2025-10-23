@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { toast } from 'sonner'
 import { apiV1, API_PATHS_V1 } from '@/lib/api-config-v1'
-import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { ServiceType } from '@/types/service-selection'
 import type { Service, Step3Data } from '@/types/service-selection'
 
@@ -97,19 +96,18 @@ export const useServiceSelection = ({
     setError(null)
     
     try {
-      const headers = createClusterHeaders(clusterId)
-      
+      // 拦截器自动注入集群ID
       let response
       if (isAddServiceMode) {
         // 添加服务模式：调用 /api/frame/service/list（GET请求，集群ID从请求头获取）
-        response = await apiV1.get(API_PATHS_V1.FRAME_SERVICE_LIST, { headers })
+        response = await apiV1.get(API_PATHS_V1.FRAME_SERVICE_LIST)
       } else {
         // 新建集群模式：调用 /api/frame/service/listWithRequired（GET请求，传type参数，集群ID从请求头获取）
         const params = new URLSearchParams({ 
           type: serviceTypeFilter
         }).toString()
         const url = `${API_PATHS_V1.FRAME_SERVICE_LIST_WITH_REQUIRED}?${params}`
-        response = await apiV1.get(url, { headers })
+        response = await apiV1.get(url)
       }
       
       if (response.data?.success && response.data?.data) {
@@ -328,19 +326,18 @@ export const useServiceSelection = ({
       setError(null)
       
       try {
-        const headers = createClusterHeaders(clusterId)
-        
+        // 拦截器自动注入集群ID
         let response
         if (isAddServiceMode) {
           // 添加服务模式：调用 /api/frame/service/list
-          response = await apiV1.get(API_PATHS_V1.FRAME_SERVICE_LIST, { headers })
+          response = await apiV1.get(API_PATHS_V1.FRAME_SERVICE_LIST)
         } else {
           // 新建集群模式：调用 /api/frame/service/listWithRequired
           const params = new URLSearchParams({ 
             type: serviceTypeFilter
           }).toString()
           const url = `${API_PATHS_V1.FRAME_SERVICE_LIST_WITH_REQUIRED}?${params}`
-          response = await apiV1.get(url, { headers })
+          response = await apiV1.get(url)
         }
         
         if (response.data?.success && response.data?.data) {

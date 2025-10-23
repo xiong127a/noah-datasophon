@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { clusterApi } from "@/lib/api"
 import { toast } from 'sonner'
-import { createClusterHeaders } from "@/lib/cluster-id-header"
 import ClusterWizardLayout from '../common/cluster-wizard-layout'
 import ClusterWizardActionBar from '../common/cluster-wizard-action-bar'
 import { BADGE_STYLES } from '../common/shared-styles'
@@ -148,8 +147,8 @@ export default function PvmHostValidationDialog({
         sshPassword: step1Data.sshPassword
       }
       
-      const headers = createClusterHeaders(cluster.id.toString())
-      const response = await clusterApi.unifiedHost.discoverFromStep1(step1Config, { headers })
+      // 拦截器会自动注入集群ID到请求头
+      const response = await clusterApi.unifiedHost.discoverFromStep1(step1Config)
 
       if (response.data?.success && response.data?.data?.hosts) {
         const hostList: PvmHost[] = response.data.data.hosts.map((hostData: BackendHostData) => {
@@ -230,8 +229,7 @@ export default function PvmHostValidationDialog({
         throw new Error('集群ID不能为空')
       }
 
-      // ✅ 调用performCheck接口执行SSH检查
-      const headers = createClusterHeaders(cluster.id.toString())
+      // 拦截器自动注入集群ID到请求头
       const response = await clusterApi.unifiedHost.performCheck({
         hostnames: currentHosts.map(h => h.ip),  // 传递IP列表
         connectionParams: {
@@ -240,7 +238,7 @@ export default function PvmHostValidationDialog({
           sshPort: step1Data.sshPort,
           sshPassword: step1Data.sshPassword
         }
-      }, { headers })
+      })
 
       if (response.data?.success && response.data?.data?.hostResults) {
         // 将后端返回的检查结果映射到前端格式

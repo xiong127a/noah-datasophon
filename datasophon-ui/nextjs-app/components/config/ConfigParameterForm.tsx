@@ -14,7 +14,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { toast } from 'sonner'
 
 import { ConfigItemRenderer } from './ConfigItemRenderer'
-import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { apiV1, API_PATHS_V1 } from '@/lib/api-config-v1'
 
 interface ConfigItem {
@@ -289,7 +288,7 @@ export default function ConfigParameterForm({
     
     setLoading(true)
     try {
-      const headers = createClusterHeaders(clusterId)
+      // 拦截器自动注入集群ID
       const params = {
         serviceInstanceId: serviceId,
         version: currentVersion || '',
@@ -298,7 +297,7 @@ export default function ConfigParameterForm({
       console.log('📡 调用API (GET):', API_PATHS_V1.GET_SERVICE_CONFIG)
       console.log('📦 查询参数:', params)
       
-      const response = await apiV1.get(API_PATHS_V1.GET_SERVICE_CONFIG, params, { headers })
+      const response = await apiV1.get(API_PATHS_V1.GET_SERVICE_CONFIG, params)
       
       console.log('📥 API响应:', response.data)
       

@@ -11,7 +11,6 @@ import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { toast } from 'sonner'
 import ClusterWizardLayout from '../common/cluster-wizard-layout'
 import ClusterWizardActionBar from '../common/cluster-wizard-action-bar'
-import { createClusterHeaders } from '@/lib/cluster-id-header'
 import { ManagementStatus, ManagementStatusUtil, ClusterType, ClusterTypeUtil } from '@/types'
 
 import type { 
@@ -205,10 +204,8 @@ export default function K8sHostValidationDialog({
       
       // 调用新的主机发现接口
       try {
-        // 创建包含集群ID的请求头
-        const headers = createClusterHeaders(clusterId)
-        
-        response = await clusterApi.unifiedHost.discoverFromStep1(step1Config, { headers })
+        // 拦截器自动注入集群ID到请求头
+        response = await clusterApi.unifiedHost.discoverFromStep1(step1Config)
         res = response.data
         
         // 统一API响应格式处理
@@ -349,7 +346,7 @@ export default function K8sHostValidationDialog({
         }
 
         // 2. 保存发现的主机到数据库
-        const hostRes = await clusterApiV1.hostManagement.saveDiscoveredHosts(clusterId)
+        const hostRes = await clusterApiV1.hostManagement.saveDiscoveredHosts()
         
         if (hostRes?.code !== 200) {
           throw new Error('保存主机失败: ' + (hostRes?.msg || '未知错误'))
@@ -395,7 +392,7 @@ export default function K8sHostValidationDialog({
   const hostCheckCompleted = async (): Promise<{ hostCheckCompleted: boolean; data: string }> => {
     if (ClusterTypeUtil.isKubernetes(clusterType)) {
       try {
-        const response = await clusterApi.unifiedHost.validateForNextStep({ headers: createClusterHeaders(clusterId) })
+        const response = await clusterApi.unifiedHost.validateForNextStep()
         const result = response.data
         
         if (result.code === 200 && result.data) {

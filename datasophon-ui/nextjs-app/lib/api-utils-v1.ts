@@ -116,14 +116,13 @@ export const clusterApiV1 = {
     getNamespaces: (kubeConfigContent: string) => {
       return apiV1.post(API_PATHS_V1.CLUSTER_NAMESPACES, { kubeConfigContent })
     },
-    // 保存Kubernetes配置
-    saveKubeConfig: (clusterId: string, kubeConfigContent: string, namespace: string, customNamespace?: string) => {
-      const config = { headers: createClusterHeaders(clusterId) };
+    // 保存Kubernetes配置 - 拦截器自动注入集群ID
+    saveKubeConfig: (kubeConfigContent: string, namespace: string, customNamespace?: string) => {
       return apiV1.post(API_PATHS_V1.CLUSTER_KUBE_CONFIG, { 
         kubeConfig: kubeConfigContent, 
         namespace, 
         customNamespace 
-      }, config);
+      });
     },
   },
 
@@ -284,150 +283,129 @@ export const clusterApiV1 = {
       selectedHosts: any[]
       connectionParams?: any
       importOptions?: any
-    }) => apiV1.post(API_PATHS_V1.HOST_IMPORT, data),
+    }, config?: any) => apiV1.post(API_PATHS_V1.HOST_IMPORT, data, config),
     
     // 刷新主机信息
-    refresh: (connectionParams: any) =>
-      apiV1.post(API_PATHS_V1.HOST_REFRESH, connectionParams),
+    refresh: (connectionParams: any, config?: any) =>
+      apiV1.post(API_PATHS_V1.HOST_REFRESH, connectionParams, config),
     
     // 检查连接状态
-    checkConnection: (connectionParams: any) =>
-      apiV1.post(API_PATHS_V1.HOST_CHECK_CONNECTION, connectionParams),
+    checkConnection: (connectionParams: any, config?: any) =>
+      apiV1.post(API_PATHS_V1.HOST_CHECK_CONNECTION, connectionParams, config),
     
     // 执行主机环境检查
     performCheck: (data: {
       hostnames: string[]
       connectionParams: any
-    }) => apiV1.post(API_PATHS_V1.HOST_PERFORM_CHECK, data),
+    }, config?: any) => apiV1.post(API_PATHS_V1.HOST_PERFORM_CHECK, data, config),
     
     // 清理资源
-    cleanup: () =>
-      apiV1.post(API_PATHS_V1.HOST_CLEANUP, {}),
+    cleanup: (config?: any) =>
+      apiV1.post(API_PATHS_V1.HOST_CLEANUP, {}, config),
     
     // 获取支持的策略类型
-    getStrategies: () =>
-      apiV1.get(API_PATHS_V1.HOST_STRATEGIES),
+    getStrategies: (config?: any) =>
+      apiV1.get(API_PATHS_V1.HOST_STRATEGIES, undefined, config),
   },
 
   // 服务角色分配相关 API (Step5)
   serviceRole: {
-    /** 获取服务角色列表 */
-    getList: async (params: GetServiceRoleListParams): Promise<GetServiceRoleListResponse> => {
-      // 集群ID通过请求头传递，其他参数作为查询参数
-      const headers = createClusterHeaders(params.clusterId)
+    /** 获取服务角色列表 - 拦截器自动注入集群ID */
+    getList: async (params: {
+      serviceIds?: string[]
+      serviceRoleType?: number
+    }): Promise<GetServiceRoleListResponse> => {
       const response = await apiV1.get(API_PATHS_V1.GET_SERVICE_ROLE_LIST, {
         serviceIds: params.serviceIds,
         serviceRoleType: params.serviceRoleType
-      }, {
-        headers
       })
       return response.data
     },
 
-    /** 获取所有主机列表 */
-    getAllHosts: async (params: GetAllHostParams): Promise<GetAllHostResponse> => {
-      // 使用GET请求，集群ID通过@ClusterId注解从请求头获取
-      const headers = createClusterHeaders(params.clusterId)
-      
-      const response = await apiV1.get(API_PATHS_V1.GET_ALL_HOST, {
-        headers
-      })
+    /** 获取所有主机列表 - 拦截器自动注入集群ID */
+    getAllHosts: async (): Promise<GetAllHostResponse> => {
+      const response = await apiV1.get(API_PATHS_V1.GET_ALL_HOST)
       return response.data
     },
 
-    /** 保存服务角色主机映射 */
-    saveMapping: async (clusterId: string, mappings: HostMapping[]): Promise<SaveServiceRoleHostMappingResponse> => {
-      const headers = createClusterHeaders(clusterId)
-      const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_ROLE_HOST_MAPPING_V2, mappings, { headers })
+    /** 保存服务角色主机映射 - 拦截器自动注入集群ID */
+    saveMapping: async (mappings: HostMapping[]): Promise<SaveServiceRoleHostMappingResponse> => {
+      const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_ROLE_HOST_MAPPING_V2, mappings)
       return response.data
     },
 
-    /** 获取非Master角色列表 (Step6) */
-    getNonMasterRoleList: async (clusterId: string, serviceIds: string[]): Promise<any> => {
-      const headers = createClusterHeaders(clusterId)
-      const response = await apiV1.get(API_PATHS_V1.GET_NON_MASTER_ROLE_LIST, {
-        serviceIds
-      }, { headers })
+    /** 获取非Master角色列表 (Step6) - 拦截器自动注入集群ID */
+    getNonMasterRoleList: async (serviceIds: string[]): Promise<any> => {
+      const response = await apiV1.get(API_PATHS_V1.GET_NON_MASTER_ROLE_LIST, { serviceIds })
       return response.data
     }
   },
 
   // Agent分发相关 API (Step3)
   agent: {
-    /** 开始Agent分发 */
-    startDistribution: async (clusterId: string, hostIds: string[]) => { // 修复：20位long精度问题
-      const headers = createClusterHeaders(clusterId)
-      const response = await apiV1.post(API_PATHS_V1.START_AGENT_DISTRIBUTION, { hostIds }, { headers })
+    /** 开始Agent分发 - 拦截器自动注入集群ID */
+    startDistribution: async (hostIds: string[]) => {
+      const response = await apiV1.post(API_PATHS_V1.START_AGENT_DISTRIBUTION, { hostIds })
       return response.data
     },
 
-    /** 获取Agent分发状态 */
-    getDistributionStatus: async (clusterId: string, taskId?: string) => {
-      const headers = createClusterHeaders(clusterId)
+    /** 获取Agent分发状态 - 拦截器自动注入集群ID */
+    getDistributionStatus: async (taskId?: string) => {
       const response = await apiV1.get(API_PATHS_V1.GET_AGENT_DISTRIBUTION_STATUS, 
-        taskId ? { taskId } : {}, { headers })
+        taskId ? { taskId } : {})
       return response.data
     },
 
-    /** 重试失败的Agent分发 */
-    retryDistribution: async (clusterId: string, hostIds: string[]) => { // 修复：20位long精度问题
-      const headers = createClusterHeaders(clusterId)
-      const response = await apiV1.post(API_PATHS_V1.RETRY_AGENT_DISTRIBUTION, { hostIds }, { headers })
+    /** 重试失败的Agent分发 - 拦截器自动注入集群ID */
+    retryDistribution: async (hostIds: string[]) => {
+      const response = await apiV1.post(API_PATHS_V1.RETRY_AGENT_DISTRIBUTION, { hostIds })
       return response.data
     },
 
-    /** 取消Agent分发 */
-    cancelDistribution: async (clusterId: string, taskId: string) => {
-      const headers = createClusterHeaders(clusterId)
-      const response = await apiV1.post(API_PATHS_V1.CANCEL_AGENT_DISTRIBUTION, { taskId }, { headers })
+    /** 取消Agent分发 - 拦截器自动注入集群ID */
+    cancelDistribution: async (taskId: string) => {
+      const response = await apiV1.post(API_PATHS_V1.CANCEL_AGENT_DISTRIBUTION, { taskId })
       return response.data
     }
   },
 
   // 主机管理相关API - v1
   hostManagement: {
-    /** Step1发现主机 */
-    discoverFromStep1: async (clusterId: string, step1Config: any) => {
-      const headers = createClusterHeaders(clusterId)
-      const response = await apiV1.post(API_PATHS_V1.HOST_DISCOVER_STEP1, step1Config, { headers })
+    /** Step1发现主机 - 拦截器自动注入集群ID */
+    discoverFromStep1: async (step1Config: any) => {
+      const response = await apiV1.post(API_PATHS_V1.HOST_DISCOVER_STEP1, step1Config)
       return response.data
     },
 
-    /** 保存发现的主机到数据库 */
-    saveDiscoveredHosts: async (clusterId: string) => {
-      const headers = createClusterHeaders(clusterId)
-      const response = await apiV1.post(API_PATHS_V1.HOST_SAVE_DISCOVERED, {}, { headers })
+    /** 保存发现的主机到数据库 - 拦截器自动注入集群ID */
+    saveDiscoveredHosts: async () => {
+      const response = await apiV1.post(API_PATHS_V1.HOST_SAVE_DISCOVERED, {})
       return response.data
     }
   },
 
   // 服务文档相关API - v1
   doc: {
-    /** 获取服务文档内容 */
+    /** 获取服务文档内容 - 拦截器自动注入集群ID */
     getServiceDoc: (params: {
-      clusterId: string
       serviceId: string
       type: 'component' | 'guide'
     }) => {
-      const config = createClusterHeaders(params.clusterId)
       return apiV1.post(API_PATHS_V1.SERVICE_DOC_GET, {
-        clusterId: params.clusterId,
         serviceId: params.serviceId,
         type: params.type
-      }, config)
+      })
     },
 
-    /** 检查服务文档是否存在 */
+    /** 检查服务文档是否存在 - 拦截器自动注入集群ID */
     hasServiceDoc: (params: {
-      clusterId: string
       serviceId: string
       type: 'component' | 'guide'
     }) => {
-      const config = createClusterHeaders(params.clusterId)
       return apiV1.get(API_PATHS_V1.SERVICE_DOC_HAS, {
         serviceId: params.serviceId,
         type: params.type
-      }, config)
+      })
     },
 
     /** 获取服务名称 */

@@ -11,7 +11,6 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
 import { apiV1, API_PATHS_V1 } from "@/lib/api-config-v1"
-import { createClusterHeaders } from '@/lib/cluster-id-header'
 
 import type { 
   ServiceConfigDialogProps,
@@ -116,10 +115,10 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     setError(null)
     
     try {
-      const headers = createClusterHeaders(cluster.id)
+      // 拦截器自动注入集群ID
       const response = await apiV1.get(API_PATHS_V1.GET_SERVICE_CONFIG_OPTION, {
         serviceName
-      }, { headers })
+      })
 
       if (response.data?.code === 200 && response.data?.data) {
         const configGroupData = response.data.data as ServiceConfigGroupData
@@ -212,8 +211,8 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     requestData.append('serviceName', serviceName)
     requestData.append('serviceConfig', JSON.stringify(filteredConfigs))
 
-    const headers = createClusterHeaders(cluster.id)
-    const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_CONFIG, requestData, { headers })
+    // 拦截器自动注入集群ID
+    const response = await apiV1.post(API_PATHS_V1.SAVE_SERVICE_CONFIG, requestData)
     
     return {
       ...response.data,
@@ -314,11 +313,10 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     }
 
     try {
-      const headers = createClusterHeaders(cluster.id)
+      // 拦截器自动注入集群ID
       const response = await apiV1.post(
         API_PATHS_V1.SAVE_SERVICE_ROLE_HOST_MAPPING_V2, 
-        requestData, 
-        { headers }
+        requestData
       )
       
       if (response.data?.code === 200) {
@@ -352,9 +350,8 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     // @RequestBody List<String> serviceNames - 请求体（JSON数组）
     const url = `${API_PATHS_V1.GENERATE_SERVICE_INSTALL_COMMAND}?commandType=${CommandType.INSTALL_SERVICE}`
     const requestBody = services  // 服务名称列表作为JSON数组
-    const headers = createClusterHeaders(cluster.id)
-
-    const response = await apiV1.post(url, requestBody, { headers })
+    // 拦截器自动注入集群ID
+    const response = await apiV1.post(url, requestBody)
     
     if (response.data?.code === 200) {
       return response.data.data || ''
