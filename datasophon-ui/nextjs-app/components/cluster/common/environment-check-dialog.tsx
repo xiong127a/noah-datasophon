@@ -320,16 +320,30 @@ export default function EnvironmentCheckDialog({
     )
   }
 
-  // 计算整体进度
+  // 计算整体进度（按主机维度统计）
   const calculateOverallProgress = () => {
-    if (checkStatus.length === 0) return { total: 0, completed: 0, success: 0, failed: 0 }
+    if (checkStatus.length === 0) {
+      // 如果还没有检查状态，但有主机列表，显示主机数量
+      return { 
+        totalHosts: actualHostList.length, 
+        completedHosts: 0, 
+        successHosts: 0, 
+        partialSuccessHosts: 0,
+        failedHosts: 0 
+      }
+    }
     
-    const total = checkStatus.reduce((sum, host) => sum + host.totalItems, 0)
-    const completed = checkStatus.reduce((sum, host) => sum + host.completedItems, 0)
-    const success = checkStatus.reduce((sum, host) => sum + host.successItems, 0)
-    const failed = checkStatus.reduce((sum, host) => sum + host.failedItems, 0)
+    const totalHosts = checkStatus.length
+    const completedHosts = checkStatus.filter(h => 
+      h.overallStatus === 'SUCCESS' || 
+      h.overallStatus === 'PARTIAL_SUCCESS' || 
+      h.overallStatus === 'FAILED'
+    ).length
+    const successHosts = checkStatus.filter(h => h.overallStatus === 'SUCCESS').length
+    const partialSuccessHosts = checkStatus.filter(h => h.overallStatus === 'PARTIAL_SUCCESS').length
+    const failedHosts = checkStatus.filter(h => h.overallStatus === 'FAILED').length
     
-    return { total, completed, success, failed }
+    return { totalHosts, completedHosts, successHosts, partialSuccessHosts, failedHosts }
   }
 
   // 判断是否可以进入下一步
@@ -343,17 +357,17 @@ export default function EnvironmentCheckDialog({
   }
 
   const overallProgress = calculateOverallProgress()
-  const progressPercentage = overallProgress.total > 0 
-    ? Math.round((overallProgress.completed / overallProgress.total) * 100)
+  const progressPercentage = overallProgress.totalHosts > 0 
+    ? Math.round((overallProgress.completedHosts / overallProgress.totalHosts) * 100)
     : 0
 
   // 创建统一的ActionBar
   const actionBar = (
     <ClusterWizardActionBar
       statusInfo={{
-        text: `环境检查进度 (${overallProgress.completed}/${overallProgress.total})`,
-        value: overallProgress.completed,
-        total: overallProgress.total,
+        text: `主机检查进度 (${overallProgress.completedHosts}/${overallProgress.totalHosts} 台)`,
+        value: overallProgress.completedHosts,
+        total: overallProgress.totalHosts,
         pulse: isChecking
       }}
       buttons={[
@@ -430,14 +444,14 @@ export default function EnvironmentCheckDialog({
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span>总体进度: {overallProgress.completed} / {overallProgress.total}</span>
+                <span>主机检查进度: {overallProgress.completedHosts} / {overallProgress.totalHosts} 台</span>
                 <span>{progressPercentage}%</span>
               </div>
               <Progress value={progressPercentage} />
               <div className="flex gap-4 text-sm">
-                <span className="text-green-600">✓ 成功: {overallProgress.success}</span>
-                <span className="text-red-600">✗ 失败: {overallProgress.failed}</span>
-                <span className="text-gray-500">主机数: {checkStatus.length > 0 ? checkStatus.length : actualHostList.length}</span>
+                <span className="text-green-600">✓ 完全通过: {overallProgress.successHosts} 台</span>
+                <span className="text-yellow-600">⚠ 部分通过: {overallProgress.partialSuccessHosts} 台</span>
+                <span className="text-red-600">✗ 未通过: {overallProgress.failedHosts} 台</span>
               </div>
             </CardContent>
           </Card>
@@ -500,7 +514,7 @@ export default function EnvironmentCheckDialog({
                   <div className="flex items-center gap-4">
                     {getStatusBadge(host.overallStatus)}
                     <div className="text-sm text-gray-600">
-                      {host.completedItems} / {host.totalItems}
+                      检查项: {host.completedItems} / {host.totalItems}
                     </div>
                     <Progress 
                       value={host.totalItems > 0 ? (host.completedItems / host.totalItems) * 100 : 0} 
