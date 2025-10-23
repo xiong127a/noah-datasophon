@@ -105,11 +105,20 @@ export default function EnvironmentCheckDialog({
         return
       }
       
+      console.log('🚀 准备调用环境检查API:', {
+        api: 'clusterApiV1.environmentCheck.start',
+        path: API_PATHS_V1.ENVIRONMENT_CHECK_START,
+        hostIps: hostsToCheck.map(h => h.ip),
+        connectionParams
+      })
+      
       // 先调用启动检查API
       const response = await clusterApiV1.environmentCheck.start({
         hostIps: hostsToCheck.map(h => h.ip),
         connectionParams
       })
+      
+      console.log('✅ 环境检查API响应:', response)
       
       if (response.code === 200) {
         console.log('环境检查已启动，任务ID:', response.data)
