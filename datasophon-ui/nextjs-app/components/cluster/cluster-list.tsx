@@ -826,6 +826,11 @@ export default function ClusterListEnhanced() {
                   onEdit={handleEditCluster}
                   onSetup={(cluster) => {
                     setSetupCluster(cluster);
+                    // 保存集群ID到localStorage，以便拦截器自动注入到所有请求
+                    if (typeof window !== 'undefined') {
+                      localStorage.setItem('clusterId', cluster.id.toString());
+                      console.log('🔧 开始配置集群，集群ID已保存到localStorage:', cluster.id);
+                    }
                     setSetupDialogOpen(true);
                   }}
                   onAuth={handleAuthCluster}
