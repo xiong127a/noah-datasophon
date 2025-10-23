@@ -47,10 +47,10 @@ export default function PvmHostConfigDialog({
   onStep1Complete
 }: PvmHostConfigDialogProps) {
   const [step1Data, setStep1Data] = useState<PvmStep1Data>({
-    hosts: '192.168.200.6',
+    hosts: '192.168.1.54,192.168.1.55,192.168.1.56',
     sshUser: 'root',
     sshPort: '22',
-    sshPassword: 'root'
+    sshPassword: 'Jd2019'
   })
   
   const [loading, setLoading] = useState(false)
@@ -64,10 +64,10 @@ export default function PvmHostConfigDialog({
   // 清空表单数据
   const clearFormData = () => {
     setStep1Data({
-      hosts: '192.168.200.6',
+      hosts: '192.168.1.54,192.168.1.55,192.168.1.56',
       sshUser: 'root',
       sshPort: '22',
-      sshPassword: 'root'
+      sshPassword: 'Jd2019'
     })
     setPasswordVisible(false)
   }
@@ -256,18 +256,18 @@ export default function PvmHostConfigDialog({
                             placeholder={`输入主机IP地址，支持以下格式：
 
 📍 单个IP：
-   192.168.1.100
+   192.168.1.54
 
 📍 每行一个IP：
-   192.168.1.100
-   192.168.1.101
-   192.168.1.102
+   192.168.1.54
+   192.168.1.55
+   192.168.1.56
 
 📍 逗号分隔：
-   192.168.1.100, 192.168.1.101, 192.168.1.102
+   192.168.1.54, 192.168.1.55, 192.168.1.56
 
 📍 范围批量（推荐）：
-   192.168.1.[100-110]   ➤   自动展开为 100-110
+   192.168.1.[54-56]    ➤   自动展开为 54-56
    10.0.0.[1-50]        ➤   自动展开为 1-50
 
 `}
@@ -358,7 +358,7 @@ export default function PvmHostConfigDialog({
                           <ul className="text-sm text-slate-700 space-y-1">
                             <li>• 确保所有IP地址对应的主机可通过 SSH 连接，且使用相同的用户名和密码</li>
                             <li>• 如需使用不同密码的主机，请分批添加和配置</li>
-                            <li>• 支持IP范围批量输入，如：192.168.1.[100-110] 表示 192.168.1.100 到 192.168.1.110</li>
+                            <li>• 支持IP范围批量输入，如：192.168.1.[54-56] 表示 192.168.1.54 到 192.168.1.56</li>
                             <li>• 建议使用默认SSH端口22，如需修改请确保所有主机使用相同端口</li>
                             <li>• 只支持IPv4地址格式，不支持主机名或域名</li>
                           </ul>
