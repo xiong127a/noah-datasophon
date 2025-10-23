@@ -80,17 +80,36 @@ export default function EnvironmentCheckDialog({
   const [eventSource, setEventSource] = useState<EventSource | null>(null)
   const [actualHostList, setActualHostList] = useState<Array<{ ip: string; hostname?: string }>>([])
 
-  // 初始化主机列表
-  // PVM模式：主机数据在Step2校验后通过props传递过来，还未保存到数据库
-  // 所以直接使用传递的hostList，而不是从数据库查询
-  // K8s模式：主机数据在Step2已保存到数据库，但传递的hostList也是可用的
+  // 当对话框打开时，重置所有状态
   useEffect(() => {
-    if (open && hostList && hostList.length > 0) {
-      const hosts = hostList.map((h: any) => ({
-        ip: h.ip,
-        hostname: h.hostname || h.ip
-      }))
-      setActualHostList(hosts)
+    if (open) {
+      console.log('🔄 环境检查对话框打开，重置所有状态')
+      // 重置所有检查相关的状态
+      setCheckStatus([])
+      setIsChecking(false)
+      setIsPaused(false)
+      setExpandedHosts(new Set())
+      setExpandedCheckItems(new Set())
+      
+      // 初始化主机列表
+      if (hostList && hostList.length > 0) {
+        const hosts = hostList.map((h: any) => ({
+          ip: h.ip,
+          hostname: h.hostname || h.ip
+        }))
+        setActualHostList(hosts)
+        console.log('✅ 主机列表已初始化:', hosts)
+      } else {
+        setActualHostList([])
+      }
+    } else {
+      // 对话框关闭时，清理SSE连接
+      setEventSource(prev => {
+        if (prev) {
+          prev.close()
+        }
+        return null
+      })
     }
   }, [open, hostList])
 
