@@ -36,6 +36,15 @@ public class EnvironmentCheckController {
     }
     
     /**
+     * 测试端点 - 验证路由是否正常工作
+     */
+    @GetMapping("/test")
+    public Result<String> test() {
+        log.info("====== [环境检查控制器] 测试端点被调用 ======");
+        return new Result<>(200, "Environment Check Controller is working!", "test-ok");
+    }
+    
+    /**
      * 启动环境检查
      */
     @PostMapping("/start")
@@ -46,9 +55,10 @@ public class EnvironmentCheckController {
         log.info("====== [环境检查控制器] 收到启动请求 ======");
         log.info("====== 集群ID: {}, 主机列表: {} ======", clusterId, request.getHostIps());
         log.info("====== 连接参数: {} ======", request.getConnectionParams());
+        log.info("====== 请求对象: {} ======", request);
         
         log.info("启动环境检查: clusterId={}, 主机数量={}", 
-                clusterId, request.getHostIps().size());
+                clusterId, request.getHostIps() != null ? request.getHostIps().size() : 0);
         
         try {
             // 设置集群ID
