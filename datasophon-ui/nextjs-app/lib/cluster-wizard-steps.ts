@@ -14,13 +14,14 @@ export interface ClusterStep {
 // 完整的步骤列表（对应原Vue2项目）
 export const ALL_STEPS: ClusterStep[] = [
   { number: 1, title: '安装主机', description: '配置集群主机和连接信息' },
-  { number: 2, title: '主机环境校验', description: '检验主机环境和依赖' },
-  { number: 3, title: '主机Agent分发', description: '分发和安装主机Agent' },
-  { number: 4, title: '选择服务', description: '选择要安装的大数据服务' },
-  { number: 5, title: '分配服务Master角色', description: '为服务分配Master节点' },
-  { number: 6, title: '分配服务Worker与Client角色', description: '为服务分配Worker和Client节点' },
-  { number: 7, title: '服务配置', description: '配置服务参数和资源分配' },
-  { number: 8, title: '安装并启动服务', description: '安装并启动所有服务' }
+  { number: 2, title: '主机校验', description: '校验主机SSH连接和基本状态' },
+  { number: 3, title: '环境检查', description: '检查CPU/内存/JDK/防火墙等环境配置' },
+  { number: 4, title: '主机Agent分发', description: '分发和安装主机Agent' },
+  { number: 5, title: '选择服务', description: '选择要安装的大数据服务' },
+  { number: 6, title: '分配服务Master角色', description: '为服务分配Master节点' },
+  { number: 7, title: '分配服务Worker与Client角色', description: '为服务分配Worker和Client节点' },
+  { number: 8, title: '服务配置', description: '配置服务参数和资源分配' },
+  { number: 9, title: '安装并启动服务', description: '安装并启动所有服务' }
 ]
 
 // 步骤类型枚举
@@ -49,12 +50,12 @@ export function getStepsByType(
   // 根据步骤类型过滤
   switch (stepsType) {
     case StepsType.HOST_MANAGE:
-      // 只保留前3步
-      steps = steps.slice(0, 3)
+      // 只保留前4步（安装主机、主机校验、环境检查、Agent分发）
+      steps = steps.slice(0, 4)
       break
     case StepsType.ADD_SERVICE:
-      // 添加服务模式：从"选择服务"步骤开始（跳过前3个主机相关步骤）
-      steps = steps.slice(3)  // 从index 3开始，即"选择服务"
+      // 添加服务模式：从"选择服务"步骤开始（跳过前4个主机相关步骤）
+      steps = steps.slice(4)  // 从index 4开始，即"选择服务"
       // 重新编号：第1步 = 选择服务，第2步 = 分配Master角色，依此类推
       steps = steps.map((step, index) => ({
         ...step,
@@ -62,8 +63,8 @@ export function getStepsByType(
       }))
       break
     case StepsType.SERVICE_EXAMPLE:
-      // 从第4步开始
-      steps = steps.slice(4)
+      // 从第5步开始
+      steps = steps.slice(5)
       // 重新编号
       steps = steps.map((step, index) => ({
         ...step,
@@ -77,8 +78,10 @@ export function getStepsByType(
   
   // 根据部署类型过滤
   if (depType === ClusterType.KUBERNETES) {
-    // Kubernetes模式：过滤掉'主机Agent分发'步骤
-    steps = steps.filter(step => step.title !== '主机Agent分发')
+    // Kubernetes模式：过滤掉'环境检查'和'主机Agent分发'步骤
+    steps = steps.filter(step => 
+      step.title !== '环境检查' && step.title !== '主机Agent分发'
+    )
     // 重新编号
     steps = steps.map((step, index) => ({
       ...step,
