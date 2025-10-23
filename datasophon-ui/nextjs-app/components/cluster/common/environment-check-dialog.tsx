@@ -360,7 +360,6 @@ export default function EnvironmentCheckDialog({
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span>检查进度</span>
-                  {loadingHosts && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
                   {actualHostList.length > 0 && (
                     <Badge variant="outline" className="text-xs">
                       {actualHostList.length} 台主机
@@ -372,7 +371,7 @@ export default function EnvironmentCheckDialog({
                     <Button 
                       onClick={handleStartCheck} 
                       size="sm"
-                      disabled={loadingHosts || actualHostList.length === 0}
+                      disabled={actualHostList.length === 0}
                     >
                       <Play className="h-4 w-4 mr-2" />
                       开始检查
