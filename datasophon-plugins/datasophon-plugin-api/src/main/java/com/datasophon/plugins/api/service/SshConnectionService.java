@@ -2,23 +2,25 @@ package com.datasophon.plugins.api.service;
 
 import com.datasophon.plugins.api.model.HostCheckContext;
 import com.datasophon.plugins.api.model.CommandResult;
+import org.pf4j.ExtensionPoint;
 
 import java.util.List;
 import java.util.Map;
 
 /**
- * SSH连接服务接口
+ * SSH连接服务接口 - PF4J 扩展点
  * 为插件提供统一的SSH连接管理和命令执行
  * 
- * 设计原则：
- * 1. 完全隔离SSH库依赖，不暴露具体的SSH客户端类型
- * 2. 基于Apache SSHJ + Commons Pool2实现高性能连接池
- * 3. 提供简洁的命令执行接口，自动管理连接生命周期
- * 4. 支持连接池监控和管理
+ * 设计原则（符合 PF4J 插件化架构）：
+ * 1. 继承 ExtensionPoint，作为 PF4J 扩展点接口
+ * 2. 完全隔离SSH库依赖，不暴露具体的SSH客户端类型
+ * 3. 基于Apache SSHJ + Commons Pool2实现高性能连接池
+ * 4. 提供简洁的命令执行接口，自动管理连接生命周期
+ * 5. 支持连接池监控和管理
  * 
  * @author DataSophon Team
  */
-public interface SshConnectionService {
+public interface SshConnectionService extends ExtensionPoint {
     
     /**
      * 执行SSH命令

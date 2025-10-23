@@ -84,9 +84,18 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     private  ClusterInfoService clusterInfoService;
     @Autowired
     private  ClusterHostService hostService;
-    // SSH连接服务
-    private final SshConnectionService sshService = 
-            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+    // SSH连接服务（延迟初始化，避免Spring上下文未初始化问题）
+    private SshConnectionService sshService;
+    
+    /**
+     * 获取SSH连接服务（延迟加载）
+     */
+    private SshConnectionService getSshService() {
+        if (sshService == null) {
+            sshService = SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+        }
+        return sshService;
+    }
     @Autowired
     private  InstallStepConverter installStepConverter;
 
@@ -330,7 +339,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 String command = "service datasophon-worker " + commandType;
                 
                 HostCheckContext context = buildHostCheckContext(hostInfo);
-                CommandResult cmdResult = sshService.executeCommand(context, command);
+                CommandResult cmdResult = getSshService().executeCommand(context, command);
                 String commandResult = cmdResult.isSuccess() ? cmdResult.output() : "";
                 result.put("success", true);
                 result.put("output", commandResult);
@@ -426,7 +435,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                 
                 // 4. 使用SSH插件适配器执行命令并返回日志内容
                 HostCheckContext context = buildHostCheckContext(hostInfo);
-                CommandResult result = sshService.executeCommand(context, command);
+                CommandResult result = getSshService().executeCommand(context, command);
                 String logContent = result.isSuccess() ? result.output() : "";
                 
                 log.debug("【安装服务】获取主机工作日志成功: {} -> {} 字符", hostInfo.getIp(),

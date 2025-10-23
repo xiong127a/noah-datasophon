@@ -52,9 +52,18 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
     @Autowired
     private ClusterHostService clusterHostService;
     
-    // SSH连接服务
-    private final SshConnectionService sshService = 
-            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+    // SSH连接服务（延迟初始化，避免Spring上下文未初始化问题）
+    private SshConnectionService sshService;
+    
+    /**
+     * 获取SSH连接服务（延迟加载）
+     */
+    private SshConnectionService getSshService() {
+        if (sshService == null) {
+            sshService = SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+        }
+        return sshService;
+    }
 
     @Override
     public StrategyType getStrategyType() {
@@ -676,14 +685,14 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             
             // 先测试连接
             HostCheckContext context = buildHostCheckContext(hostInfo);
-            CommandResult connectionTest = sshService.testConnection(context);
+            CommandResult connectionTest = getSshService().testConnection(context);
             if (!connectionTest.isSuccess()) {
                 log.warn("主机{}SSH连接测试失败: {}", ip, connectionTest.error());
                 return ip; // 连接失败，返回IP
             }
             
             // 获取主机名
-            CommandResult hostnameResult = sshService.executeCommand(context, "hostname");
+            CommandResult hostnameResult = getSshService().executeCommand(context, "hostname");
             String hostname = hostnameResult.isSuccess() ? hostnameResult.output().trim() : "";
             if (!hostname.isEmpty() && !hostname.equals("localhost")) {
                 log.debug("成功获取主机{}的主机名: {}", ip, hostname);
@@ -716,7 +725,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             
             // 测试连接
             HostCheckContext context = buildHostCheckContext(hostInfo);
-            CommandResult connectionTest = sshService.testConnection(context);
+            CommandResult connectionTest = getSshService().testConnection(context);
             if (!connectionTest.isSuccess()) {
                 systemInfo.setConnectionStatus("FAILED");
                 systemInfo.setErrorMessage(connectionTest.error());
@@ -748,7 +757,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         try {
             // 主机名
             HostCheckContext context = buildHostCheckContext(hostInfo);
-            CommandResult hostnameResult = sshService.executeCommand(context, "hostname");
+            CommandResult hostnameResult = getSshService().executeCommand(context, "hostname");
             String hostname = hostnameResult.isSuccess() ? hostnameResult.output().trim() : "";
             if (!hostname.isEmpty() && !hostname.equals("localhost")) {
                 systemInfo.setHostname(hostname);
@@ -757,7 +766,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             }
             
             // 系统负载
-            CommandResult loadResult = sshService.executeCommand(context, "cat /proc/loadavg | awk '{print $2}'");
+            CommandResult loadResult = getSshService().executeCommand(context, "cat /proc/loadavg | awk '{print $2}'");
             String loadAvg = loadResult.isSuccess() ? loadResult.output().trim() : "0.0";
             systemInfo.setAverageLoad(loadAvg.isEmpty() ? "0.0" : loadAvg);
             
@@ -775,12 +784,12 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         try {
             // CPU核数
             HostCheckContext context = buildHostCheckContext(hostInfo);
-            CommandResult coreResult = sshService.executeCommand(context, "nproc");
+            CommandResult coreResult = getSshService().executeCommand(context, "nproc");
             String cpuCores = coreResult.isSuccess() ? coreResult.output().trim() : "1";
             systemInfo.setCoreNum(cpuCores.isEmpty() ? 0 : Integer.parseInt(cpuCores));
             
             // 内存总量（KB转换为GB）
-            CommandResult memResult = sshService.executeCommand(context, "grep MemTotal /proc/meminfo | awk '{print $2}'");
+            CommandResult memResult = getSshService().executeCommand(context, "grep MemTotal /proc/meminfo | awk '{print $2}'");
             String memKb = memResult.isSuccess() ? memResult.output().trim() : "";
             if (!memKb.isEmpty()) {
                 int memGb = (int) (Long.parseLong(memKb) / 1024 / 1024);
@@ -788,7 +797,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
             }
             
             // 磁盘总量（获取根分区大小，GB）
-            CommandResult diskResult = sshService.executeCommand(context, "df -BG / | awk 'NR==2 {print $2}' | sed 's/G//'");
+            CommandResult diskResult = getSshService().executeCommand(context, "df -BG / | awk 'NR==2 {print $2}' | sed 's/G//'");
             String diskOutput = diskResult.isSuccess() ? diskResult.output().trim() : "";
             if (!diskOutput.isEmpty()) {
                 systemInfo.setTotalDisk(Integer.parseInt(diskOutput));
@@ -809,7 +818,7 @@ public class PvmHostStrategy extends AbstractHostManagementStrategy {
         try {
             // CPU架构
             HostCheckContext context = buildHostCheckContext(hostInfo);
-            CommandResult archResult = sshService.executeCommand(context, "uname -m");
+            CommandResult archResult = getSshService().executeCommand(context, "uname -m");
             String arch = archResult.isSuccess() ? archResult.output().trim() : "unknown";
             systemInfo.setCpuArchitecture(arch.isEmpty() ? "unknown" : arch);
             

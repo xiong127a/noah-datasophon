@@ -52,6 +52,7 @@ public class SshConnectorPlugin extends SpringPlugin {
         log.info("创建SSH连接器插件Spring上下文");
         AnnotationConfigApplicationContext applicationContext = new AnnotationConfigApplicationContext();
         applicationContext.setClassLoader(getWrapper().getPluginClassLoader());
+        // 扫描插件包
         applicationContext.scan("com.datasophon.plugins.ssh");
         applicationContext.refresh();
         log.info("SSH连接器插件Spring上下文创建完成");
