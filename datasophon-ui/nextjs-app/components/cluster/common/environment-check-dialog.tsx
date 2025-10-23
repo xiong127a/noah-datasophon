@@ -85,22 +85,12 @@ export default function EnvironmentCheckDialog({
   // 所以直接使用传递的hostList，而不是从数据库查询
   // K8s模式：主机数据在Step2已保存到数据库，但传递的hostList也是可用的
   useEffect(() => {
-    console.log('🔍 EnvironmentCheckDialog - open:', open, 'hostList:', hostList)
-    
     if (open && hostList && hostList.length > 0) {
-      console.log('📝 hostList详细内容:', JSON.stringify(hostList, null, 2))
       const hosts = hostList.map((h: any) => ({
         ip: h.ip,
         hostname: h.hostname || h.ip
       }))
       setActualHostList(hosts)
-      console.log('📋 使用Step2传递的主机列表:', hosts.length, '台主机', hosts)
-    } else if (open) {
-      console.warn('⚠️ 未接收到主机列表数据，actualHostList为空', {
-        open,
-        hostList,
-        hostListLength: hostList?.length
-      })
     }
   }, [open, hostList])
 
@@ -434,17 +424,8 @@ export default function EnvironmentCheckDialog({
             </Alert>
           )}
 
-          {/* 未开始检查时显示主机列表（待检查状态） */}
-          {(() => {
-            console.log('🎨 渲染条件检查:', {
-              isChecking,
-              checkStatusLength: checkStatus.length,
-              actualHostListLength: actualHostList.length,
-              shouldRender: !isChecking && checkStatus.length === 0 && actualHostList.length > 0
-            })
-            return null
-          })()}
-          {!isChecking && checkStatus.length === 0 && actualHostList.map((host) => (
+          {/* 当checkStatus为空时显示初始主机列表 */}
+          {checkStatus.length === 0 && actualHostList.length > 0 && actualHostList.map((host) => (
             <Card key={host.ip} className="border-2">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -457,9 +438,9 @@ export default function EnvironmentCheckDialog({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-gray-500">
+                    <Badge variant="outline" className={isChecking ? "text-blue-500" : "text-gray-500"}>
                       <Clock className="h-3 w-3 mr-1" />
-                      待检查
+                      {isChecking ? '检查中...' : '待检查'}
                     </Badge>
                   </div>
                 </div>
