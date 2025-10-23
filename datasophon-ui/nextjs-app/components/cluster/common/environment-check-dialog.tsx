@@ -418,7 +418,31 @@ export default function EnvironmentCheckDialog({
             </Alert>
           )}
 
-          {/* 主机检查列表 */}
+          {/* 未开始检查时显示主机列表（待检查状态） */}
+          {!isChecking && checkStatus.length === 0 && actualHostList.map((host) => (
+            <Card key={host.ip} className="border-2">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div>
+                      <CardTitle className="text-lg">
+                        {host.hostname || host.ip}
+                      </CardTitle>
+                      <p className="text-sm text-gray-500">{host.ip}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-gray-500">
+                      <Clock className="h-3 w-3 mr-1" />
+                      待检查
+                    </Badge>
+                  </div>
+                </div>
+              </CardHeader>
+            </Card>
+          ))}
+
+          {/* 主机检查列表（检查中或已完成） */}
           {checkStatus.map((host) => (
             <Card key={host.hostIp} className="border-2">
               <CardHeader 
