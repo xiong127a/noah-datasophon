@@ -100,18 +100,27 @@ export default function EnvironmentCheckDialog({
   // 启动环境检查
   const handleStartCheck = async () => {
     try {
-      setIsChecking(true)
-      
       // 使用最新获取的主机列表
       const hostsToCheck = actualHostList.length > 0 ? actualHostList : hostList
       
-      // 调用启动检查API
-      await clusterApiV1.environmentCheck.start({
+      if (!hostsToCheck || hostsToCheck.length === 0) {
+        alert('没有可检查的主机')
+        return
+      }
+      
+      // 先调用启动检查API
+      const response = await clusterApiV1.environmentCheck.start({
         hostIps: hostsToCheck.map(h => h.ip),
         connectionParams
       })
       
-      console.log('环境检查已启动，等待SSE推送进度...')
+      if (response.code === 200) {
+        console.log('环境检查已启动，任务ID:', response.data)
+        // 启动成功后，设置检查状态，触发SSE连接
+        setIsChecking(true)
+      } else {
+        throw new Error(response.msg || '启动检查失败')
+      }
     } catch (error: any) {
       console.error('启动环境检查失败:', error)
       alert('启动环境检查失败: ' + (error.message || '未知错误'))
