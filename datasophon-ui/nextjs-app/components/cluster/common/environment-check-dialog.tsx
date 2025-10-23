@@ -76,16 +76,59 @@ export default function EnvironmentCheckDialog({
   const [isChecking, setIsChecking] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [expandedHosts, setExpandedHosts] = useState<Set<string>>(new Set())
+  const [expandedCheckItems, setExpandedCheckItems] = useState<Set<string>>(new Set()) // 格式: "hostIp-checkKey"
   const [eventSource, setEventSource] = useState<EventSource | null>(null)
+  const [actualHostList, setActualHostList] = useState<Array<{ ip: string; hostname?: string }>>([])
+  const [loadingHosts, setLoadingHosts] = useState(false)
+
+  // 获取主机列表
+  const fetchHostList = async () => {
+    if (!cluster?.id) return
+    
+    setLoadingHosts(true)
+    try {
+      const response = await fetch(`/ddh/api/v1/host/list`, {
+        headers: {
+          'X-Cluster-Id': cluster.id.toString()
+        }
+      })
+      
+      if (response.ok) {
+        const result = await response.json()
+        if (result.code === 200 && result.data?.hosts) {
+          const hosts = result.data.hosts.map((h: any) => ({
+            ip: h.ip,
+            hostname: h.hostname || h.ip
+          }))
+          setActualHostList(hosts)
+          console.log('📋 获取到主机列表:', hosts.length, '台')
+        }
+      }
+    } catch (error) {
+      console.error('获取主机列表失败:', error)
+    } finally {
+      setLoadingHosts(false)
+    }
+  }
+
+  // 组件加载时获取主机列表
+  useEffect(() => {
+    if (open) {
+      fetchHostList()
+    }
+  }, [open, cluster?.id])
 
   // 启动环境检查
   const handleStartCheck = async () => {
     try {
       setIsChecking(true)
       
+      // 使用最新获取的主机列表
+      const hostsToCheck = actualHostList.length > 0 ? actualHostList : hostList
+      
       // 调用启动检查API
       await clusterApiV1.environmentCheck.start({
-        hostIps: hostList.map(h => h.ip),
+        hostIps: hostsToCheck.map(h => h.ip),
         connectionParams
       })
       
@@ -148,6 +191,25 @@ export default function EnvironmentCheckDialog({
       }
       return next
     })
+  }
+
+  // 切换检查项展开/收起
+  const toggleCheckItemExpand = (hostIp: string, checkKey: string) => {
+    const key = `${hostIp}-${checkKey}`
+    setExpandedCheckItems(prev => {
+      const next = new Set(prev)
+      if (next.has(key)) {
+        next.delete(key)
+      } else {
+        next.add(key)
+      }
+      return next
+    })
+  }
+
+  // 检查检查项是否展开
+  const isCheckItemExpanded = (hostIp: string, checkKey: string) => {
+    return expandedCheckItems.has(`${hostIp}-${checkKey}`)
   }
 
   // 跳过检查项
@@ -317,10 +379,22 @@ export default function EnvironmentCheckDialog({
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
-                <span>检查进度</span>
+                <div className="flex items-center gap-2">
+                  <span>检查进度</span>
+                  {loadingHosts && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
+                  {actualHostList.length > 0 && (
+                    <Badge variant="outline" className="text-xs">
+                      {actualHostList.length} 台主机
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex gap-2">
                   {!isChecking ? (
-                    <Button onClick={handleStartCheck} size="sm">
+                    <Button 
+                      onClick={handleStartCheck} 
+                      size="sm"
+                      disabled={loadingHosts || actualHostList.length === 0}
+                    >
                       <Play className="h-4 w-4 mr-2" />
                       开始检查
                     </Button>
@@ -351,7 +425,7 @@ export default function EnvironmentCheckDialog({
               <div className="flex gap-4 text-sm">
                 <span className="text-green-600">✓ 成功: {overallProgress.success}</span>
                 <span className="text-red-600">✗ 失败: {overallProgress.failed}</span>
-                <span className="text-gray-500">主机数: {checkStatus.length}</span>
+                <span className="text-gray-500">主机数: {checkStatus.length > 0 ? checkStatus.length : actualHostList.length}</span>
               </div>
             </CardContent>
           </Card>
@@ -411,38 +485,69 @@ export default function EnvironmentCheckDialog({
                   
                   {host.checkItems
                     .sort((a, b) => a.priority - b.priority)
-                    .map((item) => (
-                      <div 
-                        key={item.checkKey}
-                        className={`p-4 rounded-lg border ${
-                          item.status === 'FAILED' ? 'border-red-200 bg-red-50' :
-                          item.status === 'SUCCESS' ? 'border-green-200 bg-green-50' :
-                          item.status === 'RUNNING' ? 'border-blue-200 bg-blue-50' :
-                          'border-gray-200 bg-gray-50'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-3 flex-1">
-                            {getStatusIcon(item.status)}
-                            <div className="flex-1">
-                              <div className="font-medium">{item.displayName}</div>
-                              <div className="text-sm text-gray-600 mt-1">{item.message}</div>
-                              
+                    .map((item) => {
+                      const isExpanded = isCheckItemExpanded(host.hostIp, item.checkKey)
+                      
+                      return (
+                        <div 
+                          key={item.checkKey}
+                          className={`rounded-lg border transition-all ${
+                            item.status === 'FAILED' ? 'border-red-200 bg-red-50' :
+                            item.status === 'SUCCESS' ? 'border-green-200 bg-green-50' :
+                            item.status === 'RUNNING' ? 'border-blue-200 bg-blue-50' :
+                            'border-gray-200 bg-gray-50'
+                          }`}
+                        >
+                          {/* 检查项头部 - 可点击折叠 */}
+                          <div 
+                            className="p-3 cursor-pointer hover:bg-black/5 transition-colors flex items-center justify-between"
+                            onClick={() => toggleCheckItemExpand(host.hostIp, item.checkKey)}
+                          >
+                            <div className="flex items-center gap-3 flex-1">
+                              {getStatusIcon(item.status)}
+                              <div className="flex-1">
+                                <div className="font-medium flex items-center gap-2">
+                                  {item.displayName}
+                                  {item.status === 'FAILED' && (
+                                    <Badge variant="destructive" className="text-xs">失败</Badge>
+                                  )}
+                                  {item.status === 'SKIPPED' && (
+                                    <Badge variant="secondary" className="text-xs">已跳过</Badge>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-600 mt-0.5">{item.message}</div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {isExpanded ? (
+                                <ChevronUp className="h-4 w-4 text-gray-400" />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 text-gray-400" />
+                              )}
+                            </div>
+                          </div>
+                          
+                          {/* 检查项详情 - 展开后显示 */}
+                          {isExpanded && (
+                            <div className="px-3 pb-3 pt-0 space-y-3">
                               {/* 检查详情 */}
                               {item.checkResult && (
-                                <div className="text-xs text-gray-500 mt-2 font-mono">
-                                  {JSON.stringify(item.checkResult, null, 2)}
+                                <div className="bg-white/50 rounded p-2 border">
+                                  <div className="text-xs font-semibold text-gray-700 mb-1">检查详情</div>
+                                  <pre className="text-xs text-gray-600 font-mono overflow-x-auto">
+                                    {JSON.stringify(item.checkResult, null, 2)}
+                                  </pre>
                                 </div>
                               )}
                               
                               {/* 失败时显示修复建议和操作按钮 */}
                               {item.status === 'FAILED' && (
-                                <div className="mt-3 space-y-2">
+                                <div className="space-y-2">
                                   {item.recommendation && (
                                     <Alert className="bg-yellow-50 border-yellow-200">
                                       <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                                      <AlertDescription className="text-yellow-800">
-                                        {item.recommendation}
+                                      <AlertDescription className="text-yellow-800 text-xs">
+                                        💡 修复建议: {item.recommendation}
                                       </AlertDescription>
                                     </Alert>
                                   )}
@@ -452,7 +557,10 @@ export default function EnvironmentCheckDialog({
                                       <Button 
                                         size="sm" 
                                         variant="default"
-                                        onClick={() => handleRepairItem(host.hostIp, item.checkKey)}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleRepairItem(host.hostIp, item.checkKey)
+                                        }}
                                       >
                                         <Wrench className="h-4 w-4 mr-1" />
                                         自动修复
@@ -463,7 +571,10 @@ export default function EnvironmentCheckDialog({
                                       <Button 
                                         size="sm" 
                                         variant="outline"
-                                        onClick={() => handleSkipItem(host.hostIp, item.checkKey)}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          handleSkipItem(host.hostIp, item.checkKey)
+                                        }}
                                       >
                                         <SkipForward className="h-4 w-4 mr-1" />
                                         忽略此项
@@ -473,10 +584,10 @@ export default function EnvironmentCheckDialog({
                                 </div>
                               )}
                             </div>
-                          </div>
+                          )}
                         </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                 </CardContent>
               )}
             </Card>
