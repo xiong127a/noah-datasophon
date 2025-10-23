@@ -87,25 +87,25 @@ export default function EnvironmentCheckDialog({
     
     setLoadingHosts(true)
     try {
-      const response = await fetch(`/ddh/api/v1/host/list`, {
-        headers: {
-          'X-Cluster-Id': cluster.id.toString()
-        }
-      })
+      // 使用已有的API工具函数获取所有主机
+      const response = await clusterApiV1.host.all()
       
-      if (response.ok) {
-        const result = await response.json()
-        if (result.code === 200 && result.data?.hosts) {
-          const hosts = result.data.hosts.map((h: any) => ({
-            ip: h.ip,
-            hostname: h.hostname || h.ip
-          }))
-          setActualHostList(hosts)
-          console.log('📋 获取到主机列表:', hosts.length, '台')
-        }
+      if (response.code === 200 && response.data) {
+        const hosts = (response.data as any[]).map((h: any) => ({
+          ip: h.ip,
+          hostname: h.hostname || h.ip
+        }))
+        setActualHostList(hosts)
+        console.log('📋 获取到主机列表:', hosts.length, '台')
+      } else {
+        console.warn('获取主机列表返回空数据')
+        // 如果获取失败，使用传递过来的hostList作为备用
+        setActualHostList(hostList)
       }
     } catch (error) {
       console.error('获取主机列表失败:', error)
+      // 发生错误时，使用传递过来的hostList作为备用
+      setActualHostList(hostList)
     } finally {
       setLoadingHosts(false)
     }
