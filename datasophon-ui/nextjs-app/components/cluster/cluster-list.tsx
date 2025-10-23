@@ -952,7 +952,7 @@ export default function ClusterListEnhanced() {
           open={environmentCheckDialogOpen}
           onOpenChange={setEnvironmentCheckDialogOpen}
           cluster={setupCluster}
-          hostList={hostValidationData.hosts as any[] || []}
+          hostList={(hostValidationData.validHosts || hostValidationData.step2Data?.hostValidationResults || []) as any[]}
           connectionParams={{
             sshUser: pvmStep1Data.sshUser,
             sshPort: pvmStep1Data.sshPort,
