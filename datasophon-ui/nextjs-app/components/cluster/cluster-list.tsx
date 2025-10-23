@@ -108,6 +108,7 @@ import K8sHostValidationDialog from "./kubernetes/k8s-host-validation-dialog"
 import PvmHostConfigDialog, { PvmStep1Data } from "./pvm/pvm-host-config-dialog"
 import PvmHostValidationDialog from "./pvm/pvm-host-validation-dialog"
 // 通用组件
+import EnvironmentCheckDialog from "./common/environment-check-dialog"
 import AgentDeploymentDialog from "./common/agent-deployment-dialog"
 import ServiceSelectionDialog from "./common/service-selection-dialog"
 import MasterRoleAssignDialog from "./common/master-role-assign-dialog"
@@ -546,6 +547,7 @@ export default function ClusterListEnhanced() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [setupDialogOpen, setSetupDialogOpen] = useState(false);
   const [hostValidationDialogOpen, setHostValidationDialogOpen] = useState(false);
+  const [environmentCheckDialogOpen, setEnvironmentCheckDialogOpen] = useState(false);
   const [agentDeploymentDialogOpen, setAgentDeploymentDialogOpen] = useState(false);
   const [serviceSelectionDialogOpen, setServiceSelectionDialogOpen] = useState(false);
   const [masterRoleAssignDialogOpen, setMasterRoleAssignDialogOpen] = useState(false);
@@ -685,9 +687,16 @@ export default function ClusterListEnhanced() {
     if (setupCluster && ClusterTypeUtil.isKubernetes(setupCluster.depType || '')) {
       setServiceSelectionDialogOpen(true);
     } else {
-      // PVM模式进入Agent分发
-      setAgentDeploymentDialogOpen(true);
+      // PVM模式进入环境检查（Step3）
+      setEnvironmentCheckDialogOpen(true);
     }
+  };
+
+  // 处理环境检查完成
+  const handleEnvironmentCheckComplete = () => {
+    setEnvironmentCheckDialogOpen(false);
+    // 环境检查完成后进入Agent分发
+    setAgentDeploymentDialogOpen(true);
   };
 
   // 处理Agent分发完成
@@ -933,6 +942,26 @@ export default function ClusterListEnhanced() {
           onPrevious={() => {
             setHostValidationDialogOpen(false);
             setSetupDialogOpen(true);
+          }}
+        />
+      )}
+
+      {/* Step3: 环境检查（PVM专用） */}
+      {pvmStep1Data && setupCluster && ClusterTypeUtil.isPvm(setupCluster.depType || '') && hostValidationData && (
+        <EnvironmentCheckDialog
+          open={environmentCheckDialogOpen}
+          onOpenChange={setEnvironmentCheckDialogOpen}
+          cluster={setupCluster}
+          hostList={hostValidationData.hosts as any[] || []}
+          connectionParams={{
+            sshUser: pvmStep1Data.sshUser,
+            sshPort: pvmStep1Data.sshPort,
+            sshPassword: pvmStep1Data.sshPassword
+          }}
+          onNext={handleEnvironmentCheckComplete}
+          onPrevious={() => {
+            setEnvironmentCheckDialogOpen(false);
+            setHostValidationDialogOpen(true);
           }}
         />
       )}

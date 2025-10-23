@@ -180,6 +180,15 @@ export const API_PATHS_V1 = {
   HOST_CLEANUP: `${API_BASE}/host/cleanup`,
   HOST_STRATEGIES: `${API_BASE}/host/strategies`,
   
+  // 环境检查相关 - v1 (Step3)
+  ENVIRONMENT_CHECK_START: `${API_BASE}/environment-check/start`,
+  ENVIRONMENT_CHECK_STATUS: `${API_BASE}/environment-check/status`,
+  ENVIRONMENT_CHECK_SKIP: `${API_BASE}/environment-check/skip`,
+  ENVIRONMENT_CHECK_REPAIR: `${API_BASE}/environment-check/repair`,
+  ENVIRONMENT_CHECK_PAUSE: `${API_BASE}/environment-check/pause`,
+  ENVIRONMENT_CHECK_RESUME: `${API_BASE}/environment-check/resume`,
+  ENVIRONMENT_CHECK_SSE: `${API_BASE}/environment-check-sse/stream`,
+  
   // 服务安装相关 - v1
   GET_SERVICE_CONFIG_OPTION: `${API_BASE}/service/install/getServiceConfigOption`,
   SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`,

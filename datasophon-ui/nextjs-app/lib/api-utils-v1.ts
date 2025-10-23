@@ -308,6 +308,56 @@ export const clusterApiV1 = {
       apiV1.get(API_PATHS_V1.HOST_STRATEGIES, undefined, config),
   },
 
+  // 环境检查相关 API (Step3) - 自动注入集群ID
+  environmentCheck: {
+    /** 启动环境检查 */
+    start: async (request: {
+      hostIps: string[]
+      connectionParams: any
+    }) => {
+      const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_START, request)
+      return response.data
+    },
+    
+    /** 获取检查状态 */
+    getStatus: async () => {
+      const response = await apiV1.get(API_PATHS_V1.ENVIRONMENT_CHECK_STATUS)
+      return response.data
+    },
+    
+    /** 跳过检查项 */
+    skipItem: async (request: {
+      hostIp: string
+      checkItemKey: string
+      reason?: string
+    }) => {
+      const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_SKIP, request)
+      return response.data
+    },
+    
+    /** 修复检查项 */
+    repairItem: async (request: {
+      hostIp: string
+      checkItemKey: string
+      repairParams?: any
+    }) => {
+      const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_REPAIR, request)
+      return response.data
+    },
+    
+    /** 暂停检查 */
+    pause: async () => {
+      const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_PAUSE, {})
+      return response.data
+    },
+    
+    /** 恢复检查 */
+    resume: async () => {
+      const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_RESUME, {})
+      return response.data
+    },
+  },
+
   // 服务角色分配相关 API (Step5)
   serviceRole: {
     /** 获取服务角色列表 - 拦截器自动注入集群ID */

@@ -1,0 +1,171 @@
+package com.datasophon.api.controller.v1;
+
+import com.datasophon.api.annotation.ApiVersion;
+import com.datasophon.api.annotation.ClusterId;
+import com.datasophon.api.dto.Result;
+import com.datasophon.api.service.EnvironmentCheckService;
+import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
+import com.datasophon.common.dto.environment.RepairCheckItemRequest;
+import com.datasophon.common.dto.environment.SkipCheckItemRequest;
+import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
+import com.datasophon.common.vo.environment.RepairResult;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+/**
+ * 环境检查控制器
+ * 提供环境检查的HTTP接口
+ * 
+ * @author 任相鹏
+ * @date 2025-01-23
+ */
+@Slf4j
+@ApiVersion(path = "environment-check")
+@RequiredArgsConstructor
+public class EnvironmentCheckController {
+    
+    private final EnvironmentCheckService environmentCheckService;
+    
+    /**
+     * 启动环境检查
+     */
+    @PostMapping("/start")
+    public Result<String> startCheck(
+            @RequestBody EnvironmentCheckRequest request,
+            @ClusterId Long clusterId) {
+        
+        log.info("启动环境检查: clusterId={}, 主机数量={}", 
+                clusterId, request.getHostIps().size());
+        
+        try {
+            // 设置集群ID
+            request.setClusterId(clusterId);
+            
+            // 参数校验
+            if (request.getHostIps() == null || request.getHostIps().isEmpty()) {
+                return Result.error("主机列表不能为空");
+            }
+            
+            if (request.getConnectionParams() == null) {
+                return Result.error("连接参数不能为空");
+            }
+            
+            // 启动检查
+            var taskId = environmentCheckService.startEnvironmentCheck(request);
+            
+            return new Result<>(200, "环境检查任务已启动，请通过SSE接收实时状态更新", taskId);
+            
+        } catch (Exception e) {
+            log.error("启动环境检查失败: clusterId={}, error={}", 
+                    clusterId, e.getMessage(), e);
+            return Result.error("启动环境检查失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取检查状态
+     */
+    @GetMapping("/status")
+    public Result<List<EnvironmentCheckStatusVO>> getStatus(@ClusterId Long clusterId) {
+        
+        try {
+            var statuses = environmentCheckService.getCheckStatus(clusterId);
+            return Result.success(statuses);
+            
+        } catch (Exception e) {
+            log.error("获取检查状态失败: clusterId={}, error={}", clusterId, e.getMessage(), e);
+            return Result.error("获取检查状态失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 跳过检查项
+     */
+    @PostMapping("/skip")
+    public Result<String> skipItem(
+            @RequestBody SkipCheckItemRequest request,
+            @ClusterId Long clusterId) {
+        
+        log.info("跳过检查项: clusterId={}, hostIp={}, checkItemKey={}", 
+                clusterId, request.getHostIp(), request.getCheckItemKey());
+        
+        try {
+            environmentCheckService.skipCheckItem(
+                    clusterId, 
+                    request.getHostIp(), 
+                    request.getCheckItemKey());
+            
+            return Result.success("检查项已跳过");
+            
+        } catch (Exception e) {
+            log.error("跳过检查项失败: {}", e.getMessage(), e);
+            return Result.error("跳过检查项失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 修复检查项
+     */
+    @PostMapping("/repair")
+    public Result<RepairResult> repairItem(
+            @RequestBody RepairCheckItemRequest request,
+            @ClusterId Long clusterId) {
+        
+        log.info("修复检查项: clusterId={}, hostIp={}, checkItemKey={}", 
+                clusterId, request.getHostIp(), request.getCheckItemKey());
+        
+        try {
+            var result = environmentCheckService.repairCheckItem(
+                    clusterId,
+                    request.getHostIp(),
+                    request.getCheckItemKey(),
+                    request.getRepairParams());
+            
+            return Result.success(result);
+            
+        } catch (Exception e) {
+            log.error("修复检查项失败: {}", e.getMessage(), e);
+            return Result.error("修复检查项失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 暂停检查
+     */
+    @PostMapping("/pause")
+    public Result<String> pauseCheck(@ClusterId Long clusterId) {
+        
+        log.info("暂停环境检查: clusterId={}", clusterId);
+        
+        try {
+            environmentCheckService.pauseCheck(clusterId);
+            return Result.success("检查已暂停");
+            
+        } catch (Exception e) {
+            log.error("暂停检查失败: {}", e.getMessage(), e);
+            return Result.error("暂停检查失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 恢复检查
+     */
+    @PostMapping("/resume")
+    public Result<String> resumeCheck(@ClusterId Long clusterId) {
+        
+        log.info("恢复环境检查: clusterId={}", clusterId);
+        
+        try {
+            environmentCheckService.resumeCheck(clusterId);
+            return Result.success("检查已恢复");
+            
+        } catch (Exception e) {
+            log.error("恢复检查失败: {}", e.getMessage(), e);
+            return Result.error("恢复检查失败: " + e.getMessage());
+        }
+    }
+}
+
