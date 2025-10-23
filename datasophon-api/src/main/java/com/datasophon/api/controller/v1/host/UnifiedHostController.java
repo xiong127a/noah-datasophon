@@ -24,10 +24,11 @@ import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.host.UnifiedHostManagementService;
 
 import com.datasophon.api.service.host.strategy.model.HostDiscoveryResult;
+import com.datasophon.common.dto.FilterOptionsDTO;
+import com.datasophon.common.dto.HostCheckRequest;
 import com.datasophon.common.dto.HostDiscoveryResultDTO;
 import com.datasophon.common.dto.HostInfoDTO;
 import com.datasophon.common.dto.Step1ConfigurationDto;
-import com.datasophon.common.dto.FilterOptionsDTO;
 import com.datasophon.common.enums.ClusterType;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.enums.ClusterState;
@@ -136,6 +137,55 @@ public class UnifiedHostController {
         } catch (Exception e) {
             log.error("保存主机到数据库失败，集群ID: {}", clusterId, e);
             return Result.error("保存主机失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 执行主机检查
+     * Step2点击"开始检查"时调用此接口
+     * 对指定主机列表执行SSH连接测试和系统信息收集
+     * 
+     * @param request 检查请求，包含主机列表和连接参数
+     * @param clusterId 集群ID（通过@ClusterId注解从请求头获取）
+     * @return 检查结果
+     */
+    @PostMapping("perform-check")
+    public Result<Map<String, Object>> performHostCheck(
+            @RequestBody HostCheckRequest request,
+            @ClusterId Long clusterId) {
+        
+        log.info("开始执行主机检查，集群ID: {}", clusterId);
+        
+        try {
+            // 参数验证
+            if (request.getHostnames() == null || request.getHostnames().isEmpty()) {
+                return Result.error("主机列表不能为空");
+            }
+            
+            if (request.getConnectionParams() == null) {
+                return Result.error("连接参数不能为空");
+            }
+            
+            log.info("执行主机检查，主机数量: {}", request.getHostnames().size());
+            
+            // 调用主机管理服务执行检查
+            Map<String, Object> checkResult = hostManagementService.performHostCheck(
+                clusterId, request.getHostnames(), request.getConnectionParams());
+            
+            if (checkResult != null && Boolean.TRUE.equals(checkResult.get("completed"))) {
+                log.info("主机检查完成，集群ID: {}, 成功: {}, 失败: {}", 
+                        clusterId, checkResult.get("successHosts"), checkResult.get("failedHosts"));
+                return Result.success(checkResult);
+            } else {
+                String errorMessage = checkResult != null ? 
+                    (String) checkResult.getOrDefault("message", "主机检查失败") : "主机检查失败";
+                log.error("主机检查失败，集群ID: {}, 错误: {}", clusterId, errorMessage);
+                return Result.error(errorMessage);
+            }
+            
+        } catch (Exception e) {
+            log.error("主机检查异常，集群ID: {}", clusterId, e);
+            return Result.error("主机检查失败: " + e.getMessage());
         }
     }
 

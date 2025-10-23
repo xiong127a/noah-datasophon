@@ -74,6 +74,7 @@ public class SshConnectorPlugin extends SpringPlugin {
     /**
      * SSH连接器扩展实现
      */
+    @Slf4j
     @Extension
     public static class SshConnectorExtension implements SshConnector {
         
@@ -90,7 +91,7 @@ public class SshConnectorPlugin extends SpringPlugin {
         @Override
         public CompletableFuture<CheckResult> executeCheck(HostCheckContext context) {
             return CompletableFuture.supplyAsync(() -> {
-                log.info("执行SSH连接检查 for host: {}", context.getHostname() != null ? context.getHostname() : context.getHostIp());
+                log.info("【SSH连接器扩展】执行SSH连接检查 for host: {}", context.getHostname() != null ? context.getHostname() : context.getHostIp());
                 
                 // 这里实现具体的SSH连接检查逻辑
                 CheckResult result = CheckResult.builder()

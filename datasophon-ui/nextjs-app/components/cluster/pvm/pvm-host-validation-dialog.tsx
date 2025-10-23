@@ -201,51 +201,6 @@ export default function PvmHostValidationDialog({
     }
   }, [open])
 
-  // 简化的主机检查方法
-  const checkSingleHost = useCallback(async (host: PvmHost): Promise<PvmHost> => {
-    try {
-      if (!cluster?.id) {
-        throw new Error('集群ID不能为空')
-      }
-      
-      const step1Config = {
-        clusterType: 'PVM',
-        hosts: host.ip,
-        sshUser: step1Data.sshUser,
-        sshPort: step1Data.sshPort,
-        sshPassword: step1Data.sshPassword
-      }
-      
-      const headers = createClusterHeaders(cluster.id.toString())
-      const response = await clusterApi.unifiedHost.discoverFromStep1(step1Config, { headers })
-
-      if (response.data?.success && response.data?.data?.hosts?.length > 0) {
-        const hostData = response.data.data.hosts[0]
-        
-        return {
-          ...host,
-          status: mapHostStatus(hostData.status, hostData.managementStatus),
-          message: getHostMessage(hostData),
-          hostname: hostData.hostname && hostData.hostname !== hostData.ip ? hostData.hostname : undefined,
-          managementStatus: hostData.managementStatus,
-          createTime: hostData.createTime
-        }
-      }
-      
-      return {
-        ...host,
-        status: 'failed',
-        message: '主机检查失败'
-      }
-      
-    } catch {
-      return {
-        ...host,
-        status: 'failed',
-        message: '连接失败，请检查网络连接和SSH配置'
-      }
-    }
-  }, [step1Data, cluster?.id, mapHostStatus, getHostMessage])
 
   // 监听弹窗打开，获取主机列表
   useEffect(() => {
@@ -255,7 +210,7 @@ export default function PvmHostValidationDialog({
     }
   }, [open, step1Data.hosts, hostsLoaded, loadHostList])
 
-  // 批量检查主机
+  // 批量检查主机 - 修复：调用performCheck接口执行SSH检查
   const handleCheckHosts = useCallback(async (hostList?: PvmHost[]) => {
     const currentHosts = hostList || hostsRef.current
     if (currentHosts.length === 0) {
@@ -271,35 +226,69 @@ export default function PvmHostValidationDialog({
     setHosts(checkingHosts)
 
     try {
-      // 并发检查所有主机，但限制并发数
-      const concurrency = 5 // 最多同时检查5台主机
-      const results: PvmHost[] = []
-      
-      for (let i = 0; i < checkingHosts.length; i += concurrency) {
-        const batch = checkingHosts.slice(i, i + concurrency)
-        const batchResults = await Promise.all(
-          batch.map(host => checkSingleHost(host))
-        )
-        results.push(...batchResults)
-        
-        // 更新进度
-        setHosts([...results, ...checkingHosts.slice(results.length).map(h => ({ ...h, status: 'waiting' as const }))])
+      if (!cluster?.id) {
+        throw new Error('集群ID不能为空')
       }
 
-      setHosts(results)
-      setCheckStatus('completed')
-      
-      const successCount = results.filter(h => h.status === 'success').length
-      toast.success(`主机检查完成！成功: ${successCount}/${results.length}`)
+      // ✅ 调用performCheck接口执行SSH检查
+      const headers = createClusterHeaders(cluster.id.toString())
+      const response = await clusterApi.unifiedHost.performCheck({
+        hostnames: currentHosts.map(h => h.ip),  // 传递IP列表
+        connectionParams: {
+          hosts: currentHosts.map(h => h.ip).join(','),  // 用于SSH连接的主机列表
+          sshUser: step1Data.sshUser,
+          sshPort: step1Data.sshPort,
+          sshPassword: step1Data.sshPassword
+        }
+      }, { headers })
+
+      if (response.data?.success && response.data?.data?.hostResults) {
+        // 将后端返回的检查结果映射到前端格式
+        const hostResultsMap = new Map(
+          response.data.data.hostResults.map((result: any) => [result.ip, result])
+        )
+        
+        const updatedHosts: PvmHost[] = currentHosts.map(host => {
+          const result = hostResultsMap.get(host.ip)
+          if (!result) {
+            return { ...host, status: 'failed', message: '未找到检查结果' }
+          }
+          
+          const isSuccess = result.status === 'SUCCESS'
+          return {
+            ...host,
+            status: isSuccess ? 'success' : 'failed',
+            message: isSuccess ? '检查通过' : (result.error || '检查失败'),
+            hostname: result.hostname || host.hostname,
+            coreNum: result.coreNum || 0,
+            totalMem: result.totalMem || 0,
+            totalDisk: result.totalDisk || 0,
+            averageLoad: result.averageLoad || '0.0',
+            cpuArchitecture: result.cpuArchitecture || 'unknown',
+            checkTime: new Date().toISOString(),
+            age: formatTimeDuration(new Date())
+          }
+        })
+
+        setHosts(updatedHosts)
+        setCheckStatus('completed')
+        
+        const successCount = updatedHosts.filter(h => h.status === 'success').length
+        toast.success(`主机检查完成！成功: ${successCount}/${updatedHosts.length}`)
+      } else {
+        setCheckStatus('failed')
+        toast.error('主机检查失败')
+      }
       
     } catch (error) {
       console.error('批量检查主机失败:', error)
       setCheckStatus('failed')
-      toast.error('主机检查失败')
+      const errorMessage = error instanceof Error ? error.message : '未知错误'
+      toast.error(`主机检查失败: ${errorMessage}`)
     } finally {
       setLoading(false)
     }
-  }, [checkSingleHost])
+  }, [cluster?.id, step1Data, formatTimeDuration])
 
   // 处理下一步
   const handleNext = async () => {

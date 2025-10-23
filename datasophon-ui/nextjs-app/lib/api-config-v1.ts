@@ -176,7 +176,7 @@ export const API_PATHS_V1 = {
   HOST_IMPORT: `${API_BASE}/host/import`,
   HOST_REFRESH: `${API_BASE}/host/refresh`,
   HOST_CHECK_CONNECTION: `${API_BASE}/host/check-connection`,
-  HOST_PERFORM_CHECK: `${API_BASE}/host/check`,
+  HOST_PERFORM_CHECK: `${API_BASE}/host/perform-check`,
   HOST_CLEANUP: `${API_BASE}/host/cleanup`,
   HOST_STRATEGIES: `${API_BASE}/host/strategies`,
   
