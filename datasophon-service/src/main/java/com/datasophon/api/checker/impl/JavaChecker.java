@@ -3,10 +3,12 @@ package com.datasophon.api.checker.impl;
 import com.datasophon.api.checker.CheckResult;
 import com.datasophon.api.checker.EnvironmentCheckItem;
 import com.datasophon.api.checker.HostCheckContext;
+import com.datasophon.api.checker.util.CheckLogWriter;
 import com.datasophon.common.vo.environment.RepairResult;
 import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
 import com.datasophon.plugins.api.service.SshConnectionService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -34,6 +36,12 @@ public class JavaChecker implements EnvironmentCheckItem {
     
     @Value("${datasophon.checker.java.check-default-path:true}")
     private boolean checkDefaultPath;
+    
+    @Value("${datasophon.repair-commands.java:}")
+    private String repairCommand;
+    
+    @Autowired
+    private CheckLogWriter checkLogWriter;
     
     private SshConnectionService sshService;
     private static final Pattern VERSION_PATTERN = Pattern.compile("version \"([^\"]+)\"");
@@ -148,24 +156,68 @@ public class JavaChecker implements EnvironmentCheckItem {
     public RepairResult repair(HostCheckContext context, Map<String, Object> params) {
         log.info("开始修复主机 {} 的Java环境", context.getHostIp());
         
+        // 写入修复开始日志
+        checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
+                getCheckKey(), "=== 开始修复Java环境 ===");
+        
         try {
-            // TODO: 实现自动安装JDK的逻辑
-            // 1. 检查是否有JDK安装包
-            // 2. 上传JDK安装包
-            // 3. 解压并配置环境变量
-            // 4. 验证安装结果
+            if (repairCommand == null || repairCommand.trim().isEmpty()) {
+                String msg = "未配置Java修复命令";
+                checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), "错误: " + msg);
+                return RepairResult.builder()
+                        .success(false)
+                        .message(msg)
+                        .build();
+            }
             
-            return RepairResult.builder()
-                    .success(false)
-                    .message("Java环境自动修复功能开发中，请手动安装JDK")
-                    .details(String.format("推荐安装路径: %s, 推荐版本: %s", defaultPath, minVersion))
-                    .build();
+            checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "执行修复脚本:\n" + repairCommand);
+            
+            var pluginContext = toPluginContext(context);
+            var result = getSshService().executeCommand(pluginContext, repairCommand);
+            
+            checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "脚本输出:\n" + result.output());
+            
+            if (result.isSuccess()) {
+                // 验证修复结果
+                var verifyResult = getSshService().executeCommand(pluginContext, "java -version 2>&1");
+                if (verifyResult.isSuccess() && verifyResult.output().contains("version")) {
+                    String successMsg = "Java环境修复成功";
+                    checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
+                            getCheckKey(), "修复结果: 成功");
+                    return RepairResult.builder()
+                            .success(true)
+                            .message(successMsg)
+                            .build();
+                } else {
+                    String failMsg = "修复脚本执行成功，但Java环境验证失败";
+                    checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
+                            getCheckKey(), "修复结果: 失败 - " + failMsg);
+                    return RepairResult.builder()
+                            .success(false)
+                            .message(failMsg)
+                            .build();
+                }
+            } else {
+                String errorMsg = "Java环境修复失败: " + result.error();
+                checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), "修复结果: 失败 - " + errorMsg);
+                return RepairResult.builder()
+                        .success(false)
+                        .message(errorMsg)
+                        .build();
+            }
                     
         } catch (Exception e) {
             log.error("修复Java环境时发生异常: {}", e.getMessage(), e);
+            String errorMsg = "修复失败: " + e.getMessage();
+            checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "修复异常: " + errorMsg);
             return RepairResult.builder()
                     .success(false)
-                    .message("修复失败: " + e.getMessage())
+                    .message(errorMsg)
                     .build();
         }
     }

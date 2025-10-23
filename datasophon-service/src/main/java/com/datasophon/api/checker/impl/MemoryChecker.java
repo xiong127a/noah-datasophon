@@ -3,10 +3,12 @@ package com.datasophon.api.checker.impl;
 import com.datasophon.api.checker.CheckResult;
 import com.datasophon.api.checker.EnvironmentCheckItem;
 import com.datasophon.api.checker.HostCheckContext;
+import com.datasophon.api.checker.util.CheckLogWriter;
 import com.datasophon.common.vo.environment.RepairResult;
 import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
 import com.datasophon.plugins.api.service.SshConnectionService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -33,6 +35,9 @@ public class MemoryChecker implements EnvironmentCheckItem {
     
     @Value("${datasophon.checker.memory.min-swap:4096}")
     private int minSwap; // MB
+    
+    @Autowired
+    private CheckLogWriter checkLogWriter;
     
     private SshConnectionService sshService;
     
@@ -78,22 +83,38 @@ public class MemoryChecker implements EnvironmentCheckItem {
     public CheckResult execute(HostCheckContext context) {
         log.info("开始检查主机 {} 的内存配置", context.getHostIp());
         
+        // 写入检查开始日志
+        checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(), 
+                getCheckKey(), "=== 开始检查内存配置 ===");
+        
         try {
-            // 获取内存信息（以MB为单位）
+            // 获取内存详细信息
             var pluginContext = toPluginContext(context);
-            var result = getSshService().executeCommand(pluginContext, "free -m | grep -E 'Mem|Swap' | awk '{print $2}'");
             
-            if (!result.isSuccess()) {
+            // 获取总内存和已用内存
+            var memCommand = "free -m | grep Mem | awk '{print $2,$3,$4}'";
+            checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "执行命令: " + memCommand);
+            
+            var memResult = getSshService().executeCommand(pluginContext, memCommand);
+            
+            if (!memResult.isSuccess()) {
+                String errorMsg = "无法获取内存信息: " + memResult.error();
+                checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), "错误: " + errorMsg);
                 return CheckResult.failure(
-                        "无法获取内存信息: " + result.error(),
+                        errorMsg,
                         "请检查SSH连接和系统命令是否可用",
                         false,
                         false
                 );
             }
             
-            var lines = result.output().trim().split("\n");
-            if (lines.length < 2) {
+            checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "命令输出: " + memResult.output());
+            
+            var memParts = memResult.output().trim().split("\\s+");
+            if (memParts.length < 3) {
                 return CheckResult.failure(
                         "内存信息格式异常",
                         "请检查系统命令输出格式",
@@ -102,38 +123,32 @@ public class MemoryChecker implements EnvironmentCheckItem {
                 );
             }
             
-            int actualMemory = Integer.parseInt(lines[0].trim());
-            int actualSwap = Integer.parseInt(lines[1].trim());
+            int totalMemoryMB = Integer.parseInt(memParts[0].trim());
+            int usedMemoryMB = Integer.parseInt(memParts[1].trim());
+            int availableMemoryMB = Integer.parseInt(memParts[2].trim());
+            double usagePercent = (double) usedMemoryMB / totalMemoryMB * 100;
             
             var details = new HashMap<String, Object>();
-            details.put("actualMemory", actualMemory);
-            details.put("actualSwap", actualSwap);
-            details.put("requiredMemory", minMemory);
-            details.put("requiredSwap", minSwap);
-            details.put("recommendedMemory", recommendedMemory);
-            
-            var messages = new StringBuilder();
-            boolean passed = true;
+            details.put("totalMemoryMB", totalMemoryMB);
+            details.put("usedMemoryMB", usedMemoryMB);
+            details.put("availableMemoryMB", availableMemoryMB);
+            details.put("requiredMemoryMB", minMemory);
+            details.put("recommendedMemoryMB", recommendedMemory);
+            details.put("usagePercent", Math.round(usagePercent * 10) / 10.0);
             
             // 检查物理内存
-            if (actualMemory < minMemory) {
-                messages.append(String.format("物理内存不足：实际 %d MB，最少需要 %d MB；", 
-                        actualMemory, minMemory));
-                passed = false;
-            }
+            boolean passed = totalMemoryMB >= minMemory;
             
-            // 检查交换区
-            if (actualSwap < minSwap) {
-                messages.append(String.format("交换区不足：实际 %d MB，最少需要 %d MB；", 
-                        actualSwap, minSwap));
-                passed = false;
-            }
-            
+            String resultMsg;
             if (!passed) {
+                resultMsg = String.format("物理内存不足：实际 %d MB，要求至少 %d MB", 
+                        totalMemoryMB, minMemory);
+                checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), "检查结果: 失败 - " + resultMsg);
+                
                 var checkResult = CheckResult.failure(
-                        messages.toString(),
-                        String.format("建议配置至少 %d MB 物理内存和 %d MB 交换区", 
-                                recommendedMemory, minSwap),
+                        resultMsg,
+                        String.format("建议配置至少 %d MB 物理内存", recommendedMemory),
                         true,  // 可以跳过
                         false  // 不能自动修复
                 );
@@ -141,10 +156,12 @@ public class MemoryChecker implements EnvironmentCheckItem {
                 return checkResult;
             }
             
-            var checkResult = CheckResult.success(
-                    String.format("内存检查通过：物理内存 %d MB，交换区 %d MB", 
-                            actualMemory, actualSwap)
-            );
+            resultMsg = String.format("内存检查通过：总内存 %d MB，已使用 %d MB (%.1f%%)", 
+                    totalMemoryMB, usedMemoryMB, usagePercent);
+            checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "检查结果: 成功 - " + resultMsg);
+            
+            var checkResult = CheckResult.success(resultMsg);
             checkResult.setDetails(details);
             return checkResult;
             

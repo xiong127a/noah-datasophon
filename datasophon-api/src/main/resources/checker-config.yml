@@ -275,3 +275,103 @@ datasophon:
         validation-completed: true        # 校验完成通知
         validation-failed: true           # 校验失败通知
         repair-completed: false           # 修复完成通知（可选）
+
+  # 修复命令配置
+  repair-commands:
+    # JDK安装修复（通用脚本，自动检测系统）
+    java: |
+      # 临时路径，后续替换为实际JDK包路径
+      JDK_PACKAGE="/opt/datasophon/packages/jdk1.8.0_333.tar.gz"
+      JDK_INSTALL_DIR="/usr/local"
+      
+      if [ ! -f "$JDK_PACKAGE" ]; then
+        echo "JDK安装包不存在: $JDK_PACKAGE"
+        exit 1
+      fi
+      
+      tar -zxf $JDK_PACKAGE -C $JDK_INSTALL_DIR
+      
+      # 配置环境变量（兼容不同系统）
+      if [ -f /etc/profile ]; then
+        if ! grep -q "JAVA_HOME=/usr/local/jdk1.8.0_333" /etc/profile; then
+          echo 'export JAVA_HOME=/usr/local/jdk1.8.0_333' >> /etc/profile
+          echo 'export PATH=$JAVA_HOME/bin:$PATH' >> /etc/profile
+        fi
+      fi
+      source /etc/profile 2>/dev/null || true
+    
+    # 防火墙禁用（多系统适配）
+    firewall: |
+      # 检测操作系统类型
+      if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        OS_ID=$ID
+      else
+        OS_ID="unknown"
+      fi
+      
+      # CentOS/RHEL/麒麟（基于RHEL）
+      if [[ "$OS_ID" =~ ^(centos|rhel|kylin)$ ]] || command -v firewalld &> /dev/null; then
+        systemctl stop firewalld 2>/dev/null || true
+        systemctl disable firewalld 2>/dev/null || true
+        systemctl stop iptables 2>/dev/null || true
+        systemctl disable iptables 2>/dev/null || true
+      fi
+      
+      # Ubuntu/Debian
+      if [[ "$OS_ID" =~ ^(ubuntu|debian)$ ]] || command -v ufw &> /dev/null; then
+        ufw disable 2>/dev/null || true
+        systemctl stop ufw 2>/dev/null || true
+        systemctl disable ufw 2>/dev/null || true
+      fi
+      
+      # 通用iptables清理
+      iptables -F 2>/dev/null || true
+      iptables -X 2>/dev/null || true
+      iptables -P INPUT ACCEPT 2>/dev/null || true
+      iptables -P FORWARD ACCEPT 2>/dev/null || true
+      iptables -P OUTPUT ACCEPT 2>/dev/null || true
+    
+    # SELinux禁用（CentOS/RHEL/麒麟）
+    selinux: |
+      # 检查SELinux是否存在
+      if command -v getenforce &> /dev/null; then
+        setenforce 0 2>/dev/null || true
+        
+        # 永久禁用
+        if [ -f /etc/selinux/config ]; then
+          sed -i 's/^SELINUX=enforcing/SELINUX=disabled/' /etc/selinux/config
+          sed -i 's/^SELINUX=permissive/SELINUX=disabled/' /etc/selinux/config
+        fi
+      else
+        echo "SELinux not installed, skip"
+      fi
+    
+    # 文件句柄限制修复（通用）
+    file-handle: |
+      # 检查并添加配置（避免重复）
+      if [ -f /etc/security/limits.conf ]; then
+        if ! grep -q "^\* soft nofile 65535" /etc/security/limits.conf; then
+          echo "* soft nofile 65535" >> /etc/security/limits.conf
+        fi
+        if ! grep -q "^\* hard nofile 65535" /etc/security/limits.conf; then
+          echo "* hard nofile 65535" >> /etc/security/limits.conf
+        fi
+      fi
+      
+      # 临时生效
+      ulimit -n 65535 2>/dev/null || true
+
+  # 操作系统支持配置
+  system:
+    # 支持的操作系统列表
+    supported-os:
+      - id: centos
+        versions: [7, 8]
+        family: rhel
+      - id: ubuntu
+        versions: [20.04, 22.04, 24.04]
+        family: debian
+      - id: kylin
+        versions: [v10, v4]
+        family: rhel  # 银河麒麟基于RHEL

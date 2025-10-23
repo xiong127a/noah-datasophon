@@ -2,6 +2,7 @@ package com.datasophon.api.controller.v1;
 
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.annotation.ClusterId;
+import com.datasophon.api.checker.util.CheckLogWriter;
 import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.EnvironmentCheckService;
 import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
@@ -11,9 +12,12 @@ import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
 import com.datasophon.common.vo.environment.RepairResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 环境检查控制器
@@ -27,6 +31,9 @@ import java.util.List;
 public class EnvironmentCheckController {
     
     private final EnvironmentCheckService environmentCheckService;
+    
+    @Autowired
+    private CheckLogWriter checkLogWriter;
     
     // 构造器日志，确认控制器是否被实例化
     public EnvironmentCheckController(EnvironmentCheckService environmentCheckService) {
@@ -175,6 +182,33 @@ public class EnvironmentCheckController {
         } catch (Exception e) {
             log.error("恢复检查失败: {}", e.getMessage(), e);
             return Result.error("恢复检查失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取检查和修复日志
+     */
+    @GetMapping("/logs/{hostIp}/{checkKey}")
+    public Result<Map<String, String>> getLogs(
+            @PathVariable String hostIp,
+            @PathVariable String checkKey,
+            @ClusterId Long clusterId) {
+        
+        log.info("获取日志: clusterId={}, hostIp={}, checkKey={}", clusterId, hostIp, checkKey);
+        
+        try {
+            var checkLog = checkLogWriter.readCheckLog(clusterId, hostIp, checkKey);
+            var repairLog = checkLogWriter.readRepairLog(clusterId, hostIp, checkKey);
+            
+            var logs = new HashMap<String, String>();
+            logs.put("checkLog", checkLog != null ? checkLog : "暂无检查日志");
+            logs.put("repairLog", repairLog != null ? repairLog : "暂无修复日志");
+            
+            return Result.success(logs);
+            
+        } catch (Exception e) {
+            log.error("获取日志失败: {}", e.getMessage(), e);
+            return Result.error("获取日志失败: " + e.getMessage());
         }
     }
 }

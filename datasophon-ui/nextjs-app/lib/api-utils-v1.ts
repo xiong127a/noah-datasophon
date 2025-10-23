@@ -356,6 +356,12 @@ export const clusterApiV1 = {
       const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_RESUME, {})
       return response.data
     },
+    
+    /** 获取检查和修复日志 */
+    getLogs: async (hostIp: string, checkKey: string) => {
+      const response = await apiV1.get(`/api/v1/environment-check/logs/${hostIp}/${checkKey}`)
+      return response.data
+    },
   },
 
   // 服务角色分配相关 API (Step5)
