@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { 
   CheckCircle2, 
   XCircle, 
@@ -23,6 +24,8 @@ import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { API_BASE_URL, API_PATHS_V1 } from '@/lib/api-config-v1'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
+import { CheckItemDetailCard } from './check-item-detail-card'
+import { CheckLogsDialog } from './check-logs-dialog'
 
 interface EnvironmentCheckDialogProps {
   open: boolean
@@ -79,6 +82,8 @@ export default function EnvironmentCheckDialog({
   const [expandedCheckItems, setExpandedCheckItems] = useState<Set<string>>(new Set()) // 格式: "hostIp-checkKey"
   const [eventSource, setEventSource] = useState<EventSource | null>(null)
   const [actualHostList, setActualHostList] = useState<Array<{ ip: string; hostname?: string }>>([])
+  const [logsDialogOpen, setLogsDialogOpen] = useState(false)
+  const [selectedCheckItem, setSelectedCheckItem] = useState<{ hostIp: string; checkKey: string; checkName: string } | null>(null)
 
   // 当对话框打开时，重置所有状态
   useEffect(() => {
@@ -112,6 +117,45 @@ export default function EnvironmentCheckDialog({
       })
     }
   }, [open, hostList])
+
+  // 查看日志
+  const handleViewLogs = (hostIp: string, checkKey: string, checkName: string) => {
+    setSelectedCheckItem({ hostIp, checkKey, checkName })
+    setLogsDialogOpen(true)
+  }
+  
+  // 跳过检查项
+  const handleSkipItem = async (hostIp: string, checkKey: string) => {
+    try {
+      await clusterApiV1.environmentCheck.skipItem({ hostIp, checkItemKey: checkKey })
+      // SSE会自动更新状态
+      alert('检查项已跳过')
+    } catch (error: any) {
+      alert('忽略失败: ' + (error.message || '未知错误'))
+    }
+  }
+  
+  // 修复检查项
+  const handleRepairItem = async (hostIp: string, checkKey: string) => {
+    if (!confirm('确定要修复此检查项吗？')) {
+      return
+    }
+    
+    try {
+      const result = await clusterApiV1.environmentCheck.repairItem({ 
+        hostIp, 
+        checkItemKey: checkKey 
+      })
+      
+      if (result.data && result.data.success) {
+        alert('修复成功，正在重新检查...')
+      } else {
+        alert('修复失败: ' + (result.data?.message || '未知错误'))
+      }
+    } catch (error: any) {
+      alert('修复失败: ' + (error.message || '未知错误'))
+    }
+  }
 
   // 启动环境检查
   const handleStartCheck = async () => {
@@ -350,10 +394,18 @@ export default function EnvironmentCheckDialog({
   const canProceed = () => {
     if (checkStatus.length === 0) return false
     
-    // 所有主机必须是SUCCESS或PARTIAL_SUCCESS状态
-    return checkStatus.every(host => 
-      host.overallStatus === 'SUCCESS' || host.overallStatus === 'PARTIAL_SUCCESS'
-    )
+    // 所有主机的所有检查项都必须是成功或已跳过
+    return checkStatus.every(host => {
+      // 检查所有检查项是否都已解决（成功或跳过）
+      const allItemsResolved = host.checkItems.every(item => 
+        item.status === 'SUCCESS' || item.status === 'SKIPPED'
+      )
+      
+      return allItemsResolved && (
+        host.overallStatus === 'SUCCESS' || 
+        host.overallStatus === 'PARTIAL_SUCCESS'
+      )
+    })
   }
 
   const overallProgress = calculateOverallProgress()
@@ -388,6 +440,7 @@ export default function EnvironmentCheckDialog({
   )
 
   return (
+    <>
     <ClusterWizardLayout
       open={open}
       onClose={() => onOpenChange(false)}
@@ -536,28 +589,24 @@ export default function EnvironmentCheckDialog({
                   {host.checkItems
                     .sort((a, b) => a.priority - b.priority)
                     .map((item) => {
-                      const isExpanded = isCheckItemExpanded(host.hostIp, item.checkKey)
+                      const isSkipped = item.status === 'SKIPPED'
                       
                       return (
-                        <div 
-                          key={item.checkKey}
-                          className={`rounded-lg border transition-all ${
-                            item.status === 'FAILED' ? 'border-red-200 bg-red-50' :
-                            item.status === 'SUCCESS' ? 'border-green-200 bg-green-50' :
-                            item.status === 'RUNNING' ? 'border-blue-200 bg-blue-50' :
-                            'border-gray-200 bg-gray-50'
-                          }`}
-                        >
-                          {/* 检查项头部 - 可点击折叠 */}
-                          <div 
-                            className="p-3 cursor-pointer hover:bg-black/5 transition-colors flex items-center justify-between"
-                            onClick={() => toggleCheckItemExpand(host.hostIp, item.checkKey)}
-                          >
-                            <div className="flex items-center gap-3 flex-1">
-                              {getStatusIcon(item.status)}
-                              <div className="flex-1">
-                                <div className="font-medium flex items-center gap-2">
-                                  {item.displayName}
+                        <Popover key={item.checkKey}>
+                          <PopoverTrigger asChild>
+                            <div 
+                              className={`
+                                p-3 rounded-lg border cursor-pointer hover:shadow-md transition-all
+                                ${isSkipped ? 'opacity-50 bg-gray-100' : ''}
+                                ${item.status === 'FAILED' ? 'border-red-200 bg-red-50' : ''}
+                                ${item.status === 'SUCCESS' ? 'border-green-200 bg-green-50' : ''}
+                                ${item.status === 'RUNNING' ? 'border-blue-200 bg-blue-50' : ''}
+                              `}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  {getStatusIcon(item.status)}
+                                  <span className="font-medium">{item.displayName}</span>
                                   {item.status === 'FAILED' && (
                                     <Badge variant="destructive" className="text-xs">失败</Badge>
                                   )}
@@ -565,77 +614,43 @@ export default function EnvironmentCheckDialog({
                                     <Badge variant="secondary" className="text-xs">已跳过</Badge>
                                   )}
                                 </div>
-                                <div className="text-xs text-gray-600 mt-0.5">{item.message}</div>
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              {isExpanded ? (
-                                <ChevronUp className="h-4 w-4 text-gray-400" />
-                              ) : (
-                                <ChevronDown className="h-4 w-4 text-gray-400" />
-                              )}
-                            </div>
-                          </div>
-                          
-                          {/* 检查项详情 - 展开后显示 */}
-                          {isExpanded && (
-                            <div className="px-3 pb-3 pt-0 space-y-3">
-                              {/* 检查详情 */}
-                              {item.checkResult && (
-                                <div className="bg-white/50 rounded p-2 border">
-                                  <div className="text-xs font-semibold text-gray-700 mb-1">检查详情</div>
-                                  <pre className="text-xs text-gray-600 font-mono overflow-x-auto">
-                                    {JSON.stringify(item.checkResult, null, 2)}
-                                  </pre>
-                                </div>
-                              )}
-                              
-                              {/* 失败时显示修复建议和操作按钮 */}
-                              {item.status === 'FAILED' && (
-                                <div className="space-y-2">
-                                  {item.recommendation && (
-                                    <Alert className="bg-yellow-50 border-yellow-200">
-                                      <AlertTriangle className="h-4 w-4 text-yellow-600" />
-                                      <AlertDescription className="text-yellow-800 text-xs">
-                                        💡 修复建议: {item.recommendation}
-                                      </AlertDescription>
-                                    </Alert>
-                                  )}
-                                  
-                                  <div className="flex gap-2">
+                                
+                                {!isSkipped && item.status === 'FAILED' && (
+                                  <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                                     {item.canRepair && (
                                       <Button 
                                         size="sm" 
-                                        variant="default"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleRepairItem(host.hostIp, item.checkKey)
-                                        }}
+                                        onClick={() => handleRepairItem(host.hostIp, item.checkKey)}
                                       >
                                         <Wrench className="h-4 w-4 mr-1" />
-                                        自动修复
+                                        修复
                                       </Button>
                                     )}
-                                    
                                     {item.canSkip && (
                                       <Button 
                                         size="sm" 
-                                        variant="outline"
-                                        onClick={(e) => {
-                                          e.stopPropagation()
-                                          handleSkipItem(host.hostIp, item.checkKey)
-                                        }}
+                                        variant="outline" 
+                                        onClick={() => handleSkipItem(host.hostIp, item.checkKey)}
                                       >
                                         <SkipForward className="h-4 w-4 mr-1" />
-                                        忽略此项
+                                        忽略
                                       </Button>
                                     )}
                                   </div>
-                                </div>
-                              )}
+                                )}
+                              </div>
                             </div>
-                          )}
-                        </div>
+                          </PopoverTrigger>
+                          
+                          <PopoverContent className="w-96">
+                            <CheckItemDetailCard 
+                              checkKey={item.checkKey}
+                              checkResult={item.checkResult || { message: item.message, details: {} }}
+                              status={item.status}
+                              onViewLogs={() => handleViewLogs(host.hostIp, item.checkKey, item.displayName)}
+                            />
+                          </PopoverContent>
+                        </Popover>
                       )
                     })}
                 </CardContent>
@@ -646,6 +661,18 @@ export default function EnvironmentCheckDialog({
         </div>
       </div>
     </ClusterWizardLayout>
+    
+    {/* 日志查看对话框 */}
+    {selectedCheckItem && (
+      <CheckLogsDialog
+        open={logsDialogOpen}
+        onOpenChange={setLogsDialogOpen}
+        hostIp={selectedCheckItem.hostIp}
+        checkKey={selectedCheckItem.checkKey}
+        checkName={selectedCheckItem.checkName}
+      />
+    )}
+    </>
   )
 }
 
