@@ -79,44 +79,23 @@ export default function EnvironmentCheckDialog({
   const [expandedCheckItems, setExpandedCheckItems] = useState<Set<string>>(new Set()) // 格式: "hostIp-checkKey"
   const [eventSource, setEventSource] = useState<EventSource | null>(null)
   const [actualHostList, setActualHostList] = useState<Array<{ ip: string; hostname?: string }>>([])
-  const [loadingHosts, setLoadingHosts] = useState(false)
 
-  // 获取主机列表
-  const fetchHostList = async () => {
-    if (!cluster?.id) return
-    
-    setLoadingHosts(true)
-    try {
-      // 使用已有的API工具函数获取所有主机
-      const response = await clusterApiV1.host.all()
-      
-      if (response.code === 200 && response.data) {
-        const hosts = (response.data as any[]).map((h: any) => ({
-          ip: h.ip,
-          hostname: h.hostname || h.ip
-        }))
-        setActualHostList(hosts)
-        console.log('📋 获取到主机列表:', hosts.length, '台')
-      } else {
-        console.warn('获取主机列表返回空数据')
-        // 如果获取失败，使用传递过来的hostList作为备用
-        setActualHostList(hostList)
-      }
-    } catch (error) {
-      console.error('获取主机列表失败:', error)
-      // 发生错误时，使用传递过来的hostList作为备用
-      setActualHostList(hostList)
-    } finally {
-      setLoadingHosts(false)
-    }
-  }
-
-  // 组件加载时获取主机列表
+  // 初始化主机列表
+  // PVM模式：主机数据在Step2校验后通过props传递过来，还未保存到数据库
+  // 所以直接使用传递的hostList，而不是从数据库查询
+  // K8s模式：主机数据在Step2已保存到数据库，但传递的hostList也是可用的
   useEffect(() => {
-    if (open) {
-      fetchHostList()
+    if (open && hostList && hostList.length > 0) {
+      const hosts = hostList.map((h: any) => ({
+        ip: h.ip,
+        hostname: h.hostname || h.ip
+      }))
+      setActualHostList(hosts)
+      console.log('📋 使用Step2传递的主机列表:', hosts.length, '台主机')
+    } else if (open) {
+      console.warn('⚠️ 未接收到主机列表数据，actualHostList为空')
     }
-  }, [open, cluster?.id])
+  }, [open, hostList])
 
   // 启动环境检查
   const handleStartCheck = async () => {
