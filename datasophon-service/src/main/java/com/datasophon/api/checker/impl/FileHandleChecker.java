@@ -90,9 +90,11 @@ public class FileHandleChecker implements EnvironmentCheckItem {
             var pluginContext = toPluginContext(context);
             
             // 检查当前用户的文件句柄限制
-            var command = "ulimit -n";
+            // 使用 bash -l 模拟登录环境，确保加载 /etc/security/limits.conf 中的配置
+            // 这对于修复后的验证很重要，因为修改 limits.conf 需要重新登录才能生效
+            var command = "bash -l -c 'ulimit -n'";
             checkLogWriter.logCheckCommand(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), command);
+                    getCheckKey(), "检查文件句柄限制（模拟登录环境）: " + command);
             
             var result = getSshService().executeCommand(pluginContext, command);
             
@@ -180,6 +182,17 @@ public class FileHandleChecker implements EnvironmentCheckItem {
         }
     }
     
+    /**
+     * 修复文件句柄限制
+     * 
+     * 注意：此方法仅执行修复操作（修改 /etc/security/limits.conf），不包含验证逻辑。
+     * 验证由框架在修复成功后自动调用 execute() 方法完成。
+     * execute() 使用 bash -l 模拟登录环境来验证新的限制值。
+     * 
+     * @param context 主机检查上下文
+     * @param params 修复参数（当前未使用）
+     * @return RepairResult 修复结果（仅表示修改配置文件是否成功）
+     */
     @Override
     public RepairResult repair(HostCheckContext context, Map<String, Object> params) {
         log.info("开始修复主机 {} 的文件句柄限制", context.getHostIp());
