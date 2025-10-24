@@ -1,9 +1,14 @@
 package com.datasophon.api.checker.util;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,15 +16,15 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Comparator;
-import java.util.stream.Stream;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
- * 环境检查日志写入工具
- * 负责将检查和修复日志写入本地文件
+ * 环境检查JSON结构化日志写入工具
  * 
  * @author 任相鹏
- * @date 2025-01-23
+ * @date 2025-01-24
  */
 @Slf4j
 @Component
@@ -27,168 +32,243 @@ public class CheckLogWriter {
     
     // 使用相对路径，日志存储在项目运行目录的 logs/environment-check/ 下
     private static final String LOG_BASE_DIR = "logs/environment-check";
-    private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
-    private static final DateTimeFormatter LOG_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    private static final ObjectMapper objectMapper = new ObjectMapper();
     
     /**
-     * 写入检查日志
+     * 日志级别枚举
      */
-    public void writeCheckLog(Long clusterId, String hostIp, String checkKey, String content) {
-        String logPath = getOrCreateLogPath(clusterId, hostIp, checkKey, "check");
-        appendLog(logPath, content);
+    public enum LogLevel {
+        DEBUG,   // 调试信息（灰色）
+        INFO,    // 普通信息（蓝色）
+        SUCCESS, // 成功（绿色）
+        WARNING, // 警告（黄色）
+        ERROR    // 错误（红色）
     }
     
     /**
-     * 写入修复日志
+     * 日志类型枚举
      */
-    public void writeRepairLog(Long clusterId, String hostIp, String checkKey, String content) {
-        String logPath = getOrCreateLogPath(clusterId, hostIp, checkKey, "repair");
-        appendLog(logPath, content);
+    public enum LogType {
+        CHECK,  // 检查日志
+        REPAIR  // 修复日志
     }
     
     /**
-     * 读取检查日志
+     * 日志条目
+     */
+    @Data
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class LogEntry {
+        private String timestamp;
+        private String level;
+        private String type;
+        private String stage;
+        private String message;
+        private Map<String, Object> details;
+    }
+    
+    /**
+     * 核心日志方法
+     */
+    public void log(Long clusterId, String hostIp, String checkKey, LogType type, 
+                   LogLevel level, String stage, String message, Map<String, Object> details) {
+        try {
+            // 构建日志条目
+            LogEntry entry = LogEntry.builder()
+                    .timestamp(LocalDateTime.now().format(TIMESTAMP_FORMATTER))
+                    .level(level.name())
+                    .type(type.name().toLowerCase())
+                    .stage(stage)
+                    .message(message)
+                    .details(details != null ? details : new HashMap<>())
+                    .build();
+            
+            // 转换为JSON字符串
+            String jsonLine = objectMapper.writeValueAsString(entry) + "\n";
+            
+            // 写入文件
+            Path logFile = getLogFilePath(clusterId, hostIp, checkKey, type);
+            Files.write(logFile, jsonLine.getBytes(StandardCharsets.UTF_8), 
+                       StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            
+        } catch (Exception e) {
+            log.error("写入JSON日志失败: clusterId={}, hostIp={}, checkKey={}", 
+                     clusterId, hostIp, checkKey, e);
+        }
+    }
+    
+    // ==================== 检查日志便捷方法 ====================
+    
+    public void logCheckStart(Long clusterId, String hostIp, String checkKey, String message) {
+        log(clusterId, hostIp, checkKey, LogType.CHECK, LogLevel.INFO, "start", message, null);
+    }
+    
+    public void logCheckCommand(Long clusterId, String hostIp, String checkKey, String command) {
+        Map<String, Object> details = new HashMap<>();
+        details.put("command", command);
+        log(clusterId, hostIp, checkKey, LogType.CHECK, LogLevel.DEBUG, "executing", 
+            "执行命令: " + command, details);
+    }
+    
+    public void logCheckOutput(Long clusterId, String hostIp, String checkKey, String output) {
+        Map<String, Object> details = new HashMap<>();
+        details.put("output", output);
+        log(clusterId, hostIp, checkKey, LogType.CHECK, LogLevel.DEBUG, "output", 
+            "命令输出", details);
+    }
+    
+    public void logCheckSuccess(Long clusterId, String hostIp, String checkKey, String message, 
+                               Map<String, Object> details) {
+        log(clusterId, hostIp, checkKey, LogType.CHECK, LogLevel.SUCCESS, "result", message, details);
+    }
+    
+    public void logCheckError(Long clusterId, String hostIp, String checkKey, String message, 
+                             Map<String, Object> details) {
+        log(clusterId, hostIp, checkKey, LogType.CHECK, LogLevel.ERROR, "error", message, details);
+    }
+    
+    public void logCheckWarning(Long clusterId, String hostIp, String checkKey, String message, 
+                               Map<String, Object> details) {
+        log(clusterId, hostIp, checkKey, LogType.CHECK, LogLevel.WARNING, "result", message, details);
+    }
+    
+    public void logCheckInfo(Long clusterId, String hostIp, String checkKey, String message, 
+                            Map<String, Object> details) {
+        log(clusterId, hostIp, checkKey, LogType.CHECK, LogLevel.INFO, "executing", message, details);
+    }
+    
+    // ==================== 修复日志便捷方法 ====================
+    
+    public void logRepairStart(Long clusterId, String hostIp, String checkKey, String message) {
+        log(clusterId, hostIp, checkKey, LogType.REPAIR, LogLevel.INFO, "start", message, null);
+    }
+    
+    public void logRepairCommand(Long clusterId, String hostIp, String checkKey, String command) {
+        Map<String, Object> details = new HashMap<>();
+        details.put("command", command);
+        log(clusterId, hostIp, checkKey, LogType.REPAIR, LogLevel.DEBUG, "executing", 
+            "执行修复脚本", details);
+    }
+    
+    public void logRepairOutput(Long clusterId, String hostIp, String checkKey, String output) {
+        Map<String, Object> details = new HashMap<>();
+        details.put("output", output);
+        log(clusterId, hostIp, checkKey, LogType.REPAIR, LogLevel.DEBUG, "output", 
+            "脚本输出", details);
+    }
+    
+    public void logRepairSuccess(Long clusterId, String hostIp, String checkKey, String message, 
+                                Map<String, Object> details) {
+        log(clusterId, hostIp, checkKey, LogType.REPAIR, LogLevel.SUCCESS, "result", message, details);
+    }
+    
+    public void logRepairError(Long clusterId, String hostIp, String checkKey, String message, 
+                              Map<String, Object> details) {
+        log(clusterId, hostIp, checkKey, LogType.REPAIR, LogLevel.ERROR, "error", message, details);
+    }
+    
+    public void logRepairInfo(Long clusterId, String hostIp, String checkKey, String message, 
+                             Map<String, Object> details) {
+        log(clusterId, hostIp, checkKey, LogType.REPAIR, LogLevel.INFO, "executing", message, details);
+    }
+    
+    // ==================== 读取日志方法 ====================
+    
+    /**
+     * 读取检查日志（返回JSON Lines格式字符串）
      */
     public String readCheckLog(Long clusterId, String hostIp, String checkKey) {
-        return readLatestLog(clusterId, hostIp, checkKey, "check");
+        return readLog(clusterId, hostIp, checkKey, LogType.CHECK);
     }
     
     /**
-     * 读取修复日志
+     * 读取修复日志（返回JSON Lines格式字符串）
      */
     public String readRepairLog(Long clusterId, String hostIp, String checkKey) {
-        return readLatestLog(clusterId, hostIp, checkKey, "repair");
+        return readLog(clusterId, hostIp, checkKey, LogType.REPAIR);
     }
     
-    /**
-     * 获取或创建日志文件路径
-     */
-    private String getOrCreateLogPath(Long clusterId, String hostIp, String checkKey, String type) {
+    private String readLog(Long clusterId, String hostIp, String checkKey, LogType type) {
         try {
-            // 创建目录结构
-            Path dirPath = Paths.get(LOG_BASE_DIR, clusterId.toString(), hostIp);
-            Files.createDirectories(dirPath);
+            Path logFile = getLogFilePath(clusterId, hostIp, checkKey, type);
             
-            // 检查今天是否已有日志文件
-            String today = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-            String filePattern = String.format("%s-%s-%s", checkKey, type, today);
-            
-            try (Stream<Path> files = Files.list(dirPath)) {
-                var existingFile = files
-                        .filter(p -> p.getFileName().toString().startsWith(filePattern))
-                        .findFirst();
-                
-                if (existingFile.isPresent()) {
-                    return existingFile.get().toString();
-                }
-            }
-            
-            // 创建新的日志文件
-            String timestamp = LocalDateTime.now().format(TIMESTAMP_FORMATTER);
-            String fileName = String.format("%s-%s-%s.log", checkKey, type, timestamp);
-            Path logFile = dirPath.resolve(fileName);
-            Files.createFile(logFile);
-            
-            return logFile.toString();
-        } catch (IOException e) {
-            log.error("创建日志文件失败: clusterId={}, hostIp={}, checkKey={}, type={}", 
-                    clusterId, hostIp, checkKey, type, e);
-            return null;
-        }
-    }
-    
-    /**
-     * 追加日志内容
-     */
-    private void appendLog(String logPath, String content) {
-        if (logPath == null) {
-            return;
-        }
-        
-        try {
-            String timestamp = LocalDateTime.now().format(LOG_TIME_FORMATTER);
-            String logEntry = String.format("[%s] %s\n", timestamp, content);
-            
-            Files.writeString(
-                    Paths.get(logPath),
-                    logEntry,
-                    StandardCharsets.UTF_8,
-                    StandardOpenOption.APPEND
-            );
-        } catch (IOException e) {
-            log.error("写入日志失败: logPath={}", logPath, e);
-        }
-    }
-    
-    /**
-     * 读取最新的日志文件
-     */
-    private String readLatestLog(Long clusterId, String hostIp, String checkKey, String type) {
-        try {
-            Path dirPath = Paths.get(LOG_BASE_DIR, clusterId.toString(), hostIp);
-            
-            if (!Files.exists(dirPath)) {
+            if (!Files.exists(logFile)) {
                 return null;
             }
             
-            String filePattern = String.format("%s-%s-", checkKey, type);
+            // 读取所有行并返回为JSON Lines格式
+            return Files.lines(logFile, StandardCharsets.UTF_8)
+                    .collect(Collectors.joining("\n"));
             
-            try (Stream<Path> files = Files.list(dirPath)) {
-                var latestFile = files
-                        .filter(p -> p.getFileName().toString().startsWith(filePattern))
-                        .max(Comparator.comparing(p -> p.getFileName().toString()));
-                
-                if (latestFile.isPresent()) {
-                    return Files.readString(latestFile.get(), StandardCharsets.UTF_8);
-                }
-            }
-            
-            return null;
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("读取日志失败: clusterId={}, hostIp={}, checkKey={}, type={}", 
-                    clusterId, hostIp, checkKey, type, e);
+                     clusterId, hostIp, checkKey, type, e);
             return null;
         }
     }
     
     /**
-     * 清理过期日志（保留7天）
+     * 获取日志文件路径
      */
-    public void cleanupOldLogs() {
+    private Path getLogFilePath(Long clusterId, String hostIp, String checkKey, LogType type) throws IOException {
+        String fileName = String.format("%s.%s.jsonl", checkKey, type.name().toLowerCase());
+        Path dir = Paths.get(LOG_BASE_DIR, String.valueOf(clusterId), hostIp);
+        
+        // 创建目录（如果不存在）
+        if (!Files.exists(dir)) {
+            Files.createDirectories(dir);
+        }
+        
+        Path logFile = dir.resolve(fileName);
+        
+        // 如果是新的检查/修复周期，删除旧日志文件（覆盖策略）
+        // 注意：这里通过检查文件是否存在且stage为start来判断是否是新周期
+        // 实际使用时，每次startCheck应该清理旧日志
+        
+        return logFile;
+    }
+    
+    /**
+     * 清理指定检查项的日志（用于新的检查周期开始时）
+     */
+    public void clearLogs(Long clusterId, String hostIp, String checkKey) {
         try {
-            Path basePath = Paths.get(LOG_BASE_DIR);
+            Path checkLog = getLogFilePath(clusterId, hostIp, checkKey, LogType.CHECK);
+            Path repairLog = getLogFilePath(clusterId, hostIp, checkKey, LogType.REPAIR);
             
-            if (!Files.exists(basePath)) {
-                return;
+            Files.deleteIfExists(checkLog);
+            Files.deleteIfExists(repairLog);
+            
+        } catch (Exception e) {
+            log.error("清理日志失败: clusterId={}, hostIp={}, checkKey={}", 
+                     clusterId, hostIp, checkKey, e);
+        }
+    }
+    
+    /**
+     * 清理主机所有日志
+     */
+    public void clearHostLogs(Long clusterId, String hostIp) {
+        try {
+            Path hostDir = Paths.get(LOG_BASE_DIR, String.valueOf(clusterId), hostIp);
+            
+            if (Files.exists(hostDir)) {
+                Files.walk(hostDir)
+                        .filter(Files::isRegularFile)
+                        .forEach(file -> {
+                            try {
+                                Files.delete(file);
+                            } catch (IOException e) {
+                                log.warn("删除日志文件失败: {}", file, e);
+                            }
+                        });
             }
             
-            LocalDateTime cutoffTime = LocalDateTime.now().minusDays(7);
-            
-            Files.walk(basePath)
-                    .filter(Files::isRegularFile)
-                    .filter(path -> {
-                        try {
-                            var lastModified = Files.getLastModifiedTime(path);
-                            var fileTime = LocalDateTime.ofInstant(
-                                    lastModified.toInstant(),
-                                    java.time.ZoneId.systemDefault()
-                            );
-                            return fileTime.isBefore(cutoffTime);
-                        } catch (IOException e) {
-                            return false;
-                        }
-                    })
-                    .forEach(path -> {
-                        try {
-                            Files.delete(path);
-                            log.info("删除过期日志文件: {}", path);
-                        } catch (IOException e) {
-                            log.error("删除日志文件失败: {}", path, e);
-                        }
-                    });
-        } catch (IOException e) {
-            log.error("清理过期日志失败", e);
+        } catch (Exception e) {
+            log.error("清理主机日志失败: clusterId={}, hostIp={}", clusterId, hostIp, e);
         }
     }
 }
-

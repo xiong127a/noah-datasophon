@@ -3,10 +3,12 @@ package com.datasophon.api.checker.impl;
 import com.datasophon.api.checker.CheckResult;
 import com.datasophon.api.checker.EnvironmentCheckItem;
 import com.datasophon.api.checker.HostCheckContext;
+import com.datasophon.api.checker.util.CheckLogWriter;
 import com.datasophon.common.vo.environment.RepairResult;
 import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
 import com.datasophon.plugins.api.service.SshConnectionService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -31,6 +33,9 @@ public class FirewallChecker implements EnvironmentCheckItem {
     
     @Value("${datasophon.checker.firewall.auto-disable:false}")
     private boolean autoDisable;
+    
+    @Autowired
+    private CheckLogWriter checkLogWriter;
     
     private SshConnectionService sshService;
     
@@ -84,6 +89,13 @@ public class FirewallChecker implements EnvironmentCheckItem {
     public CheckResult execute(HostCheckContext context) {
         log.info("开始检查主机 {} 的防火墙状态", context.getHostIp());
         
+        // 清理旧日志
+        checkLogWriter.clearLogs(context.getClusterId(), context.getHostIp(), getCheckKey());
+        
+        // 记录检查开始
+        checkLogWriter.logCheckStart(context.getClusterId(), context.getHostIp(), 
+                getCheckKey(), "开始检查防火墙状态");
+        
         try {
             var pluginContext = toPluginContext(context);
             var activeFirewalls = new ArrayList<String>();
@@ -91,12 +103,17 @@ public class FirewallChecker implements EnvironmentCheckItem {
             
             // 检查各个防火墙服务
             for (var service : FIREWALL_SERVICES) {
-                var result = getSshService().executeCommand(pluginContext,
-                        String.format("systemctl is-active %s 2>/dev/null || echo 'inactive'", service));
+                var command = String.format("systemctl is-active %s 2>/dev/null || echo 'inactive'", service);
+                checkLogWriter.logCheckCommand(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), command);
+                
+                var result = getSshService().executeCommand(pluginContext, command);
                 
                 if (result.isSuccess()) {
                     var status = result.output().trim();
                     details.put(service, status);
+                    checkLogWriter.logCheckOutput(context.getClusterId(), context.getHostIp(),
+                            getCheckKey(), String.format("%s: %s", service, status));
                     
                     if ("active".equals(status)) {
                         activeFirewalls.add(service);
@@ -106,9 +123,18 @@ public class FirewallChecker implements EnvironmentCheckItem {
             
             details.put("activeFirewalls", activeFirewalls);
             
+            // 记录检查结果详情
+            checkLogWriter.logCheckInfo(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), String.format("防火墙检查完成: 运行中的服务=%s", activeFirewalls), details);
+            
             if (!activeFirewalls.isEmpty()) {
+                String failMsg = String.format("检测到以下防火墙服务正在运行: %s", String.join(", ", activeFirewalls));
+                details.put("recommendation", "大数据集群部署建议关闭防火墙，或者配置相应的端口规则");
+                checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), failMsg, details);
+                
                 var checkResult = CheckResult.failure(
-                        String.format("检测到以下防火墙服务正在运行: %s", String.join(", ", activeFirewalls)),
+                        failMsg,
                         "大数据集群部署建议关闭防火墙，或者配置相应的端口规则",
                         true, // 可以跳过
                         true  // 可以自动修复
@@ -117,12 +143,20 @@ public class FirewallChecker implements EnvironmentCheckItem {
                 return checkResult;
             }
             
-            var checkResult = CheckResult.success("防火墙检查通过：所有防火墙服务已关闭");
+            String successMsg = "防火墙检查通过：所有防火墙服务已关闭";
+            checkLogWriter.logCheckSuccess(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), successMsg, details);
+            
+            var checkResult = CheckResult.success(successMsg);
             checkResult.setDetails(details);
             return checkResult;
             
         } catch (Exception e) {
             log.error("检查防火墙时发生异常: {}", e.getMessage(), e);
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("error", e.getMessage());
+            checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "检查防火墙时发生异常", errorDetails);
             return CheckResult.failure(
                     "检查防火墙时发生异常: " + e.getMessage(),
                     "请检查SSH连接和系统状态",
@@ -136,6 +170,10 @@ public class FirewallChecker implements EnvironmentCheckItem {
     public RepairResult repair(HostCheckContext context, Map<String, Object> params) {
         log.info("开始修复主机 {} 的防火墙配置", context.getHostIp());
         
+        // 记录修复开始
+        checkLogWriter.logRepairStart(context.getClusterId(), context.getHostIp(),
+                getCheckKey(), "开始修复防火墙配置");
+        
         try {
             var pluginContext = toPluginContext(context);
             var disabledServices = new ArrayList<String>();
@@ -144,34 +182,63 @@ public class FirewallChecker implements EnvironmentCheckItem {
             // 禁用各个防火墙服务
             for (var service : FIREWALL_SERVICES) {
                 // 先检查服务是否存在
-                var checkResult = getSshService().executeCommand(pluginContext,
-                        String.format("systemctl list-unit-files | grep -q %s && echo 'exists' || echo 'not-exists'", service));
+                var checkCommand = String.format("systemctl list-unit-files | grep -q %s && echo 'exists' || echo 'not-exists'", service);
+                checkLogWriter.logRepairCommand(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), checkCommand);
+                
+                var checkResult = getSshService().executeCommand(pluginContext, checkCommand);
+                checkLogWriter.logRepairOutput(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), String.format("%s exists check: %s", service, checkResult.output()));
                 
                 if (checkResult.isSuccess() && checkResult.output().trim().equals("exists")) {
                     // 服务存在，尝试停止并禁用
-                    var stopResult = getSshService().executeCommand(pluginContext,
-                            String.format("sudo systemctl stop %s && sudo systemctl disable %s", service, service));
+                    var stopCommand = String.format("sudo systemctl stop %s && sudo systemctl disable %s", service, service);
+                    checkLogWriter.logRepairCommand(context.getClusterId(), context.getHostIp(),
+                            getCheckKey(), stopCommand);
+                    
+                    var stopResult = getSshService().executeCommand(pluginContext, stopCommand);
+                    checkLogWriter.logRepairOutput(context.getClusterId(), context.getHostIp(),
+                            getCheckKey(), String.format("%s disable result: %s", service, stopResult.output()));
                     
                     if (stopResult.isSuccess()) {
                         disabledServices.add(service);
-                        log.info("成功禁用防火墙服务: {}", service);
+                        checkLogWriter.logRepairInfo(context.getClusterId(), context.getHostIp(),
+                                getCheckKey(), String.format("成功禁用防火墙服务: %s", service), null);
                     } else {
                         failedServices.add(service);
-                        log.warn("禁用防火墙服务失败: {}, 错误: {}", service, stopResult.error());
+                        Map<String, Object> errorDetails = new HashMap<>();
+                        errorDetails.put("service", service);
+                        errorDetails.put("error", stopResult.error());
+                        checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
+                                getCheckKey(), String.format("禁用防火墙服务失败: %s", service), errorDetails);
                     }
                 }
             }
             
             if (failedServices.isEmpty()) {
+                String successMsg = String.format("成功禁用防火墙服务: %s", String.join(", ", disabledServices));
+                Map<String, Object> successDetails = new HashMap<>();
+                successDetails.put("disabledServices", disabledServices);
+                successDetails.put("count", disabledServices.size());
+                checkLogWriter.logRepairSuccess(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), successMsg, successDetails);
+                
                 return RepairResult.builder()
                         .success(true)
-                        .message(String.format("成功禁用防火墙服务: %s", String.join(", ", disabledServices)))
+                        .message(successMsg)
                         .details(String.format("已禁用 %d 个防火墙服务", disabledServices.size()))
                         .build();
             } else {
+                String errorMsg = String.format("部分防火墙服务禁用失败: %s", String.join(", ", failedServices));
+                Map<String, Object> errorDetails = new HashMap<>();
+                errorDetails.put("disabledServices", disabledServices);
+                errorDetails.put("failedServices", failedServices);
+                checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), errorMsg, errorDetails);
+                
                 return RepairResult.builder()
                         .success(false)
-                        .message(String.format("部分防火墙服务禁用失败: %s", String.join(", ", failedServices)))
+                        .message(errorMsg)
                         .details(String.format("成功: %s, 失败: %s", 
                                 String.join(", ", disabledServices),
                                 String.join(", ", failedServices)))
@@ -180,6 +247,10 @@ public class FirewallChecker implements EnvironmentCheckItem {
             
         } catch (Exception e) {
             log.error("修复防火墙配置时发生异常: {}", e.getMessage(), e);
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("exception", e.getMessage());
+            checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "修复失败", errorDetails);
             return RepairResult.builder()
                     .success(false)
                     .message("修复失败: " + e.getMessage())

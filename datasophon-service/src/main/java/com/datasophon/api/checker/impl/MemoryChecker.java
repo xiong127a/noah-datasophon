@@ -83,9 +83,12 @@ public class MemoryChecker implements EnvironmentCheckItem {
     public CheckResult execute(HostCheckContext context) {
         log.info("开始检查主机 {} 的内存配置", context.getHostIp());
         
-        // 写入检查开始日志
-        checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(), 
-                getCheckKey(), "=== 开始检查内存配置 ===");
+        // 清理旧日志
+        checkLogWriter.clearLogs(context.getClusterId(), context.getHostIp(), getCheckKey());
+        
+        // 记录检查开始
+        checkLogWriter.logCheckStart(context.getClusterId(), context.getHostIp(), 
+                getCheckKey(), "开始检查内存配置");
         
         try {
             // 获取内存详细信息
@@ -93,15 +96,19 @@ public class MemoryChecker implements EnvironmentCheckItem {
             
             // 获取总内存和已用内存
             var memCommand = "free -m | grep Mem | awk '{print $2,$3,$4}'";
-            checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), "执行命令: " + memCommand);
+            
+            // 记录执行命令
+            checkLogWriter.logCheckCommand(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), memCommand);
             
             var memResult = getSshService().executeCommand(pluginContext, memCommand);
             
             if (!memResult.isSuccess()) {
                 String errorMsg = "无法获取内存信息: " + memResult.error();
-                checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
-                        getCheckKey(), "错误: " + errorMsg);
+                Map<String, Object> errorDetails = new HashMap<>();
+                errorDetails.put("error", memResult.error());
+                checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), errorMsg, errorDetails);
                 return CheckResult.failure(
                         errorMsg,
                         "请检查SSH连接和系统命令是否可用",
@@ -110,11 +117,17 @@ public class MemoryChecker implements EnvironmentCheckItem {
                 );
             }
             
-            checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), "命令输出: " + memResult.output());
+            // 记录命令输出
+            checkLogWriter.logCheckOutput(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), memResult.output());
             
             var memParts = memResult.output().trim().split("\\s+");
             if (memParts.length < 3) {
+                Map<String, Object> errorDetails = new HashMap<>();
+                errorDetails.put("output", memResult.output());
+                errorDetails.put("expectedFormat", "total used available");
+                checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), "内存信息格式异常", errorDetails);
                 return CheckResult.failure(
                         "内存信息格式异常",
                         "请检查系统命令输出格式",
@@ -136,6 +149,11 @@ public class MemoryChecker implements EnvironmentCheckItem {
             details.put("recommendedMemoryMB", recommendedMemory);
             details.put("usagePercent", Math.round(usagePercent * 10) / 10.0);
             
+            // 记录解析结果
+            checkLogWriter.logCheckInfo(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), String.format("内存解析成功: 总内存=%dMB, 已用=%dMB, 可用=%dMB, 使用率=%.1f%%", 
+                            totalMemoryMB, usedMemoryMB, availableMemoryMB, usagePercent), details);
+            
             // 检查物理内存
             boolean passed = totalMemoryMB >= minMemory;
             
@@ -143,8 +161,9 @@ public class MemoryChecker implements EnvironmentCheckItem {
             if (!passed) {
                 resultMsg = String.format("物理内存不足：实际 %d MB，要求至少 %d MB", 
                         totalMemoryMB, minMemory);
-                checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
-                        getCheckKey(), "检查结果: 失败 - " + resultMsg);
+                details.put("recommendation", String.format("建议配置至少 %d MB 物理内存", recommendedMemory));
+                checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), resultMsg, details);
                 
                 var checkResult = CheckResult.failure(
                         resultMsg,
@@ -158,8 +177,8 @@ public class MemoryChecker implements EnvironmentCheckItem {
             
             resultMsg = String.format("内存检查通过：总内存 %d MB，已使用 %d MB (%.1f%%)", 
                     totalMemoryMB, usedMemoryMB, usagePercent);
-            checkLogWriter.writeCheckLog(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), "检查结果: 成功 - " + resultMsg);
+            checkLogWriter.logCheckSuccess(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), resultMsg, details);
             
             var checkResult = CheckResult.success(resultMsg);
             checkResult.setDetails(details);
@@ -167,6 +186,10 @@ public class MemoryChecker implements EnvironmentCheckItem {
             
         } catch (NumberFormatException e) {
             log.error("解析内存信息失败: {}", e.getMessage());
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("error", e.getMessage());
+            checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "解析内存信息失败", errorDetails);
             return CheckResult.failure(
                     "解析内存信息失败",
                     "请检查系统命令输出格式",
@@ -175,6 +198,10 @@ public class MemoryChecker implements EnvironmentCheckItem {
             );
         } catch (Exception e) {
             log.error("检查内存时发生异常: {}", e.getMessage(), e);
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("error", e.getMessage());
+            checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "检查内存时发生异常", errorDetails);
             return CheckResult.failure(
                     "检查内存时发生异常: " + e.getMessage(),
                     "请检查SSH连接和系统状态",

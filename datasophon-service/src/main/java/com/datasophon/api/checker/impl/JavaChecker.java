@@ -88,18 +88,40 @@ public class JavaChecker implements EnvironmentCheckItem {
     public CheckResult execute(HostCheckContext context) {
         log.info("开始检查主机 {} 的JDK环境", context.getHostIp());
         
+        // 清理旧日志
+        checkLogWriter.clearLogs(context.getClusterId(), context.getHostIp(), getCheckKey());
+        
+        // 记录检查开始
+        checkLogWriter.logCheckStart(context.getClusterId(), context.getHostIp(), 
+                getCheckKey(), "开始检查JDK环境");
+        
         try {
             // 检查 java 命令是否可用
             var pluginContext = toPluginContext(context);
-            var result = getSshService().executeCommand(pluginContext, "java -version 2>&1");
+            var command = "java -version 2>&1";
+            
+            // 记录执行命令
+            checkLogWriter.logCheckCommand(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), command);
+            
+            var result = getSshService().executeCommand(pluginContext, command);
+            
+            // 记录命令输出
+            checkLogWriter.logCheckOutput(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), result.output());
             
             var details = new HashMap<String, Object>();
             details.put("requiredVersion", minVersion);
             
             if (!result.isSuccess() || !result.output().contains("version")) {
                 // Java未安装或不可用
+                String errorMsg = "Java环境未配置或不可用";
+                details.put("recommendation", String.format("请安装JDK %s或更高版本，推荐安装路径: %s", minVersion, defaultPath));
+                checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), errorMsg, details);
+                
                 var checkResult = CheckResult.failure(
-                        "Java环境未配置或不可用",
+                        errorMsg,
                         String.format("请安装JDK %s或更高版本，推荐安装路径: %s", minVersion, defaultPath),
                         false, // 不能跳过（Java是必需的）
                         true   // 可以修复（可以自动安装）
@@ -111,8 +133,13 @@ public class JavaChecker implements EnvironmentCheckItem {
             // 解析Java版本
             Matcher matcher = VERSION_PATTERN.matcher(result.output());
             if (!matcher.find()) {
+                String errorMsg = "无法解析Java版本信息";
+                Map<String, Object> errorDetails = new HashMap<>();
+                errorDetails.put("output", result.output());
+                checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), errorMsg, errorDetails);
                 return CheckResult.failure(
-                        "无法解析Java版本信息",
+                        errorMsg,
                         "请检查Java安装是否正确",
                         false,
                         true
@@ -123,10 +150,19 @@ public class JavaChecker implements EnvironmentCheckItem {
             details.put("actualVersion", actualVersion);
             details.put("javaHome", System.getenv("JAVA_HOME"));
             
+            // 记录版本解析成功
+            checkLogWriter.logCheckInfo(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), String.format("解析Java版本成功: %s", actualVersion), details);
+            
             // 检查版本是否满足要求
             if (!isVersionSatisfied(actualVersion, minVersion)) {
+                String failMsg = String.format("Java版本过低：实际 %s，要求 %s 或更高", actualVersion, minVersion);
+                details.put("recommendation", String.format("请升级到JDK %s或更高版本", minVersion));
+                checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), failMsg, details);
+                
                 var checkResult = CheckResult.failure(
-                        String.format("Java版本过低：实际 %s，要求 %s 或更高", actualVersion, minVersion),
+                        failMsg,
                         String.format("请升级到JDK %s或更高版本", minVersion),
                         false,
                         true
@@ -135,14 +171,20 @@ public class JavaChecker implements EnvironmentCheckItem {
                 return checkResult;
             }
             
-            var checkResult = CheckResult.success(
-                    String.format("Java环境检查通过：版本 %s", actualVersion)
-            );
+            String successMsg = String.format("Java环境检查通过：版本 %s", actualVersion);
+            checkLogWriter.logCheckSuccess(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), successMsg, details);
+            
+            var checkResult = CheckResult.success(successMsg);
             checkResult.setDetails(details);
             return checkResult;
             
         } catch (Exception e) {
             log.error("检查Java环境时发生异常: {}", e.getMessage(), e);
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("error", e.getMessage());
+            checkLogWriter.logCheckError(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), "检查Java环境时发生异常", errorDetails);
             return CheckResult.failure(
                     "检查Java环境时发生异常: " + e.getMessage(),
                     "请检查SSH连接和系统状态",
@@ -156,45 +198,64 @@ public class JavaChecker implements EnvironmentCheckItem {
     public RepairResult repair(HostCheckContext context, Map<String, Object> params) {
         log.info("开始修复主机 {} 的Java环境", context.getHostIp());
         
-        // 写入修复开始日志
-        checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
-                getCheckKey(), "=== 开始修复Java环境 ===");
+        // 记录修复开始
+        checkLogWriter.logRepairStart(context.getClusterId(), context.getHostIp(),
+                getCheckKey(), "开始修复Java环境");
         
         try {
             if (repairCommand == null || repairCommand.trim().isEmpty()) {
                 String msg = "未配置Java修复命令";
-                checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
-                        getCheckKey(), "错误: " + msg);
+                Map<String, Object> errorDetails = new HashMap<>();
+                errorDetails.put("configKey", "datasophon.repair-commands.java");
+                checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), msg, errorDetails);
                 return RepairResult.builder()
                         .success(false)
                         .message(msg)
                         .build();
             }
             
-            checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), "执行修复脚本:\n" + repairCommand);
+            // 记录执行修复命令
+            checkLogWriter.logRepairCommand(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), repairCommand);
             
             var pluginContext = toPluginContext(context);
             var result = getSshService().executeCommand(pluginContext, repairCommand);
             
-            checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), "脚本输出:\n" + result.output());
+            // 记录脚本输出
+            checkLogWriter.logRepairOutput(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), result.output());
             
             if (result.isSuccess()) {
                 // 验证修复结果
-                var verifyResult = getSshService().executeCommand(pluginContext, "java -version 2>&1");
+                checkLogWriter.logRepairInfo(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), "验证Java环境安装结果", null);
+                
+                var verifyCommand = "java -version 2>&1";
+                checkLogWriter.logRepairCommand(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), verifyCommand);
+                
+                var verifyResult = getSshService().executeCommand(pluginContext, verifyCommand);
+                checkLogWriter.logRepairOutput(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), verifyResult.output());
+                
                 if (verifyResult.isSuccess() && verifyResult.output().contains("version")) {
                     String successMsg = "Java环境修复成功";
-                    checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
-                            getCheckKey(), "修复结果: 成功");
+                    Map<String, Object> successDetails = new HashMap<>();
+                    successDetails.put("verifyOutput", verifyResult.output());
+                    checkLogWriter.logRepairSuccess(context.getClusterId(), context.getHostIp(),
+                            getCheckKey(), successMsg, successDetails);
                     return RepairResult.builder()
                             .success(true)
                             .message(successMsg)
                             .build();
                 } else {
                     String failMsg = "修复脚本执行成功，但Java环境验证失败";
-                    checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
-                            getCheckKey(), "修复结果: 失败 - " + failMsg);
+                    Map<String, Object> errorDetails = new HashMap<>();
+                    errorDetails.put("verifyOutput", verifyResult.output());
+                    errorDetails.put("verifyError", verifyResult.error());
+                    checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
+                            getCheckKey(), failMsg, errorDetails);
                     return RepairResult.builder()
                             .success(false)
                             .message(failMsg)
@@ -202,8 +263,10 @@ public class JavaChecker implements EnvironmentCheckItem {
                 }
             } else {
                 String errorMsg = "Java环境修复失败: " + result.error();
-                checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
-                        getCheckKey(), "修复结果: 失败 - " + errorMsg);
+                Map<String, Object> errorDetails = new HashMap<>();
+                errorDetails.put("error", result.error());
+                checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
+                        getCheckKey(), errorMsg, errorDetails);
                 return RepairResult.builder()
                         .success(false)
                         .message(errorMsg)
@@ -213,8 +276,10 @@ public class JavaChecker implements EnvironmentCheckItem {
         } catch (Exception e) {
             log.error("修复Java环境时发生异常: {}", e.getMessage(), e);
             String errorMsg = "修复失败: " + e.getMessage();
-            checkLogWriter.writeRepairLog(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), "修复异常: " + errorMsg);
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("exception", e.getMessage());
+            checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
+                    getCheckKey(), errorMsg, errorDetails);
             return RepairResult.builder()
                     .success(false)
                     .message(errorMsg)
