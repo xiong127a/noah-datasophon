@@ -38,10 +38,12 @@ public class CreateSymlinksStep implements RepairStep {
     public void execute(HostCheckContext context, SshConnectionService sshService, CheckLogWriter logWriter) throws Exception {
         var pluginContext = toPluginContext(context);
         
-        // 检测实际的JDK目录名
-        String detectCommand = String.format("ls -dt %s/jdk* 2>/dev/null | head -1", installBasePath);
+        // 检测实际的JDK目录名（排除软链接）
+        String detectCommand = String.format(
+                "find %s -maxdepth 1 -type d -name 'jdk*' ! -name 'jdk' 2>/dev/null | sort -r | head -1", 
+                installBasePath);
         logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java",
-                "检测实际JDK目录: " + detectCommand);
+                "检测实际JDK目录（排除软链接）: " + detectCommand);
         
         var detectResult = sshService.executeCommand(pluginContext, detectCommand);
         logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", detectResult.output());
@@ -51,7 +53,7 @@ public class CreateSymlinksStep implements RepairStep {
         }
         
         String javaHome = detectResult.output().trim();
-        log.info("检测到实际JDK目录: {}", javaHome);
+        log.info("检测到实际JDK目录（非软链接）: {}", javaHome);
         
         // 创建java软链接（尝试sudo，如果失败不阻塞安装）
         String javaCommand = String.format("sudo ln -sf %s/bin/java /usr/bin/java 2>&1", javaHome);
