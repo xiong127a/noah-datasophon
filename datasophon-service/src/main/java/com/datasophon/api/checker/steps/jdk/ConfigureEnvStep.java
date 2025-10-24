@@ -31,42 +31,43 @@ public class ConfigureEnvStep implements RepairStep {
     
     @Override
     public String getStepDescription() {
-        return "将JAVA_HOME等环境变量写入/etc/profile";
+        return "将JAVA_HOME等环境变量写入用户配置文件 ~/.bashrc";
     }
     
     @Override
     public void execute(HostCheckContext context, SshConnectionService sshService, CheckLogWriter logWriter) throws Exception {
         var pluginContext = toPluginContext(context);
         
-        // 检查是否已经配置过JDK环境变量
-        String checkCommand = "grep -q 'JAVA_HOME=" + javaHome + "' /etc/profile && echo 'EXISTS' || echo 'NOT_EXISTS'";
+        // 检查是否已经配置过JDK环境变量（检查 ~/.bashrc）
+        String checkCommand = "grep -q 'JAVA_HOME=" + javaHome + "' ~/.bashrc && echo 'EXISTS' || echo 'NOT_EXISTS'";
         var checkResult = sshService.executeCommand(pluginContext, checkCommand);
         
         if (checkResult.output().contains("EXISTS")) {
-            log.info("JAVA环境变量已存在，跳过配置");
+            log.info("JAVA环境变量已存在于 ~/.bashrc，跳过配置");
             logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java", 
-                    "JAVA环境变量已存在，跳过配置", null);
+                    "JAVA环境变量已存在于 ~/.bashrc，跳过配置", null);
             return;
         }
         
-        // 配置环境变量
+        // 配置环境变量到用户的 ~/.bashrc（不需要root权限）
         StringBuilder envConfig = new StringBuilder();
-        envConfig.append("sudo bash -c 'cat >> /etc/profile << \"EOF\"\n");
+        envConfig.append("cat >> ~/.bashrc << 'EOF'\n");
         envConfig.append("\n# JDK Environment - Added by DataSophon\n");
         envConfig.append("export JAVA_HOME=").append(javaHome).append("\n");
-        envConfig.append("export JRE_HOME=\\${JAVA_HOME}/jre\n");
-        envConfig.append("export CLASSPATH=.:\\${JAVA_HOME}/lib:\\${JRE_HOME}/lib\n");
-        envConfig.append("export PATH=\\${JAVA_HOME}/bin:\\$PATH\n");
-        envConfig.append("EOF'\n");
+        envConfig.append("export JRE_HOME=${JAVA_HOME}/jre\n");
+        envConfig.append("export CLASSPATH=.:${JAVA_HOME}/lib:${JRE_HOME}/lib\n");
+        envConfig.append("export PATH=${JAVA_HOME}/bin:$PATH\n");
+        envConfig.append("EOF\n");
         
         String command = envConfig.toString();
         
         Map<String, Object> commandInfo = new HashMap<>();
         commandInfo.put("javaHome", javaHome);
-        commandInfo.put("configFile", "/etc/profile");
+        commandInfo.put("configFile", "~/.bashrc");
+        commandInfo.put("note", "无需root权限");
         logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", command);
         
-        log.info("开始配置JAVA环境变量: JAVA_HOME={}", javaHome);
+        log.info("开始配置JAVA环境变量到 ~/.bashrc: JAVA_HOME={}", javaHome);
         
         var result = sshService.executeCommand(pluginContext, command);
         logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", result.output());
@@ -75,7 +76,7 @@ public class ConfigureEnvStep implements RepairStep {
             throw new Exception("配置环境变量失败: " + result.error());
         }
         
-        log.info("JAVA环境变量配置成功");
+        log.info("JAVA环境变量配置成功（已写入 ~/.bashrc）");
     }
     
     private com.datasophon.plugins.api.model.HostCheckContext toPluginContext(HostCheckContext context) {

@@ -42,8 +42,8 @@ public class ExtractJdkStep implements RepairStep {
     public void execute(HostCheckContext context, SshConnectionService sshService, CheckLogWriter logWriter) throws Exception {
         var pluginContext = toPluginContext(context);
         
-        // 创建安装目录
-        String mkdirCommand = String.format("sudo mkdir -p %s", installPath);
+        // 创建安装目录（如果用户有权限，不使用sudo）
+        String mkdirCommand = String.format("mkdir -p %s 2>&1 || sudo mkdir -p %s", installPath, installPath);
         logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", mkdirCommand);
         
         var mkdirResult = sshService.executeCommand(pluginContext, mkdirCommand);
@@ -53,14 +53,15 @@ public class ExtractJdkStep implements RepairStep {
             throw new Exception("创建安装目录失败: " + mkdirResult.error());
         }
         
-        // 解压JDK
-        String extractCommand = String.format("cd %s && sudo tar -zxf %s -C %s 2>&1", 
-                tempDir, jdkFileName, installPath);
+        // 解压JDK（先尝试不用sudo，如果失败则使用sudo）
+        String extractCommand = String.format("cd %s && tar -zxf %s -C %s 2>&1 || sudo tar -zxf %s -C %s 2>&1", 
+                tempDir, jdkFileName, installPath, jdkFileName, installPath);
         
         Map<String, Object> commandInfo = new HashMap<>();
         commandInfo.put("command", extractCommand);
         commandInfo.put("sourceFile", tempDir + "/" + jdkFileName);
         commandInfo.put("targetDir", installPath);
+        commandInfo.put("note", "优先使用用户权限，必要时使用sudo");
         logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", extractCommand);
         
         log.info("开始解压JDK: {}/{} -> {}", tempDir, jdkFileName, installPath);

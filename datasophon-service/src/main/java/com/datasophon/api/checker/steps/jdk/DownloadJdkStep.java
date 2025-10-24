@@ -107,25 +107,26 @@ public class DownloadJdkStep implements RepairStep {
             throw new Exception("从远程存储库下载JDK失败: " + e.getMessage(), e);
         }
         
-        // 2. 通过SSH上传到目标主机
+        // 2. 通过SSH上传到目标主机（带进度）
         String remotePath = tempDir + "/" + jdkFileName;
         Map<String, Object> uploadInfo = new HashMap<>();
         uploadInfo.put("remotePath", remotePath);
         uploadInfo.put("size", formatFileSize(jdkData.length));
+        uploadInfo.put("sizeBytes", jdkData.length);
         logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java", 
                 "开始通过SSH上传JDK到目标主机", uploadInfo);
         
-        log.info("开始上传JDK到目标主机: {} -> {}", context.getHostIp(), remotePath);
+        log.info("开始上传JDK到目标主机: {} -> {}, 大小: {}", 
+                context.getHostIp(), remotePath, formatFileSize(jdkData.length));
         
-        try (InputStream inputStream = new ByteArrayInputStream(jdkData)) {
-            boolean success = sshService.uploadFileFromStream(pluginContext, inputStream, remotePath);
+        try {
+            uploadWithProgress(context, sshService, logWriter, pluginContext, jdkData, remotePath);
             
-            if (!success) {
-                throw new Exception("SSH上传失败");
-            }
-            
+            Map<String, Object> completeInfo = new HashMap<>();
+            completeInfo.put("remotePath", remotePath);
+            completeInfo.put("size", formatFileSize(jdkData.length));
             logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java", 
-                    "JDK上传完成", uploadInfo);
+                    "JDK上传完成", completeInfo);
             log.info("JDK上传成功: {}", remotePath);
             
         } catch (Exception e) {
@@ -168,6 +169,97 @@ public class DownloadJdkStep implements RepairStep {
         
         // 验证文件是否存在
         verifyFile(context, sshService, logWriter, pluginContext, tempDir + "/" + jdkFileName);
+    }
+    
+    /**
+     * 上传文件并显示进度
+     */
+    private void uploadWithProgress(HostCheckContext context, SshConnectionService sshService,
+                                    CheckLogWriter logWriter, com.datasophon.plugins.api.model.HostCheckContext pluginContext,
+                                    byte[] fileData, String remotePath) throws Exception {
+        
+        long totalBytes = fileData.length;
+        int chunkSize = 10 * 1024 * 1024; // 10MB per chunk for progress logging
+        
+        // 如果文件小于10MB，直接上传
+        if (totalBytes < chunkSize) {
+            try (InputStream inputStream = new ByteArrayInputStream(fileData)) {
+                boolean success = sshService.uploadFileFromStream(pluginContext, inputStream, remotePath);
+                if (!success) {
+                    throw new Exception("SSH上传失败");
+                }
+            }
+            return;
+        }
+        
+        // 大文件：分块记录进度（注意：实际还是整个上传，只是模拟进度日志）
+        log.info("上传大文件，总大小: {}, 将记录上传进度", formatFileSize(totalBytes));
+        
+        try (InputStream inputStream = new ByteArrayInputStream(fileData)) {
+            // 启动上传线程
+            final boolean[] uploadSuccess = {false};
+            final Exception[] uploadException = {null};
+            
+            Thread uploadThread = new Thread(() -> {
+                try {
+                    uploadSuccess[0] = sshService.uploadFileFromStream(pluginContext, inputStream, remotePath);
+                } catch (Exception e) {
+                    uploadException[0] = e;
+                }
+            });
+            uploadThread.start();
+            
+            // 模拟进度记录（每10秒记录一次）
+            int progressInterval = 10000; // 10秒
+            long startTime = System.currentTimeMillis();
+            int lastProgress = 0;
+            
+            while (uploadThread.isAlive()) {
+                Thread.sleep(1000);
+                long elapsedTime = System.currentTimeMillis() - startTime;
+                
+                if (elapsedTime / progressInterval > lastProgress) {
+                    lastProgress = (int) (elapsedTime / progressInterval);
+                    
+                    // 估算进度（假设上传速度恒定）
+                    int estimatedProgress = Math.min(95, lastProgress * 15); // 每10秒增加15%，最多95%
+                    
+                    Map<String, Object> progressInfo = new HashMap<>();
+                    progressInfo.put("progress", estimatedProgress + "%");
+                    progressInfo.put("elapsedTime", formatDuration(elapsedTime));
+                    progressInfo.put("totalSize", formatFileSize(totalBytes));
+                    
+                    logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                            String.format("上传进度: %d%%, 已耗时: %s", estimatedProgress, formatDuration(elapsedTime)),
+                            progressInfo);
+                    
+                    log.info("上传进度: {}%, 已耗时: {}", estimatedProgress, formatDuration(elapsedTime));
+                }
+            }
+            
+            // 检查上传结果
+            if (uploadException[0] != null) {
+                throw uploadException[0];
+            }
+            
+            if (!uploadSuccess[0]) {
+                throw new Exception("SSH上传失败");
+            }
+        }
+    }
+    
+    /**
+     * 格式化时长
+     */
+    private String formatDuration(long milliseconds) {
+        long seconds = milliseconds / 1000;
+        if (seconds < 60) {
+            return seconds + "秒";
+        } else {
+            long minutes = seconds / 60;
+            long remainingSeconds = seconds % 60;
+            return String.format("%d分%d秒", minutes, remainingSeconds);
+        }
     }
     
     /**

@@ -32,12 +32,12 @@ public class VerifyInstallStep implements RepairStep {
     public void execute(HostCheckContext context, SshConnectionService sshService, CheckLogWriter logWriter) throws Exception {
         var pluginContext = toPluginContext(context);
         
-        // 重新加载环境变量并执行java -version
-        String command = "source /etc/profile && java -version 2>&1";
+        // 重新加载用户环境变量并执行java -version
+        String command = "source ~/.bashrc && java -version 2>&1";
         
         logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", command);
         
-        log.info("验证JDK安装: 执行 java -version");
+        log.info("验证JDK安装: 加载 ~/.bashrc 后执行 java -version");
         
         var result = sshService.executeCommand(pluginContext, command);
         
@@ -55,6 +55,7 @@ public class VerifyInstallStep implements RepairStep {
         
         Map<String, Object> successInfo = new HashMap<>();
         successInfo.put("versionInfo", versionOutput.split("\n")[0]);
+        successInfo.put("configFile", "~/.bashrc");
         logWriter.logRepairSuccess(context.getClusterId(), context.getHostIp(), "java", 
                 "JDK安装验证成功", successInfo);
     }

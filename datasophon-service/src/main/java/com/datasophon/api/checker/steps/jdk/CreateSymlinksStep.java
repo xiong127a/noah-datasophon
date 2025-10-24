@@ -38,38 +38,47 @@ public class CreateSymlinksStep implements RepairStep {
     public void execute(HostCheckContext context, SshConnectionService sshService, CheckLogWriter logWriter) throws Exception {
         var pluginContext = toPluginContext(context);
         
-        // 创建java软链接
+        // 创建java软链接（尝试sudo，如果失败不阻塞安装）
         String javaCommand = String.format("sudo ln -sf %s/bin/java /usr/bin/java 2>&1", javaHome);
         logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", javaCommand);
         
-        log.info("创建java命令软链接: {} -> /usr/bin/java", javaHome + "/bin/java");
+        log.info("尝试创建java命令软链接: {} -> /usr/bin/java", javaHome + "/bin/java");
         
         var javaResult = sshService.executeCommand(pluginContext, javaCommand);
         logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", javaResult.output());
         
         if (!javaResult.isSuccess()) {
-            throw new Exception("创建java软链接失败: " + javaResult.error());
+            log.warn("创建java软链接失败（可能缺少sudo权限），但不影响JDK使用: {}", javaResult.error());
+            Map<String, Object> warnInfo = new HashMap<>();
+            warnInfo.put("warning", "软链接创建失败，JDK已安装但需要通过完整路径或环境变量使用");
+            warnInfo.put("javaPath", javaHome + "/bin/java");
+            logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                    "软链接创建失败（缺少权限），不影响JDK使用", warnInfo);
+        } else {
+            log.info("java软链接创建成功");
         }
         
         // 创建javac软链接
         String javacCommand = String.format("sudo ln -sf %s/bin/javac /usr/bin/javac 2>&1", javaHome);
         logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", javacCommand);
         
-        log.info("创建javac命令软链接: {} -> /usr/bin/javac", javaHome + "/bin/javac");
+        log.info("尝试创建javac命令软链接: {} -> /usr/bin/javac", javaHome + "/bin/javac");
         
         var javacResult = sshService.executeCommand(pluginContext, javacCommand);
         logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", javacResult.output());
         
         if (!javacResult.isSuccess()) {
-            throw new Exception("创建javac软链接失败: " + javacResult.error());
+            log.warn("创建javac软链接失败（可能缺少sudo权限），但不影响JDK使用: {}", javacResult.error());
+        } else {
+            log.info("javac软链接创建成功");
         }
         
-        // 验证软链接
+        // 验证软链接（可选）
         String verifyCommand = "ls -l /usr/bin/java /usr/bin/javac 2>&1";
         var verifyResult = sshService.executeCommand(pluginContext, verifyCommand);
         logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", verifyResult.output());
         
-        log.info("软链接创建成功");
+        log.info("软链接创建步骤完成");
     }
     
     private com.datasophon.plugins.api.model.HostCheckContext toPluginContext(HostCheckContext context) {
