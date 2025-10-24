@@ -74,6 +74,48 @@ public class ExtractJdkStep implements RepairStep {
         }
         
         log.info("JDK解压成功: {}", installPath);
+        
+        // 检测实际解压的目录名（tar包内部目录名可能与文件名不同）
+        // 例如：jdk-8u333-linux-x64.tar.gz 解压后实际目录可能是 jdk1.8.0_333
+        String detectCommand = String.format("ls -dt %s/jdk* 2>/dev/null | head -1", installPath);
+        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", detectCommand);
+        
+        log.info("检测JDK实际解压目录名");
+        var detectResult = sshService.executeCommand(pluginContext, detectCommand);
+        logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", detectResult.output());
+        
+        if (!detectResult.isSuccess() || detectResult.output().trim().isEmpty()) {
+            throw new Exception("无法检测JDK解压目录");
+        }
+        
+        String actualJdkDir = detectResult.output().trim();
+        log.info("检测到JDK实际目录: {}", actualJdkDir);
+        
+        // 创建统一的软链接 /usr/local/jdk -> 实际目录
+        // 这样后续步骤都可以使用 /usr/local/jdk 这个固定路径
+        String symlinkPath = installPath + "/jdk";
+        String symlinkCommand = String.format("ln -sfn %s %s 2>&1 || sudo ln -sfn %s %s 2>&1", 
+                actualJdkDir, symlinkPath, actualJdkDir, symlinkPath);
+        
+        Map<String, Object> symlinkInfo = new HashMap<>();
+        symlinkInfo.put("actualDir", actualJdkDir);
+        symlinkInfo.put("symlinkPath", symlinkPath);
+        symlinkInfo.put("note", "创建统一软链接，便于后续步骤使用");
+        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", symlinkCommand);
+        
+        log.info("创建JDK统一软链接: {} -> {}", symlinkPath, actualJdkDir);
+        var symlinkResult = sshService.executeCommand(pluginContext, symlinkCommand);
+        logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", symlinkResult.output());
+        
+        if (!symlinkResult.isSuccess()) {
+            log.warn("创建软链接失败，但不影响继续: {}", symlinkResult.error());
+        } else {
+            Map<String, Object> successInfo = new HashMap<>();
+            successInfo.put("actualDir", actualJdkDir);
+            successInfo.put("symlinkPath", symlinkPath);
+            logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                    "已创建JDK统一软链接", successInfo);
+        }
     }
     
     private com.datasophon.plugins.api.model.HostCheckContext toPluginContext(HostCheckContext context) {
