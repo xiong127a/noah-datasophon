@@ -612,7 +612,11 @@ export default function EnvironmentCheckDialog({
                           <PopoverContent className="w-96">
                             <CheckItemDetailCard 
                               checkKey={item.checkKey}
-                              checkResult={item.checkResult || { message: item.message, details: {} }}
+                              checkResult={{
+                                message: item.message,
+                                details: item.checkResult || {},
+                                recommendation: item.recommendation
+                              }}
                               status={item.status}
                               onViewLogs={() => handleViewLogs(host.hostIp, item.checkKey, item.displayName)}
                             />
