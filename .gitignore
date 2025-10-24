@@ -58,6 +58,9 @@ node/
 /datasophon-kubernetes/src/main/resources/rebel-remote.xml
 /datasophon-service/src/main/resources/rebel-remote.xml
 /datasophon-ui/src/main/resources/rebel-remote.xml
+/datasophon-ui/node/
+/datasophon-ui/node_modules/
+/datasophon-ui/nextjs-app/node_modules/
 /datasophon-worker/src/main/resources/rebel-remote.xml
 /datasophon-ui/.yarn/
 /kubernetesYaml/
