@@ -53,6 +53,17 @@ public class ExtractJdkStep implements RepairStep {
             throw new Exception("创建安装目录失败: " + mkdirResult.error());
         }
         
+        // 删除旧的软链接（如果存在），避免解压时出现"符号连接的层数过多"错误
+        String symlinkPath = installPath + "/jdk";
+        String removeOldSymlinkCommand = String.format("[ -L %s ] && (rm -f %s 2>&1 || sudo rm -f %s 2>&1) || echo 'No symlink to remove'", 
+                symlinkPath, symlinkPath, symlinkPath);
+        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", 
+                "删除旧软链接（如果存在）: " + removeOldSymlinkCommand);
+        
+        var removeResult = sshService.executeCommand(pluginContext, removeOldSymlinkCommand);
+        logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", removeResult.output());
+        log.info("清理旧软链接: {}", removeResult.output());
+        
         // 解压JDK（先尝试不用sudo，如果失败则使用sudo）
         String extractCommand = String.format("cd %s && tar -zxf %s -C %s 2>&1 || sudo tar -zxf %s -C %s 2>&1", 
                 tempDir, jdkFileName, installPath, jdkFileName, installPath);
@@ -77,34 +88,37 @@ public class ExtractJdkStep implements RepairStep {
         
         // 检测实际解压的目录名（tar包内部目录名可能与文件名不同）
         // 例如：jdk-8u333-linux-x64.tar.gz 解压后实际目录可能是 jdk1.8.0_333
-        String detectCommand = String.format("ls -dt %s/jdk* 2>/dev/null | head -1", installPath);
-        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", detectCommand);
+        // 重要：只查找真实目录，排除软链接（使用 find -type d）
+        String detectCommand = String.format(
+                "find %s -maxdepth 1 -type d -name 'jdk*' ! -name 'jdk' 2>/dev/null | sort -r | head -1", 
+                installPath);
+        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", 
+                "检测实际JDK目录（排除软链接）: " + detectCommand);
         
-        log.info("检测JDK实际解压目录名");
+        log.info("检测JDK实际解压目录名（排除软链接）");
         var detectResult = sshService.executeCommand(pluginContext, detectCommand);
         logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", detectResult.output());
         
         if (!detectResult.isSuccess() || detectResult.output().trim().isEmpty()) {
-            throw new Exception("无法检测JDK解压目录");
+            throw new Exception("无法检测JDK解压目录，请确认JDK已成功解压");
         }
         
         String actualJdkDir = detectResult.output().trim();
         log.info("检测到JDK实际目录: {}", actualJdkDir);
         
         // 创建统一的软链接 /usr/local/jdk -> 实际目录
-        // 这样后续步骤都可以使用 /usr/local/jdk 这个固定路径
-        String symlinkPath = installPath + "/jdk";
-        String symlinkCommand = String.format("ln -sfn %s %s 2>&1 || sudo ln -sfn %s %s 2>&1", 
+        // 注意：此时旧软链接已被删除，可以安全创建新的
+        String newSymlinkCommand = String.format("ln -sfn %s %s 2>&1 || sudo ln -sfn %s %s 2>&1", 
                 actualJdkDir, symlinkPath, actualJdkDir, symlinkPath);
         
         Map<String, Object> symlinkInfo = new HashMap<>();
         symlinkInfo.put("actualDir", actualJdkDir);
         symlinkInfo.put("symlinkPath", symlinkPath);
-        symlinkInfo.put("note", "创建统一软链接，便于后续步骤使用");
-        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", symlinkCommand);
+        symlinkInfo.put("note", "创建新的软链接指向实际目录");
+        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", newSymlinkCommand);
         
         log.info("创建JDK统一软链接: {} -> {}", symlinkPath, actualJdkDir);
-        var symlinkResult = sshService.executeCommand(pluginContext, symlinkCommand);
+        var symlinkResult = sshService.executeCommand(pluginContext, newSymlinkCommand);
         logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", symlinkResult.output());
         
         if (!symlinkResult.isSuccess()) {
