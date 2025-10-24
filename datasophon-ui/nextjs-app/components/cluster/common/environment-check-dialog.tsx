@@ -514,10 +514,10 @@ export default function EnvironmentCheckDialog({
                   <div className="flex items-center gap-4">
                     {getStatusBadge(host.overallStatus)}
                     <div className="text-sm text-gray-600">
-                      检查项: {host.completedItems} / {host.totalItems}
+                      检查项: {host.successItems + host.skippedItems} / {host.totalItems}
                     </div>
                     <Progress 
-                      value={host.totalItems > 0 ? (host.completedItems / host.totalItems) * 100 : 0} 
+                      value={host.totalItems > 0 ? ((host.successItems + host.skippedItems) / host.totalItems) * 100 : 0} 
                       className="w-32"
                     />
                   </div>
