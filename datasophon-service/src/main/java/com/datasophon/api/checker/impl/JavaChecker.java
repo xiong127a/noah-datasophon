@@ -208,6 +208,16 @@ public class JavaChecker implements EnvironmentCheckItem {
         }
     }
     
+    /**
+     * 修复Java环境
+     * 
+     * 注意：此方法仅执行修复操作（下载、解压、配置JDK），不包含验证逻辑。
+     * 验证由框架在修复成功后自动调用 execute() 方法完成，避免重复验证。
+     * 
+     * @param context 主机检查上下文
+     * @param params 修复参数（可选：createSymlinks - 是否创建系统软链接）
+     * @return RepairResult 修复结果（仅表示修复操作是否成功）
+     */
     @Override
     public RepairResult repair(HostCheckContext context, Map<String, Object> params) {
         log.info("开始修复主机 {} 的Java环境", context.getHostIp());
@@ -312,7 +322,8 @@ public class JavaChecker implements EnvironmentCheckItem {
             }
             
             steps.add(new com.datasophon.api.checker.steps.jdk.CleanupTempStep(tempDir));
-            steps.add(new com.datasophon.api.checker.steps.jdk.VerifyInstallStep());
+            // Note: Verification is handled by framework calling execute() after successful repair
+            // No need to add VerifyInstallStep here to avoid duplicate verification
             
             // 使用步骤执行器执行所有步骤
             return repairStepExecutor.executeSteps(steps, context, checkLogWriter, getCheckKey());
