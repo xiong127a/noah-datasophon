@@ -90,7 +90,7 @@ public class EnvironmentLogsSSEController {
             log.info("开始推送历史日志: clusterId={}, hostIp={}, checkKey={}", clusterId, hostIp, checkKey);
             
             // 读取检查日志
-            String checkLog = checkLogWriter.readLogs(clusterId, hostIp, checkKey, CheckLogWriter.LogType.CHECK);
+            String checkLog = checkLogWriter.readCheckLog(clusterId, hostIp, checkKey);
             if (checkLog != null && !checkLog.isEmpty() && !checkLog.equals("[]")) {
                 String[] checkLogLines = checkLog.substring(1, checkLog.length() - 1).split(",(?=\\{)");
                 for (String logLine : checkLogLines) {
@@ -107,7 +107,7 @@ public class EnvironmentLogsSSEController {
             }
             
             // 读取修复日志
-            String repairLog = checkLogWriter.readLogs(clusterId, hostIp, checkKey, CheckLogWriter.LogType.REPAIR);
+            String repairLog = checkLogWriter.readRepairLog(clusterId, hostIp, checkKey);
             if (repairLog != null && !repairLog.isEmpty() && !repairLog.equals("[]")) {
                 String[] repairLogLines = repairLog.substring(1, repairLog.length() - 1).split(",(?=\\{)");
                 for (String logLine : repairLogLines) {
