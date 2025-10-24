@@ -98,11 +98,13 @@ public class SelinuxChecker implements EnvironmentCheckItem {
         try {
             // 检查SELinux状态
             var pluginContext = toPluginContext(context);
-            var command = "getenforce 2>/dev/null || echo 'Disabled'";
+            // 使用 bash -l 模拟登录环境，确保加载最新的配置
+            // 虽然 setenforce 0 立即生效，但使用 bash -l 保持与其他检查器的一致性
+            var command = "bash -l -c 'getenforce 2>/dev/null || echo Disabled'";
             
             // 记录执行命令
             checkLogWriter.logCheckCommand(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), command);
+                    getCheckKey(), "检查SELinux状态（模拟登录环境）: " + command);
             
             var result = getSshService().executeCommand(pluginContext, command);
             
@@ -176,6 +178,17 @@ public class SelinuxChecker implements EnvironmentCheckItem {
         }
     }
     
+    /**
+     * 修复SELinux配置
+     * 
+     * 注意：此方法仅执行修复操作（临时禁用SELinux + 修改配置文件），不包含验证逻辑。
+     * 验证由框架在修复成功后自动调用 execute() 方法完成。
+     * execute() 使用 bash -l 模拟登录环境来验证配置。
+     * 
+     * @param context 主机检查上下文
+     * @param params 修复参数（当前未使用）
+     * @return RepairResult 修复结果（仅表示修复操作是否成功）
+     */
     @Override
     public RepairResult repair(HostCheckContext context, Map<String, Object> params) {
         log.info("开始修复主机 {} 的SELinux配置", context.getHostIp());
