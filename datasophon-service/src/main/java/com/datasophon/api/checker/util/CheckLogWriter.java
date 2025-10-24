@@ -87,16 +87,38 @@ public class CheckLogWriter {
                     .build();
             
             // 转换为JSON字符串
-            String jsonLine = objectMapper.writeValueAsString(entry) + "\n";
+            String jsonLine = objectMapper.writeValueAsString(entry);
             
             // 写入文件
             Path logFile = getLogFilePath(clusterId, hostIp, checkKey, type);
-            Files.write(logFile, jsonLine.getBytes(StandardCharsets.UTF_8), 
+            Files.write(logFile, (jsonLine + "\n").getBytes(StandardCharsets.UTF_8), 
                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+            
+            // 推送到SSE客户端（如果有客户端连接）
+            pushToSSE(clusterId, hostIp, checkKey, jsonLine);
             
         } catch (Exception e) {
             log.error("写入JSON日志失败: clusterId={}, hostIp={}, checkKey={}", 
                      clusterId, hostIp, checkKey, e);
+        }
+    }
+    
+    /**
+     * 推送日志到SSE客户端（检查日志和修复日志都推送）
+     */
+    private void pushToSSE(Long clusterId, String hostIp, String checkKey, String logJson) {
+        try {
+            // 使用反射调用SSE控制器的静态方法（避免循环依赖）
+            Class<?> sseControllerClass = Class.forName(
+                "com.datasophon.api.controller.v1.EnvironmentLogsSSEController"
+            );
+            var pushLogMethod = sseControllerClass.getMethod(
+                "pushLog", Long.class, String.class, String.class, String.class
+            );
+            pushLogMethod.invoke(null, clusterId, hostIp, checkKey, logJson);
+        } catch (Exception e) {
+            // SSE推送失败不影响日志记录
+            log.debug("推送日志到SSE失败（可能客户端未连接）: {}", e.getMessage());
         }
     }
     

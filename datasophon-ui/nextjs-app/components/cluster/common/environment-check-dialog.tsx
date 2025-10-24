@@ -584,6 +584,7 @@ export default function EnvironmentCheckDialog({
       <CheckLogsDialog
         open={logsDialogOpen}
         onOpenChange={setLogsDialogOpen}
+        clusterId={cluster?.id || 0}
         hostIp={selectedCheckItem.hostIp}
         checkKey={selectedCheckItem.checkKey}
         checkName={selectedCheckItem.checkName}

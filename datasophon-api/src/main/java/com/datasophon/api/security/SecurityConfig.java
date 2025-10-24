@@ -137,6 +137,7 @@ public class SecurityConfig {
                         // SSE端点（EventSource无法发送自定义headers，需要放行）
                         .requestMatchers(
                                 "/api/v1/environment-check-sse/**",
+                                "/api/v1/environment-logs-sse/**",
                                 "/api/v1/host-validation/stream/**",
                                 "/api/v1/logs/stream/**")
                         .permitAll()

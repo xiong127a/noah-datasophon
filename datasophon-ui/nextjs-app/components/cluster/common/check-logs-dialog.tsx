@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface CheckLogsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  clusterId: number
   hostIp: string
   checkKey: string
   checkName: string
@@ -29,6 +30,7 @@ interface LogEntry {
 export function CheckLogsDialog({
   open,
   onOpenChange,
+  clusterId,
   hostIp,
   checkKey,
   checkName
@@ -38,6 +40,8 @@ export function CheckLogsDialog({
   const [repairLogs, setRepairLogs] = useState<LogEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [levelFilter, setLevelFilter] = useState<string>('all')
+  const logsEndRef = React.useRef<HTMLDivElement>(null)
+  const eventSourceRef = React.useRef<EventSource | null>(null)
   
   const loadLogs = async () => {
     setLoading(true)
@@ -60,12 +64,66 @@ export function CheckLogsDialog({
     }
   }
   
-  // 加载日志
+  // 加载日志并建立SSE连接
   useEffect(() => {
     if (open) {
+      // 1. 首次加载历史日志
       loadLogs()
+      
+      // 2. 建立SSE连接接收实时日志（检查日志 + 修复日志）
+      const sseUrl = `/ddh/api/v1/environment-logs-sse/stream/${clusterId}/${hostIp}/${checkKey}`
+      console.log('建立日志SSE连接:', sseUrl)
+      
+      const eventSource = new EventSource(sseUrl)
+      eventSourceRef.current = eventSource
+      
+      // 连接建立
+      eventSource.addEventListener('connected', (event) => {
+        console.log('SSE连接已建立:', event.data)
+      })
+      
+      // 接收实时日志（根据type字段分发）
+      eventSource.addEventListener('log', (event) => {
+        try {
+          const logEntry = JSON.parse(event.data) as LogEntry
+          console.log('收到实时日志:', logEntry)
+          
+          // 根据日志类型追加到对应的日志列表
+          if (logEntry.type === 'check') {
+            setCheckLogs(prev => [...prev, logEntry])
+          } else if (logEntry.type === 'repair') {
+            setRepairLogs(prev => [...prev, logEntry])
+          }
+        } catch (e) {
+          console.error('解析SSE日志失败:', e)
+        }
+      })
+      
+      // 修复完成
+      eventSource.addEventListener('complete', (event) => {
+        console.log('修复完成:', event.data)
+        // SSE连接会自动关闭
+      })
+      
+      // 连接错误
+      eventSource.onerror = (error) => {
+        console.error('SSE连接错误:', error)
+        eventSource.close()
+      }
+      
+      // 清理函数
+      return () => {
+        console.log('关闭SSE连接')
+        eventSource.close()
+        eventSourceRef.current = null
+      }
     }
-  }, [open, hostIp, checkKey, loadLogs])
+  }, [open, clusterId, hostIp, checkKey])
+  
+  // 自动滚动到底部
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [checkLogs, repairLogs])
   
   const parseJsonLines = (text: string): LogEntry[] => {
     if (!text || text === '暂无检查日志' || text === '暂无修复日志') {
@@ -232,6 +290,8 @@ export function CheckLogsDialog({
           ) : (
             <div className="w-full max-w-none">
               {filteredLogs.map((log, index) => renderLogEntry(log, index))}
+              {/* 滚动锚点 */}
+              <div ref={logsEndRef} />
             </div>
           )}
         </div>
