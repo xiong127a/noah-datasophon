@@ -18,10 +18,10 @@ import java.util.Map;
 @Slf4j
 public class CreateSymlinksStep implements RepairStep {
     
-    private final String javaHome;
+    private final String installBasePath;
     
-    public CreateSymlinksStep(String javaHome) {
-        this.javaHome = javaHome;
+    public CreateSymlinksStep(String installBasePath) {
+        this.installBasePath = installBasePath;
     }
     
     @Override
@@ -37,6 +37,21 @@ public class CreateSymlinksStep implements RepairStep {
     @Override
     public void execute(HostCheckContext context, SshConnectionService sshService, CheckLogWriter logWriter) throws Exception {
         var pluginContext = toPluginContext(context);
+        
+        // 检测实际的JDK目录名
+        String detectCommand = String.format("ls -dt %s/jdk* 2>/dev/null | head -1", installBasePath);
+        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java",
+                "检测实际JDK目录: " + detectCommand);
+        
+        var detectResult = sshService.executeCommand(pluginContext, detectCommand);
+        logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", detectResult.output());
+        
+        if (!detectResult.isSuccess() || detectResult.output().trim().isEmpty()) {
+            throw new Exception("无法检测JDK目录");
+        }
+        
+        String javaHome = detectResult.output().trim();
+        log.info("检测到实际JDK目录: {}", javaHome);
         
         // 创建java软链接（尝试sudo，如果失败不阻塞安装）
         String javaCommand = String.format("sudo ln -sf %s/bin/java /usr/bin/java 2>&1", javaHome);
