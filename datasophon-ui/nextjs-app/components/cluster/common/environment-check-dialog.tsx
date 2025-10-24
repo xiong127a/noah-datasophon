@@ -218,21 +218,25 @@ export default function EnvironmentCheckDialog({
   // 修复检查项
   const handleRepairItem = async (hostIp: string, checkKey: string) => {
     try {
-      const result = await clusterApiV1.environmentCheck.repairItem({
+      // 1. 立即打开日志对话框，默认显示修复日志标签页
+      setSelectedCheckItem({ hostIp, checkKey })
+      setLogsDialogOpen(true)
+      
+      // 2. 调用修复API（异步执行，不阻塞）
+      clusterApiV1.environmentCheck.repairItem({
         hostIp,
         checkItemKey: checkKey,
         repairParams: {}
+      }).then(result => {
+        console.log('修复结果:', result)
+        // 修复完成后，可以选择刷新日志或显示通知
+      }).catch(error => {
+        console.error('修复检查项失败:', error)
       })
-      console.log('修复结果:', result)
       
-      if (result.success) {
-        alert('修复成功！')
-      } else {
-        alert('修复失败: ' + result.message)
-      }
+      // 注意：这里不使用 alert 弹框，用户可以在日志对话框中查看实时进度
     } catch (error: any) {
-      console.error('修复检查项失败:', error)
-      alert('修复失败: ' + (error.message || '未知错误'))
+      console.error('修复检查项异常:', error)
     }
   }
 
