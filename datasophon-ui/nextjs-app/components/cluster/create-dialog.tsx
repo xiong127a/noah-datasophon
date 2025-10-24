@@ -56,12 +56,15 @@ export default function CreateClusterDialogEnhanced({
     clusterCode: "",
     clusterFrame: "",
     depType: "",
+    repositoryId: "",
   })
 
   const [focusedField, setFocusedField] = useState<string>("")
   const [frameworks, setFrameworks] = useState<Framework[]>([])
+  const [repositories, setRepositories] = useState<any[]>([])
   const [loading, setLoading] = useState(false)
   const [frameworkLoading, setFrameworkLoading] = useState(false)
+  const [repositoryLoading, setRepositoryLoading] = useState(false)
 
   const isEdit = editData !== null
 
@@ -109,10 +112,35 @@ export default function CreateClusterDialogEnhanced({
     }
   }
 
-  // 当对话框打开时，获取框架列表并初始化表单
+  // 获取存储库列表
+  const fetchRepositories = async () => {
+    setRepositoryLoading(true)
+    try {
+      const response = await apiV1.get(API_PATHS_V1.PARCEL_REPOSITORY_LIST)
+      if (response.data && response.data.code === 200) {
+        const repos = response.data.data || []
+        setRepositories(repos)
+        
+        // 自动选择默认存储库
+        const defaultRepo = repos.find((r: any) => r.isDefault === 1)
+        if (defaultRepo && !formData.repositoryId) {
+          setFormData(prev => ({ ...prev, repositoryId: String(defaultRepo.id) }))
+        }
+      } else {
+        console.error('获取存储库列表失败:', response.data?.msg)
+      }
+    } catch (error) {
+      console.error('获取存储库列表失败:', error)
+    } finally {
+      setRepositoryLoading(false)
+    }
+  }
+
+  // 当对话框打开时，获取框架列表、存储库列表并初始化表单
   useEffect(() => {
     if (open) {
       fetchFrameworks()
+      fetchRepositories()
       
       if (editData) {
         // 编辑模式，填充表单数据
@@ -121,21 +149,23 @@ export default function CreateClusterDialogEnhanced({
           clusterCode: editData.clusterCode || "",
           clusterFrame: editData.clusterFrame || "",
           depType: editData.depType || "",
+          repositoryId: "",
         })
       } else {
-        // 新建模式，重置表单
+        // 新建模式，重置表单（repositoryId会在fetchRepositories中自动设置为默认值）
         setFormData({
           clusterName: "",
           clusterCode: "",
           clusterFrame: "",
           depType: "",
+          repositoryId: "",
         })
       }
     }
   }, [open, editData])
 
   const handleCreate = async () => {
-    if (formData.clusterName && formData.clusterCode && formData.clusterFrame && formData.depType) {
+    if (formData.clusterName && formData.clusterCode && formData.clusterFrame && formData.depType && formData.repositoryId) {
       setLoading(true)
       try {
         // 获取当前用户信息（容错多种字段命名）
@@ -178,6 +208,7 @@ export default function CreateClusterDialogEnhanced({
           clusterCode: formData.clusterCode.trim(),
           clusterFrame: formData.clusterFrame,
           depType: formData.depType,
+          repositoryId: Number(formData.repositoryId),
           createBy: username,
         }
 
@@ -219,6 +250,7 @@ export default function CreateClusterDialogEnhanced({
       clusterCode: "",
       clusterFrame: "",
       depType: "",
+      repositoryId: "",
     })
     setFocusedField("")
   }
@@ -231,7 +263,8 @@ export default function CreateClusterDialogEnhanced({
     return formData.clusterName.trim() && 
            formData.clusterCode.trim() && 
            formData.clusterFrame && 
-           formData.depType
+           formData.depType &&
+           formData.repositoryId
   }
 
   return (
@@ -239,28 +272,18 @@ export default function CreateClusterDialogEnhanced({
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-hidden">
         {/* 对话框头部 */}
         <DialogHeader className="relative pb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
-                <Database className="h-5 w-5 text-white" />
-              </div>
-              <div>
-                <DialogTitle className="text-xl font-bold text-slate-800">
-                  {isEdit ? '编辑集群' : '创建新集群'}
-                </DialogTitle>
-                <DialogDescription className="text-slate-600 mt-1">
-                  {isEdit ? '修改集群的基本配置信息' : '配置您的大数据平台集群环境'}
-                </DialogDescription>
-              </div>
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg">
+              <Database className="h-5 w-5 text-white" />
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleCancel}
-              className="h-8 w-8 p-0 rounded-lg hover:bg-slate-100"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            <div>
+              <DialogTitle className="text-xl font-bold text-slate-800">
+                {isEdit ? '编辑集群' : '创建新集群'}
+              </DialogTitle>
+              <DialogDescription className="text-slate-600 mt-1">
+                {isEdit ? '修改集群的基本配置信息' : '配置您的大数据平台集群环境'}
+              </DialogDescription>
+            </div>
           </div>
         </DialogHeader>
 
@@ -416,6 +439,59 @@ export default function CreateClusterDialogEnhanced({
                   </SelectContent>
                 </Select>
                 {formData.clusterFrame && (
+                  <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500 pointer-events-none" />
+                )}
+              </div>
+            </div>
+
+            {/* 存储库选择 */}
+            <div className="space-y-2">
+              <Label className="text-sm font-semibold text-slate-700 flex items-center space-x-2">
+                <span>安装包存储库</span>
+                <div className={`w-2 h-2 rounded-full shadow-lg transition-all duration-300 ${
+                  formData.repositoryId
+                    ? "bg-gradient-to-r from-green-400 to-emerald-400" 
+                    : "bg-gradient-to-r from-red-400 to-pink-400 animate-pulse"
+                }`} />
+              </Label>
+              <div className="relative">
+                <Select
+                  value={formData.repositoryId}
+                  onValueChange={(value) => setFormData({ ...formData, repositoryId: value })}
+                  disabled={repositoryLoading}
+                >
+                  <SelectTrigger className={`rounded-xl h-10 transition-all duration-300 border-2 ${
+                    formData.repositoryId
+                      ? "border-green-300 bg-green-50/30"
+                      : "border-slate-200 bg-white/80 hover:border-blue-300"
+                  }`}>
+                    {repositoryLoading ? (
+                      <div className="flex items-center space-x-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>加载存储库列表...</span>
+                      </div>
+                    ) : (
+                      <SelectValue placeholder="请选择存储库" />
+                    )}
+                  </SelectTrigger>
+                  <SelectContent className="rounded-xl border-0 shadow-2xl bg-white/95 backdrop-blur-xl">
+                    {repositories.map((repo) => (
+                      <SelectItem
+                        key={repo.id}
+                        value={String(repo.id)}
+                        className="rounded-lg m-1 hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center space-x-2">
+                          <span className="font-medium">{repo.repoName}</span>
+                          {repo.isDefault === 1 && (
+                            <Badge className="bg-blue-100 text-blue-700 border-blue-200 text-xs px-1.5 py-0">默认</Badge>
+                          )}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {formData.repositoryId && (
                   <CheckCircle className="absolute right-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-green-500 pointer-events-none" />
                 )}
               </div>
