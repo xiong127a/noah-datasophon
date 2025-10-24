@@ -255,20 +255,21 @@ public class ParcelRepositoryServiceImpl implements ParcelRepositoryService {
     @Override
     public String testConnection(String url) {
         try {
-            // 自动补全 manifest.json
-            String manifestUrl = url;
-            if (!url.endsWith("manifest.json")) {
-                manifestUrl = url.endsWith("/") ? url + "manifest.json" : url + "/manifest.json";
+            log.info("测试存储库连接: {}", url);
+            
+            // 发送HEAD请求测试连接（比GET更轻量）
+            int statusCode = cn.hutool.http.HttpRequest.head(url)
+                    .timeout(5000)
+                    .execute()
+                    .getStatus();
+            
+            if (statusCode == 200) {
+                log.info("存储库连接测试成功: {} (状态码: {})", url, statusCode);
+                return "连接成功";
+            } else {
+                log.warn("存储库连接返回非200状态码: {} (状态码: {})", url, statusCode);
+                return "连接失败: HTTP状态码 " + statusCode;
             }
-
-            log.info("测试存储库连接: {}", manifestUrl);
-            String response = HttpUtil.get(manifestUrl, 5000);
-            
-            // 尝试解析JSON
-            JSON.parseObject(response);
-            
-            log.info("存储库连接测试成功: {}", manifestUrl);
-            return "连接成功";
         } catch (Exception e) {
             log.error("存储库连接测试失败: {}", url, e);
             return "连接失败: " + e.getMessage();
