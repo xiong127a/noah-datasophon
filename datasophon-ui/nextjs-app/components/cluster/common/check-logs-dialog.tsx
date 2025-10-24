@@ -38,13 +38,6 @@ export function CheckLogsDialog({
   const [loading, setLoading] = useState(false)
   const [levelFilter, setLevelFilter] = useState<string>('all')
   
-  // 加载日志
-  useEffect(() => {
-    if (open) {
-      loadLogs()
-    }
-  }, [open, hostIp, checkKey])
-  
   const loadLogs = async () => {
     setLoading(true)
     try {
@@ -66,6 +59,13 @@ export function CheckLogsDialog({
     }
   }
   
+  // 加载日志
+  useEffect(() => {
+    if (open) {
+      loadLogs()
+    }
+  }, [open, hostIp, checkKey, loadLogs])
+  
   const parseJsonLines = (text: string): LogEntry[] => {
     if (!text || text === '暂无检查日志' || text === '暂无修复日志') {
       return []
@@ -76,7 +76,7 @@ export function CheckLogsDialog({
       .map(line => {
         try {
           return JSON.parse(line) as LogEntry
-        } catch (e) {
+        } catch {
           // 如果解析失败，返回一个默认的日志条目
           return {
             timestamp: new Date().toISOString(),
@@ -139,19 +139,20 @@ export function CheckLogsDialog({
   
   const renderLogEntry = (log: LogEntry, index: number) => {
     return (
-      <div key={index} className="mb-2 font-mono text-sm">
+      <div key={index} className="mb-3 font-mono text-sm">
         <div className="flex items-start gap-2">
-          <span className="text-gray-500">[{log.timestamp}]</span>
-          <span className={`px-2 py-0.5 rounded text-xs font-bold ${getLevelBg(log.level)}`}>
+          <span className="text-gray-500 text-xs whitespace-nowrap">{log.timestamp}</span>
+          <span className={`px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap ${getLevelBg(log.level)}`}>
             {log.level}
           </span>
-          <span className={`flex-1 ${getLevelColor(log.level)}`}>{log.message}</span>
+          <span className={`flex-1 break-words ${getLevelColor(log.level)}`}>{log.message}</span>
         </div>
         {log.details && Object.keys(log.details).length > 0 && (
-          <div className="ml-48 mt-1 text-xs text-gray-500 bg-gray-800 p-2 rounded">
+          <div className="ml-8 mt-1 text-xs text-gray-400 bg-gray-800 p-3 rounded border border-gray-700 break-all">
             {Object.entries(log.details).map(([key, value]) => (
-              <div key={key}>
-                <span className="text-gray-400">{key}:</span> {JSON.stringify(value)}
+              <div key={key} className="mb-1 last:mb-0">
+                <span className="text-blue-400 font-semibold">{key}:</span>{' '}
+                <span className="text-gray-300">{typeof value === 'string' ? value : JSON.stringify(value, null, 2)}</span>
               </div>
             ))}
           </div>
@@ -195,7 +196,7 @@ export function CheckLogsDialog({
           </div>
         </div>
         
-        <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto max-h-96">
+        <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto flex-1 min-h-0">
           {filteredLogs.length === 0 ? (
             <div className="text-gray-500 text-center py-8">
               {logs.length === 0 ? (type === 'check' ? '暂无检查日志' : '暂无修复日志') : '无匹配的日志'}
@@ -210,7 +211,7 @@ export function CheckLogsDialog({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[80vh]">
+      <DialogContent className="max-w-[90vw] w-[1400px] h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{checkName} - 日志查看</DialogTitle>
           <DialogDescription>

@@ -16,7 +16,6 @@ import {
   ChevronDown,
   ChevronUp,
   Play,
-  Pause,
   SkipForward,
   Wrench
 } from 'lucide-react'
@@ -77,10 +76,7 @@ export default function EnvironmentCheckDialog({
 }: EnvironmentCheckDialogProps) {
   const [checkStatus, setCheckStatus] = useState<HostCheckStatus[]>([])
   const [isChecking, setIsChecking] = useState(false)
-  const [isPaused, setIsPaused] = useState(false)
   const [expandedHosts, setExpandedHosts] = useState<Set<string>>(new Set())
-  const [expandedCheckItems, setExpandedCheckItems] = useState<Set<string>>(new Set()) // 格式: "hostIp-checkKey"
-  const [eventSource, setEventSource] = useState<EventSource | null>(null)
   const [actualHostList, setActualHostList] = useState<Array<{ ip: string; hostname?: string }>>([])
   const [logsDialogOpen, setLogsDialogOpen] = useState(false)
   const [selectedCheckItem, setSelectedCheckItem] = useState<{ hostIp: string; checkKey: string; checkName: string } | null>(null)
@@ -92,9 +88,7 @@ export default function EnvironmentCheckDialog({
       // 重置所有检查相关的状态
       setCheckStatus([])
       setIsChecking(false)
-      setIsPaused(false)
       setExpandedHosts(new Set())
-      setExpandedCheckItems(new Set())
       
       // 初始化主机列表
       if (hostList && hostList.length > 0) {
@@ -107,14 +101,6 @@ export default function EnvironmentCheckDialog({
       } else {
         setActualHostList([])
       }
-    } else {
-      // 对话框关闭时，清理SSE连接
-      setEventSource(prev => {
-        if (prev) {
-          prev.close()
-        }
-        return null
-      })
     }
   }, [open, hostList])
 
@@ -187,10 +173,7 @@ export default function EnvironmentCheckDialog({
     es.onerror = (error) => {
       console.error('SSE连接错误:', error)
       es.close()
-      setEventSource(null)
     }
-
-    setEventSource(es)
 
     return () => {
       console.log('关闭SSE连接')
@@ -209,25 +192,6 @@ export default function EnvironmentCheckDialog({
       }
       return next
     })
-  }
-
-  // 切换检查项展开/收起
-  const toggleCheckItemExpand = (hostIp: string, checkKey: string) => {
-    const key = `${hostIp}-${checkKey}`
-    setExpandedCheckItems(prev => {
-      const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        next.add(key)
-      }
-      return next
-    })
-  }
-
-  // 检查检查项是否展开
-  const isCheckItemExpanded = (hostIp: string, checkKey: string) => {
-    return expandedCheckItems.has(`${hostIp}-${checkKey}`)
   }
 
   // 查看日志
@@ -269,26 +233,6 @@ export default function EnvironmentCheckDialog({
     } catch (error: any) {
       console.error('修复检查项失败:', error)
       alert('修复失败: ' + (error.message || '未知错误'))
-    }
-  }
-
-  // 暂停检查
-  const handlePause = async () => {
-    try {
-      await clusterApiV1.environmentCheck.pause()
-      setIsPaused(true)
-    } catch (error: any) {
-      console.error('暂停失败:', error)
-    }
-  }
-
-  // 恢复检查
-  const handleResume = async () => {
-    try {
-      await clusterApiV1.environmentCheck.resume()
-      setIsPaused(false)
-    } catch (error: any) {
-      console.error('恢复失败:', error)
     }
   }
 
@@ -444,20 +388,18 @@ export default function EnvironmentCheckDialog({
                       <Play className="h-4 w-4 mr-2" />
                       开始检查
                     </Button>
+                  ) : overallProgress.completedHosts >= overallProgress.totalHosts && overallProgress.totalHosts > 0 ? (
+                    // 检查完成，不显示暂停/恢复按钮
+                    <Badge variant="outline" className="text-green-600 border-green-600">
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      检查完成
+                    </Badge>
                   ) : (
-                    <>
-                      {isPaused ? (
-                        <Button onClick={handleResume} size="sm" variant="outline">
-                          <Play className="h-4 w-4 mr-2" />
-                          恢复
-                        </Button>
-                      ) : (
-                        <Button onClick={handlePause} size="sm" variant="outline">
-                          <Pause className="h-4 w-4 mr-2" />
-                          暂停
-                        </Button>
-                      )}
-                    </>
+                    // 检查进行中，不显示暂停/恢复按钮（暂不支持暂停功能）
+                    <Badge variant="outline" className="text-blue-600 border-blue-600">
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                      检查中...
+                    </Badge>
                   )}
                 </div>
               </CardTitle>
@@ -481,7 +423,7 @@ export default function EnvironmentCheckDialog({
             <Alert>
               <AlertTriangle className="h-4 w-4" />
               <AlertDescription>
-                点击"开始检查"按钮，系统将对所有主机进行环境检查，包括CPU、内存、JDK、防火墙等配置项。
+                点击&ldquo;开始检查&rdquo;按钮，系统将对所有主机进行环境检查，包括CPU、内存、JDK、防火墙等配置项。
               </AlertDescription>
             </Alert>
           )}
