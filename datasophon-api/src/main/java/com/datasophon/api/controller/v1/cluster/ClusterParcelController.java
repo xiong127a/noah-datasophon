@@ -106,11 +106,13 @@ public class ClusterParcelController implements DisposableBean {
      */
     @GetMapping("/list")
     @Timed(value = "parcel.list", description = "获取Parcel列表的时间")
-    public Result<String> list() {
+    public Result<List<ParcelInfoVO>> list() {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
         log.debug("获取Parcel列表 - {}", threadInfo);
         
-        return Result.success("Parcel列表获取成功");
+        // TODO: 实现从数据库或配置文件读取已安装的Parcel列表
+        // 目前返回空列表
+        return Result.success(List.of());
     }
 
     /**
