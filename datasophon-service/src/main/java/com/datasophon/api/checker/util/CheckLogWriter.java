@@ -25,7 +25,8 @@ import java.util.stream.Stream;
 @Component
 public class CheckLogWriter {
     
-    private static final String LOG_BASE_DIR = "/opt/datasophon/logs/environment-check";
+    // 使用相对路径，日志存储在项目运行目录的 logs/environment-check/ 下
+    private static final String LOG_BASE_DIR = "logs/environment-check";
     private static final DateTimeFormatter TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
     private static final DateTimeFormatter LOG_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     
