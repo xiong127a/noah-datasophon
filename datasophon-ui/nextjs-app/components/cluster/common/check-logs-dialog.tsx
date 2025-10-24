@@ -22,6 +22,7 @@ interface LogDetails {
   progress?: number
   fileName?: string
   totalSize?: string
+  uploadedSize?: string
   elapsedTime?: string
   [key: string]: unknown
 }
@@ -222,9 +223,13 @@ export function CheckLogsDialog({
             {log.details?.fileName && (
               <div className="mb-2 flex items-center gap-3 text-sm">
                 <span className="text-cyan-400 font-medium">📦 {log.details.fileName}</span>
-                {log.details?.totalSize && (
+                {log.details?.uploadedSize && log.details?.totalSize ? (
+                  <span className="text-emerald-400 font-semibold">
+                    {log.details.uploadedSize} / {log.details.totalSize}
+                  </span>
+                ) : log.details?.totalSize ? (
                   <span className="text-gray-400">({log.details.totalSize})</span>
-                )}
+                ) : null}
               </div>
             )}
             
@@ -249,25 +254,37 @@ export function CheckLogsDialog({
             </div>
             
             {/* 统计信息 */}
-            {log.details?.elapsedTime && (
-              <div className="mt-2 flex items-center gap-4 text-xs text-gray-400">
+            <div className="mt-2 flex items-center gap-4 text-xs text-gray-400 flex-wrap">
+              {/* 已传输 / 总大小 */}
+              {log.details?.uploadedSize && log.details?.totalSize && (
                 <span className="flex items-center gap-1">
-                  <span className="text-gray-500">⏱️ 已用时:</span>
+                  <span className="text-gray-500">📊 已传输:</span>
+                  <span className="text-emerald-400 font-semibold">
+                    {log.details.uploadedSize} / {log.details.totalSize}
+                  </span>
+                </span>
+              )}
+              
+              {/* 已用时 */}
+              {log.details?.elapsedTime && (
+                <span className="flex items-center gap-1">
+                  <span className="text-gray-500">⏱️ 耗时:</span>
                   <span className="text-cyan-400 font-medium">{log.details.elapsedTime}</span>
                 </span>
-                {progress > 0 && progress < 100 && (
-                  <span className="flex items-center gap-1">
-                    <span className="text-gray-500">⚡ 进度:</span>
-                    <span className="text-green-400 font-medium">上传中...</span>
-                  </span>
-                )}
-                {progress === 100 && (
-                  <span className="flex items-center gap-1">
-                    <span className="text-green-400 font-medium">✅ 完成</span>
-                  </span>
-                )}
-              </div>
-            )}
+              )}
+              
+              {/* 状态 */}
+              {progress > 0 && progress < 100 && (
+                <span className="flex items-center gap-1">
+                  <span className="text-green-400 font-medium">⚡ 上传中...</span>
+                </span>
+              )}
+              {progress === 100 && (
+                <span className="flex items-center gap-1">
+                  <span className="text-green-400 font-bold">✅ 上传完成</span>
+                </span>
+              )}
+            </div>
           </div>
         )}
         

@@ -209,33 +209,50 @@ public class DownloadJdkStep implements RepairStep {
             });
             uploadThread.start();
             
-            // 模拟进度记录（每10秒记录一次）
-            int progressInterval = 10000; // 10秒
+            // 模拟进度记录（每1秒记录一次，像scp一样连续显示）
             long startTime = System.currentTimeMillis();
-            int lastProgress = 0;
+            int lastReportedProgress = 0;
+            
+            // 假设平均上传速度为 2MB/s（可根据实际调整）
+            double estimatedSpeedMBPerSec = 2.0;
+            double totalSizeMB = totalBytes / (1024.0 * 1024.0);
             
             while (uploadThread.isAlive()) {
-                Thread.sleep(1000);
+                Thread.sleep(1000); // 每1秒更新一次
                 long elapsedTime = System.currentTimeMillis() - startTime;
+                double elapsedSeconds = elapsedTime / 1000.0;
                 
-                if (elapsedTime / progressInterval > lastProgress) {
-                    lastProgress = (int) (elapsedTime / progressInterval);
-                    
-                    // 估算进度（假设上传速度恒定）
-                    int estimatedProgress = Math.min(95, lastProgress * 15); // 每10秒增加15%，最多95%
+                // 估算已传输大小（基于时间和速度）
+                double uploadedMB = Math.min(totalSizeMB * 0.95, elapsedSeconds * estimatedSpeedMBPerSec);
+                long uploadedBytes = (long) (uploadedMB * 1024 * 1024);
+                
+                // 计算进度百分比（最多95%，防止超过实际进度）
+                int estimatedProgress = Math.min(95, (int) (uploadedMB / totalSizeMB * 100));
+                
+                // 只在进度变化时才推送日志（避免重复）
+                if (estimatedProgress > lastReportedProgress) {
+                    lastReportedProgress = estimatedProgress;
                     
                     Map<String, Object> progressInfo = new HashMap<>();
                     progressInfo.put("elapsedTime", formatDuration(elapsedTime));
                     progressInfo.put("totalSize", formatFileSize(totalBytes));
+                    progressInfo.put("uploadedSize", formatFileSize(uploadedBytes)); // 新增：已传输大小
                     progressInfo.put("fileName", remotePath.substring(remotePath.lastIndexOf("/") + 1));
                     
                     // 使用专门的进度日志方法
                     logWriter.logRepairProgress(context.getClusterId(), context.getHostIp(), "java",
                             estimatedProgress,
-                            String.format("文件上传中... 已耗时: %s", formatDuration(elapsedTime)),
+                            String.format("上传中... %s / %s (%d%%)", 
+                                formatFileSize(uploadedBytes), 
+                                formatFileSize(totalBytes),
+                                estimatedProgress),
                             progressInfo);
                     
-                    log.info("上传进度: {}%, 已耗时: {}", estimatedProgress, formatDuration(elapsedTime));
+                    log.info("上传进度: {}%, 已传输: {} / {}, 耗时: {}", 
+                            estimatedProgress, 
+                            formatFileSize(uploadedBytes),
+                            formatFileSize(totalBytes),
+                            formatDuration(elapsedTime));
                 }
             }
             
