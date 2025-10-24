@@ -14,87 +14,87 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
 package com.datasophon.dao.entity;
 
-import com.datasophon.common.enums.ClusterState;
-import com.datasophon.common.enums.ClusterType;
 import com.datasophon.dao.entity.base.BaseEntity;
-
-import java.io.Serial;
-import java.util.List;
-
+import com.mybatisflex.annotation.Id;
+import com.mybatisflex.annotation.KeyType;
+import com.mybatisflex.annotation.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
-import lombok.experimental.SuperBuilder;
-import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
+import lombok.experimental.SuperBuilder;
 
-import com.mybatisflex.annotation.Column;
-import com.mybatisflex.annotation.Table;
+import java.io.Serial;
+import java.time.LocalDateTime;
 
 /**
- * 集群信息实体类
+ * Parcel存储库实体类
  * 
- * @author 任相鹏
- * @email 635887935@qq.com
- * @date 2025-08-13
+ * @author datasophon
+ * @date 2025-10-24
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 @SuperBuilder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table("t_ddh_cluster_info")
-public class ClusterInfoEntity extends BaseEntity {
+@Table("t_ddh_parcel_repository")
+public class ParcelRepositoryEntity extends BaseEntity {
 
     @Serial
     private static final long serialVersionUID = 1L;
-    /**
-     * 集群名称
-     */
-    private String clusterName;
-    /**
-     * 集群编码
-     */
-    private String clusterCode;
-    /**
-     * 集群框架
-     */
-    private String clusterFrame;
-    /**
-     * 集群版本
-     */
-    private String frameVersion;
-    /**
-     * 集群状态 1:待配置 3:正在运行 4:停止 5:删除中
-     */
-    private ClusterState clusterState;
-    /**
-     * 集群框架id
-     */
-    private Integer frameId;
-    /**
-     * 集群部署模式
-     */
-    private ClusterType depType;
-    /**
-     * Kubernetes配置
-     */
-    private String kubeConfig;
-    /**
-     * Kubernetes命令空间
-     */
-    private String namespace;
-    /**
-     * 关联的存储库ID
-     */
-    private Long repositoryId;
 
-    @Column(ignore = true)
-    private List<UserInfoEntity> clusterManagerList;
+    /**
+     * 主键
+     */
+    @Id(keyType = KeyType.Auto)
+    private Long id;
 
-    @Column(ignore = true)
-    private Integer clusterStateCode;
+    /**
+     * 存储库名称
+     */
+    private String repoName;
 
+    /**
+     * 存储库类型：local/http
+     */
+    private String repoType;
+
+    /**
+     * 存储库地址
+     */
+    private String repoUrl;
+
+    /**
+     * 框架代码（如 DDP-1.2.1）
+     */
+    private String frameCode;
+
+    /**
+     * 描述
+     */
+    private String description;
+
+    /**
+     * 是否默认存储库：0-否，1-是
+     */
+    private Integer isDefault;
+
+    /**
+     * 状态：0-禁用，1-启用
+     */
+    private Integer status;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createdAt;
+
+    /**
+     * 更新时间
+     */
+    private LocalDateTime updatedAt;
 }
+

@@ -44,6 +44,16 @@ public final class Constants {
         public static final String HOST_MAP = "_host_map";
         public static final String ID_RSA = PropertyUtils.getString("id_rsa", "/.ssh/id_rsa");
         public static final String HOSTNAME = "hostname";
+        
+        // 存储库类型常量
+        public static final String REPO_TYPE_LOCAL = "local";
+        public static final String REPO_TYPE_HTTP = "http";
+        
+        /**
+         * @deprecated 不再使用硬编码路径，改为从数据库读取存储库配置
+         * 使用 ParcelRepositoryService.getDefaultRepository().getRepoUrl() 替代
+         */
+        @Deprecated
         public static final String MASTER_MANAGE_PACKAGE_PATH = INSTALL_PATH + "/DDP/packages";
         public static final String UNZIP_DDH_WORKER_CMD = "tar -zxvf " + INSTALL_PATH + "/datasophon-worker.tar.gz -C "
                         + INSTALL_PATH;

@@ -99,20 +99,132 @@ public class ClusterParcelController implements DisposableBean {
     @Autowired
     private ClusterInfoConverter clusterInfoConverter;
 
+    @Autowired
+    private com.datasophon.api.service.ParcelRepositoryService parcelRepositoryService;
+
 
 
     /**
-     * 获取Parcel列表
+     * 获取存储库列表
      */
     @GetMapping("/list")
-    @Timed(value = "parcel.list", description = "获取Parcel列表的时间")
-    public Result<List<ParcelInfoVO>> list() {
+    @Timed(value = "parcel.list", description = "获取存储库列表的时间")
+    public Result<List<com.datasophon.common.dto.ParcelRepositoryDTO>> list() {
         var threadInfo = getCurrentThreadInfo(); // JDK21特性
-        log.debug("获取Parcel列表 - {}", threadInfo);
+        log.debug("获取存储库列表 - {}", threadInfo);
         
-        // TODO: 实现从数据库或配置文件读取已安装的Parcel列表
-        // 目前返回空列表
-        return Result.success(List.of());
+        return Result.success(parcelRepositoryService.list());
+    }
+
+    /**
+     * 创建存储库
+     */
+    @PostMapping("/repository/create")
+    @Timed(value = "parcel.repository.create", description = "创建存储库的时间")
+    public Result<com.datasophon.common.dto.ParcelRepositoryDTO> createRepository(
+            @RequestBody com.datasophon.common.dto.ParcelRepositoryDTO dto) {
+        var threadInfo = getCurrentThreadInfo(); // JDK21特性
+        log.info("创建存储库: {} - {}", dto.getRepoName(), threadInfo);
+        
+        try {
+            var created = parcelRepositoryService.create(dto);
+            return Result.success(created);
+        } catch (Exception e) {
+            log.error("创建存储库失败", e);
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 更新存储库
+     */
+    @PutMapping("/repository/update")
+    @Timed(value = "parcel.repository.update", description = "更新存储库的时间")
+    public Result<com.datasophon.common.dto.ParcelRepositoryDTO> updateRepository(
+            @RequestBody com.datasophon.common.dto.ParcelRepositoryDTO dto) {
+        var threadInfo = getCurrentThreadInfo(); // JDK21特性
+        log.info("更新存储库: {} - {}", dto.getId(), threadInfo);
+        
+        try {
+            var updated = parcelRepositoryService.update(dto);
+            return Result.success(updated);
+        } catch (Exception e) {
+            log.error("更新存储库失败", e);
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 删除存储库
+     */
+    @DeleteMapping("/repository/delete/{id}")
+    @Timed(value = "parcel.repository.delete", description = "删除存储库的时间")
+    public Result<Boolean> deleteRepository(@PathVariable Long id) {
+        var threadInfo = getCurrentThreadInfo(); // JDK21特性
+        log.info("删除存储库: {} - {}", id, threadInfo);
+        
+        try {
+            boolean deleted = parcelRepositoryService.delete(id);
+            return Result.success(deleted);
+        } catch (Exception e) {
+            log.error("删除存储库失败", e);
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 测试存储库连接
+     */
+    @PostMapping("/repository/test")
+    @Timed(value = "parcel.repository.test", description = "测试存储库连接的时间")
+    public Result<String> testRepository(@RequestBody Map<String, String> params) {
+        var threadInfo = getCurrentThreadInfo(); // JDK21特性
+        String url = params.get("url");
+        log.info("测试存储库连接: {} - {}", url, threadInfo);
+        
+        try {
+            String result = parcelRepositoryService.testConnection(url);
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("测试存储库连接失败", e);
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 设置默认存储库
+     */
+    @PutMapping("/repository/default/{id}")
+    @Timed(value = "parcel.repository.setDefault", description = "设置默认存储库的时间")
+    public Result<Boolean> setDefaultRepository(@PathVariable Long id) {
+        var threadInfo = getCurrentThreadInfo(); // JDK21特性
+        log.info("设置默认存储库: {} - {}", id, threadInfo);
+        
+        try {
+            boolean success = parcelRepositoryService.setDefault(id);
+            return Result.success(success);
+        } catch (Exception e) {
+            log.error("设置默认存储库失败", e);
+            return Result.error(e.getMessage());
+        }
+    }
+
+    /**
+     * 获取集群的存储库配置（供Worker调用）
+     */
+    @GetMapping("/cluster/{clusterId}/repository")
+    @Timed(value = "parcel.cluster.repository", description = "获取集群存储库配置的时间")
+    public Result<com.datasophon.common.dto.ParcelRepositoryDTO> getClusterRepository(@PathVariable Long clusterId) {
+        var threadInfo = getCurrentThreadInfo(); // JDK21特性
+        log.debug("获取集群 {} 的存储库配置 - {}", clusterId, threadInfo);
+        
+        try {
+            var repository = parcelRepositoryService.getClusterRepository(clusterId);
+            return Result.success(repository);
+        } catch (Exception e) {
+            log.error("获取集群存储库配置失败", e);
+            return Result.error(e.getMessage());
+        }
     }
 
     /**

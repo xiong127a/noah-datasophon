@@ -104,6 +104,11 @@ public class ClusterInfoDO implements Serializable {
     private String namespace;
 
     /**
+     * 关联的存储库ID
+     */
+    private Long repositoryId;
+
+    /**
      * 集群状态码（业务扩展字段）
      */
     private Integer clusterStateCode;
