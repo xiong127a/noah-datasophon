@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Progress } from '@/components/ui/progress'
 import { FileText, Wrench, RefreshCw, Copy, Filter } from 'lucide-react'
 import { API_BASE_URL } from '@/lib/api-config-v1'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -87,9 +86,39 @@ export function CheckLogsDialog({
           
           // 根据日志类型追加到对应的日志列表
           if (logEntry.type === 'check') {
-            setCheckLogs(prev => [...prev, logEntry])
+            setCheckLogs(prev => {
+              // 如果是进度日志，更新同一stage的最新进度
+              if (logEntry.details?.isProgress) {
+                const lastIndex = prev.findLastIndex(
+                  log => log.stage === logEntry.stage && log.details?.isProgress
+                )
+                if (lastIndex !== -1) {
+                  // 替换同一stage的进度日志
+                  const newLogs = [...prev]
+                  newLogs[lastIndex] = logEntry
+                  return newLogs
+                }
+              }
+              // 其他日志正常追加
+              return [...prev, logEntry]
+            })
           } else if (logEntry.type === 'repair') {
-            setRepairLogs(prev => [...prev, logEntry])
+            setRepairLogs(prev => {
+              // 如果是进度日志，更新同一stage的最新进度
+              if (logEntry.details?.isProgress) {
+                const lastIndex = prev.findLastIndex(
+                  log => log.stage === logEntry.stage && log.details?.isProgress
+                )
+                if (lastIndex !== -1) {
+                  // 替换同一stage的进度日志
+                  const newLogs = [...prev]
+                  newLogs[lastIndex] = logEntry
+                  return newLogs
+                }
+              }
+              // 其他日志正常追加
+              return [...prev, logEntry]
+            })
           }
         } catch (e) {
           console.error('解析SSE日志失败:', e)
@@ -186,21 +215,56 @@ export function CheckLogsDialog({
           <span className={`flex-1 break-words min-w-0 ${getLevelColor(log.level)}`}>{log.message}</span>
         </div>
         
-        {/* 显示进度条 */}
+        {/* 显示进度条 - 优化样式和动画 */}
         {isProgressLog && (
-          <div className="ml-8 mt-2 w-full max-w-2xl">
-            <div className="flex items-center gap-3">
-              <Progress value={progress} className="flex-1 h-3" />
-              <span className="text-blue-400 font-semibold text-sm whitespace-nowrap">{progress}%</span>
-            </div>
+          <div className="ml-8 mt-3 w-full max-w-3xl">
+            {/* 文件信息 */}
             {log.details?.fileName && (
-              <div className="mt-1 text-xs text-gray-400">
-                <span className="text-gray-500">文件:</span> <span className="text-gray-300">{log.details.fileName}</span>
+              <div className="mb-2 flex items-center gap-3 text-sm">
+                <span className="text-cyan-400 font-medium">📦 {log.details.fileName}</span>
                 {log.details?.totalSize && (
-                  <span className="ml-3 text-gray-500">大小: <span className="text-gray-300">{log.details.totalSize}</span></span>
+                  <span className="text-gray-400">({log.details.totalSize})</span>
                 )}
-                {log.details?.elapsedTime && (
-                  <span className="ml-3 text-gray-500">耗时: <span className="text-gray-300">{log.details.elapsedTime}</span></span>
+              </div>
+            )}
+            
+            {/* 进度条容器 */}
+            <div className="relative">
+              {/* 背景轨道 */}
+              <div className="h-6 bg-gray-800 rounded-full overflow-hidden border border-gray-700 shadow-inner">
+                {/* 进度条 - 添加过渡动画 */}
+                <div 
+                  className="h-full bg-gradient-to-r from-cyan-500 via-blue-500 to-indigo-600 transition-all duration-500 ease-out relative overflow-hidden"
+                  style={{ width: `${progress}%` }}
+                >
+                  {/* 动画效果 - 闪光 */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 animate-pulse"></div>
+                </div>
+              </div>
+              
+              {/* 百分比显示 */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-white font-bold text-sm drop-shadow-lg">{progress}%</span>
+              </div>
+            </div>
+            
+            {/* 统计信息 */}
+            {log.details?.elapsedTime && (
+              <div className="mt-2 flex items-center gap-4 text-xs text-gray-400">
+                <span className="flex items-center gap-1">
+                  <span className="text-gray-500">⏱️ 已用时:</span>
+                  <span className="text-cyan-400 font-medium">{log.details.elapsedTime}</span>
+                </span>
+                {progress > 0 && progress < 100 && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-gray-500">⚡ 进度:</span>
+                    <span className="text-green-400 font-medium">上传中...</span>
+                  </span>
+                )}
+                {progress === 100 && (
+                  <span className="flex items-center gap-1">
+                    <span className="text-green-400 font-medium">✅ 完成</span>
+                  </span>
                 )}
               </div>
             )}
