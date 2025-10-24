@@ -82,7 +82,7 @@ public class InstallServiceHandler {
 
             if (needDownLoad) {
                 // 下载包文件
-                downloadPkg(packageName, packagePath);
+                downloadPkg(command.getClusterId(), packageName, packagePath);
             }
 
             // 解压缩包文件
@@ -121,9 +121,9 @@ public class InstallServiceHandler {
     }
 
 
-    private void downloadPkg(String packageName, String packagePath) {
+    private void downloadPkg(Long clusterId, String packageName, String packagePath) {
         // 获取集群的存储库配置
-        RepositoryConfig repoConfig = getClusterRepositoryFromMaster();
+        RepositoryConfig repoConfig = getClusterRepositoryFromMaster(clusterId);
         
         logger.info("Repository config: type={}, url={}", repoConfig.getRepoType(), repoConfig.getRepoUrl());
         
@@ -140,14 +140,14 @@ public class InstallServiceHandler {
     /**
      * 从Master获取集群存储库配置
      */
-    private RepositoryConfig getClusterRepositoryFromMaster() {
+    private RepositoryConfig getClusterRepositoryFromMaster(Long clusterId) {
         String masterPort = PropertyUtils.getString(Constants.MASTER_WEB_PORT);
         List<String> masterHosts = GetMasterHost();
         
         for (String masterHost : masterHosts) {
             try {
                 String apiUrl = "http://" + masterHost + ":" + masterPort
-                        + "/ddh/api/v1/cluster/parcel/cluster/" + command.getClusterId() + "/repository";
+                        + "/ddh/api/v1/cluster/parcel/cluster/" + clusterId + "/repository";
                 
                 logger.info("Getting repository config from: {}", apiUrl);
                 
