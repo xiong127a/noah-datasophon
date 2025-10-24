@@ -25,6 +25,7 @@ import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
 import { CheckItemDetailCard } from './check-item-detail-card'
 import { CheckLogsDialog } from './check-logs-dialog'
+import { RepairOptionsDialog, type RepairOptions } from './repair-options-dialog'
 
 interface EnvironmentCheckDialogProps {
   open: boolean
@@ -80,6 +81,8 @@ export default function EnvironmentCheckDialog({
   const [actualHostList, setActualHostList] = useState<Array<{ ip: string; hostname?: string }>>([])
   const [logsDialogOpen, setLogsDialogOpen] = useState(false)
   const [selectedCheckItem, setSelectedCheckItem] = useState<{ hostIp: string; checkKey: string; checkName: string } | null>(null)
+  const [repairOptionsOpen, setRepairOptionsOpen] = useState(false)
+  const [pendingRepair, setPendingRepair] = useState<{ hostIp: string; checkKey: string; checkName: string } | null>(null)
 
   // 当对话框打开时，重置所有状态
   useEffect(() => {
@@ -229,8 +232,8 @@ export default function EnvironmentCheckDialog({
     }
   }
   
-  // 修复检查项
-  const handleRepairItem = async (hostIp: string, checkKey: string, checkName: string) => {
+  // 执行修复（带参数）
+  const executeRepair = async (hostIp: string, checkKey: string, checkName: string, repairParams: RepairOptions | Record<string, never>) => {
     try {
       // 1. 立即打开日志对话框，默认显示修复日志标签页
       setSelectedCheckItem({ hostIp, checkKey, checkName })
@@ -240,17 +243,34 @@ export default function EnvironmentCheckDialog({
       clusterApiV1.environmentCheck.repairItem({
         hostIp,
         checkItemKey: checkKey,
-        repairParams: {}
+        repairParams
       }).then(result => {
         console.log('修复结果:', result)
-        // 修复完成后，可以选择刷新日志或显示通知
       }).catch(error => {
         console.error('修复检查项失败:', error)
       })
-      
-      // 注意：这里不使用 alert 弹框，用户可以在日志对话框中查看实时进度
     } catch (error: any) {
       console.error('修复检查项异常:', error)
+    }
+  }
+  
+  // 修复检查项（Java检查项需要选择选项）
+  const handleRepairItem = async (hostIp: string, checkKey: string, checkName: string) => {
+    // Java检查项需要让用户选择修复选项
+    if (checkKey === 'java') {
+      setPendingRepair({ hostIp, checkKey, checkName })
+      setRepairOptionsOpen(true)
+    } else {
+      // 其他检查项直接修复
+      executeRepair(hostIp, checkKey, checkName, {})
+    }
+  }
+  
+  // 确认修复选项（仅Java使用）
+  const handleRepairOptionsConfirm = (options: RepairOptions) => {
+    if (pendingRepair) {
+      executeRepair(pendingRepair.hostIp, pendingRepair.checkKey, pendingRepair.checkName, options)
+      setPendingRepair(null)
     }
   }
 
@@ -593,21 +613,31 @@ export default function EnvironmentCheckDialog({
       </div>
     </ClusterWizardLayout>
     
+    {/* 修复选项对话框（仅Java使用） */}
+    {pendingRepair && (
+      <RepairOptionsDialog
+        open={repairOptionsOpen}
+        onOpenChange={setRepairOptionsOpen}
+        checkName={pendingRepair.checkName}
+        onConfirm={handleRepairOptionsConfirm}
+      />
+    )}
+    
     {/* 日志查看对话框 */}
-      {selectedCheckItem && (
-        <CheckLogsDialog
-          open={logsDialogOpen}
-          onOpenChange={setLogsDialogOpen}
-          clusterId={cluster?.id || 0}
-          hostIp={selectedCheckItem.hostIp}
-          checkKey={selectedCheckItem.checkKey}
-          checkName={selectedCheckItem.checkName}
-          onRepairSuccess={() => {
-            console.log('修复成功，重新加载检查结果')
-            refreshCheckStatus()
-          }}
-        />
-      )}
+    {selectedCheckItem && (
+      <CheckLogsDialog
+        open={logsDialogOpen}
+        onOpenChange={setLogsDialogOpen}
+        clusterId={cluster?.id || 0}
+        hostIp={selectedCheckItem.hostIp}
+        checkKey={selectedCheckItem.checkKey}
+        checkName={selectedCheckItem.checkName}
+        onRepairSuccess={() => {
+          console.log('修复成功，重新加载检查结果')
+          refreshCheckStatus()
+        }}
+      />
+    )}
     </>
   )
 }
