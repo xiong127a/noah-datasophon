@@ -60,7 +60,7 @@ public class ParcelRepositoryServiceImpl implements ParcelRepositoryService {
         QueryWrapper queryWrapper = QueryWrapper.create()
                 .select()
                 .from(PARCEL_REPOSITORY_ENTITY)
-                .orderBy(PARCEL_REPOSITORY_ENTITY.IS_DEFAULT.desc(), PARCEL_REPOSITORY_ENTITY.CREATED_AT.desc());
+                .orderBy(PARCEL_REPOSITORY_ENTITY.IS_DEFAULT.desc(), PARCEL_REPOSITORY_ENTITY.CREATE_TIME.desc());
 
         List<ParcelRepositoryEntity> entities = parcelRepositoryMapper.selectListByQuery(queryWrapper);
         return entities.stream()
@@ -132,8 +132,8 @@ public class ParcelRepositoryServiceImpl implements ParcelRepositoryService {
 
         ParcelRepositoryEntity entity = new ParcelRepositoryEntity();
         BeanUtils.copyProperties(dto, entity);
-        entity.setCreatedAt(LocalDateTime.now());
-        entity.setUpdatedAt(LocalDateTime.now());
+        entity.setCreateTime(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
 
         // 默认值设置
         if (entity.getStatus() == null) {
@@ -195,7 +195,7 @@ public class ParcelRepositoryServiceImpl implements ParcelRepositoryService {
         if (dto.getStatus() != null) {
             existingEntity.setStatus(dto.getStatus());
         }
-        existingEntity.setUpdatedAt(LocalDateTime.now());
+        existingEntity.setUpdateTime(LocalDateTime.now());
 
         parcelRepositoryMapper.update(existingEntity);
         log.info("更新存储库成功: {}", existingEntity.getRepoName());
@@ -245,7 +245,7 @@ public class ParcelRepositoryServiceImpl implements ParcelRepositoryService {
 
         // 设置当前存储库为默认
         entity.setIsDefault(1);
-        entity.setUpdatedAt(LocalDateTime.now());
+        entity.setUpdateTime(LocalDateTime.now());
         parcelRepositoryMapper.update(entity);
 
         log.info("设置默认存储库成功: {}", entity.getRepoName());
@@ -312,7 +312,7 @@ public class ParcelRepositoryServiceImpl implements ParcelRepositoryService {
         List<ParcelRepositoryEntity> defaultRepos = parcelRepositoryMapper.selectListByQuery(queryWrapper);
         for (ParcelRepositoryEntity repo : defaultRepos) {
             repo.setIsDefault(0);
-            repo.setUpdatedAt(LocalDateTime.now());
+            repo.setUpdateTime(LocalDateTime.now());
             parcelRepositoryMapper.update(repo);
         }
     }

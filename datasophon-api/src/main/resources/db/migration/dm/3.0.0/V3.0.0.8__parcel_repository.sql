@@ -8,8 +8,10 @@ CREATE TABLE t_ddh_parcel_repository (
   description varchar(512) DEFAULT NULL COMMENT '描述',
   is_default int DEFAULT 0 COMMENT '是否默认存储库：0-否，1-是',
   status int DEFAULT 1 COMMENT '状态：0-禁用，1-启用',
-  created_at datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-  updated_at datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  create_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  update_time datetime DEFAULT CURRENT_TIMESTAMP COMMENT '更新时间',
+  create_by varchar(64) DEFAULT NULL COMMENT '创建人',
+  update_by varchar(64) DEFAULT NULL COMMENT '更新人',
   PRIMARY KEY (id),
   CONSTRAINT uk_repo_name UNIQUE (repo_name)
 );

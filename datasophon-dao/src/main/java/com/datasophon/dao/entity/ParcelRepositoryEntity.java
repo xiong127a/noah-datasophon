@@ -17,6 +17,7 @@
 package com.datasophon.dao.entity;
 
 import com.datasophon.dao.entity.base.BaseEntity;
+import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Id;
 import com.mybatisflex.annotation.KeyType;
 import com.mybatisflex.annotation.Table;
@@ -86,15 +87,5 @@ public class ParcelRepositoryEntity extends BaseEntity {
      * 状态：0-禁用，1-启用
      */
     private Integer status;
-
-    /**
-     * 创建时间
-     */
-    private LocalDateTime createdAt;
-
-    /**
-     * 更新时间
-     */
-    private LocalDateTime updatedAt;
 }
 
