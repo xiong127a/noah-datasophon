@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Progress } from '@/components/ui/progress'
 import { FileText, Wrench, RefreshCw, Copy, Filter } from 'lucide-react'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -138,6 +139,10 @@ export function CheckLogsDialog({
   }
   
   const renderLogEntry = (log: LogEntry, index: number) => {
+    // 检测是否为进度日志
+    const isProgressLog = log.details?.isProgress === true
+    const progress = isProgressLog ? (log.details?.progress || 0) : 0
+    
     return (
       <div key={index} className="mb-3 font-mono text-sm w-full max-w-none">
         <div className="flex items-start gap-2 w-full">
@@ -147,7 +152,30 @@ export function CheckLogsDialog({
           </span>
           <span className={`flex-1 break-words min-w-0 ${getLevelColor(log.level)}`}>{log.message}</span>
         </div>
-        {log.details && Object.keys(log.details).length > 0 && (
+        
+        {/* 显示进度条 */}
+        {isProgressLog && (
+          <div className="ml-8 mt-2 w-full max-w-2xl">
+            <div className="flex items-center gap-3">
+              <Progress value={progress} className="flex-1 h-3" />
+              <span className="text-blue-400 font-semibold text-sm whitespace-nowrap">{progress}%</span>
+            </div>
+            {log.details?.fileName && (
+              <div className="mt-1 text-xs text-gray-400">
+                <span className="text-gray-500">文件:</span> <span className="text-gray-300">{log.details.fileName}</span>
+                {log.details?.totalSize && (
+                  <span className="ml-3 text-gray-500">大小: <span className="text-gray-300">{log.details.totalSize}</span></span>
+                )}
+                {log.details?.elapsedTime && (
+                  <span className="ml-3 text-gray-500">耗时: <span className="text-gray-300">{log.details.elapsedTime}</span></span>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {/* 显示详细信息（非进度日志） */}
+        {log.details && Object.keys(log.details).length > 0 && !isProgressLog && (
           <div className="ml-8 mt-1 text-xs text-gray-400 bg-gray-800 p-3 rounded border border-gray-700 break-all w-full max-w-none">
             {Object.entries(log.details).map(([key, value]) => (
               <div key={key} className="mb-1 last:mb-0 w-full">

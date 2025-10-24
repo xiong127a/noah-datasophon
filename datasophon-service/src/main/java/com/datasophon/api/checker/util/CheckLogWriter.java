@@ -175,6 +175,18 @@ public class CheckLogWriter {
         log(clusterId, hostIp, checkKey, LogType.REPAIR, LogLevel.INFO, "executing", message, details);
     }
     
+    /**
+     * 记录修复进度（特别用于文件上传等耗时操作）
+     * 前端会识别这种日志并显示进度条
+     */
+    public void logRepairProgress(Long clusterId, String hostIp, String checkKey, 
+                                  int progress, String message, Map<String, Object> details) {
+        Map<String, Object> progressDetails = details != null ? new HashMap<>(details) : new HashMap<>();
+        progressDetails.put("progress", progress);
+        progressDetails.put("isProgress", true);  // 标记为进度日志
+        log(clusterId, hostIp, checkKey, LogType.REPAIR, LogLevel.INFO, "progress", message, progressDetails);
+    }
+    
     // ==================== 读取日志方法 ====================
     
     /**

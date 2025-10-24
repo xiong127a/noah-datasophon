@@ -225,12 +225,14 @@ public class DownloadJdkStep implements RepairStep {
                     int estimatedProgress = Math.min(95, lastProgress * 15); // 每10秒增加15%，最多95%
                     
                     Map<String, Object> progressInfo = new HashMap<>();
-                    progressInfo.put("progress", estimatedProgress + "%");
                     progressInfo.put("elapsedTime", formatDuration(elapsedTime));
                     progressInfo.put("totalSize", formatFileSize(totalBytes));
+                    progressInfo.put("fileName", remotePath.substring(remotePath.lastIndexOf("/") + 1));
                     
-                    logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
-                            String.format("上传进度: %d%%, 已耗时: %s", estimatedProgress, formatDuration(elapsedTime)),
+                    // 使用专门的进度日志方法
+                    logWriter.logRepairProgress(context.getClusterId(), context.getHostIp(), "java",
+                            estimatedProgress,
+                            String.format("文件上传中... 已耗时: %s", formatDuration(elapsedTime)),
                             progressInfo);
                     
                     log.info("上传进度: {}%, 已耗时: {}", estimatedProgress, formatDuration(elapsedTime));
@@ -245,6 +247,13 @@ public class DownloadJdkStep implements RepairStep {
             if (!uploadSuccess[0]) {
                 throw new Exception("SSH上传失败");
             }
+            
+            // 上传完成，记录100%进度
+            Map<String, Object> completeInfo = new HashMap<>();
+            completeInfo.put("totalSize", formatFileSize(totalBytes));
+            completeInfo.put("fileName", remotePath.substring(remotePath.lastIndexOf("/") + 1));
+            logWriter.logRepairProgress(context.getClusterId(), context.getHostIp(), "java",
+                    100, "文件上传完成", completeInfo);
         }
     }
     
