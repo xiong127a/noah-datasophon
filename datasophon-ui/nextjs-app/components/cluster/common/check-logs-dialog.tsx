@@ -15,6 +15,7 @@ interface CheckLogsDialogProps {
   hostIp: string
   checkKey: string
   checkName: string
+  onRepairSuccess?: () => void  // 修复成功后的回调
 }
 
 interface LogDetails {
@@ -42,7 +43,8 @@ export function CheckLogsDialog({
   clusterId,
   hostIp,
   checkKey,
-  checkName
+  checkName,
+  onRepairSuccess
 }: CheckLogsDialogProps) {
   const [activeTab, setActiveTab] = useState<'check' | 'repair'>('repair') // 默认显示修复日志
   const [checkLogs, setCheckLogs] = useState<LogEntry[]>([])
@@ -129,7 +131,16 @@ export function CheckLogsDialog({
       // 修复完成
       eventSource.addEventListener('complete', (event) => {
         console.log('修复完成:', event.data)
-        // SSE连接会自动关闭
+        try {
+          const data = JSON.parse(event.data)
+          // 如果修复成功，通知父组件刷新检查状态
+          if (data.success && onRepairSuccess) {
+            console.log('修复成功，通知父组件刷新检查状态')
+            onRepairSuccess()
+          }
+        } catch (e) {
+          console.error('解析修复完成事件失败:', e)
+        }
       })
       
       // 连接错误
