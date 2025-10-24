@@ -1,12 +1,12 @@
 'use client'
 
-import { useEffect, useState, useRef, useCallback } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Progress } from '@/components/ui/progress'
 import { FileText, Wrench, RefreshCw, Copy, Filter } from 'lucide-react'
-import { clusterApiV1 } from '@/lib/api-utils-v1'
+import { API_BASE_URL } from '@/lib/api-config-v1'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 interface CheckLogsDialogProps {
@@ -18,13 +18,22 @@ interface CheckLogsDialogProps {
   checkName: string
 }
 
+interface LogDetails {
+  isProgress?: boolean
+  progress?: number
+  fileName?: string
+  totalSize?: string
+  elapsedTime?: string
+  [key: string]: unknown
+}
+
 interface LogEntry {
   timestamp: string
   level: 'DEBUG' | 'INFO' | 'SUCCESS' | 'WARNING' | 'ERROR'
   type: 'check' | 'repair'
   stage: string
   message: string
-  details?: Record<string, any>
+  details?: LogDetails
 }
 
 export function CheckLogsDialog({
@@ -52,7 +61,7 @@ export function CheckLogsDialog({
       setConnectionState('connecting')
       
       // 建立SSE连接（历史日志和实时日志都通过SSE推送）
-      const sseUrl = `/ddh/api/v1/environment-logs-sse/stream/${clusterId}/${hostIp}/${checkKey}`
+      const sseUrl = `${API_BASE_URL}/api/v1/environment-logs-sse/stream/${clusterId}/${hostIp}/${checkKey}`
       console.log('建立日志SSE连接:', sseUrl)
       
       const eventSource = new EventSource(sseUrl)
@@ -113,29 +122,6 @@ export function CheckLogsDialog({
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [checkLogs, repairLogs])
-  
-  const parseJsonLines = (text: string): LogEntry[] => {
-    if (!text || text === '暂无检查日志' || text === '暂无修复日志') {
-      return []
-    }
-    
-    return text.split('\n')
-      .filter(line => line.trim())
-      .map(line => {
-        try {
-          return JSON.parse(line) as LogEntry
-        } catch {
-          // 如果解析失败，返回一个默认的日志条目
-          return {
-            timestamp: new Date().toISOString(),
-            level: 'INFO' as const,
-            type: 'check' as const,
-            stage: 'unknown',
-            message: line
-          }
-        }
-      })
-  }
   
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -322,7 +308,7 @@ export function CheckLogsDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'check' | 'repair')} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
             <TabsTrigger value="check">
               <FileText className="h-4 w-4 mr-2" />
