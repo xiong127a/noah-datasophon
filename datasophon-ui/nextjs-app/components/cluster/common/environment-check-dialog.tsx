@@ -215,6 +215,20 @@ export default function EnvironmentCheckDialog({
     }
   }
 
+  // 刷新检查状态（修复成功后调用）
+  const refreshCheckStatus = async () => {
+    try {
+      console.log('刷新检查状态...')
+      const response = await clusterApiV1.environmentCheck.getStatus()
+      if (response && Array.isArray(response)) {
+        setCheckStatus(response)
+        console.log('检查状态已更新:', response)
+      }
+    } catch (error) {
+      console.error('刷新检查状态失败:', error)
+    }
+  }
+  
   // 修复检查项
   const handleRepairItem = async (hostIp: string, checkKey: string, checkName: string) => {
     try {
@@ -580,16 +594,20 @@ export default function EnvironmentCheckDialog({
     </ClusterWizardLayout>
     
     {/* 日志查看对话框 */}
-    {selectedCheckItem && (
-      <CheckLogsDialog
-        open={logsDialogOpen}
-        onOpenChange={setLogsDialogOpen}
-        clusterId={cluster?.id || 0}
-        hostIp={selectedCheckItem.hostIp}
-        checkKey={selectedCheckItem.checkKey}
-        checkName={selectedCheckItem.checkName}
-      />
-    )}
+      {selectedCheckItem && (
+        <CheckLogsDialog
+          open={logsDialogOpen}
+          onOpenChange={setLogsDialogOpen}
+          clusterId={cluster?.id || 0}
+          hostIp={selectedCheckItem.hostIp}
+          checkKey={selectedCheckItem.checkKey}
+          checkName={selectedCheckItem.checkName}
+          onRepairSuccess={() => {
+            console.log('修复成功，重新加载检查结果')
+            refreshCheckStatus()
+          }}
+        />
+      )}
     </>
   )
 }
