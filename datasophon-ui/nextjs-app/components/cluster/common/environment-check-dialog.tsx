@@ -118,45 +118,6 @@ export default function EnvironmentCheckDialog({
     }
   }, [open, hostList])
 
-  // 查看日志
-  const handleViewLogs = (hostIp: string, checkKey: string, checkName: string) => {
-    setSelectedCheckItem({ hostIp, checkKey, checkName })
-    setLogsDialogOpen(true)
-  }
-  
-  // 跳过检查项
-  const handleSkipItem = async (hostIp: string, checkKey: string) => {
-    try {
-      await clusterApiV1.environmentCheck.skipItem({ hostIp, checkItemKey: checkKey })
-      // SSE会自动更新状态
-      alert('检查项已跳过')
-    } catch (error: any) {
-      alert('忽略失败: ' + (error.message || '未知错误'))
-    }
-  }
-  
-  // 修复检查项
-  const handleRepairItem = async (hostIp: string, checkKey: string) => {
-    if (!confirm('确定要修复此检查项吗？')) {
-      return
-    }
-    
-    try {
-      const result = await clusterApiV1.environmentCheck.repairItem({ 
-        hostIp, 
-        checkItemKey: checkKey 
-      })
-      
-      if (result.data && result.data.success) {
-        alert('修复成功，正在重新检查...')
-      } else {
-        alert('修复失败: ' + (result.data?.message || '未知错误'))
-      }
-    } catch (error: any) {
-      alert('修复失败: ' + (error.message || '未知错误'))
-    }
-  }
-
   // 启动环境检查
   const handleStartCheck = async () => {
     try {
@@ -267,6 +228,12 @@ export default function EnvironmentCheckDialog({
   // 检查检查项是否展开
   const isCheckItemExpanded = (hostIp: string, checkKey: string) => {
     return expandedCheckItems.has(`${hostIp}-${checkKey}`)
+  }
+
+  // 查看日志
+  const handleViewLogs = (hostIp: string, checkKey: string, checkName: string) => {
+    setSelectedCheckItem({ hostIp, checkKey, checkName })
+    setLogsDialogOpen(true)
   }
 
   // 跳过检查项
