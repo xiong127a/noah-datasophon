@@ -289,19 +289,32 @@ public class JavaChecker implements EnvironmentCheckItem {
             downloadInfo.put("installPath", installBasePath);
             downloadInfo.put("javaHome", javaHome);
             downloadInfo.put("tempDir", tempDir);
+            
+            // 读取用户修复选项（是否创建软链接，默认false）
+            boolean createSymlinks = params != null 
+                    && Boolean.TRUE.equals(params.get("createSymlinks"));
+            downloadInfo.put("createSymlinks", createSymlinks);
+            
             checkLogWriter.logRepairInfo(context.getClusterId(), context.getHostIp(),
                     getCheckKey(), "准备JDK安装", downloadInfo);
             
-            // 创建修复步骤列表
-            java.util.List<com.datasophon.api.checker.RepairStep> steps = java.util.Arrays.asList(
-                new com.datasophon.api.checker.steps.jdk.CreateTempDirStep(tempDir),
-                new com.datasophon.api.checker.steps.jdk.DownloadJdkStep(tempDir, jdkFileName, jdkDownloadUrl, isHttp),
-                new com.datasophon.api.checker.steps.jdk.ExtractJdkStep(tempDir, jdkFileName, installBasePath),
-                new com.datasophon.api.checker.steps.jdk.ConfigureEnvStep(javaHome),
-                new com.datasophon.api.checker.steps.jdk.CreateSymlinksStep(javaHome),
-                new com.datasophon.api.checker.steps.jdk.CleanupTempStep(tempDir),
-                new com.datasophon.api.checker.steps.jdk.VerifyInstallStep()
-            );
+            // 创建修复步骤列表（根据用户选择决定是否包含软链接步骤）
+            java.util.List<com.datasophon.api.checker.RepairStep> steps = new java.util.ArrayList<>();
+            steps.add(new com.datasophon.api.checker.steps.jdk.CreateTempDirStep(tempDir));
+            steps.add(new com.datasophon.api.checker.steps.jdk.DownloadJdkStep(tempDir, jdkFileName, jdkDownloadUrl, isHttp));
+            steps.add(new com.datasophon.api.checker.steps.jdk.ExtractJdkStep(tempDir, jdkFileName, installBasePath));
+            steps.add(new com.datasophon.api.checker.steps.jdk.ConfigureEnvStep(javaHome));
+            
+            // 可选步骤：创建系统软链接（需要用户选择）
+            if (createSymlinks) {
+                log.info("用户选择创建系统软链接");
+                steps.add(new com.datasophon.api.checker.steps.jdk.CreateSymlinksStep(javaHome));
+            } else {
+                log.info("用户未选择创建系统软链接，跳过此步骤");
+            }
+            
+            steps.add(new com.datasophon.api.checker.steps.jdk.CleanupTempStep(tempDir));
+            steps.add(new com.datasophon.api.checker.steps.jdk.VerifyInstallStep());
             
             // 使用步骤执行器执行所有步骤
             return repairStepExecutor.executeSteps(steps, context, checkLogWriter, getCheckKey());
