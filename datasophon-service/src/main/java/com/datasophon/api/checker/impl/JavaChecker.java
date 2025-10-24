@@ -54,6 +54,9 @@ public class JavaChecker implements EnvironmentCheckItem {
     @Autowired
     private ParcelRepositoryService parcelRepositoryService;
     
+    @Autowired
+    private com.datasophon.api.checker.RepairStepExecutor repairStepExecutor;
+    
     private SshConnectionService sshService;
     private static final Pattern VERSION_PATTERN = Pattern.compile("version \"([^\"]+)\"");
     
@@ -246,12 +249,14 @@ public class JavaChecker implements EnvironmentCheckItem {
             
             // 构造JDK包下载URL
             String jdkDownloadUrl;
+            boolean isHttp = false;
             if ("http".equalsIgnoreCase(repository.getRepoType()) || "https".equalsIgnoreCase(repository.getRepoType())) {
                 // HTTP/HTTPS存储库：直接拼接URL
                 String baseUrl = repository.getRepoUrl();
                 jdkDownloadUrl = baseUrl.endsWith("/") 
                         ? baseUrl + jdkPackageName 
                         : baseUrl + "/" + jdkPackageName;
+                isHttp = true;
             } else if ("local".equalsIgnoreCase(repository.getRepoType())) {
                 // 本地存储库：使用文件路径
                 String basePath = repository.getRepoUrl();
@@ -271,79 +276,32 @@ public class JavaChecker implements EnvironmentCheckItem {
             // 提取JDK版本和文件名
             String jdkFileName = jdkPackageName.substring(jdkPackageName.lastIndexOf("/") + 1);
             String jdkDirName = jdkFileName.replace(".tar.gz", "");
+            String javaHome = installBasePath + "/" + jdkDirName;
+            String tempDir = "/tmp/jdk_install_" + System.currentTimeMillis();
             
             // 记录下载信息
             Map<String, Object> downloadInfo = new HashMap<>();
             downloadInfo.put("downloadUrl", jdkDownloadUrl);
             downloadInfo.put("fileName", jdkFileName);
             downloadInfo.put("installPath", installBasePath);
+            downloadInfo.put("javaHome", javaHome);
+            downloadInfo.put("tempDir", tempDir);
             checkLogWriter.logRepairInfo(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), "准备下载JDK安装包", downloadInfo);
+                    getCheckKey(), "准备JDK安装", downloadInfo);
             
-            // 生成安装脚本
-            String installScript = generateInstallScript(jdkDownloadUrl, jdkFileName, 
-                    jdkDirName, installBasePath, "http".equalsIgnoreCase(repository.getRepoType()));
+            // 创建修复步骤列表
+            java.util.List<com.datasophon.api.checker.RepairStep> steps = java.util.Arrays.asList(
+                new com.datasophon.api.checker.steps.jdk.CreateTempDirStep(tempDir),
+                new com.datasophon.api.checker.steps.jdk.DownloadJdkStep(tempDir, jdkFileName, jdkDownloadUrl, isHttp),
+                new com.datasophon.api.checker.steps.jdk.ExtractJdkStep(tempDir, jdkFileName, installBasePath),
+                new com.datasophon.api.checker.steps.jdk.ConfigureEnvStep(javaHome),
+                new com.datasophon.api.checker.steps.jdk.CreateSymlinksStep(javaHome),
+                new com.datasophon.api.checker.steps.jdk.CleanupTempStep(tempDir),
+                new com.datasophon.api.checker.steps.jdk.VerifyInstallStep()
+            );
             
-            // 记录执行的安装脚本
-            checkLogWriter.logRepairCommand(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), installScript);
-            
-            var pluginContext = toPluginContext(context);
-            var result = getSshService().executeCommand(pluginContext, installScript);
-            
-            // 记录脚本输出
-            checkLogWriter.logRepairOutput(context.getClusterId(), context.getHostIp(),
-                    getCheckKey(), result.output());
-            
-            if (result.isSuccess()) {
-                // 验证修复结果
-                checkLogWriter.logRepairInfo(context.getClusterId(), context.getHostIp(),
-                        getCheckKey(), "验证Java环境安装结果", null);
-                
-                // 需要重新加载环境变量
-                var verifyCommand = "source /etc/profile && java -version 2>&1";
-                checkLogWriter.logRepairCommand(context.getClusterId(), context.getHostIp(),
-                        getCheckKey(), verifyCommand);
-                
-                var verifyResult = getSshService().executeCommand(pluginContext, verifyCommand);
-                checkLogWriter.logRepairOutput(context.getClusterId(), context.getHostIp(),
-                        getCheckKey(), verifyResult.output());
-                
-                if (verifyResult.isSuccess() && verifyResult.output().contains("version")) {
-                    String successMsg = "Java环境修复成功";
-                    Map<String, Object> successDetails = new HashMap<>();
-                    successDetails.put("verifyOutput", verifyResult.output());
-                    successDetails.put("javaHome", installBasePath + "/" + jdkDirName);
-                    checkLogWriter.logRepairSuccess(context.getClusterId(), context.getHostIp(),
-                            getCheckKey(), successMsg, successDetails);
-                    return RepairResult.builder()
-                            .success(true)
-                            .message(successMsg)
-                            .build();
-                } else {
-                    String failMsg = "安装脚本执行成功，但Java环境验证失败";
-                    Map<String, Object> errorDetails = new HashMap<>();
-                    errorDetails.put("verifyOutput", verifyResult.output());
-                    errorDetails.put("verifyError", verifyResult.error());
-                    checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
-                            getCheckKey(), failMsg, errorDetails);
-                    return RepairResult.builder()
-                            .success(false)
-                            .message(failMsg)
-                            .build();
-                }
-            } else {
-                String errorMsg = "Java环境安装失败: " + result.error();
-                Map<String, Object> errorDetails = new HashMap<>();
-                errorDetails.put("error", result.error());
-                errorDetails.put("output", result.output());
-                checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
-                        getCheckKey(), errorMsg, errorDetails);
-                return RepairResult.builder()
-                        .success(false)
-                        .message(errorMsg)
-                        .build();
-            }
+            // 使用步骤执行器执行所有步骤
+            return repairStepExecutor.executeSteps(steps, context, checkLogWriter, getCheckKey());
                     
         } catch (Exception e) {
             log.error("修复Java环境时发生异常: {}", e.getMessage(), e);
@@ -357,60 +315,6 @@ public class JavaChecker implements EnvironmentCheckItem {
                     .message(errorMsg)
                     .build();
         }
-    }
-    
-    /**
-     * 生成JDK安装脚本
-     */
-    private String generateInstallScript(String downloadUrl, String fileName, 
-                                         String jdkDirName, String installPath, boolean isHttp) {
-        StringBuilder script = new StringBuilder();
-        script.append("set -e\n");  // 遇到错误立即退出
-        script.append("echo '开始安装JDK...'\n");
-        
-        // 创建临时目录
-        script.append("TMP_DIR=/tmp/jdk_install_").append(System.currentTimeMillis()).append("\n");
-        script.append("mkdir -p $TMP_DIR\n");
-        script.append("cd $TMP_DIR\n");
-        
-        // 下载JDK包
-        if (isHttp) {
-            script.append("echo '从远程存储库下载JDK...'\n");
-            script.append("wget -O ").append(fileName).append(" '").append(downloadUrl).append("'\n");
-        } else {
-            script.append("echo '从本地存储库复制JDK...'\n");
-            script.append("cp '").append(downloadUrl).append("' ").append(fileName).append("\n");
-        }
-        
-        // 解压到目标目录
-        script.append("echo '解压JDK安装包...'\n");
-        script.append("sudo mkdir -p ").append(installPath).append("\n");
-        script.append("sudo tar -zxf ").append(fileName).append(" -C ").append(installPath).append("\n");
-        
-        // 配置环境变量
-        String javaHome = installPath + "/" + jdkDirName;
-        script.append("echo '配置JAVA环境变量...'\n");
-        script.append("sudo bash -c 'cat >> /etc/profile << EOF\n");
-        script.append("# JDK Environment\n");
-        script.append("export JAVA_HOME=").append(javaHome).append("\n");
-        script.append("export JRE_HOME=\\${JAVA_HOME}/jre\n");
-        script.append("export CLASSPATH=.:\\${JAVA_HOME}/lib:\\${JRE_HOME}/lib\n");
-        script.append("export PATH=\\${JAVA_HOME}/bin:\\$PATH\n");
-        script.append("EOF'\n");
-        
-        // 创建软链接（可选，方便管理）
-        script.append("sudo ln -sf ").append(javaHome).append("/bin/java /usr/bin/java\n");
-        script.append("sudo ln -sf ").append(javaHome).append("/bin/javac /usr/bin/javac\n");
-        
-        // 清理临时文件
-        script.append("echo '清理临时文件...'\n");
-        script.append("rm -rf $TMP_DIR\n");
-        
-        script.append("echo 'JDK安装完成！'\n");
-        script.append("source /etc/profile\n");
-        script.append("java -version\n");
-        
-        return script.toString();
     }
     
     /**
