@@ -105,6 +105,15 @@ export const API_PATHS_V1 = {
   PARCEL_PROCESS: `${API_BASE}/cluster/parcel/process`,
   PARCEL_DOWNLOAD: `${API_BASE}/cluster/parcel/download`,
   PARCEL_INSTALL: `${API_BASE}/cluster/parcel/install`,
+  
+  // 存储库管理
+  PARCEL_REPOSITORY_LIST: `${API_BASE}/cluster/parcel/list`,
+  PARCEL_REPOSITORY_CREATE: `${API_BASE}/cluster/parcel/repository/create`,
+  PARCEL_REPOSITORY_UPDATE: `${API_BASE}/cluster/parcel/repository/update`,
+  PARCEL_REPOSITORY_DELETE: `${API_BASE}/cluster/parcel/repository/delete`,
+  PARCEL_REPOSITORY_TEST: `${API_BASE}/cluster/parcel/repository/test`,
+  PARCEL_REPOSITORY_SET_DEFAULT: `${API_BASE}/cluster/parcel/repository/default`,
+  PARCEL_CLUSTER_REPOSITORY: `${API_BASE}/cluster/parcel/cluster`,
 
   // 服务配置相关 - v1（规范化后端路径）
   GET_SERVICE_CONFIG: `${API_BASE}/cluster/service/instance/config/info`, // 获取服务配置信息
