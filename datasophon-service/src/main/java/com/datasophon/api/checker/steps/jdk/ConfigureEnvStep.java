@@ -43,10 +43,41 @@ public class ConfigureEnvStep implements RepairStep {
         var checkResult = sshService.executeCommand(pluginContext, checkCommand);
         
         if (checkResult.output().contains("EXISTS")) {
-            log.info("JAVA环境变量已存在于 ~/.bashrc，跳过配置");
-            logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java", 
-                    "JAVA环境变量已存在于 ~/.bashrc，跳过配置", null);
-            return;
+            log.info("检测到JAVA_HOME已存在，验证配置内容...");
+            
+            // 即使跳过配置，也要验证并显示 ~/.bashrc 内容
+            String verifyCommand = "tail -15 ~/.bashrc";
+            var verifyResult = sshService.executeCommand(pluginContext, verifyCommand);
+            
+            Map<String, Object> skipInfo = new HashMap<>();
+            skipInfo.put("javaHome", javaHome);
+            skipInfo.put("bashrcContent", verifyResult.output());
+            
+            logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java",
+                    "验证已存在的环境变量: " + verifyCommand);
+            logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java",
+                    verifyResult.output());
+            
+            // 检查是否真的包含正确的 JAVA_HOME
+            if (verifyResult.output().contains("JAVA_HOME=" + javaHome)) {
+                logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                        "✅ 验证通过：JAVA环境变量已存在且正确，跳过配置", skipInfo);
+                log.info("JAVA环境变量已存在且验证通过，跳过配置");
+                return;
+            } else {
+                // 检测到配置但路径不对，需要删除旧配置重新添加
+                log.warn("检测到旧的JAVA配置但路径不匹配，将删除旧配置重新添加");
+                logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                        "⚠️ 检测到旧配置但路径不匹配，将删除DataSophon添加的旧配置", skipInfo);
+                
+                // 删除旧的 DataSophon 添加的配置
+                String removeCommand = "sed -i '/# JDK Environment - Added by DataSophon/,+4d' ~/.bashrc";
+                logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", removeCommand);
+                var removeResult = sshService.executeCommand(pluginContext, removeCommand);
+                logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", removeResult.output());
+                
+                log.info("旧配置已删除，继续添加新配置");
+            }
         }
         
         // 配置环境变量到用户的 ~/.bashrc（不需要root权限）
