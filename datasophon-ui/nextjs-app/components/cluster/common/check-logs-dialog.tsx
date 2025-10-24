@@ -213,7 +213,7 @@ export function CheckLogsDialog({
   
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[90vw] w-[1400px] h-[85vh] flex flex-col">
+      <DialogContent className="w-[90vw] max-w-[1400px] h-[85vh] flex flex-col sm:max-w-[1400px]">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>{checkName} - 日志查看</DialogTitle>
           <DialogDescription>
