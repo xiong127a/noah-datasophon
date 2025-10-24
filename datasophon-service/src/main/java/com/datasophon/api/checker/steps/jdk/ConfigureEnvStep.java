@@ -18,10 +18,10 @@ import java.util.Map;
 @Slf4j
 public class ConfigureEnvStep implements RepairStep {
     
-    private final String javaHome;
+    private final String installBasePath;
     
-    public ConfigureEnvStep(String javaHome) {
-        this.javaHome = javaHome;
+    public ConfigureEnvStep(String installBasePath) {
+        this.installBasePath = installBasePath;
     }
     
     @Override
@@ -37,6 +37,27 @@ public class ConfigureEnvStep implements RepairStep {
     @Override
     public void execute(HostCheckContext context, SshConnectionService sshService, CheckLogWriter logWriter) throws Exception {
         var pluginContext = toPluginContext(context);
+        
+        // 检测实际的JDK目录名（解压后的实际目录，如 jdk1.8.0_333）
+        String detectCommand = String.format("ls -dt %s/jdk* 2>/dev/null | head -1", installBasePath);
+        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java",
+                "检测实际JDK目录: " + detectCommand);
+        
+        var detectResult = sshService.executeCommand(pluginContext, detectCommand);
+        logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", detectResult.output());
+        
+        if (!detectResult.isSuccess() || detectResult.output().trim().isEmpty()) {
+            throw new Exception("无法检测JDK目录，请确认JDK已解压到 " + installBasePath);
+        }
+        
+        String javaHome = detectResult.output().trim();
+        log.info("检测到实际JDK目录: {}", javaHome);
+        
+        Map<String, Object> detectedInfo = new HashMap<>();
+        detectedInfo.put("installBasePath", installBasePath);
+        detectedInfo.put("actualJavaHome", javaHome);
+        logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                "检测到实际JDK目录", detectedInfo);
         
         // 检查是否已经配置过JDK环境变量（检查 ~/.bashrc）
         String checkCommand = "grep -q 'JAVA_HOME=" + javaHome + "' ~/.bashrc && echo 'EXISTS' || echo 'NOT_EXISTS'";
