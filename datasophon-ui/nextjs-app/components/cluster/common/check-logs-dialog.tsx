@@ -139,20 +139,20 @@ export function CheckLogsDialog({
   
   const renderLogEntry = (log: LogEntry, index: number) => {
     return (
-      <div key={index} className="mb-3 font-mono text-sm">
-        <div className="flex items-start gap-2">
-          <span className="text-gray-500 text-xs whitespace-nowrap">{log.timestamp}</span>
-          <span className={`px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap ${getLevelBg(log.level)}`}>
+      <div key={index} className="mb-3 font-mono text-sm w-full max-w-none">
+        <div className="flex items-start gap-2 w-full">
+          <span className="text-gray-500 text-xs whitespace-nowrap flex-shrink-0">{log.timestamp}</span>
+          <span className={`px-2 py-0.5 rounded text-xs font-bold whitespace-nowrap flex-shrink-0 ${getLevelBg(log.level)}`}>
             {log.level}
           </span>
-          <span className={`flex-1 break-words ${getLevelColor(log.level)}`}>{log.message}</span>
+          <span className={`flex-1 break-words min-w-0 ${getLevelColor(log.level)}`}>{log.message}</span>
         </div>
         {log.details && Object.keys(log.details).length > 0 && (
-          <div className="ml-8 mt-1 text-xs text-gray-400 bg-gray-800 p-3 rounded border border-gray-700 break-all">
+          <div className="ml-8 mt-1 text-xs text-gray-400 bg-gray-800 p-3 rounded border border-gray-700 break-all w-full max-w-none">
             {Object.entries(log.details).map(([key, value]) => (
-              <div key={key} className="mb-1 last:mb-0">
+              <div key={key} className="mb-1 last:mb-0 w-full">
                 <span className="text-blue-400 font-semibold">{key}:</span>{' '}
-                <span className="text-gray-300">{typeof value === 'string' ? value : JSON.stringify(value, null, 2)}</span>
+                <span className="text-gray-300 break-all">{typeof value === 'string' ? value : JSON.stringify(value, null, 2)}</span>
               </div>
             ))}
           </div>
@@ -165,8 +165,8 @@ export function CheckLogsDialog({
     const filteredLogs = filterLogs(logs)
     
     return (
-      <div className="space-y-2">
-        <div className="flex justify-between items-center">
+      <div className="flex flex-col h-full space-y-2">
+        <div className="flex justify-between items-center flex-shrink-0">
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-400" />
             <Select value={levelFilter} onValueChange={setLevelFilter}>
@@ -196,13 +196,15 @@ export function CheckLogsDialog({
           </div>
         </div>
         
-        <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto flex-1 min-h-0">
+        <div className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-auto flex-1 w-full max-w-none">
           {filteredLogs.length === 0 ? (
             <div className="text-gray-500 text-center py-8">
               {logs.length === 0 ? (type === 'check' ? '暂无检查日志' : '暂无修复日志') : '无匹配的日志'}
             </div>
           ) : (
-            filteredLogs.map((log, index) => renderLogEntry(log, index))
+            <div className="w-full max-w-none">
+              {filteredLogs.map((log, index) => renderLogEntry(log, index))}
+            </div>
           )}
         </div>
       </div>
@@ -212,15 +214,15 @@ export function CheckLogsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[90vw] w-[1400px] h-[85vh] flex flex-col">
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0">
           <DialogTitle>{checkName} - 日志查看</DialogTitle>
           <DialogDescription>
             主机: {hostIp}
           </DialogDescription>
         </DialogHeader>
         
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="flex-1 flex flex-col min-h-0">
+          <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
             <TabsTrigger value="check">
               <FileText className="h-4 w-4 mr-2" />
               检查日志
@@ -231,16 +233,16 @@ export function CheckLogsDialog({
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="check" className="space-y-2">
+          <TabsContent value="check" className="flex-1 flex flex-col min-h-0 mt-2">
             {renderLogsTab(checkLogs, 'check')}
           </TabsContent>
           
-          <TabsContent value="repair" className="space-y-2">
+          <TabsContent value="repair" className="flex-1 flex flex-col min-h-0 mt-2">
             {renderLogsTab(repairLogs, 'repair')}
           </TabsContent>
         </Tabs>
         
-        <DialogFooter>
+        <DialogFooter className="flex-shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             关闭
           </Button>
