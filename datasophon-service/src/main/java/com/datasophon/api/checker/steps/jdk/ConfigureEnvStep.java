@@ -76,7 +76,33 @@ public class ConfigureEnvStep implements RepairStep {
             throw new Exception("配置环境变量失败: " + result.error());
         }
         
-        log.info("JAVA环境变量配置成功（已写入 ~/.bashrc）");
+        log.info("环境变量写入命令执行完成，开始验证...");
+        
+        // 验证步骤1：检查 ~/.bashrc 是否包含 JAVA_HOME
+        String verifyCommand1 = "grep 'JAVA_HOME=" + javaHome + "' ~/.bashrc";
+        var verifyResult1 = sshService.executeCommand(pluginContext, verifyCommand1);
+        
+        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", 
+                "验证环境变量: " + verifyCommand1);
+        logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", 
+                verifyResult1.output());
+        
+        if (!verifyResult1.isSuccess() || !verifyResult1.output().contains("JAVA_HOME")) {
+            throw new Exception("验证失败：~/.bashrc 中未找到 JAVA_HOME 配置");
+        }
+        
+        // 验证步骤2：显示 ~/.bashrc 的最后几行（JDK配置部分）
+        String verifyCommand2 = "tail -10 ~/.bashrc";
+        var verifyResult2 = sshService.executeCommand(pluginContext, verifyCommand2);
+        
+        Map<String, Object> verifyInfo = new HashMap<>();
+        verifyInfo.put("bashrcContent", verifyResult2.output());
+        verifyInfo.put("javaHome", javaHome);
+        
+        logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                "✅ 验证成功：环境变量已写入 ~/.bashrc", verifyInfo);
+        
+        log.info("JAVA环境变量配置成功并已验证（已写入 ~/.bashrc）");
     }
     
     private com.datasophon.plugins.api.model.HostCheckContext toPluginContext(HostCheckContext context) {
