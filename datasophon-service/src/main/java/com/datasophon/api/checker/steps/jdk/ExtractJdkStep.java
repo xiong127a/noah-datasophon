@@ -110,11 +110,25 @@ public class ExtractJdkStep implements RepairStep {
         if (!symlinkResult.isSuccess()) {
             log.warn("创建软链接失败，但不影响继续: {}", symlinkResult.error());
         } else {
-            Map<String, Object> successInfo = new HashMap<>();
-            successInfo.put("actualDir", actualJdkDir);
-            successInfo.put("symlinkPath", symlinkPath);
-            logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
-                    "已创建JDK统一软链接", successInfo);
+            // 验证软链接是否真的创建成功
+            String verifySymlinkCommand = String.format("ls -l %s | grep -E '^l'", symlinkPath);
+            var verifySymlinkResult = sshService.executeCommand(pluginContext, verifySymlinkCommand);
+            
+            logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java",
+                    "验证软链接: " + verifySymlinkCommand);
+            logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java",
+                    verifySymlinkResult.output());
+            
+            if (verifySymlinkResult.isSuccess()) {
+                Map<String, Object> successInfo = new HashMap<>();
+                successInfo.put("actualDir", actualJdkDir);
+                successInfo.put("symlinkPath", symlinkPath);
+                successInfo.put("verification", verifySymlinkResult.output());
+                logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                        "✅ 验证成功：JDK统一软链接已创建", successInfo);
+            } else {
+                log.warn("软链接验证失败，但不阻塞流程");
+            }
         }
     }
     
