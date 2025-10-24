@@ -1,6 +1,8 @@
 package com.datasophon.api.controller.v1;
 
+import com.datasophon.api.checker.util.CheckLogWriter;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -20,6 +22,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @RestController
 @RequestMapping("/api/v1/environment-logs-sse")
 public class EnvironmentLogsSSEController {
+    
+    @Autowired
+    private CheckLogWriter checkLogWriter;
     
     // 存储SSE连接：key为 "clusterId:hostIp:checkKey"
     private static final Map<String, SseEmitter> sseEmitters = new ConcurrentHashMap<>();
@@ -66,11 +71,68 @@ public class EnvironmentLogsSSEController {
             emitter.send(SseEmitter.event()
                     .name("connected")
                     .data("{\"message\":\"SSE连接已建立\"}"));
+            
+            // 异步推送历史日志
+            new Thread(() -> pushHistoricalLogs(emitter, clusterId, hostIp, checkKey)).start();
+            
         } catch (IOException e) {
             log.error("发送连接成功消息失败", e);
         }
         
         return emitter;
+    }
+    
+    /**
+     * 推送历史日志
+     */
+    private void pushHistoricalLogs(SseEmitter emitter, Long clusterId, String hostIp, String checkKey) {
+        try {
+            log.info("开始推送历史日志: clusterId={}, hostIp={}, checkKey={}", clusterId, hostIp, checkKey);
+            
+            // 读取检查日志
+            String checkLog = checkLogWriter.readLogs(clusterId, hostIp, checkKey, CheckLogWriter.LogType.CHECK);
+            if (checkLog != null && !checkLog.isEmpty() && !checkLog.equals("[]")) {
+                String[] checkLogLines = checkLog.substring(1, checkLog.length() - 1).split(",(?=\\{)");
+                for (String logLine : checkLogLines) {
+                    if (logLine.trim().isEmpty()) continue;
+                    try {
+                        emitter.send(SseEmitter.event()
+                                .name("log")
+                                .data(logLine.trim()));
+                    } catch (IOException e) {
+                        log.error("推送检查日志失败", e);
+                        return;
+                    }
+                }
+            }
+            
+            // 读取修复日志
+            String repairLog = checkLogWriter.readLogs(clusterId, hostIp, checkKey, CheckLogWriter.LogType.REPAIR);
+            if (repairLog != null && !repairLog.isEmpty() && !repairLog.equals("[]")) {
+                String[] repairLogLines = repairLog.substring(1, repairLog.length() - 1).split(",(?=\\{)");
+                for (String logLine : repairLogLines) {
+                    if (logLine.trim().isEmpty()) continue;
+                    try {
+                        emitter.send(SseEmitter.event()
+                                .name("log")
+                                .data(logLine.trim()));
+                    } catch (IOException e) {
+                        log.error("推送修复日志失败", e);
+                        return;
+                    }
+                }
+            }
+            
+            // 发送历史日志加载完成事件
+            emitter.send(SseEmitter.event()
+                    .name("history-loaded")
+                    .data("{\"message\":\"历史日志加载完成\"}"));
+            
+            log.info("历史日志推送完成: clusterId={}, hostIp={}, checkKey={}", clusterId, hostIp, checkKey);
+            
+        } catch (Exception e) {
+            log.error("推送历史日志异常: clusterId={}, hostIp={}, checkKey={}", clusterId, hostIp, checkKey, e);
+        }
     }
     
     /**

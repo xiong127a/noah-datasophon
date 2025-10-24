@@ -357,11 +357,7 @@ export const clusterApiV1 = {
       return response.data
     },
     
-    /** 获取检查和修复日志 */
-    getLogs: async (hostIp: string, checkKey: string) => {
-      const response = await apiV1.get(`/api/v1/environment-check/logs/${hostIp}/${checkKey}`)
-      return response.data
-    },
+    // 注意：日志查看已改为通过SSE实时推送，不再需要轮询API
   },
 
   // 服务角色分配相关 API (Step5)

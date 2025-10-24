@@ -283,6 +283,20 @@ public class CheckLogWriter {
     }
     
     /**
+     * 清理指定检查项的修复日志（用于新的修复开始前）
+     */
+    public void clearRepairLogs(Long clusterId, String hostIp, String checkKey) {
+        try {
+            Path repairLog = getLogFilePath(clusterId, hostIp, checkKey, LogType.REPAIR);
+            Files.deleteIfExists(repairLog);
+            log.info("清理修复日志: clusterId={}, hostIp={}, checkKey={}", clusterId, hostIp, checkKey);
+        } catch (Exception e) {
+            log.error("清理修复日志失败: clusterId={}, hostIp={}, checkKey={}", 
+                     clusterId, hostIp, checkKey, e);
+        }
+    }
+    
+    /**
      * 清理主机所有日志
      */
     public void clearHostLogs(Long clusterId, String hostIp) {

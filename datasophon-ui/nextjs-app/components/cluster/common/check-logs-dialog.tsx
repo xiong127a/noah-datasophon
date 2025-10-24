@@ -35,42 +35,23 @@ export function CheckLogsDialog({
   checkKey,
   checkName
 }: CheckLogsDialogProps) {
-  const [activeTab, setActiveTab] = useState<'check' | 'repair'>('check')
+  const [activeTab, setActiveTab] = useState<'check' | 'repair'>('repair') // 默认显示修复日志
   const [checkLogs, setCheckLogs] = useState<LogEntry[]>([])
   const [repairLogs, setRepairLogs] = useState<LogEntry[]>([])
-  const [loading, setLoading] = useState(false)
+  const [connectionState, setConnectionState] = useState<'connecting' | 'loading-history' | 'connected' | 'error'>('connecting')
   const [levelFilter, setLevelFilter] = useState<string>('all')
   const logsEndRef = useRef<HTMLDivElement>(null)
   const eventSourceRef = useRef<EventSource | null>(null)
   
-  const loadLogs = async () => {
-    setLoading(true)
-    try {
-      const response = await clusterApiV1.environmentCheck.getLogs(hostIp, checkKey)
-      if (response.data) {
-        const checkLogText = response.data.checkLog || '暂无检查日志'
-        const repairLogText = response.data.repairLog || '暂无修复日志'
-        
-        // 解析JSON Lines格式
-        setCheckLogs(parseJsonLines(checkLogText))
-        setRepairLogs(parseJsonLines(repairLogText))
-      }
-    } catch (error) {
-      console.error('加载日志失败:', error)
-      setCheckLogs([])
-      setRepairLogs([])
-    } finally {
-      setLoading(false)
-    }
-  }
-  
-  // 加载日志并建立SSE连接
+  // 建立SSE连接（作为唯一数据源）
   useEffect(() => {
     if (open) {
-      // 1. 首次加载历史日志
-      loadLogs()
+      // 重置状态
+      setCheckLogs([])
+      setRepairLogs([])
+      setConnectionState('connecting')
       
-      // 2. 建立SSE连接接收实时日志（检查日志 + 修复日志）
+      // 建立SSE连接（历史日志和实时日志都通过SSE推送）
       const sseUrl = `/ddh/api/v1/environment-logs-sse/stream/${clusterId}/${hostIp}/${checkKey}`
       console.log('建立日志SSE连接:', sseUrl)
       
@@ -80,13 +61,20 @@ export function CheckLogsDialog({
       // 连接建立
       eventSource.addEventListener('connected', (event) => {
         console.log('SSE连接已建立:', event.data)
+        setConnectionState('loading-history')
+      })
+      
+      // 历史日志加载完成
+      eventSource.addEventListener('history-loaded', (event) => {
+        console.log('历史日志加载完成:', event.data)
+        setConnectionState('connected')
       })
       
       // 接收实时日志（根据type字段分发）
       eventSource.addEventListener('log', (event) => {
         try {
           const logEntry = JSON.parse(event.data) as LogEntry
-          console.log('收到实时日志:', logEntry)
+          console.log('收到日志:', logEntry)
           
           // 根据日志类型追加到对应的日志列表
           if (logEntry.type === 'check') {
@@ -108,6 +96,7 @@ export function CheckLogsDialog({
       // 连接错误
       eventSource.onerror = (error) => {
         console.error('SSE连接错误:', error)
+        setConnectionState('error')
         eventSource.close()
       }
       
@@ -270,14 +259,38 @@ export function CheckLogsDialog({
             </Select>
           </div>
           
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {/* 连接状态指示器 */}
+            <div className="text-xs text-gray-500 flex items-center gap-1">
+              {connectionState === 'connecting' && (
+                <>
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  连接中...
+                </>
+              )}
+              {connectionState === 'loading-history' && (
+                <>
+                  <RefreshCw className="h-3 w-3 animate-spin" />
+                  加载历史日志...
+                </>
+              )}
+              {connectionState === 'connected' && (
+                <>
+                  <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  实时推送中
+                </>
+              )}
+              {connectionState === 'error' && (
+                <>
+                  <div className="h-2 w-2 rounded-full bg-red-500" />
+                  连接错误
+                </>
+              )}
+            </div>
+            
             <Button size="sm" variant="outline" onClick={() => copyLogs(filteredLogs)}>
               <Copy className="h-4 w-4 mr-1" />
               复制
-            </Button>
-            <Button size="sm" variant="outline" onClick={loadLogs} disabled={loading}>
-              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? 'animate-spin' : ''}`} />
-              刷新
             </Button>
           </div>
         </div>

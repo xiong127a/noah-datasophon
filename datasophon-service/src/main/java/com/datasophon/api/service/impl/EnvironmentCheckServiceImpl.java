@@ -4,6 +4,7 @@ import com.datasophon.api.checker.CheckOrchestrator;
 import com.datasophon.api.checker.CheckStateManager;
 import com.datasophon.api.checker.EnvironmentCheckItem;
 import com.datasophon.api.checker.HostCheckContext;
+import com.datasophon.api.checker.util.CheckLogWriter;
 import com.datasophon.api.service.EnvironmentCheckService;
 import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
@@ -34,6 +35,9 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
     
     @Autowired
     private List<EnvironmentCheckItem> checkItems;
+    
+    @Autowired
+    private CheckLogWriter checkLogWriter;
     
     @Override
     public String startEnvironmentCheck(EnvironmentCheckRequest request) {
@@ -79,6 +83,9 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
     @Override
     public RepairResult repairCheckItem(Long clusterId, String hostIp, String checkItemKey, Map<String, Object> repairParams) {
         log.info("修复检查项: 集群={}, 主机={}, 检查项={}", clusterId, hostIp, checkItemKey);
+        
+        // 清空旧的修复日志（每次修复前清空，只保留最新一次）
+        checkLogWriter.clearRepairLogs(clusterId, hostIp, checkItemKey);
         
         try {
             // 查找对应的检查器

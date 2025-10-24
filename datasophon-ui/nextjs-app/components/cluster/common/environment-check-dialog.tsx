@@ -216,10 +216,10 @@ export default function EnvironmentCheckDialog({
   }
 
   // 修复检查项
-  const handleRepairItem = async (hostIp: string, checkKey: string) => {
+  const handleRepairItem = async (hostIp: string, checkKey: string, checkName: string) => {
     try {
       // 1. 立即打开日志对话框，默认显示修复日志标签页
-      setSelectedCheckItem({ hostIp, checkKey })
+      setSelectedCheckItem({ hostIp, checkKey, checkName })
       setLogsDialogOpen(true)
       
       // 2. 调用修复API（异步执行，不阻塞）
@@ -533,7 +533,7 @@ export default function EnvironmentCheckDialog({
                                     {item.canRepair && (
                                       <Button 
                                         size="sm" 
-                                        onClick={() => handleRepairItem(host.hostIp, item.checkKey)}
+                                        onClick={() => handleRepairItem(host.hostIp, item.checkKey, item.displayName)}
                                       >
                                         <Wrench className="h-4 w-4 mr-1" />
                                         修复
