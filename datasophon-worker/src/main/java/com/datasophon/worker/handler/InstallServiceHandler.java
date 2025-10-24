@@ -21,6 +21,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.StreamProgress;
 import cn.hutool.core.lang.Console;
 import cn.hutool.http.HttpUtil;
+import com.alibaba.fastjson2.JSONObject;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.InstallServiceRoleCommand;
@@ -121,6 +122,104 @@ public class InstallServiceHandler {
 
 
     private void downloadPkg(String packageName, String packagePath) {
+        // 获取集群的存储库配置
+        RepositoryConfig repoConfig = getClusterRepositoryFromMaster();
+        
+        logger.info("Repository config: type={}, url={}", repoConfig.getRepoType(), repoConfig.getRepoUrl());
+        
+        // 根据存储库类型选择下载方式
+        if (Constants.REPO_TYPE_HTTP.equals(repoConfig.getRepoType())) {
+            // HTTP远程存储库：直接从HTTP URL下载
+            downloadFromHttp(repoConfig.getRepoUrl(), packageName, packagePath);
+        } else {
+            // 本地存储库：从Master HTTP接口下载（保持现有逻辑）
+            downloadFromMaster(packageName, packagePath);
+        }
+    }
+    
+    /**
+     * 从Master获取集群存储库配置
+     */
+    private RepositoryConfig getClusterRepositoryFromMaster() {
+        String masterPort = PropertyUtils.getString(Constants.MASTER_WEB_PORT);
+        List<String> masterHosts = GetMasterHost();
+        
+        for (String masterHost : masterHosts) {
+            try {
+                String apiUrl = "http://" + masterHost + ":" + masterPort
+                        + "/ddh/api/v1/cluster/parcel/cluster/" + command.getClusterId() + "/repository";
+                
+                logger.info("Getting repository config from: {}", apiUrl);
+                
+                String response = HttpUtil.get(apiUrl);
+                JSONObject json = JSONObject.parseObject(response);
+                
+                if (json.getInteger("code") == 200) {
+                    JSONObject data = json.getJSONObject("data");
+                    RepositoryConfig config = new RepositoryConfig();
+                    config.setRepoType(data.getString("repoType"));
+                    config.setRepoUrl(data.getString("repoUrl"));
+                    logger.info("Successfully got repository config: type={}, url={}", 
+                            config.getRepoType(), config.getRepoUrl());
+                    return config;
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to get repository config from {}: {}", masterHost, e.getMessage());
+            }
+        }
+        
+        // 如果获取失败，返回默认本地配置
+        logger.warn("Failed to get repository config from all masters, using default local config");
+        RepositoryConfig defaultConfig = new RepositoryConfig();
+        defaultConfig.setRepoType(Constants.REPO_TYPE_LOCAL);
+        defaultConfig.setRepoUrl("/opt/datasophon/DDP/packages");
+        return defaultConfig;
+    }
+    
+    /**
+     * 从HTTP远程存储库下载
+     */
+    private void downloadFromHttp(String repoUrl, String packageName, String packagePath) {
+        String downloadUrl = repoUrl.endsWith("/") 
+                ? repoUrl + packageName 
+                : repoUrl + "/" + packageName;
+        
+        logger.info("Downloading from HTTP repository: {}", downloadUrl);
+        
+        try {
+            HttpUtil.downloadFile(downloadUrl, FileUtil.file(packagePath), new StreamProgress() {
+                @Override
+                public void start() {
+                    logger.info("Start downloading package from HTTP repository");
+                    Console.log("start to download from HTTP repository...");
+                }
+
+                @Override
+                public void progress(long progressSize, long total) {
+                    logger.info("Download progress: {}/{}", 
+                            FileUtil.readableFileSize(progressSize), 
+                            FileUtil.readableFileSize(total));
+                    Console.log("downloaded: {}", FileUtil.readableFileSize(progressSize));
+                }
+
+                @Override
+                public void finish() {
+                    logger.info("Download from HTTP repository finished");
+                    Console.log("download success!");
+                }
+            });
+            
+            logger.info("Successfully downloaded package from HTTP repository");
+        } catch (Exception e) {
+            logger.error("Failed to download from HTTP repository: {}", downloadUrl, e);
+            throw new RuntimeException("Failed to download package from HTTP repository: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 从Master下载（本地存储库）
+     */
+    private void downloadFromMaster(String packageName, String packagePath) {
 
         String masterPort = PropertyUtils.getString(Constants.MASTER_WEB_PORT);
 
@@ -136,7 +235,7 @@ public class InstallServiceHandler {
                 downloadUrl = "http://" + masterHost + ":" + masterPort
                         + "/ddh/service/install/downloadPackage?packageName=" + packageName;
 
-                logger.info("Trying to download from {}", downloadUrl);
+                logger.info("Trying to download from Master {}", downloadUrl);
 
                 // 下载文件
                 HttpUtil.downloadFile(downloadUrl, FileUtil.file(packagePath), new StreamProgress() {
