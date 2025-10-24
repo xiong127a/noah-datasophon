@@ -5,12 +5,14 @@ import com.datasophon.api.checker.CheckStateManager;
 import com.datasophon.api.checker.EnvironmentCheckItem;
 import com.datasophon.api.checker.HostCheckContext;
 import com.datasophon.api.checker.util.CheckLogWriter;
+import com.datasophon.api.event.RepairCompleteEvent;
 import com.datasophon.api.service.EnvironmentCheckService;
 import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
 import com.datasophon.common.vo.environment.RepairResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -38,6 +40,9 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
     
     @Autowired
     private CheckLogWriter checkLogWriter;
+    
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
     
     @Override
     public String startEnvironmentCheck(EnvironmentCheckRequest request) {
@@ -144,10 +149,21 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
                 }
             }
             
+            // 发布修复完成事件（由SSE控制器监听并推送）
+            eventPublisher.publishEvent(new RepairCompleteEvent(
+                    this, clusterId, hostIp, checkItemKey,
+                    repairResult.getSuccess() != null && repairResult.getSuccess(),
+                    repairResult.getMessage() != null ? repairResult.getMessage() : "修复完成"));
+            
             return repairResult;
             
         } catch (Exception e) {
             log.error("修复检查项失败: {}", e.getMessage(), e);
+            
+            // 发布修复失败事件
+            eventPublisher.publishEvent(new RepairCompleteEvent(
+                    this, clusterId, hostIp, checkItemKey, false, "修复失败: " + e.getMessage()));
+            
             return RepairResult.builder()
                     .success(false)
                     .message("修复失败: " + e.getMessage())
