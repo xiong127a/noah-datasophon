@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useCallback } from 'react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -40,8 +40,8 @@ export function CheckLogsDialog({
   const [repairLogs, setRepairLogs] = useState<LogEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [levelFilter, setLevelFilter] = useState<string>('all')
-  const logsEndRef = React.useRef<HTMLDivElement>(null)
-  const eventSourceRef = React.useRef<EventSource | null>(null)
+  const logsEndRef = useRef<HTMLDivElement>(null)
+  const eventSourceRef = useRef<EventSource | null>(null)
   
   const loadLogs = async () => {
     setLoading(true)
