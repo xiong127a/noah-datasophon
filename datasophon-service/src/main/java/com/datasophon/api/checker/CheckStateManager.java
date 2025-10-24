@@ -28,6 +28,10 @@ public class CheckStateManager {
     // Key: clusterId, Value: Map<hostIp, EnvironmentCheckStatusVO>
     private final Cache<Long, Map<String, EnvironmentCheckStatusVO>> clusterStateCache;
     
+    // 连接参数缓存
+    // Key: clusterId, Value: connectionParams (包含SSH认证信息)
+    private final Cache<Long, Map<String, Object>> connectionParamsCache;
+    
     // 暂停状态缓存
     // Key: clusterId, Value: isPaused
     private final Map<Long, Boolean> pausedClusters = new ConcurrentHashMap<>();
@@ -35,6 +39,12 @@ public class CheckStateManager {
     public CheckStateManager() {
         this.clusterStateCache = Caffeine.newBuilder()
                 .maximumSize(100) // 最多缓存100个集群
+                .expireAfterWrite(Duration.ofHours(1)) // 1小时后过期
+                .expireAfterAccess(Duration.ofMinutes(30)) // 30分钟不访问则过期
+                .build();
+        
+        this.connectionParamsCache = Caffeine.newBuilder()
+                .maximumSize(100) // 最多缓存100个集群的连接参数
                 .expireAfterWrite(Duration.ofHours(1)) // 1小时后过期
                 .expireAfterAccess(Duration.ofMinutes(30)) // 30分钟不访问则过期
                 .build();
@@ -142,10 +152,26 @@ public class CheckStateManager {
     }
     
     /**
+     * 保存连接参数
+     */
+    public void saveConnectionParams(Long clusterId, Map<String, Object> connectionParams) {
+        connectionParamsCache.put(clusterId, new ConcurrentHashMap<>(connectionParams));
+        log.debug("保存集群 {} 的连接参数", clusterId);
+    }
+    
+    /**
+     * 获取连接参数
+     */
+    public Map<String, Object> getConnectionParams(Long clusterId) {
+        return connectionParamsCache.getIfPresent(clusterId);
+    }
+    
+    /**
      * 清除集群状态
      */
     public void clearClusterState(Long clusterId) {
         clusterStateCache.invalidate(clusterId);
+        connectionParamsCache.invalidate(clusterId);
         pausedClusters.remove(clusterId);
         log.info("清除集群 {} 的检查状态", clusterId);
     }

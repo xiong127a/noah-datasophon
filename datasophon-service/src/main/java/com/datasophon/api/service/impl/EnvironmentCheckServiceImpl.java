@@ -46,6 +46,9 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
         
         log.info("启动环境检查: 集群={}, 主机数={}", clusterId, hostIps.size());
         
+        // 保存连接参数，供后续修复使用
+        stateManager.saveConnectionParams(clusterId, connectionParams);
+        
         // 生成任务ID
         var taskId = UUID.randomUUID().toString();
         
@@ -93,10 +96,23 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
                         .build();
             }
             
-            // 从连接参数构建上下文（实际应该从请求中获取）
+            // 从状态管理器获取连接参数
+            var connectionParams = stateManager.getConnectionParams(clusterId);
+            if (connectionParams == null) {
+                return RepairResult.builder()
+                        .success(false)
+                        .message("未找到集群连接参数，请重新执行环境检查")
+                        .build();
+            }
+            
+            // 构建完整的检查上下文（包含SSH认证信息）
             var context = HostCheckContext.builder()
                     .clusterId(clusterId)
                     .hostIp(hostIp)
+                    .sshUser((String) connectionParams.get("sshUser"))
+                    .sshPort(Integer.parseInt((String) connectionParams.get("sshPort")))
+                    .sshPassword((String) connectionParams.get("sshPassword"))
+                    .connectionParams(connectionParams)
                     .build();
             
             // 执行修复
