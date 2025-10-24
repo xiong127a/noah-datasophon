@@ -73,10 +73,26 @@ public class CreateSymlinksStep implements RepairStep {
             log.info("javac软链接创建成功");
         }
         
-        // 验证软链接（可选）
+        // 验证软链接是否创建成功
         String verifyCommand = "ls -l /usr/bin/java /usr/bin/javac 2>&1";
+        logWriter.logRepairCommand(context.getClusterId(), context.getHostIp(), "java", 
+                "验证系统软链接: " + verifyCommand);
+        
         var verifyResult = sshService.executeCommand(pluginContext, verifyCommand);
         logWriter.logRepairOutput(context.getClusterId(), context.getHostIp(), "java", verifyResult.output());
+        
+        // 检查验证结果
+        if (verifyResult.isSuccess() && verifyResult.output().contains("java") && verifyResult.output().contains("javac")) {
+            Map<String, Object> verifyInfo = new HashMap<>();
+            verifyInfo.put("verification", verifyResult.output());
+            logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                    "✅ 验证成功：系统软链接已创建", verifyInfo);
+            log.info("✅ 系统软链接验证成功");
+        } else {
+            logWriter.logRepairInfo(context.getClusterId(), context.getHostIp(), "java",
+                    "⚠️ 软链接验证失败或部分失败（但不影响JDK使用，可通过环境变量访问）", null);
+            log.warn("⚠️ 软链接验证失败，但不影响JDK通过环境变量使用");
+        }
         
         log.info("软链接创建步骤完成");
     }
