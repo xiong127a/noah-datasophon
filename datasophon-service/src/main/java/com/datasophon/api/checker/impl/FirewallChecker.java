@@ -166,6 +166,16 @@ public class FirewallChecker implements EnvironmentCheckItem {
         }
     }
     
+    /**
+     * 修复防火墙配置
+     * 
+     * 注意：此方法仅执行修复操作（停止并禁用防火墙服务），不包含验证逻辑。
+     * 验证由框架在修复成功后自动调用 execute() 方法完成。
+     * 
+     * @param context 主机检查上下文
+     * @param params 修复参数（当前未使用）
+     * @return RepairResult 修复结果（仅表示禁用防火墙是否成功）
+     */
     @Override
     public RepairResult repair(HostCheckContext context, Map<String, Object> params) {
         log.info("开始修复主机 {} 的防火墙配置", context.getHostIp());
