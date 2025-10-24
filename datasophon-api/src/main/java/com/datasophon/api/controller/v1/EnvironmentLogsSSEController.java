@@ -1,8 +1,10 @@
 package com.datasophon.api.controller.v1;
 
 import com.datasophon.api.checker.util.CheckLogWriter;
+import com.datasophon.api.event.RepairCompleteEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.event.EventListener;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -152,6 +154,17 @@ public class EnvironmentLogsSSEController {
                 sseEmitters.remove(key);
             }
         }
+    }
+    
+    /**
+     * 监听修复完成事件并推送到SSE
+     */
+    @EventListener
+    public void onRepairComplete(RepairCompleteEvent event) {
+        log.info("收到修复完成事件: clusterId={}, hostIp={}, checkKey={}, success={}", 
+                event.getClusterId(), event.getHostIp(), event.getCheckKey(), event.isSuccess());
+        pushComplete(event.getClusterId(), event.getHostIp(), event.getCheckKey(), 
+                event.isSuccess(), event.getMessage());
     }
     
     /**
