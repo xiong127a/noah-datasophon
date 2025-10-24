@@ -273,10 +273,13 @@ public class JavaChecker implements EnvironmentCheckItem {
                         .build();
             }
             
-            // 提取JDK版本和文件名
+            // 提取JDK文件名
             String jdkFileName = jdkPackageName.substring(jdkPackageName.lastIndexOf("/") + 1);
-            String jdkDirName = jdkFileName.replace(".tar.gz", "");
-            String javaHome = installBasePath + "/" + jdkDirName;
+            
+            // 使用统一的软链接路径，不依赖文件名推测目录名
+            // ExtractJdkStep 会在解压后创建 /usr/local/jdk -> 实际目录 的软链接
+            // 这样可以处理文件名与解压目录名不一致的情况（如 jdk-8u333-linux-x64.tar.gz -> jdk1.8.0_333）
+            String javaHome = installBasePath + "/jdk";
             String tempDir = "/tmp/jdk_install_" + System.currentTimeMillis();
             
             // 记录下载信息
