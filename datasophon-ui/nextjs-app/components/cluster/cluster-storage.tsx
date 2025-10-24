@@ -43,7 +43,7 @@ export default function ClusterStorage() {
   const fetchParcelList = async () => {
     setLoading(true)
     try {
-      const response = await apiClient.post(API_PATHS.PARCEL_LIST, {})
+      const response = await apiClient.get(API_PATHS.PARCEL_LIST)
       if (response.data.code === 200) {
         setParcelList(response.data.data || [])
       }
