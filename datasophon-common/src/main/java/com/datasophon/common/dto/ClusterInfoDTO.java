@@ -44,6 +44,7 @@ public record ClusterInfoDTO(
         ClusterType depType,
         String kubeConfig,
         String namespace,
+        Long repositoryId,
         List<UserInfoDTO> clusterManagerList,
         Integer clusterStateCode) implements Serializable {
 }
