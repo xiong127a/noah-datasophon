@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   CheckCircle2, 
   XCircle, 
@@ -18,7 +19,9 @@ import {
   Play,
   SkipForward,
   Wrench,
-  FileText
+  FileText,
+  Server,
+  Globe
 } from 'lucide-react'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { API_BASE_URL, API_PATHS_V1 } from '@/lib/api-config-v1'
@@ -99,6 +102,9 @@ export default function EnvironmentCheckDialog({
   const [globalCheckResults, setGlobalCheckResults] = useState<any[]>([])
   const [isRunningGlobalChecks, setIsRunningGlobalChecks] = useState(false)
   const [showGlobalChecks, setShowGlobalChecks] = useState(false)
+  
+  // Tab切换状态
+  const [activeTab, setActiveTab] = useState<'host' | 'global'>('host')
   
   // 主机管理对话框状态
   const [hostnameEditDialogOpen, setHostnameEditDialogOpen] = useState(false)
@@ -529,36 +535,20 @@ export default function EnvironmentCheckDialog({
                       开始检查
                     </Button>
                   ) : overallProgress.completedHosts >= overallProgress.totalHosts && overallProgress.totalHosts > 0 ? (
-                    // 检查完成，显示重新检查按钮和主机管理按钮
+                    // 检查完成，显示重新检查按钮
                     <>
                       <Badge variant="outline" className="text-green-600 border-green-600">
                         <CheckCircle2 className="h-4 w-4 mr-1" />
                         检查完成
                       </Badge>
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={handleRestartCheck} 
-                          size="sm"
-                          variant="outline"
-                        >
-                          <Play className="h-4 w-4 mr-2" />
-                          重新检查
-                        </Button>
-                        <Button 
-                          onClick={() => setHostnameEditDialogOpen(true)} 
-                          size="sm"
-                          variant="outline"
-                        >
-                          批量修改主机名
-                        </Button>
-                        <Button 
-                          onClick={() => setHostsFileSyncDialogOpen(true)} 
-                          size="sm"
-                          variant="outline"
-                        >
-                          同步Hosts文件
-                        </Button>
-                      </div>
+                      <Button 
+                        onClick={handleRestartCheck} 
+                        size="sm"
+                        variant="outline"
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        重新检查
+                      </Button>
                     </>
                   ) : (
                     // 检查进行中，不显示暂停/恢复按钮（暂不支持暂停功能）
@@ -584,6 +574,30 @@ export default function EnvironmentCheckDialog({
             </CardContent>
           </Card>
 
+          {/* Tabs: 单主机检查 vs 综合检查 */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'host' | 'global')} className="mt-6">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="host" className="flex items-center gap-2">
+                <Server className="h-4 w-4" />
+                单主机检查
+                {checkStatus.length > 0 && (
+                  <Badge variant="outline" className="ml-2">
+                    {checkStatus.length}台
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="global" className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                综合检查
+                {globalCheckResults.length > 0 && (
+                  <Badge variant="outline" className="ml-2">
+                    {globalCheckResults.length}项
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="host" className="space-y-4 mt-6">
           {/* 提示信息 */}
           {!isChecking && checkStatus.length === 0 && (
             <Alert>
@@ -747,31 +761,51 @@ export default function EnvironmentCheckDialog({
               )}
             </Card>
           ))}
-          </div>
-          
-          {/* 全局检查区域 */}
-          {!isChecking && checkStatus.length > 0 && (
-            <div className="mt-8">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">综合检查</h3>
-                <Button
-                  onClick={handleRunGlobalChecks}
-                  disabled={isRunningGlobalChecks}
-                  size="sm"
-                >
-                  {isRunningGlobalChecks ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      检查中...
-                    </>
-                  ) : (
-                    <>
-                      <Play className="mr-2 h-4 w-4" />
-                      运行综合检查
-                    </>
-                  )}
-                </Button>
-              </div>
+            </TabsContent>
+
+            <TabsContent value="global" className="space-y-4 mt-6">
+              {/* 综合检查操作区域 */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle>综合检查</CardTitle>
+                      <p className="text-sm text-gray-500 mt-1">
+                        检查集群级别的配置，如主机名唯一性、hosts文件一致性等
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleRunGlobalChecks}
+                        disabled={isRunningGlobalChecks || checkStatus.length === 0}
+                        size="sm"
+                      >
+                        {isRunningGlobalChecks ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            检查中...
+                          </>
+                        ) : (
+                          <>
+                            <Play className="mr-2 h-4 w-4" />
+                            运行综合检查
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+              </Card>
+
+              {/* 提示：需要先完成单主机检查 */}
+              {checkStatus.length === 0 && (
+                <Alert>
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertDescription>
+                    请先完成单主机检查，然后再运行综合检查
+                  </AlertDescription>
+                </Alert>
+              )}
               
               {showGlobalChecks && globalCheckResults.length > 0 && (
                 <div className="space-y-4">
@@ -836,8 +870,36 @@ export default function EnvironmentCheckDialog({
                   </AlertDescription>
                 </Alert>
               )}
-            </div>
-          )}
+
+              {/* 主机管理操作 */}
+              {checkStatus.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>主机管理操作</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex gap-3">
+                      <Button 
+                        onClick={() => setHostnameEditDialogOpen(true)} 
+                        size="sm"
+                        variant="outline"
+                      >
+                        批量修改主机名
+                      </Button>
+                      <Button 
+                        onClick={() => setHostsFileSyncDialogOpen(true)} 
+                        size="sm"
+                        variant="outline"
+                      >
+                        同步Hosts文件
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+          </div>
         </div>
       </div>
     </ClusterWizardLayout>
