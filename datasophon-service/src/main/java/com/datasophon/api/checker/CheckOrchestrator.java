@@ -4,6 +4,8 @@ import com.datasophon.common.enums.CheckItemStatus;
 import com.datasophon.common.enums.HostCheckStatus;
 import com.datasophon.common.vo.environment.CheckItemStatusVO;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
+import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
+import com.datasophon.plugins.api.service.SshConnectionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
@@ -39,6 +42,32 @@ public class CheckOrchestrator {
     
     // 限制并发主机数的信号量
     private Semaphore hostConcurrencyLimit;
+    
+    // SSH服务（用于收集主机信息）
+    private SshConnectionService sshService;
+    
+    /**
+     * 获取SSH服务（延迟加载）
+     */
+    private SshConnectionService getSshService() {
+        if (sshService == null) {
+            sshService = SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+        }
+        return sshService;
+    }
+    
+    /**
+     * 转换为插件API的HostCheckContext
+     */
+    private com.datasophon.plugins.api.model.HostCheckContext toPluginContext(HostCheckContext context) {
+        return com.datasophon.plugins.api.model.HostCheckContext.builder()
+                .hostIp(context.getHostIp())
+                .clusterId(context.getClusterId() != null ? context.getClusterId() : null)
+                .sshUser(context.getSshUser())
+                .sshPort(context.getSshPort())
+                .sshPassword(context.getSshPassword())
+                .build();
+    }
     
     /**
      * 检查所有主机
@@ -282,13 +311,14 @@ public class CheckOrchestrator {
             log.info("开始收集主机 {} 的信息（主机名和hosts文件）", hostIp);
             
             var pluginContext = toPluginContext(context);
+            var ssh = getSshService();
             
             // 获取主机名
-            var hostnameResult = sshService.executeCommand(pluginContext, "hostname");
+            var hostnameResult = ssh.executeCommand(pluginContext, "hostname");
             String hostname = hostnameResult.isSuccess() ? hostnameResult.output().trim() : null;
             
             // 获取hosts文件内容
-            var hostsResult = sshService.executeCommand(pluginContext, "cat /etc/hosts");
+            var hostsResult = ssh.executeCommand(pluginContext, "cat /etc/hosts");
             String hostsContent = hostsResult.isSuccess() ? hostsResult.output() : null;
             
             if (hostname != null || hostsContent != null) {
