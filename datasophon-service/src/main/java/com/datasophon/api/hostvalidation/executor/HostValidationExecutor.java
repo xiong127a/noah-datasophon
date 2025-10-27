@@ -160,7 +160,7 @@ public class HostValidationExecutor {
             log.debug("开始校验主机: clusterId={}, hostIp={}", clusterId, hostIp);
             
             HostCheckContext context = HostCheckContext.builder()
-                .clusterId(clusterId.toString())
+                .clusterId(clusterId)
                 .hostIp(hostIp)
                 .sshPort(request.sshPort())
                 .sshUser(request.sshUser())
@@ -228,7 +228,7 @@ public class HostValidationExecutor {
             
             // 构建上下文 - 需要从状态管理器获取SSH连接信息
             HostCheckContext context = HostCheckContext.builder()
-                .clusterId(clusterId.toString())
+                .clusterId(clusterId)
                 .hostIp(hostIp)
                 .build();
             
