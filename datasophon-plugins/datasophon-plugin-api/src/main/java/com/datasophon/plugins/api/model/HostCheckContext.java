@@ -48,7 +48,7 @@ public class HostCheckContext implements Serializable {
     /**
      * 集群ID
      */
-    private String clusterId;
+    private Long clusterId;
     
     /**
      * SSH用户名

@@ -53,7 +53,7 @@ public class FileHandleChecker implements EnvironmentCheckItem {
     private com.datasophon.plugins.api.model.HostCheckContext toPluginContext(HostCheckContext context) {
         return com.datasophon.plugins.api.model.HostCheckContext.builder()
                 .hostIp(context.getHostIp())
-                .clusterId(context.getClusterId() != null ? context.getClusterId().toString() : null)
+                .clusterId(context.getClusterId() != null ? context.getClusterId() : null)
                 .sshUser(context.getSshUser())
                 .sshPort(context.getSshPort())
                 .sshPassword(context.getSshPassword())
