@@ -3,6 +3,7 @@ package com.datasophon.api.service;
 import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
 import com.datasophon.common.vo.environment.EnvironmentValidationResult;
+import com.datasophon.common.vo.environment.GlobalCheckResult;
 import com.datasophon.common.vo.environment.RepairResult;
 
 import java.util.List;
@@ -81,5 +82,21 @@ public interface EnvironmentCheckService {
      * @param clusterId 集群ID
      */
     void cleanupCheckData(Long clusterId);
+    
+    /**
+     * 运行全局检查（在所有主机单个检查完成后）
+     * 
+     * @param clusterId 集群ID
+     * @return 全局检查结果列表
+     */
+    List<GlobalCheckResult> runGlobalChecks(Long clusterId);
+    
+    /**
+     * 获取全局检查结果
+     * 
+     * @param clusterId 集群ID
+     * @return 全局检查结果列表
+     */
+    List<GlobalCheckResult> getGlobalCheckResults(Long clusterId);
 }
 

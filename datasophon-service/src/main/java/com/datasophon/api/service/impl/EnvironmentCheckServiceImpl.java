@@ -3,6 +3,7 @@ package com.datasophon.api.service.impl;
 import com.datasophon.api.checker.CheckOrchestrator;
 import com.datasophon.api.checker.CheckStateManager;
 import com.datasophon.api.checker.EnvironmentCheckItem;
+import com.datasophon.api.checker.GlobalCheckItem;
 import com.datasophon.api.checker.HostCheckContext;
 import com.datasophon.api.checker.util.CheckLogWriter;
 import com.datasophon.api.event.RepairCompleteEvent;
@@ -11,6 +12,7 @@ import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
 import com.datasophon.common.enums.CheckItemStatus;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
 import com.datasophon.common.vo.environment.EnvironmentValidationResult;
+import com.datasophon.common.vo.environment.GlobalCheckResult;
 import com.datasophon.common.vo.environment.RepairResult;
 import com.datasophon.common.vo.environment.ValidationSummary;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -42,11 +42,17 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
     @Autowired
     private List<EnvironmentCheckItem> checkItems;
     
+    @Autowired(required = false)
+    private List<GlobalCheckItem> globalCheckItems = new ArrayList<>();
+    
     @Autowired
     private CheckLogWriter checkLogWriter;
     
     @Autowired
     private ApplicationEventPublisher eventPublisher;
+    
+    // 存储全局检查结果：clusterId -> List<GlobalCheckResult>
+    private final Map<Long, List<GlobalCheckResult>> globalCheckResultsCache = new java.util.concurrent.ConcurrentHashMap<>();
     
     @Override
     public String startEnvironmentCheck(EnvironmentCheckRequest request) {
@@ -291,7 +297,87 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
         // 清理状态管理器中的所有数据
         stateManager.clearClusterState(clusterId);
         
+        // 清理全局检查结果缓存
+        globalCheckResultsCache.remove(clusterId);
+        
         log.info("环境检查数据已清理: 集群={}", clusterId);
+    }
+    
+    @Override
+    public List<GlobalCheckResult> runGlobalChecks(Long clusterId) {
+        log.info("开始运行全局检查: 集群={}", clusterId);
+        
+        try {
+            // 1. 获取所有主机信息（从单主机检查结果中）
+            List<GlobalCheckItem.HostInfo> hosts = collectHostInfoFromCheckResults(clusterId);
+            
+            if (hosts.isEmpty()) {
+                log.warn("没有找到主机信息，跳过全局检查: 集群={}", clusterId);
+                return Collections.emptyList();
+            }
+            
+            // 2. 获取连接参数
+            Map<String, Object> connectionParams = stateManager.getConnectionParams(clusterId);
+            if (connectionParams == null) {
+                log.warn("没有找到连接参数，跳过全局检查: 集群={}", clusterId);
+                return Collections.emptyList();
+            }
+            
+            // 3. 按优先级执行所有全局检查器
+            List<GlobalCheckResult> results = globalCheckItems.stream()
+                    .filter(GlobalCheckItem::isEnabled)
+                    .sorted(Comparator.comparingInt(GlobalCheckItem::getPriority))
+                    .map(checker -> {
+                        try {
+                            log.info("执行全局检查: checkKey={}, displayName={}", 
+                                    checker.getCheckKey(), checker.getDisplayName());
+                            return checker.execute(hosts, clusterId, connectionParams);
+                        } catch (Exception e) {
+                            log.error("全局检查执行失败: checkKey={}, error={}", 
+                                    checker.getCheckKey(), e.getMessage(), e);
+                            return GlobalCheckResult.builder()
+                                    .checkKey(checker.getCheckKey())
+                                    .displayName(checker.getDisplayName())
+                                    .status(CheckItemStatus.FAILED)
+                                    .message("检查执行失败: " + e.getMessage())
+                                    .recommendation("请检查系统状态")
+                                    .details(Map.of("error", e.getMessage()))
+                                    .timestamp(System.currentTimeMillis())
+                                    .build();
+                        }
+                    })
+                    .collect(Collectors.toList());
+            
+            // 4. 保存全局检查结果到缓存
+            globalCheckResultsCache.put(clusterId, results);
+            
+            log.info("全局检查完成: 集群={}, 检查项数={}", clusterId, results.size());
+            return results;
+            
+        } catch (Exception e) {
+            log.error("运行全局检查失败: 集群={}, error={}", clusterId, e.getMessage(), e);
+            return Collections.emptyList();
+        }
+    }
+    
+    @Override
+    public List<GlobalCheckResult> getGlobalCheckResults(Long clusterId) {
+        log.info("获取全局检查结果: 集群={}", clusterId);
+        return globalCheckResultsCache.getOrDefault(clusterId, Collections.emptyList());
+    }
+    
+    /**
+     * 从检查结果中收集主机信息
+     */
+    private List<GlobalCheckItem.HostInfo> collectHostInfoFromCheckResults(Long clusterId) {
+        List<EnvironmentCheckStatusVO> statuses = getCheckStatus(clusterId);
+        
+        return statuses.stream()
+                .map(status -> new GlobalCheckItem.HostInfo(
+                        status.getHostIp(),
+                        status.getHostname()
+                ))
+                .collect(Collectors.toList());
     }
 }
 
