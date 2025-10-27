@@ -17,7 +17,8 @@ import {
   ChevronUp,
   Play,
   SkipForward,
-  Wrench
+  Wrench,
+  FileText
 } from 'lucide-react'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { API_BASE_URL, API_PATHS_V1 } from '@/lib/api-config-v1'
