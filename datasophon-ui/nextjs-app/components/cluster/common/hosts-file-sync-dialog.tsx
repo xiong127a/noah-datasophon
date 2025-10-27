@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { apiUtils } from '@/lib/api-utils-v1'
+import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { API_BASE_URL, API_PATHS_V1 } from '@/lib/api-config-v1'
 import { CheckCircle2, XCircle, Loader2, Play, AlertCircle, Info } from 'lucide-react'
 
@@ -54,7 +54,7 @@ export default function HostsFileSyncDialog({
     })))
 
     try {
-      const response = await apiUtils.hostManagement.syncHostsFile({
+      const response = await clusterApiV1.hostManagement.syncHostsFile({
         hostIps,
         connectionParams
       })

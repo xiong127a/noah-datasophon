@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
-import { apiUtils } from '@/lib/api-utils-v1'
+import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { API_BASE_URL, API_PATHS_V1 } from '@/lib/api-config-v1'
 import { CheckCircle2, XCircle, Loader2, Eye, Play, AlertCircle } from 'lucide-react'
 
@@ -79,7 +79,7 @@ export default function HostnameBatchEditDialog({
 
   const loadConfig = async () => {
     try {
-      const response = await apiUtils.hostManagement.getHostnameConfig()
+      const response = await clusterApiV1.hostManagement.getHostnameConfig()
       if (response.code === 200) {
         setConfig(response.data)
       }
@@ -97,7 +97,7 @@ export default function HostnameBatchEditDialog({
 
     setLoading(true)
     try {
-      const response = await apiUtils.hostManagement.previewHostnameChanges({
+      const response = await clusterApiV1.hostManagement.previewHostnameChanges({
         prefix: prefix.trim(),
         suffixFormatIndex,
         startIndex,
@@ -135,7 +135,7 @@ export default function HostnameBatchEditDialog({
     })))
 
     try {
-      const response = await apiUtils.hostManagement.batchChangeHostnames({
+      const response = await clusterApiV1.hostManagement.batchChangeHostnames({
         prefix: prefix.trim(),
         suffixFormatIndex,
         startIndex,
