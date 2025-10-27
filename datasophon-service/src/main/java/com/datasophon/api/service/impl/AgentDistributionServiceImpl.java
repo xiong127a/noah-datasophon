@@ -244,10 +244,20 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
         String repoUrl = repository.getRepoUrl();
         // 确保URL末尾没有斜杠
         String baseUrl = repoUrl.endsWith("/") ? repoUrl.substring(0, repoUrl.length() - 1) : repoUrl;
-        String agentPackagePath = baseUrl + "/" + Constants.WORKER_PACKAGE_NAME;
         
-        log.info("从存储库获取Agent包路径: type={}, url={}", 
-                repository.getRepoType(), agentPackagePath);
+        // 构建包含框架版本号的路径: baseUrl/frameVersion/datasophon-worker.tar.gz
+        String frameVersion = cluster.getFrameVersion();
+        String agentPackagePath;
+        if (frameVersion != null && !frameVersion.isEmpty()) {
+            agentPackagePath = baseUrl + "/" + frameVersion + "/" + Constants.WORKER_PACKAGE_NAME;
+        } else {
+            // 如果没有版本号，使用默认路径（向后兼容）
+            agentPackagePath = baseUrl + "/" + Constants.WORKER_PACKAGE_NAME;
+            log.warn("集群 {} 未配置框架版本号，使用默认路径", cluster.getId());
+        }
+        
+        log.info("从存储库获取Agent包路径: type={}, version={}, url={}", 
+                repository.getRepoType(), frameVersion, agentPackagePath);
         
         return agentPackagePath;
     }
