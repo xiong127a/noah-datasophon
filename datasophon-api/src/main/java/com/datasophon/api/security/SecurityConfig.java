@@ -140,7 +140,12 @@ public class SecurityConfig {
                                 "/api/v1/environment-logs-sse/**",
                                 "/api/v1/agent-distribution-sse/**",
                                 "/api/v1/host-validation/stream/**",
-                                "/api/v1/logs/stream/**")
+                                "/api/v1/logs/stream/**",
+                                "/ddh/api/v1/environment-check-sse/**",
+                                "/ddh/api/v1/environment-logs-sse/**",
+                                "/ddh/api/v1/agent-distribution-sse/**",
+                                "/ddh/api/v1/host-validation/stream/**",
+                                "/ddh/api/v1/logs/stream/**")
                         .permitAll()
 
                         // 原有免登录接口

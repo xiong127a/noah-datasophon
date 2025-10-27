@@ -120,6 +120,10 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             
             logWriter.logStart(clusterId, hostIp, "开始分发Agent到主机: " + hostIp);
             
+            // 构建本地包路径
+            String localPackagePath = Constants.MASTER_MANAGE_PACKAGE_PATH + 
+                    Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
+            
             // 构建分发上下文
             AgentDistributionContext context = AgentDistributionContext.builder()
                     .clusterId(clusterId)
@@ -130,6 +134,7 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
                     .sshPassword(sshPassword)
                     .agentPackageUrl(agentPackageUrl)
                     .isLocalRepository(isLocalRepository)
+                    .localPackagePath(localPackagePath)
                     .logWriter(logWriter)
                     .remoteInstallPath(Constants.INSTALL_PATH)
                     .build();
