@@ -10,6 +10,7 @@ import com.datasophon.api.repository.RepositoryDownloaderFactory;
 import com.datasophon.api.service.AgentDistributionService;
 import com.datasophon.api.service.ParcelRepositoryService;
 import com.datasophon.common.Constants;
+import com.datasophon.common.dto.ParcelRepositoryDTO;
 import com.datasophon.common.vo.agent.AgentDistributionStatusVO;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
@@ -219,10 +220,26 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     
     /**
      * 获取Agent包URL
-     * 集群必定配置了存储库，直接获取即可
+     * 优先使用集群配置的存储库，如果未配置则使用默认本地路径
      */
     private String getAgentPackageUrl(ClusterInfoEntity cluster) {
-        var repository = repositoryService.getById(cluster.getRepositoryId());
+        Long repositoryId = cluster.getRepositoryId();
+        
+        // 如果集群未配置存储库ID，使用默认本地路径
+        if (repositoryId == null) {
+            String defaultPath = Constants.INSTALL_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
+            log.warn("集群 {} 未配置存储库ID，使用默认本地路径: {}", cluster.getId(), defaultPath);
+            return defaultPath;
+        }
+        
+        ParcelRepositoryDTO repository = repositoryService.getById(repositoryId);
+        
+        // 如果数据库中找不到存储库记录，也使用默认本地路径
+        if (repository == null) {
+            String defaultPath = Constants.INSTALL_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
+            log.warn("存储库ID {} 不存在，使用默认本地路径: {}", repositoryId, defaultPath);
+            return defaultPath;
+        }
         
         String repoUrl = repository.getRepoUrl();
         // 确保URL末尾没有斜杠
