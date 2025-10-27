@@ -50,128 +50,44 @@ public class StartAgentStep implements AgentDistributionStep {
             HostCheckContext pluginContext = toPluginContext(context);
             
             String installPath = context.getRemoteInstallPath();
-            String localHostName = InetAddress.getLocalHost().getHostName();
             
             // 1. 检测Linux发行版
             CommandResult distroResult = sshService.executeCommand(pluginContext,
                     "cat /etc/os-release | grep -E '^ID=' | cut -d'=' -f2 | tr -d '\"'");
-            String osId = distroResult.isSuccess() ? distroResult.output().trim() : "linux";
-            String distroInfo = osId.isEmpty() ? "linux" : osId;
+            String distroInfo = distroResult.isSuccess() && !distroResult.output().trim().isEmpty() 
+                    ? distroResult.output().trim() 
+                    : "linux";
             
             Map<String, Object> osInfo = new HashMap<>();
-            osInfo.put("osId", osId);
             osInfo.put("distro", distroInfo);
+            osInfo.put("serviceManager", "systemd");
+            osInfo.put("architecture", "API→Worker单向通信");
             logWriter.logInfo(clusterId, hostIp, "start", 
-                    "检测到Linux发行版: " + distroInfo, osInfo);
-            log.info("主机 {} 的Linux发行版: {}", hostIp, distroInfo);
+                    "Linux发行版: " + distroInfo + ", 服务管理: systemd", osInfo);
+            log.info("主机 {} Linux发行版: {}, 使用systemd管理Worker服务", hostIp, distroInfo);
             
-            // 确定服务脚本路径和管理方式
-            String serviceDir = "/etc/rc.d/init.d";
-            boolean useSystemd = false;
-            
-            if (distroInfo.toLowerCase().contains("ubuntu") ||
-                    distroInfo.toLowerCase().contains("debian") ||
-                    "kylin".equals(osId)) {
-                serviceDir = "/etc/init.d";
-                useSystemd = true;
-            }
-            
-            Map<String, Object> serviceInfo = new HashMap<>();
-            serviceInfo.put("serviceDir", serviceDir);
-            serviceInfo.put("useSystemd", useSystemd);
-            logWriter.logInfo(clusterId, hostIp, "start", 
-                    "服务管理方式: " + (useSystemd ? "systemd" : "SysVinit"), serviceInfo);
-            
-            // 2. 更新common.properties配置
-            logWriter.logInfo(clusterId, hostIp, "start", "更新Worker配置文件", null);
-            String updateCommand = Constants.UPDATE_COMMON_CMD +
-                    localHostName +
-                    Constants.SPACE +
-                    configBean.getServerPort() +
-                    Constants.SPACE +
-                    clusterFrame +
-                    Constants.SPACE +
-                    clusterId +
-                    Constants.SPACE +
-                    installPath +
-                    Constants.SPACE +
-                    hostIp;
-            
-            logWriter.logCommand(clusterId, hostIp, "start", updateCommand);
-            CommandResult updateResult = sshService.executeCommand(pluginContext, updateCommand);
-            
-            if (!updateResult.isSuccess() || StringUtils.isBlank(updateResult.output())) {
-                throw new Exception("更新common.properties配置失败");
-            }
-            
-            logWriter.logInfo(clusterId, hostIp, "start", "配置文件更新完成", null);
-            
-            // 3. 初始化系统环境
+            // 2. 初始化系统环境
             logWriter.logInfo(clusterId, hostIp, "start", "初始化系统环境", null);
             sshService.executeCommand(pluginContext, "ulimit -n 65535");
             sshService.executeCommand(pluginContext, "sysctl -w vm.max_map_count=2000000");
             
-            // 4. 配置服务自启动
+            // 3. 创建systemd服务文件
+            logWriter.logInfo(clusterId, hostIp, "start", "创建systemd服务文件", null);
+            String createServiceCommand = getCreateServiceCommand(installPath);
+            CommandResult serviceFileResult = sshService.executeCommand(pluginContext, createServiceCommand);
+            
+            if (!serviceFileResult.isSuccess()) {
+                throw new Exception("创建systemd服务文件失败: " + serviceFileResult.error());
+            }
+            
+            // 4. 重新加载systemd并启用服务
             logWriter.logInfo(clusterId, hostIp, "start", "配置Worker服务自启动", null);
+            sshService.executeCommand(pluginContext, "systemctl daemon-reload");
             
-            // 创建服务目录
-            sshService.executeCommand(pluginContext, "sudo mkdir -p " + serviceDir);
-            
-            // 复制服务脚本
-            CommandResult copyResult = sshService.executeCommand(pluginContext,
-                    "\\cp " + installPath + "/datasophon-worker/script/datasophon-worker " + serviceDir + "/");
-            if (!copyResult.isSuccess()) {
-                throw new Exception("复制服务脚本失败: " + copyResult.error());
-            }
-            
-            // 设置执行权限
-            CommandResult chmodResult = sshService.executeCommand(pluginContext,
-                    "chmod +x " + serviceDir + "/datasophon-worker");
-            if (!chmodResult.isSuccess()) {
-                throw new Exception("设置服务脚本权限失败: " + chmodResult.error());
-            }
-            
-            // 根据系统类型配置服务
-            if (useSystemd) {
-                logWriter.logInfo(clusterId, hostIp, "start", "使用systemd配置服务", null);
-                
-                // 创建systemd服务文件
-                String createServiceCommand = getCreateServiceCommand(serviceDir, installPath);
-                CommandResult serviceFileResult = sshService.executeCommand(pluginContext, createServiceCommand);
-                
-                if (serviceFileResult.isSuccess()) {
-                    // 重新加载systemd
-                    sshService.executeCommand(pluginContext, "systemctl daemon-reload");
-                    
-                    // 启用服务自启动
-                    CommandResult enableResult = sshService.executeCommand(pluginContext,
-                            "systemctl enable datasophon-worker");
-                    if (!enableResult.isSuccess()) {
-                        log.warn("systemctl enable失败: {}", enableResult.error());
-                    }
-                } else {
-                    // 回退到传统方式
-                    log.warn("创建systemd服务文件失败，回退到传统方式");
-                    CommandResult serviceResult;
-                    if ("kylin".equals(osId)) {
-                        serviceResult = sshService.executeCommand(pluginContext,
-                                "chkconfig --add datasophon-worker");
-                    } else {
-                        serviceResult = sshService.executeCommand(pluginContext,
-                                "update-rc.d datasophon-worker defaults");
-                    }
-                    if (!serviceResult.isSuccess()) {
-                        log.warn("配置服务自启动失败: {}", serviceResult.error());
-                    }
-                }
-            } else {
-                // CentOS使用chkconfig
-                logWriter.logInfo(clusterId, hostIp, "start", "使用chkconfig配置服务", null);
-                CommandResult chkconfigResult = sshService.executeCommand(pluginContext,
-                        "chkconfig --add datasophon-worker");
-                if (!chkconfigResult.isSuccess()) {
-                    log.warn("chkconfig配置失败: {}", chkconfigResult.error());
-                }
+            CommandResult enableResult = sshService.executeCommand(pluginContext,
+                    "systemctl enable datasophon-worker");
+            if (!enableResult.isSuccess()) {
+                log.warn("systemctl enable失败: {}", enableResult.error());
             }
             
             // 5. 安装环境变量脚本
@@ -182,29 +98,10 @@ public class StartAgentStep implements AgentDistributionStep {
                 log.warn("安装环境变量脚本失败: {}", envResult.error());
             }
             
-            // 加载环境变量
-            sshService.executeCommand(pluginContext, "source /etc/profile.d/datasophon-env.sh");
-            
-            // 6. 启动服务
+            // 6. 启动Worker服务
             logWriter.logInfo(clusterId, hostIp, "start", "启动Worker服务", null);
-            CommandResult startResult;
-            if (useSystemd) {
-                sshService.executeCommand(pluginContext, "systemctl daemon-reload");
-                
-                // 先用脚本启动，再用systemd管理
-                CommandResult restartScriptResult = sshService.executeCommand(pluginContext,
-                        installPath + "/datasophon-worker/bin/datasophon-worker.sh restart worker");
-                
-                if (restartScriptResult.isSuccess()) {
-                    startResult = sshService.executeCommand(pluginContext,
-                            "systemctl restart datasophon-worker");
-                } else {
-                    throw new Exception("使用脚本启动Worker失败: " + restartScriptResult.error());
-                }
-            } else {
-                startResult = sshService.executeCommand(pluginContext,
-                        "service datasophon-worker restart");
-            }
+            CommandResult startResult = sshService.executeCommand(pluginContext,
+                    "systemctl restart datasophon-worker");
             
             if (!startResult.isSuccess()) {
                 throw new Exception("启动Worker服务失败: " + startResult.error());
@@ -214,14 +111,8 @@ public class StartAgentStep implements AgentDistributionStep {
             
             // 7. 验证服务状态
             logWriter.logInfo(clusterId, hostIp, "start", "验证服务状态", null);
-            CommandResult statusResult;
-            if (useSystemd) {
-                statusResult = sshService.executeCommand(pluginContext,
-                        "systemctl status datasophon-worker");
-            } else {
-                statusResult = sshService.executeCommand(pluginContext,
-                        "service datasophon-worker status");
-            }
+            CommandResult statusResult = sshService.executeCommand(pluginContext,
+                    "systemctl status datasophon-worker");
             
             Map<String, Object> statusInfo = new HashMap<>();
             statusInfo.put("status", statusResult.isSuccess() ? "running" : "unknown");
@@ -248,30 +139,35 @@ public class StartAgentStep implements AgentDistributionStep {
     
     /**
      * 创建systemd服务文件命令
+     * 新架构: API→Worker单向通信，无需Worker主动上报
      */
-    private String getCreateServiceCommand(String serviceDir, String installPath) {
+    private String getCreateServiceCommand(String installPath) {
+        String startScript = installPath + "/datasophon-worker/bin/datasophon-worker.sh";
+        
         String serviceContent = String.format(
                 """
                         [Unit]
                         Description=DataSophon Worker Service
-                        After=network.target
+                        Documentation=https://github.com/datasophon/datasophon
+                        After=network-online.target
+                        Wants=network-online.target
                         
                         [Service]
                         Type=forking
-                        ExecStart=%s start
-                        ExecStop=%s stop
-                        ExecReload=%s restart
-                        WorkingDirectory=%s
+                        ExecStart=%s start worker
+                        ExecStop=%s stop worker
+                        ExecReload=%s restart worker
+                        WorkingDirectory=%s/datasophon-worker
                         User=root
                         Group=root
                         Restart=on-failure
                         RestartSec=10
+                        LimitNOFILE=65535
                         
                         [Install]
                         WantedBy=multi-user.target
                         """,
-                serviceDir + "/datasophon-worker", serviceDir + "/datasophon-worker",
-                serviceDir + "/datasophon-worker", installPath);
+                startScript, startScript, startScript, installPath);
         
         return String.format("echo '%s' | tee /etc/systemd/system/datasophon-worker.service > /dev/null",
                 serviceContent.replace("'", "'\"'\"'"));
