@@ -23,6 +23,7 @@ import java.time.temporal.ChronoUnit;
 
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.converter.InstallStepConverter;
+import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.AgentDistributionService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.InstallService;
@@ -48,7 +49,6 @@ import com.datasophon.plugins.api.model.CommandResult;
 import com.datasophon.plugins.api.model.HostCheckContext;
 import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.common.model.WorkerServiceMessage;
-import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.InstallStepEntity;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -225,31 +225,28 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                     var status = statusMap.get(hostInfo.getIp());
                     if (status != null) {
                         // 映射新架构的状态到旧的InstallState
-                        switch (status.getStatus()) {
-                            case SUCCESS:
-                                hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
-                                hostInfo.setInstallState(InstallState.SUCCESS);
-                                hostInfo.setProgress(100);
-                                hostInfo.setMessage("Agent安装成功");
-                                break;
-                            case FAILED:
-                                hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
-                                hostInfo.setInstallState(InstallState.FAILED);
-                                hostInfo.setProgress(100);
-                                hostInfo.setMessage(status.getMessage());
-                                break;
-                            case RUNNING:
-                                hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
-                                hostInfo.setInstallState(InstallState.RUNNING);
-                                hostInfo.setProgress(status.getProgress());
-                                hostInfo.setMessage("正在分发Agent...");
-                                break;
-                            default:
-                                hostInfo.setInstallStateCode(InstallState.WAITING.getValue());
-                                hostInfo.setInstallState(InstallState.WAITING);
-                                hostInfo.setProgress(0);
-                                hostInfo.setMessage("等待分发");
-                                break;
+                        String statusStr = status.getStatus();
+                        if ("SUCCESS".equals(statusStr)) {
+                            hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
+                            hostInfo.setInstallState(InstallState.SUCCESS);
+                            hostInfo.setProgress(100);
+                            hostInfo.setMessage("Agent安装成功");
+                        } else if ("FAILED".equals(statusStr)) {
+                            hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+                            hostInfo.setInstallState(InstallState.FAILED);
+                            hostInfo.setProgress(100);
+                            hostInfo.setMessage(status.getMessage());
+                        } else if ("RUNNING".equals(statusStr)) {
+                            hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
+                            hostInfo.setInstallState(InstallState.RUNNING);
+                            hostInfo.setProgress(status.getProgress());
+                            hostInfo.setMessage("正在分发Agent...");
+                        } else {
+                            // PENDING或其他状态，标记为RUNNING等待
+                            hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
+                            hostInfo.setInstallState(InstallState.RUNNING);
+                            hostInfo.setProgress(0);
+                            hostInfo.setMessage("等待分发");
                         }
                     } else if (!CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp())) {
                         // 如果没有状态且未启动过，则自动启动分发（保持原有逻辑）
@@ -306,7 +303,6 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     @Override
     public boolean reStartDispatcherHostAgent(Long clusterId, String ips) {
         try {
-            ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
             Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
             
             List<String> ipList = java.util.Arrays.asList(ips.split(","));
