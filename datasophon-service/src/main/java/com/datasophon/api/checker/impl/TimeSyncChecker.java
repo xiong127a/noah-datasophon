@@ -170,13 +170,24 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
     
     @Override
     public RepairResult repair(HostCheckContext context, Map<String, Object> params) {
-        log.info("开始修复时间同步: host={}", context.getHostIp());
+        Long clusterId = context.getClusterId();
+        String hostIp = context.getHostIp();
+        String checkKey = getCheckKey();
+        
+        log.info("开始修复时间同步: host={}", hostIp);
+        checkLogWriter.logRepairStart(clusterId, hostIp, checkKey, "开始修复时间同步");
         
         try {
             // 步骤1：获取修复前的时间差信息
             CheckResult beforeResult = execute(context);
             log.info("修复前检查结果: host={}, status={}, message={}", 
-                    context.getHostIp(), beforeResult.getStatus(), beforeResult.getMessage());
+                    hostIp, beforeResult.getStatus(), beforeResult.getMessage());
+            
+            Map<String, Object> beforeDetails = new HashMap<>();
+            beforeDetails.put("status", beforeResult.getStatus().name());
+            beforeDetails.put("message", beforeResult.getMessage());
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "修复前检查: " + beforeResult.getMessage(), beforeDetails);
             
             // 步骤2：获取本地管理端时间（格式化）
             LocalDateTime localTime = LocalDateTime.now();
@@ -185,11 +196,19 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
             
             log.info("本地管理端时间: timeString={}, timestamp={}", timeString, localTimestamp);
             
+            Map<String, Object> timeDetails = new HashMap<>();
+            timeDetails.put("managementTime", timeString);
+            timeDetails.put("timestamp", localTimestamp);
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "管理端当前时间: " + timeString, timeDetails);
+            
             // 步骤3：分步执行时间同步（先date -s，成功后再hwclock）
             String dateCommand = String.format("sudo %s \"%s\"", 
                     checkerProperties.getTimeSync().getSyncCommand(), timeString);
             
-            log.info("执行时间同步命令: host={}, command={}", context.getHostIp(), dateCommand);
+            log.info("执行时间同步命令: host={}, command={}", hostIp, dateCommand);
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "执行系统时间同步命令", Map.of("command", dateCommand));
             
             var dateResult = getSshService().executeCommand(
                 toPluginContext(context), 
@@ -199,7 +218,13 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
             
             if (!dateResult.isSuccess()) {
                 String errorMsg = String.format("设置系统时间失败: %s", dateResult.error());
-                log.error("时间同步失败: host={}, error={}", context.getHostIp(), errorMsg);
+                log.error("时间同步失败: host={}, error={}", hostIp, errorMsg);
+                
+                Map<String, Object> errorDetails = new HashMap<>();
+                errorDetails.put("command", dateCommand);
+                errorDetails.put("error", dateResult.error());
+                checkLogWriter.logRepairError(clusterId, hostIp, checkKey, errorMsg, errorDetails);
+                
                 return RepairResult.builder()
                         .success(false)
                         .message(errorMsg)
@@ -207,10 +232,15 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
                         .build();
             }
             
-            log.info("设置系统时间成功: host={}, output={}", context.getHostIp(), dateResult.output());
+            log.info("设置系统时间成功: host={}, output={}", hostIp, dateResult.output());
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "系统时间设置成功", Map.of("output", dateResult.output()));
             
             // 步骤4：同步到硬件时钟
             String hwclockCommand = "sudo hwclock --systohc";
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "同步到硬件时钟", Map.of("command", hwclockCommand));
+            
             var hwclockResult = getSshService().executeCommand(
                 toPluginContext(context), 
                 hwclockCommand, 
@@ -219,15 +249,25 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
             
             if (!hwclockResult.isSuccess()) {
                 log.warn("硬件时钟同步失败（不影响系统时间）: host={}, error={}", 
-                        context.getHostIp(), hwclockResult.error());
+                        hostIp, hwclockResult.error());
+                checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                        "硬件时钟同步失败（不影响系统时间）", 
+                        Map.of("error", hwclockResult.error()));
             } else {
-                log.info("硬件时钟同步成功: host={}", context.getHostIp());
+                log.info("硬件时钟同步成功: host={}", hostIp);
+                checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                        "硬件时钟同步成功", Map.of("output", hwclockResult.output()));
             }
             
             // 步骤5：等待2秒后验证（给足够时间让时间同步生效）
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "等待时间同步生效...", null);
             Thread.sleep(2000);
             
             // 步骤6：验证时间差是否已在允许范围内
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "验证时间同步结果...", null);
+            
             CheckResult verifyResult = execute(context);
             
             // 获取当前时间差（从details中）
@@ -236,11 +276,18 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
             String timeDiffInfo = timeDiffObj != null ? String.valueOf(timeDiffObj) + "秒" : "未知";
             
             log.info("验证结果: host={}, status={}, message={}, timeDiff={}", 
-                    context.getHostIp(), verifyResult.getStatus(), 
+                    hostIp, verifyResult.getStatus(), 
                     verifyResult.getMessage(), timeDiffInfo);
+            
+            Map<String, Object> verifyDetails = new HashMap<>();
+            verifyDetails.put("status", verifyResult.getStatus().name());
+            verifyDetails.put("message", verifyResult.getMessage());
+            verifyDetails.put("timeDiff", timeDiffInfo);
             
             if (verifyResult.getStatus() == com.datasophon.common.enums.CheckItemStatus.SUCCESS) {
                 String successMsg = String.format("时间同步成功，当前时间差: %s", timeDiffInfo);
+                checkLogWriter.logRepairSuccess(clusterId, hostIp, checkKey, successMsg, verifyDetails);
+                
                 return RepairResult.builder()
                         .success(true)
                         .message(successMsg)
@@ -248,6 +295,8 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
             } else {
                 String failMsg = String.format("时间同步后验证失败，当前时间差: %s（超过允许的%d秒）", 
                         timeDiffInfo, checkerProperties.getTimeSync().getMaxTimeDiffSeconds());
+                checkLogWriter.logRepairError(clusterId, hostIp, checkKey, failMsg, verifyDetails);
+                
                 return RepairResult.builder()
                         .success(false)
                         .message(failMsg)
@@ -256,7 +305,14 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
             }
             
         } catch (Exception e) {
-            log.error("修复时间同步失败: host={}, error={}", context.getHostIp(), e.getMessage(), e);
+            log.error("修复时间同步失败: host={}, error={}", hostIp, e.getMessage(), e);
+            
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("exception", e.getClass().getSimpleName());
+            errorDetails.put("error", e.getMessage());
+            checkLogWriter.logRepairError(clusterId, hostIp, checkKey, 
+                    "修复失败: " + e.getMessage(), errorDetails);
+            
             return RepairResult.builder()
                     .success(false)
                     .message("修复失败: " + e.getMessage())
