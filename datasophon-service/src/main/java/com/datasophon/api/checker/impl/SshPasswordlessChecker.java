@@ -19,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -117,40 +118,70 @@ public class SshPasswordlessChecker implements EnvironmentCheckItem {
     
     @Override
     public RepairResult repair(HostCheckContext context, Map<String, Object> params) {
-        log.info("开始修复SSH免密登录: host={}", context.getHostIp());
+        Long clusterId = context.getClusterId();
+        String hostIp = context.getHostIp();
+        String checkKey = getCheckKey();
+        
+        log.info("开始修复SSH免密登录: host={}", hostIp);
+        checkLogWriter.logRepairStart(clusterId, hostIp, checkKey, "开始配置SSH免密登录");
         
         var config = checkerProperties.getSshPasswordless();
         
         try {
             // 步骤1：检查本地密钥对是否存在
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "检查本地SSH密钥对...", null);
+            
             Path publicKeyPath = Paths.get(expandHome(config.getPublicKeyPath()));
             Path privateKeyPath = Paths.get(expandHome(config.getPrivateKeyPath()));
             
             if (!Files.exists(privateKeyPath) || !Files.exists(publicKeyPath)) {
                 log.info("本地SSH密钥对不存在，开始生成");
+                checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                        "本地SSH密钥对不存在，开始生成...", 
+                        Map.of("publicKeyPath", publicKeyPath.toString(), 
+                               "privateKeyPath", privateKeyPath.toString()));
                 
                 if (config.isAutoGenerateKey()) {
                     boolean generated = generateSshKeyPair(privateKeyPath, config);
                     if (!generated) {
+                        checkLogWriter.logRepairError(clusterId, hostIp, checkKey, 
+                                "生成SSH密钥对失败", null);
                         return RepairResult.builder()
                                 .success(false)
                                 .message("生成SSH密钥对失败")
                                 .build();
                     }
+                    checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                            "SSH密钥对生成成功", null);
                 } else {
+                    String errorMsg = "SSH密钥对不存在，且未启用自动生成";
+                    checkLogWriter.logRepairError(clusterId, hostIp, checkKey, 
+                            errorMsg, null);
                     return RepairResult.builder()
                             .success(false)
-                            .message("SSH密钥对不存在，且未启用自动生成")
+                            .message(errorMsg)
                             .build();
                 }
+            } else {
+                checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                        "本地SSH密钥对已存在", 
+                        Map.of("publicKeyPath", publicKeyPath.toString()));
             }
             
             // 步骤2：读取公钥内容
             String publicKey = Files.readString(publicKeyPath, StandardCharsets.UTF_8).trim();
             log.info("读取公钥成功，长度: {}", publicKey.length());
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "读取公钥成功", 
+                    Map.of("keyLength", publicKey.length(), 
+                           "keyType", publicKey.split(" ")[0]));
             
             // 步骤3：使用密码SSH登录到目标主机
             // 步骤4：将公钥追加到目标主机的 ~/.ssh/authorized_keys
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "配置目标主机authorized_keys...", null);
+            
             String setupScript = String.format(
                 "#!/bin/bash\n" +
                 "mkdir -p ~/.ssh\n" +
@@ -171,31 +202,52 @@ public class SshPasswordlessChecker implements EnvironmentCheckItem {
             var result = getSshService().executeCommand(toPluginContext(context), setupScript, 30);
             
             if (!result.isSuccess()) {
-                log.error("配置SSH免密登录失败: host={}, error={}", context.getHostIp(), result.error());
+                String errorMsg = "配置SSH免密登录失败: " + result.error();
+                log.error("配置SSH免密登录失败: host={}, error={}", hostIp, result.error());
+                checkLogWriter.logRepairError(clusterId, hostIp, checkKey, 
+                        errorMsg, 
+                        Map.of("error", result.error()));
                 return RepairResult.builder()
                         .success(false)
-                        .message("配置失败: " + result.error())
+                        .message(errorMsg)
                         .build();
             }
             
-            log.info("SSH免密登录配置成功: host={}, output={}", context.getHostIp(), result.output());
+            log.info("SSH免密登录配置成功: host={}, output={}", hostIp, result.output());
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "authorized_keys配置成功", 
+                    Map.of("output", result.output()));
             
             // 步骤5：验证免密登录是否成功
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "验证SSH免密登录...", null);
+            
             var verifyResult = getSshService().testConnection(toPluginContext(context));
             if (verifyResult.isSuccess()) {
+                checkLogWriter.logRepairSuccess(clusterId, hostIp, checkKey, 
+                        "SSH免密登录配置成功，验证通过", null);
                 return RepairResult.builder()
                         .success(true)
                         .message("SSH免密登录配置成功")
                         .build();
             } else {
+                String errorMsg = "验证失败，免密登录仍不可用";
+                checkLogWriter.logRepairError(clusterId, hostIp, checkKey, 
+                        errorMsg, 
+                        Map.of("error", verifyResult.error()));
                 return RepairResult.builder()
                         .success(false)
-                        .message("验证失败，免密登录仍不可用")
+                        .message(errorMsg)
                         .build();
             }
             
         } catch (Exception e) {
-            log.error("修复SSH免密登录失败: host={}, error={}", context.getHostIp(), e.getMessage(), e);
+            log.error("修复SSH免密登录失败: host={}, error={}", hostIp, e.getMessage(), e);
+            Map<String, Object> errorDetails = new HashMap<>();
+            errorDetails.put("exception", e.getClass().getSimpleName());
+            errorDetails.put("error", e.getMessage());
+            checkLogWriter.logRepairError(clusterId, hostIp, checkKey, 
+                    "修复失败: " + e.getMessage(), errorDetails);
             return RepairResult.builder()
                     .success(false)
                     .message("修复失败: " + e.getMessage())
