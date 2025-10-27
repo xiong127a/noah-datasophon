@@ -73,5 +73,13 @@ public interface EnvironmentCheckService {
      * @return 验证结果（包含是否可以进入下一步、原因、统计信息）
      */
     EnvironmentValidationResult validateForNextStep(Long clusterId);
+    
+    /**
+     * 清理环境检查数据
+     * 用户点击"上一步"时调用，清理当前步骤的缓存数据
+     * 
+     * @param clusterId 集群ID
+     */
+    void cleanupCheckData(Long clusterId);
 }
 

@@ -279,5 +279,15 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
         
         return result;
     }
+    
+    @Override
+    public void cleanupCheckData(Long clusterId) {
+        log.info("清理环境检查数据: 集群={}", clusterId);
+        
+        // 清理状态管理器中的所有数据
+        stateManager.clearClusterState(clusterId);
+        
+        log.info("环境检查数据已清理: 集群={}", clusterId);
+    }
 }
 

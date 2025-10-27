@@ -232,5 +232,24 @@ public class EnvironmentCheckController {
             return Result.error("验证失败: " + e.getMessage());
         }
     }
+    
+    /**
+     * 清理环境检查数据
+     * 用户点击"上一步"时调用，清理当前步骤的缓存数据
+     */
+    @PostMapping("/cleanup")
+    public Result<String> cleanupCheckData(@ClusterId Long clusterId) {
+        
+        log.info("清理环境检查数据: clusterId={}", clusterId);
+        
+        try {
+            environmentCheckService.cleanupCheckData(clusterId);
+            return Result.success("检查数据已清理");
+        } catch (Exception e) {
+            log.error("清理检查数据失败: clusterId={}, error={}", 
+                clusterId, e.getMessage(), e);
+            return Result.error("清理失败: " + e.getMessage());
+        }
+    }
 }
 
