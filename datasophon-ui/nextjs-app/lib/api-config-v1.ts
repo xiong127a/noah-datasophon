@@ -198,6 +198,9 @@ export const API_PATHS_V1 = {
   ENVIRONMENT_CHECK_RESUME: `${API_BASE}/environment-check/resume`,
   ENVIRONMENT_CHECK_VALIDATION: `${API_BASE}/environment-check/validation`,
   ENVIRONMENT_CHECK_CLEANUP: `${API_BASE}/environment-check/cleanup`,
+  ENVIRONMENT_CHECK_RESTART: `${API_BASE}/environment-check/restart`,
+  ENVIRONMENT_CHECK_JDK_CONFIG: `${API_BASE}/environment-check/jdk-config`,
+  ENVIRONMENT_CHECK_JDK_FILES: `${API_BASE}/environment-check/jdk-files`,
   ENVIRONMENT_CHECK_SSE: `${API_BASE}/environment-check-sse/stream`,
   
   // Agent分发相关 - v1

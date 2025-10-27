@@ -369,6 +369,27 @@ export const clusterApiV1 = {
       return response.data
     },
     
+    /** 重新检查（清理旧数据并启动新检查） */
+    restart: async (request: {
+      hostIps: string[]
+      connectionParams: any
+    }) => {
+      const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_RESTART, request)
+      return response.data
+    },
+    
+    /** 获取JDK配置（是否启用高级选择、默认版本等） */
+    getJdkConfig: async () => {
+      const response = await apiV1.get(API_PATHS_V1.ENVIRONMENT_CHECK_JDK_CONFIG)
+      return response.data
+    },
+    
+    /** 获取存储库中的JDK文件列表（高级模式使用） */
+    getJdkFiles: async () => {
+      const response = await apiV1.get(API_PATHS_V1.ENVIRONMENT_CHECK_JDK_FILES)
+      return response.data
+    },
+    
     // 注意：日志查看已改为通过SSE实时推送，不再需要轮询API
   },
 

@@ -152,6 +152,43 @@ export default function EnvironmentCheckDialog({
     }
   }
 
+  // 重新检查（检查完成后可以点击）
+  const handleRestartCheck = async () => {
+    try {
+      const hostsToCheck = actualHostList.length > 0 ? actualHostList : hostList
+      
+      if (!hostsToCheck || hostsToCheck.length === 0) {
+        alert('没有可检查的主机')
+        return
+      }
+      
+      console.log('🔄 重新启动环境检查')
+      
+      // 重置状态
+      setCheckStatus([])
+      setValidation(null)
+      
+      // 调用重新检查API（会自动清理旧数据）
+      const response = await clusterApiV1.environmentCheck.restart({
+        hostIps: hostsToCheck.map(h => h.ip),
+        connectionParams
+      })
+      
+      console.log('✅ 重新检查API响应:', response)
+      
+      if (response.code === 200) {
+        console.log('环境检查已重新启动，任务ID:', response.data)
+        setIsChecking(true)
+      } else {
+        throw new Error(response.msg || '重新启动检查失败')
+      }
+    } catch (error: any) {
+      console.error('重新启动环境检查失败:', error)
+      alert('重新启动环境检查失败: ' + (error.message || '未知错误'))
+      setIsChecking(false)
+    }
+  }
+
   // SSE连接，接收实时进度
   useEffect(() => {
     if (!isChecking || !cluster?.id) return
@@ -441,11 +478,21 @@ export default function EnvironmentCheckDialog({
                       开始检查
                     </Button>
                   ) : overallProgress.completedHosts >= overallProgress.totalHosts && overallProgress.totalHosts > 0 ? (
-                    // 检查完成，不显示暂停/恢复按钮
-                    <Badge variant="outline" className="text-green-600 border-green-600">
-                      <CheckCircle2 className="h-4 w-4 mr-1" />
-                      检查完成
-                    </Badge>
+                    // 检查完成，显示重新检查按钮
+                    <>
+                      <Badge variant="outline" className="text-green-600 border-green-600">
+                        <CheckCircle2 className="h-4 w-4 mr-1" />
+                        检查完成
+                      </Badge>
+                      <Button 
+                        onClick={handleRestartCheck} 
+                        size="sm"
+                        variant="outline"
+                      >
+                        <Play className="h-4 w-4 mr-2" />
+                        重新检查
+                      </Button>
+                    </>
                   ) : (
                     // 检查进行中，不显示暂停/恢复按钮（暂不支持暂停功能）
                     <Badge variant="outline" className="text-blue-600 border-blue-600">
