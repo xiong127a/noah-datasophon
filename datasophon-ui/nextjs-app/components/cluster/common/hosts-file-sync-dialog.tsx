@@ -1,14 +1,15 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { API_BASE_URL, API_PATHS_V1 } from '@/lib/api-config-v1'
-import { CheckCircle2, XCircle, Loader2, Play, AlertCircle, Info } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Play, AlertCircle, Info, RefreshCw } from 'lucide-react'
 
 interface HostsFileSyncDialogProps {
   open: boolean
@@ -38,9 +39,48 @@ export default function HostsFileSyncDialog({
   const [progress, setProgress] = useState<HostProgress[]>([])
   const [taskId, setTaskId] = useState<string | null>(null)
   const [completed, setCompleted] = useState(false)
+  const [hostsContent, setHostsContent] = useState('')
+  const [hostsEdited, setHostsEdited] = useState(false)
+
+  // 生成默认hosts文件内容
+  useEffect(() => {
+    if (open && !hostsEdited) {
+      generateDefaultHostsContent()
+    }
+  }, [open, hostIps])
+
+  const generateDefaultHostsContent = async () => {
+    try {
+      // 尝试从后端获取主机信息
+      const response = await clusterApiV1.environmentCheck.getStatus()
+      if (response && Array.isArray(response)) {
+        const hostsEntries = response.map((host: any) => {
+          const hostname = host.hostname || host.hostIp
+          return `${host.hostIp}\t${hostname}`
+        }).join('\n')
+        
+        const defaultContent = `# DataSophon Managed Hosts - START
+# 此部分由DataSophon管理，请勿手动修改
+${hostsEntries}
+# DataSophon Managed Hosts - END`
+        
+        setHostsContent(defaultContent)
+      }
+    } catch (error) {
+      console.error('生成默认hosts内容失败:', error)
+      // 使用简单的IP列表
+      const simpleContent = hostIps.map(ip => `${ip}\t${ip}`).join('\n')
+      setHostsContent(`# DataSophon Managed Hosts - START\n${simpleContent}\n# DataSophon Managed Hosts - END`)
+    }
+  }
 
   // 执行同步
   const handleExecute = async () => {
+    if (!hostsContent.trim()) {
+      alert('Hosts文件内容不能为空')
+      return
+    }
+
     if (!confirm(`确定要同步hosts文件到 ${hostIps.length} 台主机吗？`)) {
       return
     }
@@ -56,6 +96,7 @@ export default function HostsFileSyncDialog({
     try {
       const response = await clusterApiV1.hostManagement.syncHostsFile({
         hostIps,
+        hostsContent,  // 传递用户编辑的hosts内容
         connectionParams
       })
 
@@ -202,6 +243,39 @@ export default function HostsFileSyncDialog({
                 </div>
               </AlertDescription>
             </Alert>
+          )}
+
+          {/* Hosts文件编辑器（未执行时） */}
+          {!executing && !completed && (
+            <div className="border rounded-md p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="font-semibold">Hosts文件内容</h3>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    generateDefaultHostsContent()
+                    setHostsEdited(false)
+                  }}
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  重新生成
+                </Button>
+              </div>
+              <Textarea
+                value={hostsContent}
+                onChange={(e) => {
+                  setHostsContent(e.target.value)
+                  setHostsEdited(true)
+                }}
+                placeholder="请输入hosts文件内容..."
+                className="font-mono text-sm"
+                rows={12}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                ⚠️ 此内容将被同步到所有主机的 /etc/hosts 文件。系统会智能合并，仅修改DataSophon管理的部分。
+              </p>
+            </div>
           )}
 
           {/* 主机列表（未执行时） */}

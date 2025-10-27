@@ -198,8 +198,14 @@ public class HostManagementServiceImpl implements HostManagementService {
         log.info("执行hosts文件同步任务: taskId={}", taskId);
         
         try {
-            // 构建统一的hosts文件内容
-            String hostsContent = buildHostsFileContent(request);
+            // 使用用户提供的hosts内容，如果没有则自动生成
+            String hostsContent = request.getHostsContent();
+            if (hostsContent == null || hostsContent.trim().isEmpty()) {
+                hostsContent = buildHostsFileContent(request);
+                log.info("用户未提供hosts内容，使用自动生成的内容");
+            } else {
+                log.info("使用用户提供的hosts内容");
+            }
             
             // 逐个同步到主机
             for (String hostIp : request.getHostIps()) {

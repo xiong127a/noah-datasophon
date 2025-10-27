@@ -28,5 +28,10 @@ public class HostsSyncRequest {
      * SSH连接参数
      */
     private Map<String, Object> connectionParams;
+    
+    /**
+     * Hosts文件内容（由用户编辑）
+     */
+    private String hostsContent;
 }
 
