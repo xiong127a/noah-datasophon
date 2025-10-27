@@ -54,6 +54,9 @@ public class ParcelRepositoryServiceImpl implements ParcelRepositoryService {
 
     @Autowired
     private ClusterInfoService clusterInfoService;
+    
+    @Autowired
+    private com.datasophon.api.config.CheckerProperties checkerProperties;
 
     @Override
     public List<ParcelRepositoryDTO> list() {
@@ -297,55 +300,61 @@ public class ParcelRepositoryServiceImpl implements ParcelRepositoryService {
         ParcelRepositoryDTO repo = getById(repositoryId);
         java.util.List<String> jdkFiles = new java.util.ArrayList<>();
         
+        // 获取JDK配置
+        var jdkConfig = checkerProperties.getJava().getPackages();
+        String jdkSubDir = jdkConfig.getRepositorySubDir();
+        
         if (repo.isLocal()) {
-            // 本地存储库：扫描文件系统
-            java.io.File repoDir = new java.io.File(repo.getRepoUrl());
-            if (!repoDir.exists() || !repoDir.isDirectory()) {
-                log.warn("存储库目录不存在: {}", repo.getRepoUrl());
-                return jdkFiles;
+            // 本地存储库：扫描 {repoUrl}/jdk/ 目录
+            String jdkDirPath = repo.getRepoUrl() + "/" + jdkSubDir;
+            java.io.File jdkDir = new java.io.File(jdkDirPath);
+            
+            if (!jdkDir.exists() || !jdkDir.isDirectory()) {
+                log.warn("JDK目录不存在: {}，返回配置的默认版本列表", jdkDirPath);
+                // 返回配置的默认版本
+                return getConfiguredJdkFiles(false);
             }
             
-            // 列出所有JDK相关文件（.tar.gz, .zip, .rpm等）
-            java.io.File[] files = repoDir.listFiles((dir, name) -> {
+            // 扫描实际文件
+            java.io.File[] files = jdkDir.listFiles((dir, name) -> {
                 String lowerName = name.toLowerCase();
                 return (lowerName.contains("jdk") || lowerName.contains("java")) &&
                        (lowerName.endsWith(".tar.gz") || lowerName.endsWith(".tgz") ||
                         lowerName.endsWith(".zip") || lowerName.endsWith(".rpm"));
             });
             
-            if (files != null) {
+            if (files != null && files.length > 0) {
                 for (java.io.File file : files) {
                     jdkFiles.add(file.getName());
                 }
+            } else {
+                // 如果目录为空，返回配置的版本
+                log.info("JDK目录为空，返回配置的默认版本列表");
+                return getConfiguredJdkFiles(false);
             }
             
         } else if (repo.isHttp()) {
-            // HTTP存储库：尝试获取目录列表（如果支持）
-            // 注意：HTTP目录列表因服务器而异，这里提供基础实现
-            try {
-                String url = repo.getRepoUrl();
-                if (!url.endsWith("/")) {
-                    url += "/";
-                }
-                
-                // 使用Apache HttpClient或OkHttp获取目录列表
-                // 这里提供一个简单的实现，实际可能需要解析HTML
-                log.info("HTTP存储库暂不支持自动列出文件，请手动指定JDK包名");
-                // 可以返回一些常见的JDK包名供用户选择
-                jdkFiles.add("jdk-21_linux-x64_bin.tar.gz");
-                jdkFiles.add("jdk-17_linux-x64_bin.tar.gz");
-                jdkFiles.add("jdk-11_linux-x64_bin.tar.gz");
-                jdkFiles.add("jdk-8u333-linux-x64.tar.gz");
-                
-            } catch (Exception e) {
-                log.error("列出HTTP存储库文件失败: {}", e.getMessage());
-            }
+            // HTTP存储库：返回配置的版本列表
+            log.info("HTTP存储库，返回配置的JDK版本列表");
+            return getConfiguredJdkFiles(false);
         }
         
-        // 排序
         jdkFiles.sort(String::compareTo);
         log.info("存储库 {} 中找到 {} 个JDK文件", repo.getRepoName(), jdkFiles.size());
         return jdkFiles;
+    }
+    
+    /**
+     * 从配置文件获取JDK文件列表
+     * @param isArm 是否为ARM架构
+     * @return JDK文件列表
+     */
+    private java.util.List<String> getConfiguredJdkFiles(boolean isArm) {
+        var jdkConfig = checkerProperties.getJava().getPackages();
+        
+        return jdkConfig.getAvailableVersions().stream()
+                .map(v -> v.getFilenameForArch(isArm))
+                .collect(java.util.stream.Collectors.toList());
     }
 
     /**

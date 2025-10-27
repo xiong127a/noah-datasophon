@@ -34,6 +34,32 @@ datasophon:
       default-path: /usr/local/jdk1.8.0_333
       # 是否检查默认路径
       check-default-path: true
+      
+      # JDK包配置
+      packages:
+        # 存储库中JDK子目录（固定为jdk/）
+        repository-sub-dir: jdk/
+        
+        # 默认JDK版本（用于非高级模式）
+        default-version: JDK21
+        
+        # 是否启用高级选择（让用户选择版本和架构）
+        advanced-selection-enabled: false
+        
+        # 可用JDK版本列表（实际存储库中的文件名）
+        available-versions:
+          - version: JDK21
+            display-name: "JDK 21"
+            filename: jdk-21_linux-x64_bin.tar.gz
+            description: "OpenJDK 21 LTS (推荐)"
+          - version: JDK11
+            display-name: "JDK 11"
+            filename: jdk-11.0.21.tar.gz
+            description: "OpenJDK 11 LTS"
+          - version: JDK8
+            display-name: "JDK 8"
+            filename: jdk-8u333-linux-x64.tar.gz
+            description: "Oracle JDK 8"
     
     # 磁盘空间检查配置
     disk:

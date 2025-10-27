@@ -11,7 +11,6 @@ import com.datasophon.common.dto.environment.SkipCheckItemRequest;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
 import com.datasophon.common.vo.environment.EnvironmentValidationResult;
 import com.datasophon.common.vo.environment.RepairResult;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -41,6 +40,9 @@ public class EnvironmentCheckController {
     
     @Autowired
     private com.datasophon.api.service.ParcelRepositoryService parcelRepositoryService;
+    
+    @Autowired
+    private com.datasophon.api.config.CheckerProperties checkerProperties;
     
     // 构造器日志，确认控制器是否被实例化
     public EnvironmentCheckController(EnvironmentCheckService environmentCheckService) {
@@ -259,6 +261,55 @@ public class EnvironmentCheckController {
     }
     
     /**
+     * 获取JDK配置（包含是否启用高级选择）
+     */
+    @GetMapping("/jdk-config")
+    public Result<Map<String, Object>> getJdkConfig(@ClusterId Long clusterId) {
+        log.info("获取JDK配置: clusterId={}", clusterId);
+        
+        try {
+            var jdkConfig = checkerProperties.getJava().getPackages();
+            
+            Map<String, Object> config = new HashMap<>();
+            config.put("advancedSelectionEnabled", jdkConfig.isAdvancedSelectionEnabled());
+            config.put("defaultVersion", jdkConfig.getDefaultVersion());
+            
+            // 如果启用高级选择，返回可用版本列表
+            if (jdkConfig.isAdvancedSelectionEnabled()) {
+                List<Map<String, String>> versions = jdkConfig.getAvailableVersions().stream()
+                        .map(v -> {
+                            Map<String, String> versionInfo = new HashMap<>();
+                            versionInfo.put("version", v.getVersion());
+                            versionInfo.put("displayName", v.getDisplayName());
+                            versionInfo.put("filename", v.getFilename());
+                            versionInfo.put("description", v.getDescription());
+                            return versionInfo;
+                        })
+                        .collect(java.util.stream.Collectors.toList());
+                config.put("availableVersions", versions);
+            } else {
+                // 非高级模式，只返回默认版本信息
+                var defaultJdk = jdkConfig.getAvailableVersions().stream()
+                        .filter(v -> v.getVersion().equals(jdkConfig.getDefaultVersion()))
+                        .findFirst()
+                        .orElse(null);
+                if (defaultJdk != null) {
+                    Map<String, String> defaultInfo = new HashMap<>();
+                    defaultInfo.put("displayName", defaultJdk.getDisplayName());
+                    defaultInfo.put("filename", defaultJdk.getFilename());
+                    config.put("defaultJdkInfo", defaultInfo);
+                }
+            }
+            
+            return Result.success(config);
+            
+        } catch (Exception e) {
+            log.error("获取JDK配置失败: {}", e.getMessage(), e);
+            return Result.error("获取失败: " + e.getMessage());
+        }
+    }
+    
+    /**
      * 获取存储库中的JDK文件列表
      * 用于环境修复时让用户选择JDK版本
      */
@@ -268,6 +319,14 @@ public class EnvironmentCheckController {
         log.info("获取JDK文件列表: clusterId={}", clusterId);
         
         try {
+            var jdkConfig = checkerProperties.getJava().getPackages();
+            
+            // 如果未启用高级选择，返回空列表
+            if (!jdkConfig.isAdvancedSelectionEnabled()) {
+                log.info("高级JDK选择未启用，返回空列表");
+                return Result.success(java.util.Collections.emptyList());
+            }
+            
             // 获取集群关联的存储库
             var cluster = clusterInfoService.getById(clusterId);
             if (cluster == null) {

@@ -57,6 +57,9 @@ public class JavaChecker implements EnvironmentCheckItem {
     @Autowired
     private com.datasophon.api.checker.RepairStepExecutor repairStepExecutor;
     
+    @Autowired
+    private com.datasophon.api.config.CheckerProperties checkerProperties;
+    
     private SshConnectionService sshService;
     private static final Pattern VERSION_PATTERN = Pattern.compile("version \"([^\"]+)\"");
     
@@ -257,12 +260,31 @@ public class JavaChecker implements EnvironmentCheckItem {
             checkLogWriter.logRepairInfo(context.getClusterId(), context.getHostIp(),
                     getCheckKey(), "获取存储库信息成功", repoInfo);
             
-            // 获取JDK包名（支持用户选择或使用默认值）
-            String selectedJdkPackage = params != null && params.containsKey("jdkPackage")
-                    ? (String) params.get("jdkPackage")
-                    : jdkPackageName;
-            
-            log.info("使用JDK包: {}", selectedJdkPackage);
+            // 获取JDK包名（支持用户选择或使用配置的默认值）
+            String selectedJdkPackage;
+            if (params != null && params.containsKey("jdkPackage")) {
+                // 用户选择的版本（高级模式）
+                selectedJdkPackage = (String) params.get("jdkPackage");
+                log.info("使用用户选择的JDK包: {}", selectedJdkPackage);
+            } else {
+                // 使用配置的默认版本
+                var jdkConfig = checkerProperties.getJava().getPackages();
+                var defaultJdk = jdkConfig.getAvailableVersions().stream()
+                        .filter(v -> v.getVersion().equals(jdkConfig.getDefaultVersion()))
+                        .findFirst()
+                        .orElseThrow(() -> new IllegalStateException("未找到默认JDK版本配置: " + jdkConfig.getDefaultVersion()));
+                
+                // 根据架构选择文件名
+                boolean isArm = params != null && Boolean.TRUE.equals(params.get("isArm"));
+                String jdkFileName = defaultJdk.getFilenameForArch(isArm);
+                
+                // 构建完整路径：jdk/文件名
+                String jdkSubDir = jdkConfig.getRepositorySubDir();
+                selectedJdkPackage = jdkSubDir + jdkFileName;
+                
+                log.info("使用配置的默认JDK包: {} (版本: {}, ARM: {})", 
+                        selectedJdkPackage, jdkConfig.getDefaultVersion(), isArm);
+            }
             
             // 构造JDK包下载URL
             String jdkDownloadUrl;

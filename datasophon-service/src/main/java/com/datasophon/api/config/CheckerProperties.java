@@ -195,6 +195,90 @@ public class CheckerProperties {
          * 是否检查默认路径
          */
         private boolean checkDefaultPath = true;
+        
+        /**
+         * JDK包配置
+         */
+        private JdkPackagesConfig packages = new JdkPackagesConfig();
+    }
+    
+    /**
+     * JDK包配置类
+     */
+    @Data
+    public static class JdkPackagesConfig {
+        /**
+         * 存储库中JDK子目录（固定为jdk/）
+         */
+        private String repositorySubDir = "jdk/";
+        
+        /**
+         * 默认JDK版本（用于非高级模式）
+         */
+        private String defaultVersion = "JDK21";
+        
+        /**
+         * 是否启用高级选择（让用户选择版本和架构）
+         */
+        private boolean advancedSelectionEnabled = false;
+        
+        /**
+         * 可用JDK版本列表
+         */
+        private List<JdkVersionConfig> availableVersions = new ArrayList<>();
+    }
+    
+    /**
+     * JDK版本配置类
+     */
+    @Data
+    public static class JdkVersionConfig {
+        /**
+         * 版本标识，如JDK21
+         */
+        private String version;
+        
+        /**
+         * 显示名称，如"JDK 21"
+         */
+        private String displayName;
+        
+        /**
+         * 文件名，如jdk-21_linux-x64_bin.tar.gz
+         */
+        private String filename;
+        
+        /**
+         * 描述信息，如"OpenJDK 21 LTS (推荐)"
+         */
+        private String description;
+        
+        /**
+         * 根据架构获取文件名
+         * ARM架构会在扩展名前添加-arm后缀
+         * 
+         * @param isArm 是否为ARM架构
+         * @return 对应架构的文件名
+         */
+        public String getFilenameForArch(boolean isArm) {
+            if (!isArm) {
+                return filename;
+            }
+            // ARM架构：在扩展名前添加-arm
+            int lastDot = filename.lastIndexOf('.');
+            if (lastDot > 0) {
+                String baseName = filename.substring(0, lastDot);
+                String extension = filename.substring(lastDot);
+                // 检查是否是 .tar.gz
+                if (extension.equals(".gz") && baseName.endsWith(".tar")) {
+                    int tarDot = baseName.lastIndexOf('.');
+                    String realBase = baseName.substring(0, tarDot);
+                    return realBase + "-arm.tar.gz";
+                }
+                return baseName + "-arm" + extension;
+            }
+            return filename + "-arm";
+        }
     }
 
     /**
