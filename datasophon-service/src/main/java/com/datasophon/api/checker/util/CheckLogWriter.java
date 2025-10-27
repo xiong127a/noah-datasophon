@@ -16,7 +16,9 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -294,6 +296,47 @@ public class CheckLogWriter {
             log.error("清理修复日志失败: clusterId={}, hostIp={}, checkKey={}", 
                      clusterId, hostIp, checkKey, e);
         }
+    }
+    
+    /**
+     * 读取主机的所有日志文件信息（不读取内容，只返回文件列表）
+     * @return 日志文件信息列表 [{checkKey, type, filePath}...]
+     */
+    public List<Map<String, String>> listHostLogFiles(Long clusterId, String hostIp) {
+        List<Map<String, String>> logFiles = new ArrayList<>();
+        
+        try {
+            Path hostDir = Paths.get(LOG_BASE_DIR, String.valueOf(clusterId), hostIp);
+            
+            if (!Files.exists(hostDir)) {
+                return logFiles;
+            }
+            
+            Files.list(hostDir)
+                    .filter(path -> path.toString().endsWith(".jsonl"))
+                    .sorted()
+                    .forEach(logFile -> {
+                        try {
+                            String fileName = logFile.getFileName().toString();
+                            // 文件名格式: {checkKey}.{type}.jsonl
+                            String[] parts = fileName.replace(".jsonl", "").split("\\.");
+                            if (parts.length == 2) {
+                                Map<String, String> fileInfo = new HashMap<>();
+                                fileInfo.put("checkKey", parts[0]);
+                                fileInfo.put("type", parts[1]);
+                                fileInfo.put("filePath", logFile.toString());
+                                logFiles.add(fileInfo);
+                            }
+                        } catch (Exception e) {
+                            log.error("解析日志文件名失败: {}", logFile, e);
+                        }
+                    });
+            
+        } catch (Exception e) {
+            log.error("列出主机日志文件失败: clusterId={}, hostIp={}", clusterId, hostIp, e);
+        }
+        
+        return logFiles;
     }
     
     /**

@@ -25,6 +25,7 @@ import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar from './cluster-wizard-action-bar'
 import { CheckItemDetailCard } from './check-item-detail-card'
 import { CheckLogsDialog } from './check-logs-dialog'
+import { HostLogsDialog } from './host-logs-dialog'
 import { RepairOptionsDialog, type RepairOptions } from './repair-options-dialog'
 import HostnameBatchEditDialog from './hostname-batch-edit-dialog'
 import HostsFileSyncDialog from './hosts-file-sync-dialog'
@@ -83,6 +84,8 @@ export default function EnvironmentCheckDialog({
   const [actualHostList, setActualHostList] = useState<Array<{ ip: string; hostname?: string }>>([])
   const [logsDialogOpen, setLogsDialogOpen] = useState(false)
   const [selectedCheckItem, setSelectedCheckItem] = useState<{ hostIp: string; checkKey: string; checkName: string } | null>(null)
+  const [hostLogsDialogOpen, setHostLogsDialogOpen] = useState(false)
+  const [selectedHost, setSelectedHost] = useState<{ hostIp: string; hostname: string } | null>(null)
   const [repairOptionsOpen, setRepairOptionsOpen] = useState(false)
   const [pendingRepair, setPendingRepair] = useState<{ hostIp: string; checkKey: string; checkName: string } | null>(null)
   const [validation, setValidation] = useState<{
@@ -617,12 +620,10 @@ export default function EnvironmentCheckDialog({
           {/* 主机检查列表（检查中或已完成） */}
           {checkStatus.map((host) => (
             <Card key={host.hostIp} className="border-2">
-              <CardHeader 
-                className="cursor-pointer hover:bg-gray-50 transition-colors"
-                onClick={() => toggleHostExpand(host.hostIp)}
-              >
+              <CardHeader>
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity flex-1"
+                       onClick={() => toggleHostExpand(host.hostIp)}>
                     {expandedHosts.has(host.hostIp) ? (
                       <ChevronUp className="h-5 w-5 text-gray-400" />
                     ) : (
@@ -644,6 +645,19 @@ export default function EnvironmentCheckDialog({
                       value={host.totalItems > 0 ? ((host.successItems + host.skippedItems) / host.totalItems) * 100 : 0} 
                       className="w-32"
                     />
+                    {/* 查看日志按钮 */}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setSelectedHost({ hostIp: host.hostIp, hostname: host.hostname })
+                        setHostLogsDialogOpen(true)
+                      }}
+                    >
+                      <FileText className="h-4 w-4 mr-1" />
+                      查看日志
+                    </Button>
                   </div>
                 </div>
               </CardHeader>
@@ -850,6 +864,17 @@ export default function EnvironmentCheckDialog({
           console.log('修复成功，重新加载检查结果')
           refreshCheckStatus()
         }}
+      />
+    )}
+    
+    {/* 主机日志查看对话框 */}
+    {selectedHost && (
+      <HostLogsDialog
+        open={hostLogsDialogOpen}
+        onOpenChange={setHostLogsDialogOpen}
+        clusterId={cluster?.id?.toString() || '0'}
+        hostIp={selectedHost.hostIp}
+        hostname={selectedHost.hostname}
       />
     )}
     
