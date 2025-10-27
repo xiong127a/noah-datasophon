@@ -372,6 +372,32 @@ export const clusterApiV1 = {
     // 注意：日志查看已改为通过SSE实时推送，不再需要轮询API
   },
 
+  // Agent分发相关 API
+  agentDistribution: {
+    /** 启动Agent分发 */
+    start: async (request: {
+      hostIps: string[]
+      connectionParams: any
+    }) => {
+      const response = await apiV1.post(API_PATHS_V1.AGENT_DISTRIBUTION_START, request)
+      return response.data
+    },
+    
+    /** 获取Agent分发状态 */
+    getStatus: async () => {
+      const response = await apiV1.get(API_PATHS_V1.AGENT_DISTRIBUTION_STATUS)
+      return response.data
+    },
+    
+    /** 取消Agent分发 */
+    cancel: async () => {
+      const response = await apiV1.post(API_PATHS_V1.AGENT_DISTRIBUTION_CANCEL, {})
+      return response.data
+    },
+    
+    // 注意：日志查看通过SSE实时推送
+  },
+
   // 服务角色分配相关 API (Step5)
   serviceRole: {
     /** 获取服务角色列表 - 拦截器自动注入集群ID */

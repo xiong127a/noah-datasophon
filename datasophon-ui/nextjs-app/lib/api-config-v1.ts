@@ -200,6 +200,12 @@ export const API_PATHS_V1 = {
   ENVIRONMENT_CHECK_CLEANUP: `${API_BASE}/environment-check/cleanup`,
   ENVIRONMENT_CHECK_SSE: `${API_BASE}/environment-check-sse/stream`,
   
+  // Agent分发相关 - v1
+  AGENT_DISTRIBUTION_START: `${API_BASE}/agent-distribution/start`,
+  AGENT_DISTRIBUTION_STATUS: `${API_BASE}/agent-distribution/status`,
+  AGENT_DISTRIBUTION_CANCEL: `${API_BASE}/agent-distribution/cancel`,
+  AGENT_DISTRIBUTION_SSE: `${API_BASE}/agent-distribution-sse/stream`,
+  
   // 服务安装相关 - v1
   GET_SERVICE_CONFIG_OPTION: `${API_BASE}/service/install/getServiceConfigOption`,
   SAVE_SERVICE_CONFIG: `${API_BASE}/service/install/saveServiceConfig`,
