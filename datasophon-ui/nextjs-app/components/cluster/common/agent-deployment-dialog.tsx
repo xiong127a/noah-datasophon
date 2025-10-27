@@ -1,30 +1,10 @@
 "use client"
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 
-/**
- * 🔧 修复Long类型精度丢失的JSON解析器
- */
-function parseJsonWithLongSupport(jsonString: string): unknown {
-  try {
-    const safeMaxInt = Number.MAX_SAFE_INTEGER;
-    const longIntRegex = /"?(-?\d{15,})"?/g;
-    const processedJson = jsonString.replace(longIntRegex, (match, number) => {
-      const num = Math.abs(parseInt(number));
-      if (num > safeMaxInt) {
-        return `"${number}"`;
-      }
-      return match;
-    });
-    return JSON.parse(processedJson);
-  } catch (error) {
-    console.warn('JSON解析失败，使用原生解析:', error);
-    return JSON.parse(jsonString);
-  }
-}
 import { 
   Loader2, RefreshCw, AlertCircle, Server, CheckCircle2, XCircle, Play, 
-  Pause, Clock, Info, Download, Zap
+  Clock, Info, Terminal
 } from 'lucide-react'
 import { Progress } from "@/components/ui/progress"
 import { Badge } from "@/components/ui/badge"
@@ -34,14 +14,15 @@ import { toast } from 'sonner'
 import ClusterWizardLayout from './cluster-wizard-layout'
 import ClusterWizardActionBar, { type ActionButton, type StatusInfo } from './cluster-wizard-action-bar'
 import { ClusterTypeUtil } from '@/types'
-import { CARD_STYLES, BADGE_STYLES } from './shared-styles'
+import { CARD_STYLES } from './shared-styles'
 
 import type { 
   AgentDeploymentDialogProps, 
   HostInfo, 
-  AgentDistributionTask,
   Step3AgentData
 } from '@/types/agent-deployment'
+import { clusterApiV1 } from '@/lib/api-utils-v1'
+import { AgentLogsDialog } from './agent-logs-dialog'
 
 /**
  * 集群步骤3：主机Agent分发对话框
@@ -56,17 +37,18 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
   clusterType = '',
   hostList,
   connectionParams,
-  step2Data,
   onComplete,
   onPrevious
 }) => {
   // 状态管理
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [hosts, setHosts] = useState<HostInfo[]>([])
-  const [distributionTasks, setDistributionTasks] = useState<AgentDistributionTask[]>([])
   const [isDistributing, setIsDistributing] = useState(false)
   const [overallStatus, setOverallStatus] = useState<'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'FAILED'>('NOT_STARTED')
+  
+  // 日志对话框状态
+  const [logsDialogOpen, setLogsDialogOpen] = useState(false)
+  const [selectedHost, setSelectedHost] = useState<{ ip: string; hostname: string } | null>(null)
 
   // 判断是否为K8s模式
   const isK8s = ClusterTypeUtil.isKubernetes(clusterType || cluster?.depType || '')
@@ -97,84 +79,99 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
 
     setIsDistributing(true)
     setOverallStatus('IN_PROGRESS')
+    setError(null)
     
     try {
-      // 初始化分发任务
-      const tasks: AgentDistributionTask[] = hosts.map(host => ({
-        taskId: `agent-${host.id}-${Date.now()}`,
-        hostId: host.id,
-        hostIp: host.ip,
-        status: 'PENDING',
-        progress: 0,
-        startTime: new Date().toISOString()
-      }))
+      console.log('开始Agent分发:', { clusterId: cluster.id, hostCount: hosts.length })
       
-      setDistributionTasks(tasks)
-
-      // 模拟分发过程（实际应该调用后端接口）
-      for (let i = 0; i < tasks.length; i++) {
-        const task = tasks[i]
-        const host = hosts[i]
-        
-        // 更新任务状态为运行中
-        task.status = 'RUNNING'
-        setDistributionTasks([...tasks])
-        
-        // 更新主机Agent状态
-        host.agentStatus = 'INSTALLING'
-        setHosts([...hosts])
-
-        // 模拟分发进度
-        for (let progress = 0; progress <= 100; progress += 20) {
-          await new Promise(resolve => setTimeout(resolve, 300))
-          task.progress = progress
-          host.progress = progress
-          setDistributionTasks([...tasks])
-          setHosts([...hosts])
+      // 1. 调用后端API启动分发
+      const hostIps = hosts.map(h => h.ip)
+      const request = {
+        hostIps,
+        connectionParams: {
+          sshUser: connectionParams.sshUser,
+          sshPort: connectionParams.sshPort,
+          sshPassword: connectionParams.sshPassword,
+          hostnames: hosts.reduce((acc, h) => {
+            acc[h.ip] = h.hostname
+            return acc
+          }, {} as Record<string, string>)
         }
-
-        // 随机模拟成功或失败（实际根据后端返回结果）
-        const isSuccess = Math.random() > 0.2 // 80%成功率
-        if (isSuccess) {
-          task.status = 'SUCCESS'
-          task.endTime = new Date().toISOString()
-          host.agentStatus = 'INSTALLED'
-          toast.success(`${host.hostname} Agent安装成功`)
-        } else {
-          task.status = 'FAILED'
-          task.endTime = new Date().toISOString()
-          task.errorMessage = '连接超时或认证失败'
-          host.agentStatus = 'FAILED'
-          host.errorMessage = '连接超时或认证失败'
-          toast.error(`${host.hostname} Agent安装失败`)
-        }
-        
-        setDistributionTasks([...tasks])
-        setHosts([...hosts])
       }
-
-      // 检查分发结果
-      const successCount = tasks.filter(t => t.status === 'SUCCESS').length
-      const failedCount = tasks.filter(t => t.status === 'FAILED').length
       
-      if (failedCount === 0) {
-        setOverallStatus('COMPLETED')
-        toast.success('所有主机Agent分发完成')
-      } else if (successCount > 0) {
-        setOverallStatus('COMPLETED')
-        toast.warning(`部分主机Agent分发完成 (成功: ${successCount}, 失败: ${failedCount})`)
-      } else {
-        setOverallStatus('FAILED')
-        toast.error('所有主机Agent分发失败')
+      await clusterApiV1.agentDistribution.start(request)
+      console.log('Agent分发任务已启动')
+      toast.success('Agent分发任务已启动')
+      
+      // 2. 开始轮询获取分发状态
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResult = await clusterApiV1.agentDistribution.getStatus()
+          const statusList = statusResult.data || []
+          
+          console.log('获取Agent分发状态:', statusList)
+          
+          // 更新主机状态
+          const updatedHosts = hosts.map(host => {
+            const status = statusList.find((s: any) => s.hostIp === host.ip)
+            if (status) {
+              const agentStatus: HostInfo['agentStatus'] = 
+                status.status === 'SUCCESS' ? 'INSTALLED' 
+                : status.status === 'FAILED' ? 'FAILED' 
+                : status.status === 'RUNNING' ? 'INSTALLING' 
+                : 'NOT_INSTALLED'
+              
+              return {
+                ...host,
+                progress: status.progress || 0,
+                agentStatus,
+                errorMessage: status.message
+              } as HostInfo
+            }
+            return host
+          })
+          setHosts(updatedHosts)
+          
+          // 检查是否所有主机都完成（成功或失败）
+          const allCompleted = statusList.every((s: any) => 
+            s.status === 'SUCCESS' || s.status === 'FAILED'
+          )
+          
+          if (allCompleted && statusList.length > 0) {
+            clearInterval(pollInterval)
+            setIsDistributing(false)
+            
+            const successCount = statusList.filter((s: any) => s.status === 'SUCCESS').length
+            const failedCount = statusList.filter((s: any) => s.status === 'FAILED').length
+            
+            if (failedCount === 0) {
+              setOverallStatus('COMPLETED')
+              toast.success('所有主机Agent分发完成')
+            } else if (successCount > 0) {
+              setOverallStatus('COMPLETED')
+              toast.warning(`部分主机Agent分发完成 (成功: ${successCount}, 失败: ${failedCount})`)
+            } else {
+              setOverallStatus('FAILED')
+              toast.error('所有主机Agent分发失败')
+            }
+          }
+          
+        } catch (pollError) {
+          console.error('轮询Agent分发状态失败:', pollError)
+        }
+      }, 2000) // 每2秒轮询一次
+      
+      // 清理函数：组件卸载时停止轮询
+      return () => {
+        clearInterval(pollInterval)
       }
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '未知错误'
       setError(errorMessage)
       setOverallStatus('FAILED')
-      toast.error(`Agent分发失败: ${errorMessage}`)
-    } finally {
       setIsDistributing(false)
+      toast.error(`启动Agent分发失败: ${errorMessage}`)
     }
   }
 
@@ -216,7 +213,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
       
       const step3Data: Step3AgentData = {
         hosts,
-        tasks: distributionTasks,
+        tasks: [],  // 新架构不再使用tasks，保留为空数组以兼容类型
         overallStatus,
         successCount,
         failedCount
@@ -270,6 +267,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
   ]
 
   return (
+    <>
     <ClusterWizardLayout
       open={open}
       onClose={() => onOpenChange(false)}
@@ -284,7 +282,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
           statusInfo={statusInfo}
           statusBadge={!isK8s ? {
             text: overallStatus === 'COMPLETED' ? '分发完成' : overallStatus === 'IN_PROGRESS' ? '分发中...' : '待分发',
-            variant: overallStatus === 'COMPLETED' ? 'success' : overallStatus === 'IN_PROGRESS' ? 'warning' : 'default',
+            variant: overallStatus === 'COMPLETED' ? 'success' : overallStatus === 'IN_PROGRESS' ? 'warning' : 'info',
             show: true
           } : undefined}
           buttons={buttons}
@@ -378,25 +376,11 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
               </div>
 
               {/* 主机列表 */}
-              {loading ? (
-                <div className="flex items-center justify-center h-64">
-                  <div className="flex items-center space-x-3">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-500" />
-                    <span className="text-gray-600 font-medium">正在加载主机列表...</span>
-                  </div>
-                </div>
-              ) : error ? (
+              {error ? (
                 <div className="flex flex-col items-center justify-center h-64 text-red-500">
                   <AlertCircle className="w-12 h-12 mb-4" />
-                  <p className="text-lg font-semibold mb-2">加载失败</p>
+                  <p className="text-lg font-semibold mb-2">操作失败</p>
                   <p className="text-gray-600">{error}</p>
-                  <Button 
-                    onClick={fetchHosts}
-                    className="mt-4"
-                    variant="outline"
-                  >
-                    重试
-                  </Button>
                 </div>
               ) : hosts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-64 text-gray-500">
@@ -477,6 +461,22 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
                             <div>内存: {host.memory}GB</div>
                           )}
                         </div>
+                        
+                        {/* 查看日志按钮 */}
+                        {(host.agentStatus === 'INSTALLING' || host.agentStatus === 'INSTALLED' || host.agentStatus === 'FAILED') && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full mt-3 text-xs"
+                            onClick={() => {
+                              setSelectedHost({ ip: host.ip, hostname: host.hostname })
+                              setLogsDialogOpen(true)
+                            }}
+                          >
+                            <Terminal className="w-3 h-3 mr-1" />
+                            查看分发日志
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   ))}
@@ -487,6 +487,18 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
         </div>
       </div>
     </ClusterWizardLayout>
+    
+    {/* Agent分发日志对话框 */}
+    {selectedHost && (
+      <AgentLogsDialog
+        open={logsDialogOpen}
+        onOpenChange={setLogsDialogOpen}
+        clusterId={typeof cluster?.id === 'number' ? cluster.id : Number(cluster?.id) || 0}
+        hostIp={selectedHost.ip}
+        hostname={selectedHost.hostname}
+      />
+    )}
+  </>
   )
 }
 
