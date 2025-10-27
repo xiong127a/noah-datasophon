@@ -43,12 +43,20 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     private final ConfigBean configBean;
     private final RepositoryDownloaderFactory downloaderFactory;
     
-    // SSH连接服务
-    private final SshConnectionService sshService = 
-            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+    // SSH连接服务（延迟初始化，避免Spring容器初始化时获取上下文）
+    private SshConnectionService sshService;
     
     // 异步执行线程池
     private final ExecutorService executorService = Executors.newCachedThreadPool();
+    
+    /**
+     * Bean初始化后执行，此时Spring容器已完成初始化
+     */
+    @jakarta.annotation.PostConstruct
+    public void init() {
+        this.sshService = SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+        log.info("AgentDistributionServiceImpl 初始化完成，SSH连接服务已就绪");
+    }
     
     @Override
     public String startDistribution(Long clusterId, List<String> hostIps, Map<String, Object> connectionParams) {
