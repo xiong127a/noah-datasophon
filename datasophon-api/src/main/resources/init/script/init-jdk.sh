@@ -57,37 +57,13 @@ else
   mkdir -p ${JDK_FOLDER_PATH}
   tar -zxvf ${PACKAGES_PATH}/${JDK_TAR_NAME} -C ${JDK_FOLDER_PATH}
   JAVA_HOME="${JDK_FOLDER_PATH}/${JDK_PATH_NAME}"
-  JRE_HOME="${JDK_FOLDER_PATH}/${JDK_PATH_NAME}/jre"
   JAVA_SOURCE_ENV="source /etc/profile"
   echo "export JAVA_HOME=$JAVA_HOME" >>/etc/profile
-  echo "export JRE_HOME=$JRE_HOME" >>/etc/profile
-  echo "export CLASSPATH=.:\$JRE_HOME/lib/rt.jar:\$JAVA_HOME/lib/dt.jar:\$JAVA_HOME/lib/tools.jar" >>/etc/profile
   echo "export PATH=\$PATH:\$JAVA_HOME/bin" >>/etc/profile
   echo ${JAVA_SOURCE_ENV} >>~/.bash_profile
   echo ${JAVA_SOURCE_ENV} >>~/.bashrc
-  echo "Prepare to config BCPROV..."
-  JAVA_SECURITY_DIR="${JAVA_HOME}/jre/lib/security/java.security"
-  JAVA_BCPROV_DIR="${JAVA_HOME}/jre/lib/ext/"
-  JAVA_BCPROV_JAR="${PACKAGES_PATH}/bcprov-jdk15on-1.68.jar"
-
-  JAVA_SECURITY_ARGS_ARR[0]="security.provider.1=sun.security.provider.Sun"
-  JAVA_SECURITY_ARGS_ARR[1]="security.provider.2=sun.security.rsa.SunRsaSign"
-  JAVA_SECURITY_ARGS_ARR[2]="security.provider.3=com.sun.net.ssl.internal.ssl.Provider"
-  JAVA_SECURITY_ARGS_ARR[3]="security.provider.4=com.sun.crypto.provider.SunJCE"
-  JAVA_SECURITY_ARGS_ARR[4]="security.provider.5=sun.security.jgss.SunProvider"
-  JAVA_SECURITY_ARGS_ARR[5]="security.provider.6=com.sun.security.sasl.Provider"
-  JAVA_SECURITY_ARGS_ARR[6]="security.provider.7=org.jcp.xml.dsig.internal.dom.XMLDSigRI"
-  JAVA_SECURITY_ARGS_ARR[7]="security.provider.8=sun.security.smartcardio.SunPCSC"
-  JAVA_SECURITY_ARGS_ARR[8]="security.provider.9=org.bouncycastle.jce.provider.BouncyCastleProvider"
-
-  for element in ${JAVA_SECURITY_ARGS_ARR[@]}; do
-    JAVA_SECURITY_ARGS="${JAVA_SECURITY_ARGS}${element}\n"
-  done
-
-  echo -e ${JAVA_SECURITY_ARGS} >>${JAVA_SECURITY_DIR}
-  cp -a ${JAVA_BCPROV_JAR} ${JAVA_BCPROV_DIR}
-
-  echo "BCPROV Installed."
+  # JDK 21+ 不再需要配置 BCPROV，已内置现代加密算法支持
+  echo "JDK 21+ includes modern crypto support, skipping BCPROV configuration."
 
   echo "If you need to effect the environment variable in the current session, do it manually: "
   source ${BASH_PROFILE_PATH}

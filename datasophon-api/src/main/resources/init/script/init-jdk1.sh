@@ -60,16 +60,15 @@ if [[ ! -d "$INSTALL_DIR/$JDK_DIR" ]]; then
     exit 1
 fi
 
-# 设置 JAVA_HOME, JRE_HOME 和 PATH 环境变量
+# 设置 JAVA_HOME 和 PATH 环境变量
 echo "Setting up JDK environment variables..."
 
-# 设置新的 JAVA_HOME
+# 设置新的 JAVA_HOME (JDK 21+ 没有单独的 jre 目录)
 echo "export JAVA_HOME=$INSTALL_DIR/$JDK_DIR" >> /etc/profile
-echo "export JRE_HOME=$INSTALL_DIR/$JDK_DIR/jre" >> /etc/profile
 
 # 刷新环境变量
 source /etc/profile
-rm /usr/bin/java
+rm -f /usr/bin/java 2>/dev/null
 echo "export PATH=$JAVA_HOME/bin:$(echo $PATH | tr ':' '\n' | sort | uniq | tr '\n' ':')" >> /etc/profile
 # 刷新环境变量
 source /etc/profile

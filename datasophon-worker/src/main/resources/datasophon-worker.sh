@@ -73,52 +73,26 @@ export DDH_HOME=$BIN_DIR/..
 echo "脚本所在目录: $BIN_DIR"
 echo "DDH_HOME: $DDH_HOME"
 
-# 查找Java环境
-# 1. 首先尝试使用 ../java 目录的JDK
-RELATIVE_JAVA_HOME="$DDH_HOME/java"
-if [ -d "$RELATIVE_JAVA_HOME" ]; then
-  export JAVA_HOME=$RELATIVE_JAVA_HOME
-  export PATH=$JAVA_HOME/bin:$PATH
-  JAVA=$JAVA_HOME/bin/java
-  echo "使用相对路径Java: $JAVA_HOME"
-else
-  # 2. 尝试使用 /usr/local/jdk1.8.0_333
-  SYSTEM_JAVA="/usr/local/jdk1.8.0_333"
-  if [ -d "$SYSTEM_JAVA" ]; then
-    # 创建软链接到 ../java
-    echo "创建软链接: $SYSTEM_JAVA -> $RELATIVE_JAVA_HOME"
-    mkdir -p `dirname $RELATIVE_JAVA_HOME` 2>/dev/null
-    ln -sf $SYSTEM_JAVA $RELATIVE_JAVA_HOME 2>/dev/null
-
-    export JAVA_HOME=$SYSTEM_JAVA
-    export PATH=$JAVA_HOME/bin:$PATH
-    JAVA=$JAVA_HOME/bin/java
-    echo "使用系统Java并创建软链接: $JAVA_HOME"
-  else
-    # 3. 尝试使用 JAVA_HOME 环境变量
-    if [ -n "$JAVA_HOME" ] && [ -d "$JAVA_HOME" ]; then
-      export PATH=$JAVA_HOME/bin:$PATH
-      JAVA=$JAVA_HOME/bin/java
-      echo "使用JAVA_HOME环境变量: $JAVA_HOME"
-    else
-      # 4. 尝试直接使用java命令
-      JAVA=`which java 2>/dev/null`
-      if [ -n "$JAVA" ]; then
-        echo "使用系统PATH中的Java: $JAVA"
-      else
-        # 5. 如果都失败，报错退出
-        echo "错误: 未找到可用的Java环境! 请安装JDK或设置JAVA_HOME环境变量。"
-        exit 1
-      fi
-    fi
-  fi
-fi
-
-# 测试Java是否可用
-if ! "$JAVA" -version >/dev/null 2>&1; then
-  echo "错误: Java命令无法执行! 请检查Java安装或权限。"
+# 查找Java环境 - 只使用JAVA_HOME环境变量
+if [ -z "$JAVA_HOME" ]; then
+  echo "错误: JAVA_HOME环境变量未设置! 请先配置JAVA_HOME。"
+  echo "提示: 执行 'source /etc/profile' 加载环境变量"
   exit 1
 fi
+
+if [ ! -d "$JAVA_HOME" ]; then
+  echo "错误: JAVA_HOME目录不存在: $JAVA_HOME"
+  exit 1
+fi
+
+JAVA="$JAVA_HOME/bin/java"
+if [ ! -x "$JAVA" ]; then
+  echo "错误: Java可执行文件不存在或无执行权限: $JAVA"
+  exit 1
+fi
+
+echo "使用JAVA_HOME: $JAVA_HOME"
+export PATH=$JAVA_HOME/bin:$PATH
 
 export HOSTNAME=`hostname`
 
