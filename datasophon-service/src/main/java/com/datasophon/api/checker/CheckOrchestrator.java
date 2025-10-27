@@ -136,6 +136,9 @@ public class CheckOrchestrator {
                 // 确定整体状态
                 statusVO.setOverallStatus(determineOverallStatus(statusVO));
                 
+                // 收集主机信息（主机名和hosts文件）用于后续全局检查
+                collectHostInfo(context, clusterId, hostIp, stateManager);
+                
                 stateManager.updateHostStatus(clusterId, hostIp, statusVO);
                 log.info("主机 {} 检查完成，整体状态: {}", hostIp, statusVO.getOverallStatus());
                 
@@ -268,6 +271,45 @@ public class CheckOrchestrator {
                 .startTime(System.currentTimeMillis())
                 .endTime(System.currentTimeMillis())
                 .build();
+    }
+    
+    /**
+     * 收集主机信息（主机名和hosts文件内容）
+     */
+    private void collectHostInfo(HostCheckContext context, Long clusterId, String hostIp, 
+                                 CheckStateManager stateManager) {
+        try {
+            log.info("开始收集主机 {} 的信息（主机名和hosts文件）", hostIp);
+            
+            var pluginContext = toPluginContext(context);
+            
+            // 获取主机名
+            var hostnameResult = sshService.executeCommand(pluginContext, "hostname");
+            String hostname = hostnameResult.isSuccess() ? hostnameResult.output().trim() : null;
+            
+            // 获取hosts文件内容
+            var hostsResult = sshService.executeCommand(pluginContext, "cat /etc/hosts");
+            String hostsContent = hostsResult.isSuccess() ? hostsResult.output() : null;
+            
+            if (hostname != null || hostsContent != null) {
+                // 存储到缓存
+                Map<String, Object> hostInfo = new HashMap<>();
+                hostInfo.put("hostIp", hostIp);
+                if (hostname != null) {
+                    hostInfo.put("hostname", hostname);
+                }
+                if (hostsContent != null) {
+                    hostInfo.put("hostsContent", hostsContent);
+                }
+                hostInfo.put("timestamp", System.currentTimeMillis());
+                
+                stateManager.storeHostInfo(clusterId, hostIp, hostInfo);
+                log.info("成功收集主机 {} 的信息: hostname={}", hostIp, hostname);
+            }
+            
+        } catch (Exception e) {
+            log.warn("收集主机 {} 信息失败（不影响检查）: {}", hostIp, e.getMessage());
+        }
     }
 }
 

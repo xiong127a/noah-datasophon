@@ -371,12 +371,28 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
      */
     private List<GlobalCheckItem.HostInfo> collectHostInfoFromCheckResults(Long clusterId) {
         List<EnvironmentCheckStatusVO> statuses = getCheckStatus(clusterId);
+        Map<String, Map<String, Object>> allHostInfo = stateManager.getAllHostInfo(clusterId);
         
         return statuses.stream()
-                .map(status -> new GlobalCheckItem.HostInfo(
-                        status.getHostIp(),
-                        status.getHostname()
-                ))
+                .map(status -> {
+                    String ip = status.getHostIp();
+                    Map<String, Object> info = allHostInfo.get(ip);
+                    
+                    // 从缓存中获取主机名和其他信息
+                    String hostname = status.getHostname();
+                    Map<String, Object> additionalInfo = new HashMap<>();
+                    
+                    if (info != null) {
+                        // 更新主机名
+                        if (info.containsKey("hostname")) {
+                            hostname = (String) info.get("hostname");
+                        }
+                        // 存储所有额外信息（包括hostsContent等）
+                        additionalInfo.putAll(info);
+                    }
+                    
+                    return new GlobalCheckItem.HostInfo(ip, hostname, additionalInfo);
+                })
                 .collect(Collectors.toList());
     }
 }

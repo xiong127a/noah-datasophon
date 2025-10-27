@@ -36,6 +36,10 @@ public class CheckStateManager {
     // Key: clusterId, Value: isPaused
     private final Map<Long, Boolean> pausedClusters = new ConcurrentHashMap<>();
     
+    // 主机信息缓存（主机名、hosts文件等）
+    // Key: clusterId, Value: Map<hostIp, Map<String, Object>>
+    private final Cache<Long, Map<String, Map<String, Object>>> hostInfoCache;
+    
     public CheckStateManager() {
         this.clusterStateCache = Caffeine.newBuilder()
                 .maximumSize(100) // 最多缓存100个集群
@@ -45,6 +49,12 @@ public class CheckStateManager {
         
         this.connectionParamsCache = Caffeine.newBuilder()
                 .maximumSize(100) // 最多缓存100个集群的连接参数
+                .expireAfterWrite(Duration.ofHours(1)) // 1小时后过期
+                .expireAfterAccess(Duration.ofMinutes(30)) // 30分钟不访问则过期
+                .build();
+        
+        this.hostInfoCache = Caffeine.newBuilder()
+                .maximumSize(100) // 最多缓存100个集群的主机信息
                 .expireAfterWrite(Duration.ofHours(1)) // 1小时后过期
                 .expireAfterAccess(Duration.ofMinutes(30)) // 30分钟不访问则过期
                 .build();
@@ -167,11 +177,45 @@ public class CheckStateManager {
     }
     
     /**
+     * 存储主机信息（主机名、hosts文件等）
+     */
+    public void storeHostInfo(Long clusterId, String hostIp, Map<String, Object> info) {
+        var hostMap = hostInfoCache.get(clusterId, k -> new ConcurrentHashMap<>());
+        if (hostMap != null) {
+            hostMap.put(hostIp, info);
+        }
+        log.debug("存储主机信息: 集群={}, 主机={}", clusterId, hostIp);
+    }
+    
+    /**
+     * 获取单台主机的信息
+     */
+    public Map<String, Object> getHostInfo(Long clusterId, String hostIp) {
+        var hostMap = hostInfoCache.getIfPresent(clusterId);
+        if (hostMap != null) {
+            return hostMap.get(hostIp);
+        }
+        return null;
+    }
+    
+    /**
+     * 获取集群所有主机的信息
+     */
+    public Map<String, Map<String, Object>> getAllHostInfo(Long clusterId) {
+        var hostMap = hostInfoCache.getIfPresent(clusterId);
+        if (hostMap != null) {
+            return new ConcurrentHashMap<>(hostMap);
+        }
+        return new ConcurrentHashMap<>();
+    }
+    
+    /**
      * 清除集群状态
      */
     public void clearClusterState(Long clusterId) {
         clusterStateCache.invalidate(clusterId);
         connectionParamsCache.invalidate(clusterId);
+        hostInfoCache.invalidate(clusterId);
         pausedClusters.remove(clusterId);
         log.info("清除集群 {} 的检查状态", clusterId);
     }
