@@ -46,7 +46,7 @@ import java.util.List;
 @Slf4j
 public class SshConnectionServiceFactory {
     
-    private static SshConnectionServiceFactory instance;
+    private static volatile SshConnectionServiceFactory instance;
     private static final Object lock = new Object();
     
     // 服务实例缓存（避免重复查找）
@@ -86,19 +86,15 @@ public class SshConnectionServiceFactory {
                 var applicationContext = SpringContextUtils.getApplicationContext();
                 if (applicationContext != null) {
                     var pluginManager = applicationContext.getBean(PluginManager.class);
-                    if (pluginManager != null) {
-                        // 通过 PF4J 扩展点机制获取所有 SshConnectionService 实现
-                        List<SshConnectionService> extensions = pluginManager.getExtensions(SshConnectionService.class);
-                        if (!extensions.isEmpty()) {
-                            cachedService = extensions.get(0); // 获取第一个实现
-                            log.info("【SSH服务工厂】通过PF4J扩展点成功获取SSH连接服务: {}", 
-                                    cachedService.getClass().getName());
-                            return cachedService;
-                        } else {
-                            log.warn("【SSH服务工厂】未找到任何SshConnectionService扩展点实现，请检查ssh-connector插件是否已加载");
-                        }
+                    // 通过 PF4J 扩展点机制获取所有 SshConnectionService 实现
+                    List<SshConnectionService> extensions = pluginManager.getExtensions(SshConnectionService.class);
+                    if (!extensions.isEmpty()) {
+                        cachedService = extensions.getFirst(); // 获取第一个实现
+                        log.info("【SSH服务工厂】通过PF4J扩展点成功获取SSH连接服务: {}",
+                                cachedService.getClass().getName());
+                        return cachedService;
                     } else {
-                        log.warn("【SSH服务工厂】无法获取PluginManager，插件系统可能未初始化");
+                        log.warn("【SSH服务工厂】未找到任何SshConnectionService扩展点实现，请检查ssh-connector插件是否已加载");
                     }
                 } else {
                     log.warn("【SSH服务工厂】无法获取Spring应用上下文");
