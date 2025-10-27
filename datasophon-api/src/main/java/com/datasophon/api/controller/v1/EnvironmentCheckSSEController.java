@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,6 +37,9 @@ public class EnvironmentCheckSSEController {
     
     // 存储所有活跃的SSE连接
     private final Map<String, SseEmitter> activeEmitters = new ConcurrentHashMap<>();
+    
+    // 存储每个连接对应的定时任务
+    private final Map<String, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
     
     // 定时推送器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
@@ -58,18 +62,18 @@ public class EnvironmentCheckSSEController {
         // 设置完成和超时回调
         emitter.onCompletion(() -> {
             log.info("SSE连接完成: 集群ID={}", clusterId);
-            activeEmitters.remove(emitterKey);
+            cleanupConnection(emitterKey);
         });
         
         emitter.onTimeout(() -> {
             log.info("SSE连接超时: 集群ID={}", clusterId);
-            activeEmitters.remove(emitterKey);
+            cleanupConnection(emitterKey);
             emitter.complete();
         });
         
         emitter.onError(e -> {
             log.error("SSE连接错误: 集群ID={}, 错误={}", clusterId, e.getMessage());
-            activeEmitters.remove(emitterKey);
+            cleanupConnection(emitterKey);
         });
         
         // 发送初始连接消息
@@ -82,7 +86,7 @@ public class EnvironmentCheckSSEController {
         }
         
         // 启动定时推送任务（每秒推送一次状态和验证结果）
-        scheduler.scheduleAtFixedRate(() -> {
+        ScheduledFuture<?> task = scheduler.scheduleAtFixedRate(() -> {
             try {
                 var status = stateManager.getClusterStatus(clusterId);
                 if (!status.isEmpty()) {
@@ -101,12 +105,30 @@ public class EnvironmentCheckSSEController {
                 }
             } catch (Exception e) {
                 log.error("推送进度失败: {}", e.getMessage());
-                activeEmitters.remove(emitterKey);
+                cleanupConnection(emitterKey);
                 emitter.completeWithError(e);
             }
         }, 0, 1, TimeUnit.SECONDS);
         
+        // 保存定时任务引用，以便后续取消
+        scheduledTasks.put(emitterKey, task);
+        
         return emitter;
+    }
+    
+    /**
+     * 清理SSE连接和定时任务
+     */
+    private void cleanupConnection(String emitterKey) {
+        // 移除emitter
+        activeEmitters.remove(emitterKey);
+        
+        // 取消并移除定时任务
+        ScheduledFuture<?> task = scheduledTasks.remove(emitterKey);
+        if (task != null && !task.isCancelled()) {
+            boolean cancelled = task.cancel(true);
+            log.info("取消定时任务: key={}, 成功={}", emitterKey, cancelled);
+        }
     }
 }
 
