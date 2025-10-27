@@ -70,7 +70,7 @@ export interface ServiceConfigOptionResponse {
 
 // 保存配置API参数
 export interface SaveConfigParams {
-  clusterId: number
+  clusterId: string  // 使用 string 避免 Long 精度丢失
   serviceName: string
   serviceConfig: string // JSON字符串
 }
@@ -85,7 +85,7 @@ export interface SaveConfigResponse {
 
 // 生成命令API参数
 export interface GenerateCommandParams {
-  clusterId: number
+  clusterId: string  // 使用 string 避免 Long 精度丢失
   serviceNames: string[]
   commandType: string
 }

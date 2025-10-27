@@ -208,7 +208,7 @@ export default function CreateClusterDialogEnhanced({
           clusterCode: formData.clusterCode.trim(),
           clusterFrame: formData.clusterFrame,
           depType: formData.depType,
-          repositoryId: Number(formData.repositoryId),
+          repositoryId: formData.repositoryId,  // 保持字符串类型，避免 Long 精度丢失
           createBy: username,
         }
 
