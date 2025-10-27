@@ -138,6 +138,7 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/v1/environment-check-sse/**",
                                 "/api/v1/environment-logs-sse/**",
+                                "/api/v1/agent-distribution-sse/**",
                                 "/api/v1/host-validation/stream/**",
                                 "/api/v1/logs/stream/**")
                         .permitAll()
