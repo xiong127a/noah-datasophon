@@ -3,8 +3,6 @@ package com.datasophon.api.controller.v1;
 import com.datasophon.api.agent.util.AgentLogWriter;
 import com.datasophon.api.annotation.ClusterId;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
@@ -32,7 +30,6 @@ import java.util.concurrent.TimeUnit;
 @RestController
 @RequestMapping("/api/v1/agent-distribution-sse")
 @RequiredArgsConstructor
-@Api(tags = "Agent分发SSE")
 public class AgentDistributionSSEController {
     
     private final AgentLogWriter logWriter;
@@ -53,7 +50,6 @@ public class AgentDistributionSSEController {
      * @return SSE Emitter
      */
     @GetMapping(value = "/stream/{hostIp}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    @ApiOperation("建立SSE连接接收Agent分发日志")
     public SseEmitter streamLogs(
             @ClusterId Long clusterId,
             @PathVariable String hostIp) {
