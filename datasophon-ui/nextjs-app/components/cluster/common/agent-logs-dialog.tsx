@@ -189,6 +189,17 @@ export function AgentLogsDialog({
     }
   }
 
+  /**
+   * 格式化输出文本，处理转义字符
+   */
+  const formatOutput = (output: string) => {
+    return output
+      .replace(/\\r\\n/g, '\n')  // 替换 \r\n 为真实换行
+      .replace(/\\n/g, '\n')      // 替换 \n 为真实换行
+      .replace(/\\"/g, '"')       // 替换 \" 为 "
+      .replace(/\\t/g, '  ')      // 替换 \t 为空格
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[85vh] p-0 flex flex-col">
@@ -279,11 +290,52 @@ export function AgentLogsDialog({
                 )}
                 
                 {/* 其他详情显示 */}
-                {log.details && !log.details.isProgress && Object.keys(log.details).length > 0 && (
-                  <div className="mt-1 text-xs text-gray-500 bg-gray-50 rounded p-2">
-                    <pre className="whitespace-pre-wrap">
-                      {JSON.stringify(log.details, null, 2)}
-                    </pre>
+                {log.details && !log.details.isProgress && (
+                  <div className="mt-2 text-xs bg-gray-50 rounded p-3 border border-gray-200">
+                    {/* 特殊处理 command 字段 */}
+                    {log.details.command && (
+                      <div className="mb-3">
+                        <div className="text-gray-600 font-semibold mb-1">执行命令:</div>
+                        <pre className="whitespace-pre-wrap text-gray-700 leading-relaxed font-mono text-xs bg-white rounded p-2 border border-blue-200">
+                          {formatOutput(log.details.command)}
+                        </pre>
+                      </div>
+                    )}
+                    
+                    {/* 特殊处理 output 字段 */}
+                    {log.details.output && (
+                      <div className="mb-3">
+                        <div className="text-gray-600 font-semibold mb-1">执行输出:</div>
+                        <pre className="whitespace-pre-wrap text-gray-700 leading-relaxed font-mono text-xs bg-white rounded p-2 border border-gray-200 max-h-60 overflow-y-auto">
+                          {formatOutput(log.details.output)}
+                        </pre>
+                      </div>
+                    )}
+                    
+                    {/* 特殊处理 status 字段 */}
+                    {log.details.status && (
+                      <div className="mb-2">
+                        <span className="text-gray-600 font-semibold">状态: </span>
+                        <Badge className={
+                          log.details.status === 'running' ? 'bg-blue-100 text-blue-700' :
+                          log.details.status === 'success' ? 'bg-green-100 text-green-700' :
+                          'bg-gray-100 text-gray-700'
+                        }>
+                          {log.details.status}
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    {/* 其他字段 */}
+                    {Object.entries(log.details)
+                      .filter(([key]) => !['output', 'command', 'status', 'isProgress', 'progress', 'uploadedSize', 'totalSize'].includes(key))
+                      .map(([key, value]) => (
+                        <div key={key} className="mb-1">
+                          <span className="text-gray-600 font-semibold">{key}: </span>
+                          <span className="text-gray-700">{typeof value === 'string' ? formatOutput(value) : String(value)}</span>
+                        </div>
+                      ))
+                    }
                   </div>
                 )}
               </div>
