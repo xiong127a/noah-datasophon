@@ -352,7 +352,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
                   
                   <Button
                     onClick={startAgentDistribution}
-                    disabled={isDistributing || hosts.length === 0 || overallStatus === 'COMPLETED'}
+                    disabled={isDistributing || hosts.length === 0}
                     className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg"
                   >
                     {isDistributing ? (
@@ -360,10 +360,10 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                         分发中...
                       </>
-                    ) : overallStatus === 'COMPLETED' ? (
+                    ) : (overallStatus === 'COMPLETED' || overallStatus === 'FAILED') ? (
                       <>
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        分发完成
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        重新分发
                       </>
                     ) : (
                       <>
