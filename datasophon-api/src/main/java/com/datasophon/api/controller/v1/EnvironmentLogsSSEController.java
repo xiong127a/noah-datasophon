@@ -268,6 +268,11 @@ public class EnvironmentLogsSSEController {
             
             // 获取主机的所有日志文件
             List<Map<String, String>> logFiles = checkLogWriter.listHostLogFiles(clusterId, hostIp);
+            log.info("找到 {} 个日志文件", logFiles.size());
+            
+            if (logFiles.isEmpty()) {
+                log.warn("未找到任何日志文件: clusterId={}, hostIp={}", clusterId, hostIp);
+            }
             
             // 逐个文件读取并推送
             for (Map<String, String> fileInfo : logFiles) {
