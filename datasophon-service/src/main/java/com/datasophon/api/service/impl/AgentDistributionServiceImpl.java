@@ -219,16 +219,47 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
      * 获取Agent包URL
      */
     private String getAgentPackageUrl(ClusterInfoEntity cluster) {
-        // TODO: 从集群配置中获取存储库URL
-        // 这里需要根据实际的存储库配置逻辑来实现
-        // 暂时返回默认本地路径
-        return Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
+        try {
+            // 从集群配置中获取存储库信息
+            if (cluster.getRepositoryId() == null) {
+                log.warn("集群未配置存储库，使用默认本地路径: clusterId={}", cluster.getId());
+                return Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
+            }
+            
+            var repository = repositoryService.getById(cluster.getRepositoryId());
+            if (repository == null) {
+                log.warn("存储库不存在: repositoryId={}, 使用默认本地路径", cluster.getRepositoryId());
+                return Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
+            }
+            
+            String repoUrl = repository.getRepoUrl();
+            if (repoUrl == null || repoUrl.isEmpty()) {
+                log.warn("存储库URL为空，使用默认本地路径");
+                return Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
+            }
+            
+            // 构建Agent包完整路径
+            // 确保URL末尾没有斜杠
+            String baseUrl = repoUrl.endsWith("/") ? repoUrl.substring(0, repoUrl.length() - 1) : repoUrl;
+            String agentPackagePath = baseUrl + "/" + Constants.WORKER_PACKAGE_NAME;
+            
+            log.info("从存储库获取Agent包路径: type={}, url={}", 
+                    repository.getRepoType(), agentPackagePath);
+            
+            return agentPackagePath;
+            
+        } catch (Exception e) {
+            log.error("获取Agent包URL失败: clusterId={}, 错误={}, 使用默认本地路径", 
+                    cluster.getId(), e.getMessage(), e);
+            return Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
+        }
     }
     
     /**
      * 判断是否为本地存储库
      */
     private boolean isLocalRepository(String url) {
+        // 不以http://或https://开头的都认为是本地路径
         return !url.startsWith("http://") && !url.startsWith("https://");
     }
 }
