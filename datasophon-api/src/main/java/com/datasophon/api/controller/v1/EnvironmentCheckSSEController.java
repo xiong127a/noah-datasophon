@@ -2,6 +2,7 @@ package com.datasophon.api.controller.v1;
 
 import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.checker.CheckStateManager;
+import com.datasophon.api.service.EnvironmentCheckService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit;
 public class EnvironmentCheckSSEController {
     
     private final CheckStateManager stateManager;
+    private final EnvironmentCheckService environmentCheckService;
     private final ObjectMapper objectMapper;
     
     // 存储所有活跃的SSE连接
@@ -79,14 +81,18 @@ public class EnvironmentCheckSSEController {
             log.error("发送初始消息失败: {}", e.getMessage());
         }
         
-        // 启动定时推送任务（每秒推送一次状态）
+        // 启动定时推送任务（每秒推送一次状态和验证结果）
         scheduler.scheduleAtFixedRate(() -> {
             try {
                 var status = stateManager.getClusterStatus(clusterId);
                 if (!status.isEmpty()) {
+                    // 同时计算验证结果（避免前端轮询）
+                    var validation = environmentCheckService.validateForNextStep(clusterId);
+                    
                     var json = objectMapper.writeValueAsString(Map.of(
                             "type", "progress",
-                            "data", status
+                            "data", status,
+                            "validation", validation  // 新增：同时推送验证结果
                     ));
                     
                     emitter.send(SseEmitter.event()
