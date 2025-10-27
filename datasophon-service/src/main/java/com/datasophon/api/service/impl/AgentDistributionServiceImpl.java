@@ -54,7 +54,7 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
         log.info("开始Agent分发: 集群={}, 主机数量={}", clusterId, hostIps.size());
         
         // 获取集群信息
-        ClusterInfoEntity cluster = clusterInfoMapper.selectById(clusterId);
+        ClusterInfoEntity cluster = clusterInfoMapper.selectOneById(clusterId);
         if (cluster == null) {
             throw new RuntimeException("集群不存在: " + clusterId);
         }
