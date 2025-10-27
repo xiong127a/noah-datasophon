@@ -9,6 +9,7 @@ import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
 import com.datasophon.common.dto.environment.RepairCheckItemRequest;
 import com.datasophon.common.dto.environment.SkipCheckItemRequest;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
+import com.datasophon.common.vo.environment.EnvironmentValidationResult;
 import com.datasophon.common.vo.environment.RepairResult;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -209,6 +210,26 @@ public class EnvironmentCheckController {
         } catch (Exception e) {
             log.error("获取日志失败: {}", e.getMessage(), e);
             return Result.error("获取日志失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 验证环境检查是否完成
+     * 用于判断是否可以进入下一步
+     */
+    @GetMapping("/validation")
+    public Result<EnvironmentValidationResult> validateForNextStep(
+            @ClusterId Long clusterId) {
+        
+        log.info("验证环境检查是否完成: clusterId={}", clusterId);
+        
+        try {
+            var result = environmentCheckService.validateForNextStep(clusterId);
+            return Result.success(result);
+        } catch (Exception e) {
+            log.error("验证环境检查失败: clusterId={}, error={}", 
+                clusterId, e.getMessage(), e);
+            return Result.error("验证失败: " + e.getMessage());
         }
     }
 }
