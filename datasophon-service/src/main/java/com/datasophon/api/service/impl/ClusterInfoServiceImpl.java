@@ -96,6 +96,9 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Autowired
     private ConfigBean configBean;
+    
+    @Autowired
+    private FrameInfoService frameInfoService;
 
     @Autowired
     private FrameServiceService frameServiceService;
@@ -135,6 +138,24 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
                 .selectByClusterCode(clusterInfo.getClusterCode());
         if (existingCluster != null) {
             throw new RuntimeException(Status.CLUSTER_CODE_EXISTS.getMsg());
+        }
+        
+        // 根据框架编码自动设置框架版本号
+        if (clusterInfo.getClusterFrame() != null && !clusterInfo.getClusterFrame().isEmpty()) {
+            try {
+                var frameInfo = frameInfoService.getFrameInfoByFrameCode(clusterInfo.getClusterFrame());
+                if (frameInfo != null && frameInfo.frameVersion() != null) {
+                    clusterInfo.setFrameVersion(frameInfo.frameVersion());
+                    log.info("自动设置集群框架版本号: cluster={}, frame={}, version={}", 
+                            clusterInfo.getClusterCode(), clusterInfo.getClusterFrame(), frameInfo.frameVersion());
+                } else {
+                    log.warn("未找到框架 {} 的版本号信息", clusterInfo.getClusterFrame());
+                    throw new RuntimeException("框架 " + clusterInfo.getClusterFrame() + " 未配置版本号，无法创建集群");
+                }
+            } catch (Exception e) {
+                log.error("获取框架版本号失败: frame={}", clusterInfo.getClusterFrame(), e);
+                throw new RuntimeException("获取框架版本号失败: " + e.getMessage());
+            }
         }
 
         clusterInfo.setCreateTime(LocalDateTime.now());
