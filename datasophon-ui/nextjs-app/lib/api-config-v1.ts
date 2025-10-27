@@ -201,7 +201,16 @@ export const API_PATHS_V1 = {
   ENVIRONMENT_CHECK_RESTART: `${API_BASE}/environment-check/restart`,
   ENVIRONMENT_CHECK_JDK_CONFIG: `${API_BASE}/environment-check/jdk-config`,
   ENVIRONMENT_CHECK_JDK_FILES: `${API_BASE}/environment-check/jdk-files`,
+  ENVIRONMENT_CHECK_GLOBAL_RUN: `${API_BASE}/environment-check/global-checks`,
+  ENVIRONMENT_CHECK_GLOBAL_RESULTS: `${API_BASE}/environment-check/global-checks`,
   ENVIRONMENT_CHECK_SSE: `${API_BASE}/environment-check-sse/stream`,
+  
+  // 主机管理相关 - v1
+  HOST_MANAGEMENT_HOSTNAME_CONFIG: `${API_BASE}/host-management/hostname-config`,
+  HOST_MANAGEMENT_PREVIEW_HOSTNAME: `${API_BASE}/host-management/preview-hostname-changes`,
+  HOST_MANAGEMENT_BATCH_HOSTNAME: `${API_BASE}/host-management/batch-hostname`,
+  HOST_MANAGEMENT_SYNC_HOSTS: `${API_BASE}/host-management/sync-hosts-file`,
+  HOST_MANAGEMENT_SSE: `${API_BASE}/host-management-sse/stream`,
   
   // Agent分发相关 - v1
   AGENT_DISTRIBUTION_START: `${API_BASE}/agent-distribution/start`,

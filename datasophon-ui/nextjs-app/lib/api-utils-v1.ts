@@ -390,7 +390,60 @@ export const clusterApiV1 = {
       return response.data
     },
     
+    /** 运行全局检查（在所有主机检查完成后） */
+    runGlobalChecks: async () => {
+      const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_GLOBAL_RUN, {})
+      return response.data
+    },
+    
+    /** 获取全局检查结果 */
+    getGlobalCheckResults: async () => {
+      const response = await apiV1.get(API_PATHS_V1.ENVIRONMENT_CHECK_GLOBAL_RESULTS)
+      return response.data
+    },
+    
     // 注意：日志查看已改为通过SSE实时推送，不再需要轮询API
+  },
+  
+  // 主机管理相关 API
+  hostManagement: {
+    /** 获取主机名配置 */
+    getHostnameConfig: async () => {
+      const response = await apiV1.get(API_PATHS_V1.HOST_MANAGEMENT_HOSTNAME_CONFIG)
+      return response.data
+    },
+    
+    /** 预览主机名变更 */
+    previewHostnameChanges: async (request: {
+      prefix: string
+      suffixFormatIndex: number
+      startIndex: number
+      hostIps: string[]
+    }) => {
+      const response = await apiV1.post(API_PATHS_V1.HOST_MANAGEMENT_PREVIEW_HOSTNAME, request)
+      return response.data
+    },
+    
+    /** 批量修改主机名（返回taskId，通过SSE获取进度） */
+    batchChangeHostnames: async (request: {
+      prefix: string
+      suffixFormatIndex: number
+      startIndex: number
+      hostIps: string[]
+      connectionParams: any
+    }) => {
+      const response = await apiV1.post(API_PATHS_V1.HOST_MANAGEMENT_BATCH_HOSTNAME, request)
+      return response.data
+    },
+    
+    /** 同步hosts文件（返回taskId，通过SSE获取进度） */
+    syncHostsFile: async (request: {
+      hostIps: string[]
+      connectionParams: any
+    }) => {
+      const response = await apiV1.post(API_PATHS_V1.HOST_MANAGEMENT_SYNC_HOSTS, request)
+      return response.data
+    },
   },
 
   // Agent分发相关 API
