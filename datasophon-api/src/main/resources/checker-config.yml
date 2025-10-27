@@ -80,8 +80,12 @@ datasophon:
     
     # 时间同步配置
     time-sync:
-      # 最大允许时间偏差(秒)
-      max-time-diff: 10
+      enabled: true                       # 是否启用时间同步检查
+      priority: 2                         # 检查优先级
+      timeout-seconds: 30                 # 检查超时时间
+      max-time-diff: 10                   # 最大允许时间偏差(秒)
+      max-time-diff-seconds: 1            # 最大允许时间差（秒）- 用于环境检查
+      sync-command: "date -s"             # 同步命令
     
     # 用户和组检查配置
     user-group:
@@ -121,6 +125,11 @@ datasophon:
         - ~/.ssh/id_rsa
         - ~/.ssh/id_ecdsa
         - ~/.ssh/id_ed25519
+      public-key-path: ~/.ssh/id_rsa.pub  # 主公钥文件路径
+      private-key-path: ~/.ssh/id_rsa     # 主私钥文件路径
+      auto-generate-key: true             # 自动生成密钥对
+      key-type: rsa                       # 密钥类型
+      key-bits: 2048                      # 密钥位数
 
     # 系统信息收集配置
     system-info:
@@ -168,13 +177,42 @@ datasophon:
         - postfix
         - sendmail
 
-    # Hosts文件检查配置
+    # Hosts文件检查配置（全局检查）
     hosts-file:
       enabled: true                       # 是否启用hosts文件检查
-      priority: 11                        # 检查优先级
-      timeout-seconds: 30                 # 检查超时时间
+      priority: 101                       # 检查优先级（全局检查）
+      timeout-seconds: 60                 # 检查超时时间
       auto-sync: false                    # 是否自动同步hosts文件
       backup-before-modify: true          # 修改前是否备份
+      managed-marker-start: "# === DataSophon Managed Hosts Start ==="  # 管理段开始标记
+      managed-marker-end: "# === DataSophon Managed Hosts End ==="      # 管理段结束标记
+      backup-suffix: ".datasophon.bak"    # 备份文件后缀
+      preserve-entries:                   # 需要保留的系统默认条目
+        - "127.0.0.1"
+        - "::1"
+        - "localhost"
+    
+    # 主机名检查配置（全局检查）
+    hostname:
+      enabled: true                       # 是否启用主机名检查
+      priority: 100                       # 检查优先级（全局检查）
+      timeout-seconds: 60                 # 检查超时时间
+      recommended-prefixes:               # 推荐的主机名前缀
+        - bigdata
+        - bdp
+        - hadoop
+      default-prefix: bigdata             # 默认前缀
+      suffix-formats:                     # 后缀递增格式
+        - name: "数字递增"
+          pattern: "{prefix}{index}"
+          example: "bigdata1, bigdata2, bigdata3"
+        - name: "两位补零"
+          pattern: "{prefix}{index:02d}"
+          example: "bigdata01, bigdata02, bigdata03"
+        - name: "三位补零"
+          pattern: "{prefix}{index:03d}"
+          example: "bigdata001, bigdata002, bigdata003"
+      default-format-index: 1             # 默认使用两位补零
 
     # 主机校验流程控制配置
     validation-flow:

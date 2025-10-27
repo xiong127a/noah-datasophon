@@ -87,6 +87,11 @@ public class CheckerProperties {
      * Hosts文件检查配置
      */
     private HostsFileConfig hostsFile = new HostsFileConfig();
+    
+    /**
+     * 主机名检查配置
+     */
+    private HostnameConfig hostname = new HostnameConfig();
 
     /**
      * 主机校验流程控制配置
@@ -329,10 +334,24 @@ public class CheckerProperties {
      */
     @Data
     public static class TimeSyncConfig {
+        private boolean enabled = true;
+        private int priority = 2;
+        private int timeoutSeconds = 30;
+        
         /**
          * 最大允许时间偏差(秒)
          */
         private int maxTimeDiff = 120;
+        
+        /**
+         * 最大允许时间差（秒）- 用于环境检查
+         */
+        private int maxTimeDiffSeconds = 1;
+        
+        /**
+         * 同步命令
+         */
+        private String syncCommand = "date -s";
 
         /**
          * 推荐的NTP服务器
@@ -366,6 +385,31 @@ public class CheckerProperties {
         private int timeoutSeconds = 30;
         private List<String> publicKeyPaths = List.of("~/.ssh/id_rsa.pub", "~/.ssh/id_ecdsa.pub", "~/.ssh/id_ed25519.pub");
         private List<String> privateKeyPaths = List.of("~/.ssh/id_rsa", "~/.ssh/id_ecdsa", "~/.ssh/id_ed25519");
+        
+        /**
+         * 主公钥文件路径
+         */
+        private String publicKeyPath = "~/.ssh/id_rsa.pub";
+        
+        /**
+         * 主私钥文件路径
+         */
+        private String privateKeyPath = "~/.ssh/id_rsa";
+        
+        /**
+         * 自动生成密钥对
+         */
+        private boolean autoGenerateKey = true;
+        
+        /**
+         * 密钥类型
+         */
+        private String keyType = "rsa";
+        
+        /**
+         * 密钥位数
+         */
+        private int keyBits = 2048;
     }
 
     /**
@@ -431,10 +475,81 @@ public class CheckerProperties {
     @Data
     public static class HostsFileConfig {
         private boolean enabled = true;
-        private int priority = 11;
-        private int timeoutSeconds = 30;
+        private int priority = 101;
+        private int timeoutSeconds = 60;
         private boolean autoSync = false;
         private boolean backupBeforeModify = true;
+        
+        /**
+         * 管理段开始标记
+         */
+        private String managedMarkerStart = "# === DataSophon Managed Hosts Start ===";
+        
+        /**
+         * 管理段结束标记
+         */
+        private String managedMarkerEnd = "# === DataSophon Managed Hosts End ===";
+        
+        /**
+         * 备份文件后缀
+         */
+        private String backupSuffix = ".datasophon.bak";
+        
+        /**
+         * 需要保留的系统默认条目
+         */
+        private List<String> preserveEntries = List.of("127.0.0.1", "::1", "localhost");
+    }
+    
+    /**
+     * 主机名检查配置类（全局检查）
+     */
+    @Data
+    public static class HostnameConfig {
+        private boolean enabled = true;
+        private int priority = 100;
+        private int timeoutSeconds = 60;
+        
+        /**
+         * 推荐的主机名前缀
+         */
+        private List<String> recommendedPrefixes = List.of("bigdata", "bdp", "hadoop");
+        
+        /**
+         * 默认前缀
+         */
+        private String defaultPrefix = "bigdata";
+        
+        /**
+         * 后缀递增格式
+         */
+        private List<SuffixFormat> suffixFormats = new ArrayList<>();
+        
+        /**
+         * 默认格式索引
+         */
+        private int defaultFormatIndex = 1;
+        
+        /**
+         * 后缀格式类
+         */
+        @Data
+        public static class SuffixFormat {
+            /**
+             * 格式名称
+             */
+            private String name;
+            
+            /**
+             * 格式模式
+             */
+            private String pattern;
+            
+            /**
+             * 示例
+             */
+            private String example;
+        }
     }
 
     /**
