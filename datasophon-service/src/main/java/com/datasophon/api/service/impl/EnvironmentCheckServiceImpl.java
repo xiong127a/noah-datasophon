@@ -9,7 +9,9 @@ import com.datasophon.api.event.RepairCompleteEvent;
 import com.datasophon.api.service.EnvironmentCheckService;
 import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
+import com.datasophon.common.vo.environment.EnvironmentValidationResult;
 import com.datasophon.common.vo.environment.RepairResult;
+import com.datasophon.common.vo.environment.ValidationSummary;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 /**
  * 环境检查服务实现
@@ -181,6 +184,100 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
     public void resumeCheck(Long clusterId) {
         log.info("恢复环境检查: 集群={}", clusterId);
         stateManager.resumeCheck(clusterId);
+    }
+    
+    @Override
+    public EnvironmentValidationResult validateForNextStep(Long clusterId) {
+        log.info("验证环境检查是否完成: 集群={}", clusterId);
+        
+        // 获取所有主机的检查状态
+        List<EnvironmentCheckStatusVO> statuses = getCheckStatus(clusterId);
+        
+        if (statuses == null || statuses.isEmpty()) {
+            return EnvironmentValidationResult.builder()
+                    .canProceed(false)
+                    .reason("未找到环境检查状态")
+                    .summary(ValidationSummary.builder()
+                            .totalHosts(0)
+                            .completedHosts(0)
+                            .totalItems(0)
+                            .successItems(0)
+                            .failedItems(0)
+                            .skippedItems(0)
+                            .failedHostIps(List.of())
+                            .build())
+                    .build();
+        }
+        
+        // 统计信息
+        int totalHosts = statuses.size();
+        int totalItems = 0;
+        int successItems = 0;
+        int failedItems = 0;
+        int skippedItems = 0;
+        
+        // 业务规则：所有主机的所有检查项都必须是SUCCESS或SKIPPED
+        boolean canProceed = true;
+        List<String> failedHostIps = statuses.stream()
+                .filter(host -> {
+                    boolean hasFailed = host.getCheckItems().stream()
+                            .anyMatch(item -> "FAILED".equals(item.getStatus()));
+                    return hasFailed;
+                })
+                .map(EnvironmentCheckStatusVO::getHostIp)
+                .collect(Collectors.toList());
+        
+        // 如果有失败的主机，则不能进入下一步
+        if (!failedHostIps.isEmpty()) {
+            canProceed = false;
+        }
+        
+        // 计算统计数据
+        for (EnvironmentCheckStatusVO host : statuses) {
+            totalItems += host.getTotalItems();
+            successItems += host.getSuccessItems();
+            failedItems += host.getFailedItems();
+            skippedItems += host.getSkippedItems();
+        }
+        
+        // 已完成的主机数（所有检查项都是SUCCESS或SKIPPED）
+        int completedHosts = (int) statuses.stream()
+                .filter(host -> host.getCheckItems().stream()
+                        .allMatch(item -> "SUCCESS".equals(item.getStatus()) || "SKIPPED".equals(item.getStatus())))
+                .count();
+        
+        // 构建验证结果
+        ValidationSummary summary = ValidationSummary.builder()
+                .totalHosts(totalHosts)
+                .completedHosts(completedHosts)
+                .totalItems(totalItems)
+                .successItems(successItems)
+                .failedItems(failedItems)
+                .skippedItems(skippedItems)
+                .failedHostIps(failedHostIps)
+                .build();
+        
+        String reason = null;
+        if (!canProceed) {
+            if (!failedHostIps.isEmpty()) {
+                reason = String.format("还有 %d 台主机存在失败的检查项: %s", 
+                        failedHostIps.size(), 
+                        String.join(", ", failedHostIps));
+            } else {
+                reason = "存在未完成的检查项";
+            }
+        }
+        
+        EnvironmentValidationResult result = EnvironmentValidationResult.builder()
+                .canProceed(canProceed)
+                .reason(reason)
+                .summary(summary)
+                .build();
+        
+        log.info("验证结果: canProceed={}, reason={}, 完成主机={}/{}, 成功项={}, 失败项={}, 跳过项={}", 
+                canProceed, reason, completedHosts, totalHosts, successItems, failedItems, skippedItems);
+        
+        return result;
     }
 }
 

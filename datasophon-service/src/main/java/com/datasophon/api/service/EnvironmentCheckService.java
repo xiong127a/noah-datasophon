@@ -2,6 +2,7 @@ package com.datasophon.api.service;
 
 import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
+import com.datasophon.common.vo.environment.EnvironmentValidationResult;
 import com.datasophon.common.vo.environment.RepairResult;
 
 import java.util.List;
@@ -64,5 +65,13 @@ public interface EnvironmentCheckService {
      * @param clusterId 集群ID
      */
     void resumeCheck(Long clusterId);
+    
+    /**
+     * 验证环境检查是否完成，是否可以进入下一步
+     * 
+     * @param clusterId 集群ID
+     * @return 验证结果（包含是否可以进入下一步、原因、统计信息）
+     */
+    EnvironmentValidationResult validateForNextStep(Long clusterId);
 }
 
