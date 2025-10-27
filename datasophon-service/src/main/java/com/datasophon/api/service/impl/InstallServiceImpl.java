@@ -22,9 +22,8 @@ package com.datasophon.api.service.impl;
 import java.time.temporal.ChronoUnit;
 
 import com.datasophon.common.enums.Status;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.DispatcherWorkerActor;
 import com.datasophon.api.converter.InstallStepConverter;
+import com.datasophon.api.service.AgentDistributionService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.InstallService;
 import com.datasophon.common.enums.InstallState;
@@ -39,7 +38,6 @@ import com.datasophon.api.utils.MessageResolverUtils;
 
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.command.DispatcherHostAgentCommand;
 import com.datasophon.common.dto.HostCheckStatusDto;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.exception.ServiceException;
@@ -84,6 +82,8 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
     private  ClusterInfoService clusterInfoService;
     @Autowired
     private  ClusterHostService hostService;
+    @Autowired
+    private  AgentDistributionService agentDistributionService;
     // SSH连接服务（延迟初始化，避免Spring上下文未初始化问题）
     private SshConnectionService sshService;
     
@@ -212,15 +212,14 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                     hostInfo.setMessage(MessageResolverUtils.getMessage("distribution.success"));
                     hostInfo.setInstallState(InstallState.SUCCESS);
                 } else if (!CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp())) {
-                    log.info("start to dispatcher host agent to {}", hostInfo.getIp());
-                    ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class,
-                            "dispatcherWorkerActor-" + hostInfo.getIp());
-                    hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
-                    hostInfo.setCreateTime(LocalDateTime.now());
-                    hostActor.tell(new DispatcherHostAgentCommand(hostInfo, clusterId, clusterInfo.getClusterFrame()),
-                            ActorRef.noSender());
-                    // 保存主机agent分发历史
-                    CacheUtils.put(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp(), true);
+                    // TODO: 已废弃，建议使用新的 AgentDistributionController API
+                    // 旧的Actor架构已被替换为Spring Service架构
+                    // 此方法仅用于兼容性，实际分发请使用 /api/v1/agent-distribution/start
+                    log.warn("旧的Agent分发接口已废弃，建议使用新的API: /api/v1/agent-distribution/start");
+                    hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+                    hostInfo.setProgress(0);
+                    hostInfo.setMessage("请使用新的Agent分发接口");
+                    hostInfo.setInstallState(InstallState.FAILED);
 
                 } else {
                     long timeout = ChronoUnit.MINUTES.between(hostInfo.getCreateTime(), LocalDateTime.now());
@@ -279,16 +278,15 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                     hostInfo.setHostname(ip); // 使用IP作为hostname
                 }
 
-                ActorRef hostActor = ActorUtils.getLocalActor(DispatcherWorkerActor.class,
-                        "dispatcherWorkerActor-" + hostInfo.getHostname());
-
-                hostInfo.setInstallState(InstallState.RUNNING);
-                hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
-                hostInfo.setErrMsg("");
+                // TODO: 已废弃，建议使用新的 AgentDistributionController API
+                // 旧的Actor架构已被替换为Spring Service架构
+                // 此方法仅用于兼容性，实际重试请使用 /api/v1/agent-distribution/start
+                log.warn("旧的Agent重试接口已废弃，主机: {}, 建议使用新的API: /api/v1/agent-distribution/start", ip);
+                
+                hostInfo.setInstallState(InstallState.FAILED);
+                hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+                hostInfo.setErrMsg("请使用新的Agent分发接口");
                 hostInfo.setProgress(0);
-
-                hostActor.tell(new DispatcherHostAgentCommand(hostInfo, clusterId, clusterInfo.getClusterFrame()),
-                        ActorRef.noSender());
             }
             return true;
         } catch (Exception e) {
