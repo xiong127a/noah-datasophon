@@ -263,14 +263,26 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Override
     public ClusterInfoDTO updateCluster(ClusterInfoDTO clusterInfoDTO) {
+        log.info("更新集群: id={}, code={}, name={}", 
+                clusterInfoDTO.id(), clusterInfoDTO.clusterCode(), clusterInfoDTO.clusterName());
+        
         // DTO转Entity
         ClusterInfoEntity clusterInfo = clusterInfoConverter.dtoToEntity(clusterInfoDTO);
+        
+        log.info("DTO转Entity后: id={}, code={}", clusterInfo.getId(), clusterInfo.getClusterCode());
 
         // 集群编码判重
         ClusterInfoEntity existingCluster = getMapper()
                 .selectByClusterCode(clusterInfo.getClusterCode());
+        
+        if (existingCluster != null) {
+            log.info("找到相同编码的集群: existingId={}, currentId={}", 
+                    existingCluster.getId(), clusterInfo.getId());
+        }
 
         if (existingCluster != null && !existingCluster.getId().equals(clusterInfo.getId())) {
+            log.error("集群编码冲突: 编码={}, 已存在集群ID={}, 当前集群ID={}", 
+                    clusterInfo.getClusterCode(), existingCluster.getId(), clusterInfo.getId());
             throw new RuntimeException(Status.CLUSTER_CODE_EXISTS.getMsg());
         }
 
