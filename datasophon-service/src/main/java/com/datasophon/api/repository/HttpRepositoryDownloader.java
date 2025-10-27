@@ -30,47 +30,49 @@ public class HttpRepositoryDownloader implements RepositoryDownloader {
         
         try {
             // 使用流式下载，支持大文件
-            HttpResponse response = HttpRequest.get(sourceUrl)
+            long downloadedSize;
+            try (HttpResponse response = HttpRequest.get(sourceUrl)
                     .timeout(600000) // 10分钟超时
-                    .executeAsync();
-            
-            if (!response.isOk()) {
-                throw new Exception("HTTP下载失败，状态码: " + response.getStatus());
-            }
-            
-            // 获取文件大小
-            long totalSize = response.contentLength();
-            long downloadedSize = 0;
-            int lastReportedProgress = 0;
-            long lastReportTime = System.currentTimeMillis();
-            
-            try (InputStream inputStream = response.bodyStream();
-                 FileOutputStream outputStream = new FileOutputStream(tempFile)) {
-                
-                byte[] buffer = new byte[8192];
-                int bytesRead;
-                
-                while ((bytesRead = inputStream.read(buffer)) != -1) {
-                    outputStream.write(buffer, 0, bytesRead);
-                    downloadedSize += bytesRead;
-                    
-                    // 每秒或每10%推送一次进度
-                    int progress = totalSize > 0 ? (int) ((downloadedSize * 100) / totalSize) : 0;
-                    long currentTime = System.currentTimeMillis();
-                    
-                    if (progress > lastReportedProgress && (currentTime - lastReportTime) >= 1000) {
-                        lastReportedProgress = progress;
-                        lastReportTime = currentTime;
-                        
-                        if (progressCallback != null) {
-                            progressCallback.onProgress(downloadedSize, totalSize, progress);
+                    .executeAsync()) {
+
+                if (!response.isOk()) {
+                    throw new Exception("HTTP下载失败，状态码: " + response.getStatus());
+                }
+
+                // 获取文件大小
+                long totalSize = response.contentLength();
+                downloadedSize = 0;
+                int lastReportedProgress = 0;
+                long lastReportTime = System.currentTimeMillis();
+
+                try (InputStream inputStream = response.bodyStream();
+                     FileOutputStream outputStream = new FileOutputStream(tempFile)) {
+
+                    byte[] buffer = new byte[8192];
+                    int bytesRead;
+
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, bytesRead);
+                        downloadedSize += bytesRead;
+
+                        // 每秒或每10%推送一次进度
+                        int progress = totalSize > 0 ? (int) ((downloadedSize * 100) / totalSize) : 0;
+                        long currentTime = System.currentTimeMillis();
+
+                        if (progress > lastReportedProgress && (currentTime - lastReportTime) >= 1000) {
+                            lastReportedProgress = progress;
+                            lastReportTime = currentTime;
+
+                            if (progressCallback != null) {
+                                progressCallback.onProgress(downloadedSize, totalSize, progress);
+                            }
+
+                            log.debug("下载进度: {}%, {} / {} bytes", progress, downloadedSize, totalSize);
                         }
-                        
-                        log.debug("下载进度: {}%, {} / {} bytes", progress, downloadedSize, totalSize);
                     }
                 }
             }
-            
+
             // 重命名临时文件为目标文件
             Files.move(tempFile.toPath(), Paths.get(localPath), StandardCopyOption.REPLACE_EXISTING);
             

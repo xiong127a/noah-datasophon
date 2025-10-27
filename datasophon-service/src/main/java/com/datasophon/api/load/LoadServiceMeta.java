@@ -394,6 +394,22 @@ public class LoadServiceMeta implements ApplicationRunner {
         if (Objects.isNull(frameInfo)) {
             frameInfo = new FrameInfoEntity();
             frameInfo.setFrameCode(frameCode);
+            
+            // 从 frameCode 中提取框架名称和版本号
+            // 例如: "DDP-3.0.0" -> frameName="DDP", frameVersion="3.0.0"
+            String frameName = frameCode;
+            String frameVersion = extractVersion(frameCode);
+            
+            if (frameVersion != null && frameCode.contains("-")) {
+                // 去掉版本号部分得到框架名称
+                // "DDP-3.0.0" -> "DDP"
+                frameName = frameCode.substring(0, frameCode.lastIndexOf("-"));
+            }
+            
+            frameInfo.setFrameName(frameName);
+            frameInfo.setFrameVersion(frameVersion);
+            
+            logger.info("扫描到新框架: code={}, name={}, version={}", frameCode, frameName, frameVersion);
             frameInfoService.save(frameInfo);
         }
         return frameInfo;
