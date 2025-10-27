@@ -291,6 +291,62 @@ public class ParcelRepositoryServiceImpl implements ParcelRepositoryService {
         
         throw new IllegalStateException("不支持的存储库类型: " + repo.getRepoType());
     }
+    
+    @Override
+    public java.util.List<String> listJdkFiles(Long repositoryId) {
+        ParcelRepositoryDTO repo = getById(repositoryId);
+        java.util.List<String> jdkFiles = new java.util.ArrayList<>();
+        
+        if (repo.isLocal()) {
+            // 本地存储库：扫描文件系统
+            java.io.File repoDir = new java.io.File(repo.getRepoUrl());
+            if (!repoDir.exists() || !repoDir.isDirectory()) {
+                log.warn("存储库目录不存在: {}", repo.getRepoUrl());
+                return jdkFiles;
+            }
+            
+            // 列出所有JDK相关文件（.tar.gz, .zip, .rpm等）
+            java.io.File[] files = repoDir.listFiles((dir, name) -> {
+                String lowerName = name.toLowerCase();
+                return (lowerName.contains("jdk") || lowerName.contains("java")) &&
+                       (lowerName.endsWith(".tar.gz") || lowerName.endsWith(".tgz") ||
+                        lowerName.endsWith(".zip") || lowerName.endsWith(".rpm"));
+            });
+            
+            if (files != null) {
+                for (java.io.File file : files) {
+                    jdkFiles.add(file.getName());
+                }
+            }
+            
+        } else if (repo.isHttp()) {
+            // HTTP存储库：尝试获取目录列表（如果支持）
+            // 注意：HTTP目录列表因服务器而异，这里提供基础实现
+            try {
+                String url = repo.getRepoUrl();
+                if (!url.endsWith("/")) {
+                    url += "/";
+                }
+                
+                // 使用Apache HttpClient或OkHttp获取目录列表
+                // 这里提供一个简单的实现，实际可能需要解析HTML
+                log.info("HTTP存储库暂不支持自动列出文件，请手动指定JDK包名");
+                // 可以返回一些常见的JDK包名供用户选择
+                jdkFiles.add("jdk-21_linux-x64_bin.tar.gz");
+                jdkFiles.add("jdk-17_linux-x64_bin.tar.gz");
+                jdkFiles.add("jdk-11_linux-x64_bin.tar.gz");
+                jdkFiles.add("jdk-8u333-linux-x64.tar.gz");
+                
+            } catch (Exception e) {
+                log.error("列出HTTP存储库文件失败: {}", e.getMessage());
+            }
+        }
+        
+        // 排序
+        jdkFiles.sort(String::compareTo);
+        log.info("存储库 {} 中找到 {} 个JDK文件", repo.getRepoName(), jdkFiles.size());
+        return jdkFiles;
+    }
 
     /**
      * Entity转DTO

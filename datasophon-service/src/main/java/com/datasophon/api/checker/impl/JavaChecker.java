@@ -257,6 +257,13 @@ public class JavaChecker implements EnvironmentCheckItem {
             checkLogWriter.logRepairInfo(context.getClusterId(), context.getHostIp(),
                     getCheckKey(), "获取存储库信息成功", repoInfo);
             
+            // 获取JDK包名（支持用户选择或使用默认值）
+            String selectedJdkPackage = params != null && params.containsKey("jdkPackage")
+                    ? (String) params.get("jdkPackage")
+                    : jdkPackageName;
+            
+            log.info("使用JDK包: {}", selectedJdkPackage);
+            
             // 构造JDK包下载URL
             String jdkDownloadUrl;
             boolean isHttp = false;
@@ -264,15 +271,15 @@ public class JavaChecker implements EnvironmentCheckItem {
                 // HTTP/HTTPS存储库：直接拼接URL
                 String baseUrl = repository.getRepoUrl();
                 jdkDownloadUrl = baseUrl.endsWith("/") 
-                        ? baseUrl + jdkPackageName 
-                        : baseUrl + "/" + jdkPackageName;
+                        ? baseUrl + selectedJdkPackage 
+                        : baseUrl + "/" + selectedJdkPackage;
                 isHttp = true;
             } else if ("local".equalsIgnoreCase(repository.getRepoType())) {
                 // 本地存储库：使用文件路径
                 String basePath = repository.getRepoUrl();
                 jdkDownloadUrl = basePath.endsWith("/") 
-                        ? basePath + jdkPackageName 
-                        : basePath + "/" + jdkPackageName;
+                        ? basePath + selectedJdkPackage 
+                        : basePath + "/" + selectedJdkPackage;
             } else {
                 String msg = "不支持的存储库类型: " + repository.getRepoType();
                 checkLogWriter.logRepairError(context.getClusterId(), context.getHostIp(),
@@ -284,7 +291,7 @@ public class JavaChecker implements EnvironmentCheckItem {
             }
             
             // 提取JDK文件名
-            String jdkFileName = jdkPackageName.substring(jdkPackageName.lastIndexOf("/") + 1);
+            String jdkFileName = selectedJdkPackage.substring(selectedJdkPackage.lastIndexOf("/") + 1);
             String tempDir = "/tmp/jdk_install_" + System.currentTimeMillis();
             
             // 读取用户修复选项（是否创建软链接，默认false）

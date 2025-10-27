@@ -106,5 +106,13 @@ public interface ParcelRepositoryService {
      * @return 完整下载路径
      */
     String getPackagePath(Long repositoryId, String packageName);
+    
+    /**
+     * 列出存储库中的JDK文件
+     * 
+     * @param repositoryId 存储库ID
+     * @return JDK文件列表
+     */
+    java.util.List<String> listJdkFiles(Long repositoryId);
 }
 

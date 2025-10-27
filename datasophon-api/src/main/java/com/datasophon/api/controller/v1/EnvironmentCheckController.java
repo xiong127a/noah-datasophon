@@ -36,6 +36,12 @@ public class EnvironmentCheckController {
     @Autowired
     private CheckLogWriter checkLogWriter;
     
+    @Autowired
+    private com.datasophon.api.service.ClusterInfoService clusterInfoService;
+    
+    @Autowired
+    private com.datasophon.api.service.ParcelRepositoryService parcelRepositoryService;
+    
     // 构造器日志，确认控制器是否被实例化
     public EnvironmentCheckController(EnvironmentCheckService environmentCheckService) {
         this.environmentCheckService = environmentCheckService;
@@ -249,6 +255,40 @@ public class EnvironmentCheckController {
             log.error("清理检查数据失败: clusterId={}, error={}", 
                 clusterId, e.getMessage(), e);
             return Result.error("清理失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取存储库中的JDK文件列表
+     * 用于环境修复时让用户选择JDK版本
+     */
+    @GetMapping("/jdk-files")
+    public Result<List<String>> getJdkFiles(@ClusterId Long clusterId) {
+        
+        log.info("获取JDK文件列表: clusterId={}", clusterId);
+        
+        try {
+            // 获取集群关联的存储库
+            var cluster = clusterInfoService.getById(clusterId);
+            if (cluster == null) {
+                return Result.error("集群不存在");
+            }
+            
+            Long repositoryId = cluster.getRepositoryId();
+            if (repositoryId == null) {
+                return Result.error("集群未关联存储库");
+            }
+            
+            // 获取存储库中的JDK文件列表
+            var jdkFiles = parcelRepositoryService.listJdkFiles(repositoryId);
+            
+            log.info("找到 {} 个JDK文件", jdkFiles.size());
+            return Result.success(jdkFiles);
+            
+        } catch (Exception e) {
+            log.error("获取JDK文件列表失败: clusterId={}, error={}", 
+                clusterId, e.getMessage(), e);
+            return Result.error("获取失败: " + e.getMessage());
         }
     }
 }
