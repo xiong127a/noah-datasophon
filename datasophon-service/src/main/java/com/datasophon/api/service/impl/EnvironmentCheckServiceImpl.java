@@ -8,6 +8,7 @@ import com.datasophon.api.checker.util.CheckLogWriter;
 import com.datasophon.api.event.RepairCompleteEvent;
 import com.datasophon.api.service.EnvironmentCheckService;
 import com.datasophon.common.dto.environment.EnvironmentCheckRequest;
+import com.datasophon.common.enums.CheckItemStatus;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
 import com.datasophon.common.vo.environment.EnvironmentValidationResult;
 import com.datasophon.common.vo.environment.RepairResult;
@@ -220,8 +221,9 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
         boolean canProceed = true;
         List<String> failedHostIps = statuses.stream()
                 .filter(host -> {
+                    // 修复：使用枚举比较而不是字符串比较
                     boolean hasFailed = host.getCheckItems().stream()
-                            .anyMatch(item -> "FAILED".equals(item.getStatus()));
+                            .anyMatch(item -> item.getStatus() == CheckItemStatus.FAILED);
                     return hasFailed;
                 })
                 .map(EnvironmentCheckStatusVO::getHostIp)
@@ -243,7 +245,9 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
         // 已完成的主机数（所有检查项都是SUCCESS或SKIPPED）
         int completedHosts = (int) statuses.stream()
                 .filter(host -> host.getCheckItems().stream()
-                        .allMatch(item -> "SUCCESS".equals(item.getStatus()) || "SKIPPED".equals(item.getStatus())))
+                        // 修复：使用枚举比较而不是字符串比较
+                        .allMatch(item -> item.getStatus() == CheckItemStatus.SUCCESS || 
+                                        item.getStatus() == CheckItemStatus.SKIPPED))
                 .count();
         
         // 构建验证结果
