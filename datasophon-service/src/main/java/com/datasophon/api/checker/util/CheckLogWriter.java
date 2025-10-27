@@ -237,9 +237,17 @@ public class CheckLogWriter {
                 return null;
             }
             
-            // 读取所有行并返回为JSON Lines格式
-            return Files.lines(logFile, StandardCharsets.UTF_8)
-                    .collect(Collectors.joining("\n"));
+            // 读取所有行（JSONL格式），转换为JSON数组
+            List<String> lines = Files.lines(logFile, StandardCharsets.UTF_8)
+                    .filter(line -> !line.trim().isEmpty())
+                    .collect(Collectors.toList());
+            
+            if (lines.isEmpty()) {
+                return "[]";
+            }
+            
+            // 将JSONL格式转换为JSON数组格式
+            return "[" + String.join(",", lines) + "]";
             
         } catch (Exception e) {
             log.error("读取日志失败: clusterId={}, hostIp={}, checkKey={}, type={}", 
