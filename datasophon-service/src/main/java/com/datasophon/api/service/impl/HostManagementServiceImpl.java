@@ -1,9 +1,11 @@
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.checker.CheckStateManager;
 import com.datasophon.api.config.CheckerProperties;
 import com.datasophon.api.service.HostManagementService;
 import com.datasophon.common.dto.host.BatchHostnameChangeRequest;
 import com.datasophon.common.dto.host.HostsSyncRequest;
+import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
 import com.datasophon.common.vo.host.HostOperationProgressVO;
 import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
 import com.datasophon.plugins.api.service.SshConnectionService;
@@ -30,6 +32,9 @@ public class HostManagementServiceImpl implements HostManagementService {
     
     @Autowired
     private CheckerProperties checkerProperties;
+    
+    @Autowired
+    private CheckStateManager checkStateManager;
     
     private SshConnectionService sshService;
     
@@ -270,20 +275,59 @@ public class HostManagementServiceImpl implements HostManagementService {
      * 构建hosts文件内容
      */
     private String buildHostsFileContent(HostsSyncRequest request) {
-        // TODO: 这里需要获取所有主机的信息（IP和主机名）
-        // 暂时返回一个简单的示例
         var config = checkerProperties.getHostsFile();
         
         StringBuilder content = new StringBuilder();
         content.append(config.getManagedMarkerStart()).append("\n");
         
-        // 这里应该从数据库或缓存中获取所有主机的IP和主机名
+        // 从环境检查状态中获取主机名
+        List<EnvironmentCheckStatusVO> checkStatuses = checkStateManager.getCheckStatusSnapshot(request.getClusterId());
+        Map<String, String> hostnameMap = new HashMap<>();
+        
+        for (EnvironmentCheckStatusVO status : checkStatuses) {
+            if (status.getHostname() != null && !status.getHostname().isEmpty()) {
+                hostnameMap.put(status.getHostIp(), status.getHostname());
+            }
+        }
+        
+        // 如果从检查状态中没有获取到主机名，尝试通过SSH获取
         for (String hostIp : request.getHostIps()) {
-            content.append(hostIp).append("\t").append("hostname-placeholder\n");
+            String hostname = hostnameMap.get(hostIp);
+            
+            if (hostname == null || hostname.isEmpty()) {
+                // 尝试通过SSH获取主机名
+                try {
+                    var context = com.datasophon.plugins.api.model.HostCheckContext.builder()
+                            .hostIp(hostIp)
+                            .sshUser((String) request.getConnectionParams().get("sshUser"))
+                            .sshPassword((String) request.getConnectionParams().get("sshPassword"))
+                            .sshPort((Integer) request.getConnectionParams().getOrDefault("sshPort", 22))
+                            .build();
+                    
+                    var result = getSshService().executeCommand(context, "hostname", 10);
+                    if (result.getExitCode() == 0 && result.getStdout() != null) {
+                        hostname = result.getStdout().trim();
+                        if (!hostname.isEmpty()) {
+                            hostnameMap.put(hostIp, hostname);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("无法获取主机名: hostIp={}, error={}", hostIp, e.getMessage());
+                }
+            }
+            
+            // 如果仍然没有主机名，使用IP作为主机名
+            if (hostname == null || hostname.isEmpty()) {
+                hostname = hostIp.replace(".", "-");
+                log.warn("使用IP作为主机名: hostIp={}, hostname={}", hostIp, hostname);
+            }
+            
+            content.append(hostIp).append("\t").append(hostname).append("\n");
         }
         
         content.append(config.getManagedMarkerEnd()).append("\n");
         
+        log.info("构建hosts文件内容完成，包含{}个主机条目", hostnameMap.size());
         return content.toString();
     }
     
