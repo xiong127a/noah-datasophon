@@ -96,6 +96,8 @@ public class CheckLogWriter {
             Files.write(logFile, (jsonLine + "\n").getBytes(StandardCharsets.UTF_8), 
                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             
+            log.debug("日志已写入文件: {}, 类型={}, stage={}", logFile, type, stage);
+            
             // 推送到SSE客户端（如果有客户端连接）
             pushToSSE(clusterId, hostIp, checkKey, jsonLine);
             
@@ -308,7 +310,10 @@ public class CheckLogWriter {
         try {
             Path hostDir = Paths.get(LOG_BASE_DIR, String.valueOf(clusterId), hostIp);
             
+            log.info("尝试列出主机日志文件: 目录={}, 存在={}", hostDir, Files.exists(hostDir));
+            
             if (!Files.exists(hostDir)) {
+                log.warn("主机日志目录不存在: {}", hostDir);
                 return logFiles;
             }
             
@@ -331,6 +336,10 @@ public class CheckLogWriter {
                             log.error("解析日志文件名失败: {}", logFile, e);
                         }
                     });
+            
+            log.info("找到 {} 个日志文件: {}", logFiles.size(), 
+                    logFiles.stream().map(f -> f.get("checkKey") + "." + f.get("type"))
+                            .collect(java.util.stream.Collectors.joining(", ")));
             
         } catch (Exception e) {
             log.error("列出主机日志文件失败: clusterId={}, hostIp={}", clusterId, hostIp, e);
