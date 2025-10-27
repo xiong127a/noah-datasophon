@@ -61,14 +61,35 @@ public class UploadAgentStep implements AgentDistributionStep {
                 localPackagePath, hostIp, remotePackagePath, formatFileSize(totalSize));
         
         try {
+            // ====== 1. 上传Agent包 ======
             uploadWithProgress(context, localPackagePath, remotePackagePath, totalSize);
+            log.info("Agent包上传成功: {}", remotePackagePath);
+            
+            // ====== 2. 上传MD5文件 ======
+            String localMd5Path = localPackagePath + ".md5";
+            String remoteMd5Path = remotePackagePath + ".md5";
+            File md5File = new File(localMd5Path);
+            
+            if (md5File.exists()) {
+                log.info("上传MD5文件: {} -> {}", localMd5Path, remoteMd5Path);
+                HostCheckContext pluginContext = toPluginContext(context);
+                boolean md5Success = sshService.uploadFile(pluginContext, localMd5Path, remoteMd5Path);
+                
+                if (md5Success) {
+                    log.info("MD5文件上传成功: {}", remoteMd5Path);
+                } else {
+                    log.warn("MD5文件上传失败: {}", remoteMd5Path);
+                }
+            } else {
+                log.warn("本地MD5文件不存在，跳过上传: {}", localMd5Path);
+            }
             
             Map<String, Object> completeInfo = new HashMap<>();
-            completeInfo.put("remotePath", remotePackagePath);
-            completeInfo.put("size", formatFileSize(totalSize));
+            completeInfo.put("packagePath", remotePackagePath);
+            completeInfo.put("packageSize", formatFileSize(totalSize));
+            completeInfo.put("md5Path", remoteMd5Path);
             logWriter.logSuccess(clusterId, hostIp, "upload", 
-                    "Agent包上传完成", completeInfo);
-            log.info("Agent包上传成功: {}", remotePackagePath);
+                    "Agent包和MD5文件上传完成", completeInfo);
             
         } catch (Exception e) {
             Map<String, Object> errorInfo = new HashMap<>();

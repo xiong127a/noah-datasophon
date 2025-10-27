@@ -64,7 +64,8 @@ public class DownloadAgentStep implements AgentDistributionStep {
         
         log.info("使用{}存储库下载器", repoType);
         
-        // 执行下载，带进度回调
+        // ====== 1. 下载Agent包 ======
+        log.info("下载Agent包: {}", agentPackageUrl);
         downloader.download(
                 agentPackageUrl,
                 localPackagePath,
@@ -72,20 +73,36 @@ public class DownloadAgentStep implements AgentDistributionStep {
                     // 进度回调
                     logWriter.logProgress(clusterId, hostIp, "download",
                             progress, downloadedBytes, totalBytes,
-                            String.format("下载中... %s / %s (%d%%)",
+                            String.format("下载Agent包... %s / %s (%d%%)",
                                     formatFileSize(downloadedBytes),
                                     formatFileSize(totalBytes),
                                     progress));
                 }
         );
         
-        // 下载完成日志
         File downloadedFile = new File(localPackagePath);
+        log.info("Agent包下载完成: {}, 大小: {}", localPackagePath, formatFileSize(downloadedFile.length()));
+        
+        // ====== 2. 下载MD5文件 ======
+        String md5Url = agentPackageUrl + ".md5";
+        String md5Path = localPackagePath + ".md5";
+        
+        log.info("下载MD5文件: {}", md5Url);
+        try {
+            downloader.download(md5Url, md5Path, null); // MD5文件很小，不需要进度回调
+            log.info("MD5文件下载完成: {}", md5Path);
+        } catch (Exception e) {
+            log.warn("MD5文件下载失败: {}, 将跳过MD5校验", e.getMessage());
+            // MD5文件不存在不影响安装，只是跳过校验
+        }
+        
+        // 下载完成日志
         Map<String, Object> completeInfo = new HashMap<>();
-        completeInfo.put("localPath", localPackagePath);
-        completeInfo.put("size", formatFileSize(downloadedFile.length()));
+        completeInfo.put("packagePath", localPackagePath);
+        completeInfo.put("packageSize", formatFileSize(downloadedFile.length()));
+        completeInfo.put("md5Path", md5Path);
         logWriter.logSuccess(clusterId, hostIp, "download",
-                "Agent包准备完成", completeInfo);
+                "Agent包和MD5文件准备完成", completeInfo);
         log.info("Agent包准备完成: {}, 大小: {}", localPackagePath, formatFileSize(downloadedFile.length()));
     }
     
