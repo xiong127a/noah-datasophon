@@ -1,7 +1,6 @@
 package com.datasophon.api.controller.v1;
 
 import com.datasophon.api.agent.util.AgentLogWriter;
-import com.datasophon.api.annotation.ClusterId;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -45,13 +45,13 @@ public class AgentDistributionSSEController {
     /**
      * 建立SSE连接，推送Agent分发日志
      * 
-     * @param clusterId 集群ID
+     * @param clusterId 集群ID（从query parameter获取，因为EventSource无法发送自定义header）
      * @param hostIp 主机IP
      * @return SSE Emitter
      */
     @GetMapping(value = "/stream/{hostIp}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter streamLogs(
-            @ClusterId Long clusterId,
+            @RequestParam Long clusterId,
             @PathVariable String hostIp) {
         
         log.info("建立Agent分发日志SSE连接: 集群={}, 主机={}", clusterId, hostIp);
