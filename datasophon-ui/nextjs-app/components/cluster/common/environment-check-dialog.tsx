@@ -83,6 +83,11 @@ export default function EnvironmentCheckDialog({
   const [selectedCheckItem, setSelectedCheckItem] = useState<{ hostIp: string; checkKey: string; checkName: string } | null>(null)
   const [repairOptionsOpen, setRepairOptionsOpen] = useState(false)
   const [pendingRepair, setPendingRepair] = useState<{ hostIp: string; checkKey: string; checkName: string } | null>(null)
+  const [validation, setValidation] = useState<{
+    canProceed: boolean
+    reason?: string
+    summary?: any
+  } | null>(null)
 
   // 当对话框打开时，重置所有状态
   useEffect(() => {
@@ -226,11 +231,34 @@ export default function EnvironmentCheckDialog({
       if (response && Array.isArray(response)) {
         setCheckStatus(response)
         console.log('检查状态已更新:', response)
+        // 同时刷新验证结果
+        fetchValidation()
       }
     } catch (error) {
       console.error('刷新检查状态失败:', error)
     }
   }
+  
+  // 从后端获取验证结果
+  const fetchValidation = async () => {
+    try {
+      console.log('获取验证结果...')
+      const response = await clusterApiV1.environmentCheck.validate()
+      if (response.code === 200) {
+        setValidation(response.data)
+        console.log('验证结果:', response.data)
+      }
+    } catch (error) {
+      console.error('获取验证结果失败:', error)
+    }
+  }
+  
+  // 在检查状态变化时获取验证结果
+  useEffect(() => {
+    if (checkStatus.length > 0) {
+      fetchValidation()
+    }
+  }, [checkStatus])
   
   // 执行修复（带参数）
   const executeRepair = async (hostIp: string, checkKey: string, checkName: string, repairParams: RepairOptions | Record<string, never>) => {
@@ -339,24 +367,6 @@ export default function EnvironmentCheckDialog({
     return { totalHosts, completedHosts, successHosts, partialSuccessHosts, failedHosts }
   }
 
-  // 判断是否可以进入下一步
-  const canProceed = () => {
-    if (checkStatus.length === 0) return false
-    
-    // 所有主机的所有检查项都必须是成功或已跳过
-    return checkStatus.every(host => {
-      // 检查所有检查项是否都已解决（成功或跳过）
-      const allItemsResolved = host.checkItems.every(item => 
-        item.status === 'SUCCESS' || item.status === 'SKIPPED'
-      )
-      
-      return allItemsResolved && (
-        host.overallStatus === 'SUCCESS' || 
-        host.overallStatus === 'PARTIAL_SUCCESS'
-      )
-    })
-  }
-
   const overallProgress = calculateOverallProgress()
   const progressPercentage = overallProgress.totalHosts > 0 
     ? Math.round((overallProgress.completedHosts / overallProgress.totalHosts) * 100)
@@ -381,7 +391,7 @@ export default function EnvironmentCheckDialog({
         {
           text: "下一步：Agent分发",
           onClick: onNext,
-          disabled: !canProceed(),
+          disabled: !validation?.canProceed,
           loading: false
         }
       ]}
