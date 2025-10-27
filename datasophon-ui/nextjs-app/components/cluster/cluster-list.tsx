@@ -872,7 +872,7 @@ export default function ClusterListEnhanced() {
         onOpenChange={setEditDialogOpen}
         onSuccess={handleClusterSuccess}
         editData={editingCluster ? {
-          id: Number(editingCluster.id),
+          id: editingCluster.id,  // 保持字符串类型，避免 Long 精度丢失
           clusterName: editingCluster.clusterName,
           clusterCode: editingCluster.clusterCode || '',
           clusterFrame: editingCluster.clusterFrame || '',

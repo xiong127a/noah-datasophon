@@ -17,7 +17,7 @@ interface CreateClusterDialogProps {
   onOpenChange: (open: boolean) => void
   onSuccess?: () => void
   editData?: {
-    id: number
+    id: string  // 使用 string 类型避免 JavaScript 数字精度丢失
     clusterName: string
     clusterCode: string
     clusterFrame: string
