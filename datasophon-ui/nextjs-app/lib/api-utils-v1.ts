@@ -363,6 +363,12 @@ export const clusterApiV1 = {
       return response.data
     },
     
+    /** 清理环境检查数据（用户点击上一步时调用） */
+    cleanup: async () => {
+      const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_CLEANUP, {})
+      return response.data
+    },
+    
     // 注意：日志查看已改为通过SSE实时推送，不再需要轮询API
   },
 

@@ -362,6 +362,20 @@ export default function EnvironmentCheckDialog({
     ? Math.round((overallProgress.completedHosts / overallProgress.totalHosts) * 100)
     : 0
 
+  // 处理上一步：清理检查数据
+  const handlePrevious = async () => {
+    try {
+      console.log('返回上一步，清理检查数据...')
+      await clusterApiV1.environmentCheck.cleanup()
+      console.log('检查数据已清理')
+    } catch (error) {
+      console.error('清理检查数据失败:', error)
+    } finally {
+      // 无论清理成功与否，都返回上一步
+      onPrevious()
+    }
+  }
+
   // 创建统一的ActionBar
   const actionBar = (
     <ClusterWizardActionBar
@@ -374,7 +388,7 @@ export default function EnvironmentCheckDialog({
       buttons={[
         {
           text: "上一步",
-          onClick: onPrevious,
+          onClick: handlePrevious,
           variant: 'secondary' as const,
           disabled: isChecking
         },
