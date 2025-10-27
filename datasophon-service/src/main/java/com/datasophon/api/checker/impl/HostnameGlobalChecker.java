@@ -134,7 +134,7 @@ public class HostnameGlobalChecker implements GlobalCheckItem {
                 return GlobalCheckResult.builder()
                         .checkKey(getCheckKey())
                         .displayName(getDisplayName())
-                        .status(CheckItemStatus.WARNING)
+                                .status(CheckItemStatus.FAILED)
                         .message(message)
                         .recommendation(recommendation)
                         .details(details)
@@ -184,10 +184,10 @@ public class HostnameGlobalChecker implements GlobalCheckItem {
         
         var result = getSshService().executeCommand(context, "hostname", 10);
         
-        if (result.getExitCode() == 0) {
-            return result.getStdout().trim();
+        if (result.isSuccess()) {
+            return result.output().trim();
         } else {
-            throw new RuntimeException("无法获取主机名: " + result.getStderr());
+            throw new RuntimeException("无法获取主机名: " + result.error());
         }
     }
 }

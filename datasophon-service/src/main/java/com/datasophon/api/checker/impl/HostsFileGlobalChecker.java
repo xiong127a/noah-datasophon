@@ -138,7 +138,7 @@ public class HostsFileGlobalChecker implements GlobalCheckItem {
                 return GlobalCheckResult.builder()
                         .checkKey(getCheckKey())
                         .displayName(getDisplayName())
-                        .status(CheckItemStatus.WARNING)
+                            .status(CheckItemStatus.FAILED)
                         .message(message)
                         .recommendation(recommendation)
                         .details(details)
@@ -213,10 +213,10 @@ public class HostsFileGlobalChecker implements GlobalCheckItem {
         
         var result = getSshService().executeCommand(context, "cat /etc/hosts", 10);
         
-        if (result.getExitCode() == 0) {
-            return result.getStdout();
+        if (result.isSuccess()) {
+            return result.output();
         } else {
-            throw new RuntimeException("无法读取hosts文件: " + result.getStderr());
+            throw new RuntimeException("无法读取hosts文件: " + result.error());
         }
     }
     

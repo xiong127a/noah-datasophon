@@ -266,8 +266,8 @@ public class HostManagementServiceImpl implements HostManagementService {
         
         var result = getSshService().executeCommand(context, command, 30);
         
-        if (result.getExitCode() != 0) {
-            throw new RuntimeException("修改主机名失败: " + result.getStderr());
+        if (!result.isSuccess()) {
+            throw new RuntimeException("修改主机名失败: " + result.error());
         }
     }
     
@@ -281,7 +281,7 @@ public class HostManagementServiceImpl implements HostManagementService {
         content.append(config.getManagedMarkerStart()).append("\n");
         
         // 从环境检查状态中获取主机名
-        List<EnvironmentCheckStatusVO> checkStatuses = checkStateManager.getCheckStatusSnapshot(request.getClusterId());
+        List<EnvironmentCheckStatusVO> checkStatuses = checkStateManager.getClusterStatus(request.getClusterId());
         Map<String, String> hostnameMap = new HashMap<>();
         
         for (EnvironmentCheckStatusVO status : checkStatuses) {
@@ -305,8 +305,8 @@ public class HostManagementServiceImpl implements HostManagementService {
                             .build();
                     
                     var result = getSshService().executeCommand(context, "hostname", 10);
-                    if (result.getExitCode() == 0 && result.getStdout() != null) {
-                        hostname = result.getStdout().trim();
+                    if (result.isSuccess() && result.output() != null) {
+                        hostname = result.output().trim();
                         if (!hostname.isEmpty()) {
                             hostnameMap.put(hostIp, hostname);
                         }
@@ -365,7 +365,7 @@ public class HostManagementServiceImpl implements HostManagementService {
             "  echo \"$NEW_CONTENT\" | sudo tee -a $HOSTS_FILE > /dev/null\n" +
             "fi\n" +
             "echo 'Hosts file synced successfully'",
-            config.getBackupBeforeModify() ? "/etc/hosts" : "/tmp/hosts",
+            config.isBackupBeforeModify() ? "/etc/hosts" : "/tmp/hosts",
             config.getBackupSuffix(),
             config.getManagedMarkerStart(),
             config.getManagedMarkerEnd(),
@@ -374,8 +374,8 @@ public class HostManagementServiceImpl implements HostManagementService {
         
         var result = getSshService().executeCommand(context, script, 30);
         
-        if (result.getExitCode() != 0) {
-            throw new RuntimeException("同步hosts文件失败: " + result.getStderr());
+        if (!result.isSuccess()) {
+            throw new RuntimeException("同步hosts文件失败: " + result.error());
         }
     }
     

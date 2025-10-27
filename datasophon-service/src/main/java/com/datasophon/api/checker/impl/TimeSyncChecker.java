@@ -96,22 +96,26 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
                 10
             );
             
-            if (result.getExitCode() != 0) {
-                log.error("获取远程主机时间失败: host={}, stderr={}", context.getHostIp(), result.getStderr());
-                return CheckResult.failed(
+            if (!result.isSuccess()) {
+                log.error("获取远程主机时间失败: host={}, error={}", context.getHostIp(), result.error());
+                return CheckResult.failure(
                     "无法获取远程主机时间",
-                    "请检查date命令是否可用"
+                    "请检查date命令是否可用",
+                    false,
+                    false
                 );
             }
             
             long remoteTimestamp;
             try {
-                remoteTimestamp = Long.parseLong(result.getStdout().trim());
+                remoteTimestamp = Long.parseLong(result.output().trim());
             } catch (NumberFormatException e) {
-                log.error("解析远程时间戳失败: host={}, output={}", context.getHostIp(), result.getStdout());
-                return CheckResult.failed(
+                log.error("解析远程时间戳失败: host={}, output={}", context.getHostIp(), result.output());
+                return CheckResult.failure(
                     "解析远程时间戳失败",
-                    "远程主机返回的时间格式不正确"
+                    "远程主机返回的时间格式不正确",
+                    false,
+                    false
                 );
             }
             
@@ -127,17 +131,21 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
             } else {
                 log.warn("时间差异超过阈值: host={}, timeDiff={}秒, maxAllowed={}秒", 
                         context.getHostIp(), timeDiff, maxTimeDiff);
-                return CheckResult.failed(
+                return CheckResult.failure(
                     String.format("时间差异: %d秒（超过允许的%d秒）", timeDiff, maxTimeDiff),
-                    "需要同步时间。可以点击修复按钮自动同步管理端时间"
+                    "需要同步时间。可以点击修复按钮自动同步管理端时间",
+                    false,
+                    true
                 );
             }
             
         } catch (Exception e) {
             log.error("时间同步检查失败: host={}, error={}", context.getHostIp(), e.getMessage(), e);
-            return CheckResult.failed(
+            return CheckResult.failure(
                 "时间同步检查失败: " + e.getMessage(),
-                "请检查SSH连接是否正常"
+                "请检查SSH连接是否正常",
+                false,
+                false
             );
         }
     }
@@ -166,26 +174,38 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
                 30
             );
             
-            if (result.getExitCode() != 0) {
-                log.error("时间同步失败: host={}, stderr={}", context.getHostIp(), result.getStderr());
-                return RepairResult.failed("时间同步失败: " + result.getStderr());
+            if (!result.isSuccess()) {
+                log.error("时间同步失败: host={}, error={}", context.getHostIp(), result.error());
+                return RepairResult.builder()
+                        .success(false)
+                        .message("时间同步失败: " + result.error())
+                        .build();
             }
             
-            log.info("时间同步命令执行成功: host={}, output={}", context.getHostIp(), result.getStdout());
+            log.info("时间同步命令执行成功: host={}, output={}", context.getHostIp(), result.output());
             
             // 步骤3：验证时间差是否已在允许范围内
             Thread.sleep(1000); // 等待1秒确保时间已同步
             
             CheckResult verifyResult = execute(context);
-            if (verifyResult.isSuccess()) {
-                return RepairResult.success("时间同步成功");
+            if (verifyResult.getStatus() == com.datasophon.common.enums.CheckItemStatus.SUCCESS) {
+                return RepairResult.builder()
+                        .success(true)
+                        .message("时间同步成功")
+                        .build();
             } else {
-                return RepairResult.failed("时间同步后验证失败，时间差仍超过阈值");
+                return RepairResult.builder()
+                        .success(false)
+                        .message("时间同步后验证失败，时间差仍超过阈值")
+                        .build();
             }
             
         } catch (Exception e) {
             log.error("修复时间同步失败: host={}, error={}", context.getHostIp(), e.getMessage(), e);
-            return RepairResult.failed("修复失败: " + e.getMessage());
+            return RepairResult.builder()
+                    .success(false)
+                    .message("修复失败: " + e.getMessage())
+                    .build();
         }
     }
 }

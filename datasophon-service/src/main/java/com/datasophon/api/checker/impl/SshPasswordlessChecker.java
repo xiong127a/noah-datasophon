@@ -91,22 +91,26 @@ public class SshPasswordlessChecker implements EnvironmentCheckItem {
             // 如果能够成功执行命令，说明免密登录已配置
             var testResult = getSshService().testConnection(toPluginContext(context));
             
-            if (testResult.getExitCode() == 0) {
+            if (testResult.isSuccess()) {
                 log.info("SSH免密登录检查通过: host={}", context.getHostIp());
                 return CheckResult.success("SSH免密登录已配置");
             } else {
-                log.warn("SSH免密登录未配置: host={}, error={}", context.getHostIp(), testResult.getStderr());
-                return CheckResult.failed(
+                log.warn("SSH免密登录未配置: host={}, error={}", context.getHostIp(), testResult.error());
+                return CheckResult.failure(
                     "SSH免密登录未配置",
-                    "需要配置SSH密钥认证。可以点击修复按钮自动配置"
+                    "需要配置SSH密钥认证。可以点击修复按钮自动配置",
+                    false,
+                    true
                 );
             }
             
         } catch (Exception e) {
             log.error("SSH免密登录检查失败: host={}, error={}", context.getHostIp(), e.getMessage(), e);
-            return CheckResult.failed(
+            return CheckResult.failure(
                 "SSH免密登录检查失败: " + e.getMessage(),
-                "请检查SSH服务是否正常运行，网络是否畅通"
+                "请检查SSH服务是否正常运行，网络是否畅通",
+                false,
+                false
             );
         }
     }
@@ -128,10 +132,16 @@ public class SshPasswordlessChecker implements EnvironmentCheckItem {
                 if (config.isAutoGenerateKey()) {
                     boolean generated = generateSshKeyPair(privateKeyPath, config);
                     if (!generated) {
-                        return RepairResult.failed("生成SSH密钥对失败");
+                        return RepairResult.builder()
+                                .success(false)
+                                .message("生成SSH密钥对失败")
+                                .build();
                     }
                 } else {
-                    return RepairResult.failed("SSH密钥对不存在，且未启用自动生成");
+                    return RepairResult.builder()
+                            .success(false)
+                            .message("SSH密钥对不存在，且未启用自动生成")
+                            .build();
                 }
             }
             
@@ -160,24 +170,36 @@ public class SshPasswordlessChecker implements EnvironmentCheckItem {
             
             var result = getSshService().executeCommand(toPluginContext(context), setupScript, 30);
             
-            if (result.getExitCode() != 0) {
-                log.error("配置SSH免密登录失败: host={}, stderr={}", context.getHostIp(), result.getStderr());
-                return RepairResult.failed("配置失败: " + result.getStderr());
+            if (!result.isSuccess()) {
+                log.error("配置SSH免密登录失败: host={}, error={}", context.getHostIp(), result.error());
+                return RepairResult.builder()
+                        .success(false)
+                        .message("配置失败: " + result.error())
+                        .build();
             }
             
-            log.info("SSH免密登录配置成功: host={}, output={}", context.getHostIp(), result.getStdout());
+            log.info("SSH免密登录配置成功: host={}, output={}", context.getHostIp(), result.output());
             
             // 步骤5：验证免密登录是否成功
             var verifyResult = getSshService().testConnection(toPluginContext(context));
-            if (verifyResult.getExitCode() == 0) {
-                return RepairResult.success("SSH免密登录配置成功");
+            if (verifyResult.isSuccess()) {
+                return RepairResult.builder()
+                        .success(true)
+                        .message("SSH免密登录配置成功")
+                        .build();
             } else {
-                return RepairResult.failed("验证失败，免密登录仍不可用");
+                return RepairResult.builder()
+                        .success(false)
+                        .message("验证失败，免密登录仍不可用")
+                        .build();
             }
             
         } catch (Exception e) {
             log.error("修复SSH免密登录失败: host={}, error={}", context.getHostIp(), e.getMessage(), e);
-            return RepairResult.failed("修复失败: " + e.getMessage());
+            return RepairResult.builder()
+                    .success(false)
+                    .message("修复失败: " + e.getMessage())
+                    .build();
         }
     }
     
