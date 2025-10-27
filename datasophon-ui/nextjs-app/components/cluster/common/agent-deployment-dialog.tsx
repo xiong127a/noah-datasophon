@@ -277,7 +277,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
       clusterType={clusterType}
       stepTitle="主机Agent分发"
       stepDescription={isK8s ? "主机Agent分发 - Kubernetes模式无需手动分发Agent" : "主机Agent分发 - 向选定的主机分发和安装Agent程序"}
-      currentStep={3}
+      currentStep={4}
       dialogTitle={`主机Agent分发 - ${cluster?.clusterName}`}
       actionBar={
         <ClusterWizardActionBar
