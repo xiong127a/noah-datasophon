@@ -6,6 +6,7 @@ import com.datasophon.api.agent.AgentStateManager;
 import com.datasophon.api.agent.steps.*;
 import com.datasophon.api.agent.util.AgentLogWriter;
 import com.datasophon.api.load.ConfigBean;
+import com.datasophon.api.repository.RepositoryDownloaderFactory;
 import com.datasophon.api.service.AgentDistributionService;
 import com.datasophon.api.service.ParcelRepositoryService;
 import com.datasophon.common.Constants;
@@ -39,6 +40,7 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     private final ClusterInfoMapper clusterInfoMapper;
     private final ParcelRepositoryService repositoryService;
     private final ConfigBean configBean;
+    private final RepositoryDownloaderFactory downloaderFactory;
     
     // SSH连接服务
     private final SshConnectionService sshService = 
@@ -133,7 +135,7 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             
             // 创建分发步骤列表
             List<AgentDistributionStep> steps = Arrays.asList(
-                    new DownloadAgentStep(),
+                    new DownloadAgentStep(downloaderFactory),
                     new UploadAgentStep(sshService),
                     new VerifyMd5Step(sshService),
                     new DecompressAgentStep(sshService),
@@ -217,42 +219,20 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     
     /**
      * 获取Agent包URL
+     * 集群必定配置了存储库，直接获取即可
      */
     private String getAgentPackageUrl(ClusterInfoEntity cluster) {
-        try {
-            // 从集群配置中获取存储库信息
-            if (cluster.getRepositoryId() == null) {
-                log.warn("集群未配置存储库，使用默认本地路径: clusterId={}", cluster.getId());
-                return Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
-            }
-            
-            var repository = repositoryService.getById(cluster.getRepositoryId());
-            if (repository == null) {
-                log.warn("存储库不存在: repositoryId={}, 使用默认本地路径", cluster.getRepositoryId());
-                return Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
-            }
-            
-            String repoUrl = repository.getRepoUrl();
-            if (repoUrl == null || repoUrl.isEmpty()) {
-                log.warn("存储库URL为空，使用默认本地路径");
-                return Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
-            }
-            
-            // 构建Agent包完整路径
-            // 确保URL末尾没有斜杠
-            String baseUrl = repoUrl.endsWith("/") ? repoUrl.substring(0, repoUrl.length() - 1) : repoUrl;
-            String agentPackagePath = baseUrl + "/" + Constants.WORKER_PACKAGE_NAME;
-            
-            log.info("从存储库获取Agent包路径: type={}, url={}", 
-                    repository.getRepoType(), agentPackagePath);
-            
-            return agentPackagePath;
-            
-        } catch (Exception e) {
-            log.error("获取Agent包URL失败: clusterId={}, 错误={}, 使用默认本地路径", 
-                    cluster.getId(), e.getMessage(), e);
-            return Constants.MASTER_MANAGE_PACKAGE_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
-        }
+        var repository = repositoryService.getById(cluster.getRepositoryId());
+        
+        String repoUrl = repository.getRepoUrl();
+        // 确保URL末尾没有斜杠
+        String baseUrl = repoUrl.endsWith("/") ? repoUrl.substring(0, repoUrl.length() - 1) : repoUrl;
+        String agentPackagePath = baseUrl + "/" + Constants.WORKER_PACKAGE_NAME;
+        
+        log.info("从存储库获取Agent包路径: type={}, url={}", 
+                repository.getRepoType(), agentPackagePath);
+        
+        return agentPackagePath;
     }
     
     /**
