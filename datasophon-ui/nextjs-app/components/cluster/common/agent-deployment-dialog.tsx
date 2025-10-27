@@ -54,6 +54,8 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
   onOpenChange,
   cluster,
   clusterType = '',
+  hostList,
+  connectionParams,
   step2Data,
   onComplete,
   onPrevious
@@ -69,58 +71,25 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
   // 判断是否为K8s模式
   const isK8s = ClusterTypeUtil.isKubernetes(clusterType || cluster?.depType || '')
 
-  // 获取主机列表
-  const fetchHosts = useCallback(async () => {
-    if (!cluster?.id) return
-
-    setLoading(true)
-    setError(null)
-    
-    try {
-      // fetch API不使用拦截器，直接从localStorage获取集群ID
-      const clusterId = localStorage.getItem('clusterId')
-      const headers: Record<string, string> = {
-        'Content-Type': 'application/json'
-      }
-      if (clusterId && clusterId !== '-1') {
-        headers['X-Cluster-Id'] = clusterId
-      }
-      // 这里使用假的API端点，实际需要根据后端接口调整
-      const response = await fetch('/ddh/api/v1/cluster/host/all', {
-        method: 'GET',
-        headers: headers
-      })
-
-      if (response.ok) {
-        const responseText = await response.text()
-        const data = parseJsonWithLongSupport(responseText) as { success: boolean; data: any[] }
-        if (data.success && data.data) {
-          setHosts(data.data.map((host: any) => ({
-            ...host,
-            agentStatus: host.agentStatus || 'NOT_INSTALLED',
-            progress: 0
-          })))
-        } else {
-          throw new Error(data.message || '获取主机列表失败')
-        }
-      } else {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : '未知错误'
-      setError(errorMessage)
-      toast.error(`获取主机列表失败: ${errorMessage}`)
-    } finally {
-      setLoading(false)
-    }
-  }, [cluster?.id])
-
-  // 初始化数据
+  // 初始化主机列表（从props获取，不再调用API）
   useEffect(() => {
-    if (open && !isK8s) {
-      fetchHosts()
+    if (open && hostList && hostList.length > 0) {
+      console.log('🔄 Agent分发对话框打开，初始化主机列表:', hostList)
+      const initializedHosts: HostInfo[] = hostList.map((host: any) => ({
+        id: host.id || host.ip, // 如果没有id，使用ip作为id
+        hostname: host.hostname || host.ip,
+        ip: host.ip,
+        sshUser: connectionParams.sshUser,
+        sshPort: parseInt(connectionParams.sshPort),
+        agentStatus: 'NOT_INSTALLED',
+        progress: 0
+      }))
+      setHosts(initializedHosts)
+      console.log('✅ 主机列表已初始化:', initializedHosts)
+    } else if (open) {
+      setHosts([])
     }
-  }, [open, isK8s, fetchHosts])
+  }, [open, hostList, connectionParams])
 
   // 开始Agent分发
   const startAgentDistribution = async () => {

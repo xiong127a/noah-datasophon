@@ -967,7 +967,7 @@ export default function ClusterListEnhanced() {
       )}
 
       {/* Agent分发弹窗 (仅PVM模式) */}
-      {hostValidationData && setupCluster && ClusterTypeUtil.isPvm(setupCluster.depType || '') && (
+      {hostValidationData && setupCluster && pvmStep1Data && ClusterTypeUtil.isPvm(setupCluster.depType || '') && (
         <AgentDeploymentDialog
           open={agentDeploymentDialogOpen}
           onOpenChange={setAgentDeploymentDialogOpen}
@@ -978,11 +978,17 @@ export default function ClusterListEnhanced() {
             clusterCode: setupCluster.clusterCode || ''
           } : null}
           clusterType={setupCluster.depType || ''}
+          hostList={(hostValidationData.validHosts || hostValidationData.step2Data?.hostValidationResults || []) as any[]}
+          connectionParams={{
+            sshUser: pvmStep1Data.sshUser,
+            sshPort: pvmStep1Data.sshPort,
+            sshPassword: pvmStep1Data.sshPassword
+          }}
           step2Data={hostValidationData || undefined}
           onComplete={handleAgentDeploymentComplete}
           onPrevious={() => {
             setAgentDeploymentDialogOpen(false);
-            setHostValidationDialogOpen(true);
+            setEnvironmentCheckDialogOpen(true);
           }}
         />
       )}

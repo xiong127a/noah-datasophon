@@ -80,6 +80,14 @@ export interface AgentDeploymentDialogProps {
   } | null
   /** 集群类型 */
   clusterType?: string
+  /** 主机列表（从前面步骤传入，不再调用API获取） */
+  hostList: Array<{ ip: string; hostname?: string; id?: string }>
+  /** SSH连接参数 */
+  connectionParams: {
+    sshUser: string
+    sshPort: string
+    sshPassword: string
+  }
   /** Step2传递的数据 */
   step2Data?: Record<string, unknown>
   /** Step3完成回调 */
