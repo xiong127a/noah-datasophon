@@ -10,6 +10,7 @@ import com.datasophon.common.dto.environment.RepairCheckItemRequest;
 import com.datasophon.common.dto.environment.SkipCheckItemRequest;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
 import com.datasophon.common.vo.environment.EnvironmentValidationResult;
+import com.datasophon.common.vo.environment.GlobalCheckResult;
 import com.datasophon.common.vo.environment.RepairResult;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -395,6 +396,38 @@ public class EnvironmentCheckController {
         } catch (Exception e) {
             log.error("获取JDK文件列表失败: clusterId={}, error={}", 
                 clusterId, e.getMessage(), e);
+            return Result.error("获取失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 运行全局检查（在所有主机检查完成后）
+     */
+    @PostMapping("/global-checks")
+    public Result<List<GlobalCheckResult>> runGlobalChecks(@ClusterId Long clusterId) {
+        log.info("运行全局检查: clusterId={}", clusterId);
+        
+        try {
+            List<GlobalCheckResult> results = environmentCheckService.runGlobalChecks(clusterId);
+            return Result.success(results);
+        } catch (Exception e) {
+            log.error("运行全局检查失败: clusterId={}, error={}", clusterId, e.getMessage(), e);
+            return Result.error("运行失败: " + e.getMessage());
+        }
+    }
+    
+    /**
+     * 获取全局检查结果
+     */
+    @GetMapping("/global-checks")
+    public Result<List<GlobalCheckResult>> getGlobalCheckResults(@ClusterId Long clusterId) {
+        log.info("获取全局检查结果: clusterId={}", clusterId);
+        
+        try {
+            List<GlobalCheckResult> results = environmentCheckService.getGlobalCheckResults(clusterId);
+            return Result.success(results);
+        } catch (Exception e) {
+            log.error("获取全局检查结果失败: clusterId={}, error={}", clusterId, e.getMessage(), e);
             return Result.error("获取失败: " + e.getMessage());
         }
     }
