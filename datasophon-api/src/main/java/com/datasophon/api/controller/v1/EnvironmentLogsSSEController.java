@@ -2,6 +2,7 @@ package com.datasophon.api.controller.v1;
 
 import com.datasophon.api.checker.util.CheckLogWriter;
 import com.datasophon.api.event.RepairCompleteEvent;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.event.EventListener;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -27,6 +29,9 @@ public class EnvironmentLogsSSEController {
     
     @Autowired
     private CheckLogWriter checkLogWriter;
+    
+    @Autowired
+    private ObjectMapper objectMapper;
     
     // 存储SSE连接：key为 "clusterId:hostIp:checkKey"
     private static final Map<String, SseEmitter> sseEmitters = new ConcurrentHashMap<>();
@@ -94,34 +99,56 @@ public class EnvironmentLogsSSEController {
             // 读取检查日志
             String checkLog = checkLogWriter.readCheckLog(clusterId, hostIp, checkKey);
             if (checkLog != null && !checkLog.isEmpty() && !checkLog.equals("[]")) {
-                String[] checkLogLines = checkLog.substring(1, checkLog.length() - 1).split(",(?=\\{)");
-                for (String logLine : checkLogLines) {
-                    if (logLine.trim().isEmpty()) continue;
-                    try {
-                        emitter.send(SseEmitter.event()
-                                .name("log")
-                                .data(logLine.trim()));
-                    } catch (IOException e) {
-                        log.error("推送检查日志失败", e);
-                        return;
+                try {
+                    // 使用ObjectMapper解析JSON数组
+                    List<Map<String, Object>> checkLogEntries = objectMapper.readValue(
+                        checkLog, 
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class)
+                    );
+                    
+                    // 逐条发送日志
+                    for (Map<String, Object> logEntry : checkLogEntries) {
+                        try {
+                            String logJson = objectMapper.writeValueAsString(logEntry);
+                            emitter.send(SseEmitter.event()
+                                    .name("log")
+                                    .data(logJson));
+                        } catch (IOException e) {
+                            log.error("推送检查日志条目失败", e);
+                            return;
+                        }
                     }
+                    log.info("成功推送 {} 条检查日志", checkLogEntries.size());
+                } catch (Exception e) {
+                    log.error("解析检查日志JSON失败: {}", checkLog, e);
                 }
             }
             
             // 读取修复日志
             String repairLog = checkLogWriter.readRepairLog(clusterId, hostIp, checkKey);
             if (repairLog != null && !repairLog.isEmpty() && !repairLog.equals("[]")) {
-                String[] repairLogLines = repairLog.substring(1, repairLog.length() - 1).split(",(?=\\{)");
-                for (String logLine : repairLogLines) {
-                    if (logLine.trim().isEmpty()) continue;
-                    try {
-                        emitter.send(SseEmitter.event()
-                                .name("log")
-                                .data(logLine.trim()));
-                    } catch (IOException e) {
-                        log.error("推送修复日志失败", e);
-                        return;
+                try {
+                    // 使用ObjectMapper解析JSON数组
+                    List<Map<String, Object>> repairLogEntries = objectMapper.readValue(
+                        repairLog,
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, Map.class)
+                    );
+                    
+                    // 逐条发送日志
+                    for (Map<String, Object> logEntry : repairLogEntries) {
+                        try {
+                            String logJson = objectMapper.writeValueAsString(logEntry);
+                            emitter.send(SseEmitter.event()
+                                    .name("log")
+                                    .data(logJson));
+                        } catch (IOException e) {
+                            log.error("推送修复日志条目失败", e);
+                            return;
+                        }
                     }
+                    log.info("成功推送 {} 条修复日志", repairLogEntries.size());
+                } catch (Exception e) {
+                    log.error("解析修复日志JSON失败: {}", repairLog, e);
                 }
             }
             
