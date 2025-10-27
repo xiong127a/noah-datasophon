@@ -220,25 +220,25 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     
     /**
      * 获取Agent包URL
-     * 优先使用集群配置的存储库，如果未配置则使用默认本地路径
+     * 从集群配置的存储库获取Agent包路径
      */
     private String getAgentPackageUrl(ClusterInfoEntity cluster) {
         Long repositoryId = cluster.getRepositoryId();
         
-        // 如果集群未配置存储库ID，使用默认本地路径
+        // 集群必须配置存储库ID
         if (repositoryId == null) {
-            String defaultPath = Constants.INSTALL_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
-            log.warn("集群 {} 未配置存储库ID，使用默认本地路径: {}", cluster.getId(), defaultPath);
-            return defaultPath;
+            String errorMsg = String.format("集群 %s 未配置存储库ID，无法获取Agent包路径", cluster.getId());
+            log.error(errorMsg);
+            throw new IllegalStateException(errorMsg);
         }
         
         ParcelRepositoryDTO repository = repositoryService.getById(repositoryId);
         
-        // 如果数据库中找不到存储库记录，也使用默认本地路径
+        // 存储库记录必须存在
         if (repository == null) {
-            String defaultPath = Constants.INSTALL_PATH + Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
-            log.warn("存储库ID {} 不存在，使用默认本地路径: {}", repositoryId, defaultPath);
-            return defaultPath;
+            String errorMsg = String.format("存储库ID %s 不存在，无法获取Agent包路径", repositoryId);
+            log.error(errorMsg);
+            throw new IllegalStateException(errorMsg);
         }
         
         String repoUrl = repository.getRepoUrl();
