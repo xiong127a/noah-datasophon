@@ -26,6 +26,8 @@ import ClusterWizardActionBar from './cluster-wizard-action-bar'
 import { CheckItemDetailCard } from './check-item-detail-card'
 import { CheckLogsDialog } from './check-logs-dialog'
 import { RepairOptionsDialog, type RepairOptions } from './repair-options-dialog'
+import HostnameBatchEditDialog from './hostname-batch-edit-dialog'
+import HostsFileSyncDialog from './hosts-file-sync-dialog'
 
 interface EnvironmentCheckDialogProps {
   open: boolean
@@ -88,6 +90,15 @@ export default function EnvironmentCheckDialog({
     reason?: string
     summary?: any
   } | null>(null)
+  
+  // 全局检查相关状态
+  const [globalCheckResults, setGlobalCheckResults] = useState<any[]>([])
+  const [isRunningGlobalChecks, setIsRunningGlobalChecks] = useState(false)
+  const [showGlobalChecks, setShowGlobalChecks] = useState(false)
+  
+  // 主机管理对话框状态
+  const [hostnameEditDialogOpen, setHostnameEditDialogOpen] = useState(false)
+  const [hostsFileSyncDialogOpen, setHostsFileSyncDialogOpen] = useState(false)
 
   // 当对话框打开时，重置所有状态
   useEffect(() => {
@@ -249,6 +260,42 @@ export default function EnvironmentCheckDialog({
   const handleViewLogs = (hostIp: string, checkKey: string, checkName: string) => {
     setSelectedCheckItem({ hostIp, checkKey, checkName })
     setLogsDialogOpen(true)
+  }
+  
+  // 运行全局检查
+  const handleRunGlobalChecks = async () => {
+    setIsRunningGlobalChecks(true)
+    try {
+      console.log('🌐 开始运行全局检查')
+      const response = await clusterApiV1.environmentCheck.runGlobalChecks()
+      if (response.code === 200) {
+        setGlobalCheckResults(response.data || [])
+        setShowGlobalChecks(true)
+        console.log('全局检查完成:', response.data)
+      } else {
+        console.error('全局检查失败:', response.msg)
+        alert(response.msg || '运行全局检查失败')
+      }
+    } catch (error) {
+      console.error('运行全局检查失败:', error)
+      alert('运行全局检查失败，请重试')
+    } finally {
+      setIsRunningGlobalChecks(false)
+    }
+  }
+  
+  // 加载全局检查结果
+  const loadGlobalCheckResults = async () => {
+    try {
+      const response = await clusterApiV1.environmentCheck.getGlobalCheckResults()
+      if (response.code === 200 && response.data && response.data.length > 0) {
+        setGlobalCheckResults(response.data)
+        setShowGlobalChecks(true)
+        console.log('加载全局检查结果:', response.data)
+      }
+    } catch (error) {
+      console.error('加载全局检查结果失败:', error)
+    }
   }
 
   // 跳过检查项
@@ -478,20 +525,36 @@ export default function EnvironmentCheckDialog({
                       开始检查
                     </Button>
                   ) : overallProgress.completedHosts >= overallProgress.totalHosts && overallProgress.totalHosts > 0 ? (
-                    // 检查完成，显示重新检查按钮
+                    // 检查完成，显示重新检查按钮和主机管理按钮
                     <>
                       <Badge variant="outline" className="text-green-600 border-green-600">
                         <CheckCircle2 className="h-4 w-4 mr-1" />
                         检查完成
                       </Badge>
-                      <Button 
-                        onClick={handleRestartCheck} 
-                        size="sm"
-                        variant="outline"
-                      >
-                        <Play className="h-4 w-4 mr-2" />
-                        重新检查
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={handleRestartCheck} 
+                          size="sm"
+                          variant="outline"
+                        >
+                          <Play className="h-4 w-4 mr-2" />
+                          重新检查
+                        </Button>
+                        <Button 
+                          onClick={() => setHostnameEditDialogOpen(true)} 
+                          size="sm"
+                          variant="outline"
+                        >
+                          批量修改主机名
+                        </Button>
+                        <Button 
+                          onClick={() => setHostsFileSyncDialogOpen(true)} 
+                          size="sm"
+                          variant="outline"
+                        >
+                          同步Hosts文件
+                        </Button>
+                      </div>
                     </>
                   ) : (
                     // 检查进行中，不显示暂停/恢复按钮（暂不支持暂停功能）
@@ -670,6 +733,96 @@ export default function EnvironmentCheckDialog({
             </Card>
           ))}
           </div>
+          
+          {/* 全局检查区域 */}
+          {!isChecking && checkStatus.length > 0 && (
+            <div className="mt-8">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold">综合检查</h3>
+                <Button
+                  onClick={handleRunGlobalChecks}
+                  disabled={isRunningGlobalChecks}
+                  size="sm"
+                >
+                  {isRunningGlobalChecks ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      检查中...
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" />
+                      运行综合检查
+                    </>
+                  )}
+                </Button>
+              </div>
+              
+              {showGlobalChecks && globalCheckResults.length > 0 && (
+                <div className="space-y-4">
+                  {globalCheckResults.map((result) => {
+                    const isSuccess = result.status === 'SUCCESS'
+                    const isFailed = result.status === 'FAILED'
+                    const isWarning = result.status === 'WARNING'
+                    
+                    return (
+                      <Card key={result.checkKey} className={`
+                        ${isSuccess ? 'border-green-200 bg-green-50' : ''}
+                        ${isFailed ? 'border-red-200 bg-red-50' : ''}
+                        ${isWarning ? 'border-yellow-200 bg-yellow-50' : ''}
+                      `}>
+                        <CardHeader>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {isSuccess && <CheckCircle2 className="h-5 w-5 text-green-500" />}
+                              {isFailed && <XCircle className="h-5 w-5 text-red-500" />}
+                              {isWarning && <AlertTriangle className="h-5 w-5 text-yellow-500" />}
+                              <CardTitle className="text-base">{result.displayName}</CardTitle>
+                            </div>
+                            {isSuccess && <Badge variant="success">正常</Badge>}
+                            {isFailed && <Badge variant="destructive">异常</Badge>}
+                            {isWarning && <Badge variant="warning">警告</Badge>}
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            <p className="text-sm text-gray-700">{result.message}</p>
+                            {result.recommendation && (
+                              <Alert variant={isFailed ? 'destructive' : 'default'}>
+                                <AlertDescription className="text-sm">
+                                  <strong>建议：</strong>{result.recommendation}
+                                </AlertDescription>
+                              </Alert>
+                            )}
+                            {result.details && Object.keys(result.details).length > 0 && (
+                              <details className="mt-2">
+                                <summary className="text-sm font-medium cursor-pointer text-blue-600 hover:text-blue-700">
+                                  查看详细信息
+                                </summary>
+                                <div className="mt-2 p-3 bg-gray-50 rounded text-xs font-mono">
+                                  <pre className="whitespace-pre-wrap">
+                                    {JSON.stringify(result.details, null, 2)}
+                                  </pre>
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )
+                  })}
+                </div>
+              )}
+              
+              {showGlobalChecks && globalCheckResults.length === 0 && (
+                <Alert>
+                  <AlertDescription>
+                    暂无综合检查结果
+                  </AlertDescription>
+                </Alert>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </ClusterWizardLayout>
@@ -699,6 +852,34 @@ export default function EnvironmentCheckDialog({
         }}
       />
     )}
+    
+    {/* 主机名批量修改对话框 */}
+    <HostnameBatchEditDialog
+      open={hostnameEditDialogOpen}
+      onClose={() => setHostnameEditDialogOpen(false)}
+      clusterId={cluster?.id?.toString() || '0'}
+      hostIps={actualHostList.map(h => h.ip)}
+      connectionParams={connectionParams}
+      onSuccess={() => {
+        console.log('主机名修改成功')
+        // 可以选择刷新检查状态或重新运行全局检查
+        loadGlobalCheckResults()
+      }}
+    />
+    
+    {/* Hosts文件同步对话框 */}
+    <HostsFileSyncDialog
+      open={hostsFileSyncDialogOpen}
+      onClose={() => setHostsFileSyncDialogOpen(false)}
+      clusterId={cluster?.id?.toString() || '0'}
+      hostIps={actualHostList.map(h => h.ip)}
+      connectionParams={connectionParams}
+      onSuccess={() => {
+        console.log('Hosts文件同步成功')
+        // 可以选择刷新检查状态或重新运行全局检查
+        loadGlobalCheckResults()
+      }}
+    />
     </>
   )
 }
