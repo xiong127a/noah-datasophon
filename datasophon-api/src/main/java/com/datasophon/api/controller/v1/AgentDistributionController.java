@@ -1,11 +1,9 @@
 package com.datasophon.api.controller.v1;
 
 import com.datasophon.api.annotation.ClusterId;
+import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.AgentDistributionService;
-import com.datasophon.common.Result;
 import com.datasophon.common.vo.agent.AgentDistributionStatusVO;
-import io.swagger.annotations.Api;
-import io.swagger.annotations.ApiOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +22,6 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/agent-distribution")
 @RequiredArgsConstructor
-@Api(tags = "Agent分发管理")
 public class AgentDistributionController {
     
     private final AgentDistributionService agentDistributionService;
@@ -37,7 +34,6 @@ public class AgentDistributionController {
      * @return 分发任务ID
      */
     @PostMapping("/start")
-    @ApiOperation("启动Agent分发")
     public Result<String> startDistribution(
             @ClusterId Long clusterId,
             @RequestBody AgentDistributionRequest request) {
@@ -65,7 +61,6 @@ public class AgentDistributionController {
      * @return Agent分发状态列表
      */
     @GetMapping("/status")
-    @ApiOperation("获取Agent分发状态")
     public Result<List<AgentDistributionStatusVO>> getDistributionStatus(
             @ClusterId Long clusterId) {
         
@@ -88,7 +83,6 @@ public class AgentDistributionController {
      * @return 操作结果
      */
     @PostMapping("/cancel")
-    @ApiOperation("取消Agent分发")
     public Result<String> cancelDistribution(
             @ClusterId Long clusterId) {
         
