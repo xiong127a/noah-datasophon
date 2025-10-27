@@ -205,40 +205,94 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                     .filter(e -> e.getCommonResult().getCode() == 10001)
                     .toList();
 
+            // 获取当前Agent分发状态
+            var distributionStatus = agentDistributionService.getDistributionStatus(clusterId);
+            Map<String, com.datasophon.common.vo.agent.AgentDistributionStatusVO> statusMap = 
+                    distributionStatus.stream()
+                            .collect(java.util.stream.Collectors.toMap(
+                                    com.datasophon.common.vo.agent.AgentDistributionStatusVO::getHostIp, 
+                                    s -> s));
+
             for (HostInfo hostInfo : list) {
                 if (hostInfo.isManaged()) {
+                    // 已托管的主机直接标记为成功
                     hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
                     hostInfo.setProgress(Constants.ONE_HUNDRRD);
                     hostInfo.setMessage(MessageResolverUtils.getMessage("distribution.success"));
                     hostInfo.setInstallState(InstallState.SUCCESS);
-                } else if (!CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp())) {
-                    // TODO: 已废弃，建议使用新的 AgentDistributionController API
-                    // 旧的Actor架构已被替换为Spring Service架构
-                    // 此方法仅用于兼容性，实际分发请使用 /api/v1/agent-distribution/start
-                    log.warn("旧的Agent分发接口已废弃，建议使用新的API: /api/v1/agent-distribution/start");
-                    hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
-                    hostInfo.setProgress(0);
-                    hostInfo.setMessage("请使用新的Agent分发接口");
-                    hostInfo.setInstallState(InstallState.FAILED);
-
                 } else {
-                    long timeout = ChronoUnit.MINUTES.between(hostInfo.getCreateTime(), LocalDateTime.now());
-                    long timeOutPeriodOne = PropertyUtils.getLong("timeOutPeriodOne");
-                    long timeOutPeriodTwo = PropertyUtils.getLong("timeOutPeriodTwo");
-                    Integer progress = hostInfo.getProgress();
-                    if ("75".equals(String.valueOf(progress)) && timeout > timeOutPeriodOne) {
-                        hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
-                        hostInfo.setProgress(Constants.ONE_HUNDRRD);
-                        hostInfo.setMessage(MessageResolverUtils.getMessage("distribution.fail.tips.one"));
-                        hostInfo.setInstallState(InstallState.FAILED);
-                    }
-                    if (timeout > timeOutPeriodTwo) {
-                        hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
-                        hostInfo.setProgress(Constants.ONE_HUNDRRD);
-                        hostInfo.setInstallState(InstallState.FAILED);
+                    // 从新架构获取分发状态
+                    var status = statusMap.get(hostInfo.getIp());
+                    if (status != null) {
+                        // 映射新架构的状态到旧的InstallState
+                        switch (status.getStatus()) {
+                            case SUCCESS:
+                                hostInfo.setInstallStateCode(InstallState.SUCCESS.getValue());
+                                hostInfo.setInstallState(InstallState.SUCCESS);
+                                hostInfo.setProgress(100);
+                                hostInfo.setMessage("Agent安装成功");
+                                break;
+                            case FAILED:
+                                hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+                                hostInfo.setInstallState(InstallState.FAILED);
+                                hostInfo.setProgress(100);
+                                hostInfo.setMessage(status.getMessage());
+                                break;
+                            case RUNNING:
+                                hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
+                                hostInfo.setInstallState(InstallState.RUNNING);
+                                hostInfo.setProgress(status.getProgress());
+                                hostInfo.setMessage("正在分发Agent...");
+                                break;
+                            default:
+                                hostInfo.setInstallStateCode(InstallState.WAITING.getValue());
+                                hostInfo.setInstallState(InstallState.WAITING);
+                                hostInfo.setProgress(0);
+                                hostInfo.setMessage("等待分发");
+                                break;
+                        }
+                    } else if (!CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp())) {
+                        // 如果没有状态且未启动过，则自动启动分发（保持原有逻辑）
+                        log.info("自动启动Agent分发: {}", hostInfo.getIp());
+                        try {
+                            // 准备连接参数
+                            Map<String, Object> connectionParams = new java.util.HashMap<>();
+                            connectionParams.put("sshUser", hostInfo.getSshUser());
+                            connectionParams.put("sshPort", hostInfo.getSshPort());
+                            connectionParams.put("sshPassword", hostInfo.getSshPassword());
+                            
+                            Map<String, String> hostnames = new java.util.HashMap<>();
+                            hostnames.put(hostInfo.getIp(), hostInfo.getHostname());
+                            connectionParams.put("hostnames", hostnames);
+                            
+                            // 调用新的分发服务
+                            agentDistributionService.startDistribution(
+                                    clusterId, 
+                                    java.util.Collections.singletonList(hostInfo.getIp()), 
+                                    connectionParams);
+                            
+                            hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
+                            hostInfo.setInstallState(InstallState.RUNNING);
+                            hostInfo.setCreateTime(LocalDateTime.now());
+                            
+                            // 标记已启动
+                            CacheUtils.put(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp(), true);
+                        } catch (Exception e) {
+                            log.error("启动Agent分发失败: {}", hostInfo.getIp(), e);
+                            hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
+                            hostInfo.setInstallState(InstallState.FAILED);
+                            hostInfo.setMessage("启动分发失败: " + e.getMessage());
+                        }
+                    } else {
+                        // 已启动但无状态信息（可能正在初始化）
+                        hostInfo.setInstallStateCode(InstallState.RUNNING.getValue());
+                        hostInfo.setInstallState(InstallState.RUNNING);
+                        hostInfo.setProgress(0);
+                        hostInfo.setMessage("正在初始化...");
                     }
                 }
             }
+            
             // list分页
             Integer offset = (page - 1) * pageSize;
             List<HostInfo> result = getListPage(list, offset, pageSize);
@@ -254,44 +308,50 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
         try {
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
             Map<String, HostInfo> map = CacheUtils.getHostMap(clusterId + Constants.HOST_MAP);
-
-            for (String ip : ips.split(",")) {
-                // 不使用不存在的getClusterHostByIp方法
-                HostInfo hostInfo = new HostInfo();
-                boolean foundInMap = false;
-
+            
+            List<String> ipList = java.util.Arrays.asList(ips.split(","));
+            Map<String, Object> connectionParams = new java.util.HashMap<>();
+            Map<String, String> hostnames = new java.util.HashMap<>();
+            
+            // 准备连接参数
+            for (String ip : ipList) {
+                HostInfo hostInfo = null;
+                
                 // 在缓存map中查找匹配IP的主机信息
                 for (Map.Entry<String, HostInfo> entry : map.entrySet()) {
                     HostInfo hi = entry.getValue();
-                    if (hi != null && ip.equals(hi.getIp())) {
+                    if (hi != null && ip.trim().equals(hi.getIp())) {
                         hostInfo = hi;
-                        foundInMap = true;
                         break;
                     }
                 }
-
-                // 如果在缓存中没找到，则使用提供的IP构建基本信息
-                if (!foundInMap) {
-                    hostInfo.setIp(ip);
-                    hostInfo.setSshUser("root");
-                    hostInfo.setSshPort(22);
-                    hostInfo.setHostname(ip); // 使用IP作为hostname
-                }
-
-                // TODO: 已废弃，建议使用新的 AgentDistributionController API
-                // 旧的Actor架构已被替换为Spring Service架构
-                // 此方法仅用于兼容性，实际重试请使用 /api/v1/agent-distribution/start
-                log.warn("旧的Agent重试接口已废弃，主机: {}, 建议使用新的API: /api/v1/agent-distribution/start", ip);
                 
-                hostInfo.setInstallState(InstallState.FAILED);
-                hostInfo.setInstallStateCode(InstallState.FAILED.getValue());
-                hostInfo.setErrMsg("请使用新的Agent分发接口");
-                hostInfo.setProgress(0);
+                if (hostInfo != null) {
+                    // 使用找到的主机信息
+                    connectionParams.put("sshUser", hostInfo.getSshUser());
+                    connectionParams.put("sshPort", hostInfo.getSshPort());
+                    connectionParams.put("sshPassword", hostInfo.getSshPassword());
+                    hostnames.put(ip.trim(), hostInfo.getHostname());
+                } else {
+                    // 使用默认值
+                    log.warn("主机 {} 未在缓存中找到，使用默认SSH配置", ip);
+                    connectionParams.put("sshUser", "root");
+                    connectionParams.put("sshPort", 22);
+                    hostnames.put(ip.trim(), ip.trim());
+                }
             }
+            
+            connectionParams.put("hostnames", hostnames);
+            
+            // 调用新的Agent分发服务
+            log.info("重启Agent分发: 集群={}, 主机={}", clusterId, ips);
+            agentDistributionService.startDistribution(clusterId, ipList, connectionParams);
+            
             return true;
         } catch (Exception e) {
-            log.error("重启主机代理分发失败", e);
-            throw new BusinessException(Status.INTERNAL_SERVER_ERROR_ARGS.getCode(), "重启主机代理分发失败: " + e.getMessage());
+            log.error("重启主机代理分发失败: 集群={}, 主机={}", clusterId, ips, e);
+            throw new BusinessException(Status.INTERNAL_SERVER_ERROR_ARGS.getCode(), 
+                    "重启主机代理分发失败: " + e.getMessage());
         }
     }
 
