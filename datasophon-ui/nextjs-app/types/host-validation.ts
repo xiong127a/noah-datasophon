@@ -23,7 +23,7 @@ export interface CheckItem {
 
 // 主机接口
 export interface Host {
-  id?: number
+  id?: string  // 使用 string 避免 Long 精度丢失
   ip: string
   hostname?: string
   os?: string

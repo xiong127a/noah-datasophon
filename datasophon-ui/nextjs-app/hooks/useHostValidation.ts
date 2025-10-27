@@ -3,7 +3,7 @@ import { message } from 'antd'
 
 // API 接口定义
 interface HostValidationRequest {
-  clusterId: number
+  clusterId: string  // 使用 string 避免 Long 精度丢失
   hostIps: string[]
   sshUser: string
   sshPassword?: string
@@ -36,7 +36,7 @@ interface HostStatus {
 
 interface LogMessage {
   type: 'log'
-  clusterId: number
+  clusterId: string  // 使用 string 避免 Long 精度丢失
   hostIp: string
   logLevel: 'INFO' | 'WARN' | 'ERROR' | 'DEBUG'
   message: string
@@ -48,7 +48,7 @@ interface LogMessage {
  * 主机校验Hook
  * 管理主机校验状态、SSE连接和操作控制
  */
-export const useHostValidation = (clusterId: number) => {
+export const useHostValidation = (clusterId: string) => {
   // 状态管理
   const [hostStatuses, setHostStatuses] = useState<HostStatus[]>([])
   const [isConnected, setIsConnected] = useState(false)

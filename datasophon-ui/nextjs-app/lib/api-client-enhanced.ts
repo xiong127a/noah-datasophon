@@ -16,7 +16,7 @@ import { API_BASE_URL } from './api-config-v1'
  * 增强版API客户端配置
  */
 interface EnhancedApiConfig extends AxiosRequestConfig {
-  clusterId?: number | null  // 可选的集群ID，如果不提供则使用全局设置
+  clusterId?: string | null  // 可选的集群ID，如果不提供则使用全局设置
   requireClusterId?: boolean // 是否强制要求集群ID
 }
 
@@ -197,7 +197,7 @@ export class EnhancedApi {
    */
   async getWithCluster<T = any>(
     url: string, 
-    clusterId?: number | null,
+    clusterId?: string | null,
     config: EnhancedApiConfig = {}
   ): Promise<AxiosResponse<T>> {
     return this.get<T>(url, {
@@ -213,7 +213,7 @@ export class EnhancedApi {
   async postWithCluster<T = any>(
     url: string, 
     data?: any,
-    clusterId?: number | null,
+    clusterId?: string | null,
     config: EnhancedApiConfig = {}
   ): Promise<AxiosResponse<T>> {
     return this.post<T>(url, data, {
@@ -229,7 +229,7 @@ export class EnhancedApi {
   async putWithCluster<T = any>(
     url: string, 
     data?: any,
-    clusterId?: number | null,
+    clusterId?: string | null,
     config: EnhancedApiConfig = {}
   ): Promise<AxiosResponse<T>> {
     return this.put<T>(url, data, {
@@ -244,7 +244,7 @@ export class EnhancedApi {
    */
   async deleteWithCluster<T = any>(
     url: string, 
-    clusterId?: number | null,
+    clusterId?: string | null,
     config: EnhancedApiConfig = {}
   ): Promise<AxiosResponse<T>> {
     return this.delete<T>(url, {
@@ -267,13 +267,13 @@ export const clusterApiEnhanced = {
   /**
    * 获取集群详情
    */
-  getDetail: (clusterId?: number | null) => 
+  getDetail: (clusterId?: string | null) => 
     enhancedApi.getWithCluster('/api/v1/cluster/detail', clusterId),
 
   /**
    * 更新集群状态
    */
-  updateState: (clusterState: number, clusterId?: number | null) => 
+  updateState: (clusterState: number, clusterId?: string | null) => 
     enhancedApi.postWithCluster('/api/v1/cluster/updateClusterState', 
       null, clusterId, { 
         params: { clusterState } 
@@ -286,7 +286,7 @@ export const clusterApiEnhanced = {
     kubeConfig: string
     namespace: string
     customNamespace?: string
-  }, clusterId?: number | null) => 
+  }, clusterId?: string | null) => 
     enhancedApi.postWithCluster('/api/v1/cluster/kube-config', config, clusterId),
 
   /**
@@ -297,13 +297,13 @@ export const clusterApiEnhanced = {
     ip?: string
     page: number
     pageSize: number
-  }, clusterId?: number | null) => 
+  }, clusterId?: string | null) => 
     enhancedApi.getWithCluster('/api/v1/cluster/host/list', clusterId, { params }),
 
   /**
    * 获取集群服务列表
    */
-  getServiceList: (clusterId?: number | null) => 
+  getServiceList: (clusterId?: string | null) => 
     enhancedApi.getWithCluster('/api/v1/cluster/service/list', clusterId),
 }
 
