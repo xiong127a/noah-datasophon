@@ -46,6 +46,15 @@ public interface ClusterInfoConverter extends BaseConverter<ClusterInfoEntity, C
     ClusterInfoDTO entityToDto(ClusterInfoEntity entity);
 
     /**
+     * DTO转换为Entity时，将整数转换为枚举
+     */
+    @Mapping(target = "clusterState", source = "clusterState", qualifiedByName = "mapIntegerToClusterState")
+    @Mapping(target = "updateTime", ignore = true)
+    @Mapping(target = "updateBy", ignore = true)
+    @Override
+    ClusterInfoEntity dtoToEntity(ClusterInfoDTO dto);
+
+    /**
      * Entity转换为VO时，添加状态文本映射
      */
     @Mapping(target = "clusterState", source = "clusterState", qualifiedByName = "mapClusterStateToInteger")
@@ -100,5 +109,16 @@ public interface ClusterInfoConverter extends BaseConverter<ClusterInfoEntity, C
     @Named("mapClusterStateToInteger")
     default Integer mapClusterStateToInteger(ClusterState clusterState) {
         return clusterState != null ? clusterState.getValue() : null;
+    }
+
+    /**
+     * 将Integer转换为ClusterState枚举
+     */
+    @Named("mapIntegerToClusterState")
+    default ClusterState mapIntegerToClusterState(Integer clusterState) {
+        if (clusterState == null) {
+            return null;
+        }
+        return ClusterState.of(clusterState);
     }
 }
