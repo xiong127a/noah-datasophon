@@ -357,6 +357,12 @@ export const clusterApiV1 = {
       return response.data
     },
     
+    /** 验证环境检查是否完成，是否可以进入下一步 */
+    validate: async () => {
+      const response = await apiV1.get(API_PATHS_V1.ENVIRONMENT_CHECK_VALIDATION)
+      return response.data
+    },
+    
     // 注意：日志查看已改为通过SSE实时推送，不再需要轮询API
   },
 
