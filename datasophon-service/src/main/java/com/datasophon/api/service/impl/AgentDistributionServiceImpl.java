@@ -91,8 +91,11 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             log.info("【统一下载】开始下载Agent包到管理节点: {} -> {}", 
                     agentPackageUrl, localPackagePath);
             
-            // 创建临时上下文用于下载
+            // 创建临时上下文用于下载（使用特殊标识，因为是统一下载不针对特定主机）
             AgentDistributionContext downloadContext = AgentDistributionContext.builder()
+                    .clusterId(clusterId)
+                    .hostIp("management-node")  // 特殊标识：管理节点统一下载
+                    .hostname("Management Node")
                     .agentPackageUrl(agentPackageUrl)
                     .isLocalRepository(isLocalRepository)
                     .localPackagePath(localPackagePath)
