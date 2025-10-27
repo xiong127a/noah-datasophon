@@ -261,6 +261,54 @@ public class EnvironmentCheckController {
     }
     
     /**
+     * 重新检查环境
+     * 先清理旧的检查数据，再启动新的检查
+     * 用于检查完成后用户想要重新检查的场景
+     */
+    @PostMapping("/restart")
+    public Result<String> restartCheck(
+            @RequestBody EnvironmentCheckRequest request,
+            @ClusterId Long clusterId) {
+        
+        log.info("====== [环境检查控制器] 收到重新检查请求 ======");
+        log.info("====== 集群ID: {}, 主机列表: {} ======", clusterId, request.getHostIps());
+        
+        try {
+            // 设置集群ID
+            request.setClusterId(clusterId);
+            
+            // 参数校验
+            if (request.getHostIps() == null || request.getHostIps().isEmpty()) {
+                return Result.error("主机列表不能为空");
+            }
+            
+            if (request.getConnectionParams() == null) {
+                return Result.error("连接参数不能为空");
+            }
+            
+            // 先清理旧的检查数据
+            log.info("清理旧的检查数据: clusterId={}", clusterId);
+            try {
+                environmentCheckService.cleanupCheckData(clusterId);
+                log.info("旧数据清理成功，准备启动新检查");
+            } catch (Exception e) {
+                log.warn("清理旧数据时发生异常，继续启动新检查: {}", e.getMessage());
+                // 继续执行，不因为清理失败而中断
+            }
+            
+            // 启动新的检查
+            var taskId = environmentCheckService.startEnvironmentCheck(request);
+            
+            return new Result<>(200, "环境检查已重新启动，请通过SSE接收实时状态更新", taskId);
+            
+        } catch (Exception e) {
+            log.error("重新启动环境检查失败: clusterId={}, error={}", 
+                    clusterId, e.getMessage(), e);
+            return Result.error("重新启动环境检查失败: " + e.getMessage());
+        }
+    }
+    
+    /**
      * 获取JDK配置（包含是否启用高级选择）
      */
     @GetMapping("/jdk-config")
