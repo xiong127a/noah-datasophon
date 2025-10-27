@@ -83,12 +83,47 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
         log.info("Agent包来源: {}, 类型: {}", agentPackageUrl, 
                 isLocalRepository ? "本地" : "HTTP");
         
+        // ====== 1. 先下载Agent包到管理节点（只下载一次） ======
+        String localPackagePath = Constants.MASTER_MANAGE_PACKAGE_PATH + 
+                Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
+        
+        try {
+            log.info("【统一下载】开始下载Agent包到管理节点: {} -> {}", 
+                    agentPackageUrl, localPackagePath);
+            
+            // 创建临时上下文用于下载
+            AgentDistributionContext downloadContext = AgentDistributionContext.builder()
+                    .agentPackageUrl(agentPackageUrl)
+                    .isLocalRepository(isLocalRepository)
+                    .localPackagePath(localPackagePath)
+                    .logWriter(logWriter)
+                    .build();
+            
+            // 执行下载步骤（只执行一次）
+            DownloadAgentStep downloadStep = new DownloadAgentStep(downloaderFactory);
+            downloadStep.execute(downloadContext);
+            
+            log.info("【统一下载】Agent包下载完成: {}", localPackagePath);
+            
+        } catch (Exception e) {
+            log.error("【统一下载】Agent包下载失败: {}", e.getMessage(), e);
+            
+            // 下载失败，所有主机都标记为失败
+            for (String hostIp : hostIps) {
+                stateManager.initHostStatus(clusterId, hostIp, hostIp);
+                stateManager.updateHostStatus(clusterId, hostIp, "FAILED", 0,
+                        "下载Agent包", "Agent包下载失败: " + e.getMessage());
+            }
+            
+            throw new RuntimeException("Agent包下载失败: " + e.getMessage(), e);
+        }
+        
         // 提取SSH连接参数
         String sshUser = (String) connectionParams.get("sshUser");
         Integer sshPort = Integer.parseInt(String.valueOf(connectionParams.get("sshPort")));
         String sshPassword = (String) connectionParams.get("sshPassword");
         
-        // 为每个主机初始化状态并创建异步分发任务
+        // ====== 2. 并发分发到各个主机（跳过下载步骤） ======
         for (String hostIp : hostIps) {
             String hostname = hostIp; // 默认使用IP作为主机名
             if (connectionParams.containsKey("hostnames")) {
@@ -103,11 +138,11 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             // 清理旧日志
             logWriter.clearLog(clusterId, hostIp);
             
-            // 启动异步分发任务
+            // 启动异步分发任务（从本地上传，跳过下载步骤）
             String finalHostname = hostname;
             CompletableFuture.runAsync(() -> {
                 distributeToHost(clusterId, hostIp, finalHostname, sshUser, sshPort, sshPassword,
-                        agentPackageUrl, isLocalRepository, cluster.getClusterFrame());
+                        localPackagePath, cluster.getClusterFrame());
             }, executorService);
         }
         
@@ -115,11 +150,11 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     }
     
     /**
-     * 分发Agent到单个主机
+     * 分发Agent到单个主机（从本地已下载的包）
      */
     private void distributeToHost(Long clusterId, String hostIp, String hostname,
                                    String sshUser, Integer sshPort, String sshPassword,
-                                   String agentPackageUrl, boolean isLocalRepository,
+                                   String localPackagePath,
                                    String clusterFrame) {
         try {
             // 检查是否已取消
@@ -130,15 +165,11 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
                 return;
             }
             
-            log.info("开始分发Agent到主机: {}", hostIp);
+            log.info("开始分发Agent到主机: {} (从本地: {})", hostIp, localPackagePath);
             stateManager.updateHostStatus(clusterId, hostIp, "RUNNING", 0,
                     "准备中", "开始分发Agent");
             
             logWriter.logStart(clusterId, hostIp, "开始分发Agent到主机: " + hostIp);
-            
-            // 构建本地包路径
-            String localPackagePath = Constants.MASTER_MANAGE_PACKAGE_PATH + 
-                    Constants.SLASH + Constants.WORKER_PACKAGE_NAME;
             
             // 构建分发上下文
             AgentDistributionContext context = AgentDistributionContext.builder()
@@ -148,16 +179,13 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
                     .sshUser(sshUser)
                     .sshPort(sshPort)
                     .sshPassword(sshPassword)
-                    .agentPackageUrl(agentPackageUrl)
-                    .isLocalRepository(isLocalRepository)
                     .localPackagePath(localPackagePath)
                     .logWriter(logWriter)
                     .remoteInstallPath(Constants.INSTALL_PATH)
                     .build();
             
-            // 创建分发步骤列表
+            // 创建分发步骤列表（跳过下载步骤，直接从本地上传）
             List<AgentDistributionStep> steps = Arrays.asList(
-                    new DownloadAgentStep(downloaderFactory),
                     new UploadAgentStep(getSshService()),
                     new VerifyMd5Step(getSshService()),
                     new DecompressAgentStep(getSshService()),
