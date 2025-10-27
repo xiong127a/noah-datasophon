@@ -172,6 +172,12 @@ export default function EnvironmentCheckDialog({
         const data = JSON.parse(event.data)
         if (data.type === 'progress' && data.data) {
           setCheckStatus(data.data)
+          
+          // 同时更新验证结果（不再需要额外 API 调用）
+          if (data.validation) {
+            setValidation(data.validation)
+            console.log('验证结果已更新:', data.validation)
+          }
         }
       } catch (error) {
         console.error('解析SSE消息失败:', error)
@@ -231,34 +237,18 @@ export default function EnvironmentCheckDialog({
       if (response && Array.isArray(response)) {
         setCheckStatus(response)
         console.log('检查状态已更新:', response)
-        // 同时刷新验证结果
-        fetchValidation()
+        
+        // 同时刷新验证结果（SSE 可能断开时使用）
+        const validationResponse = await clusterApiV1.environmentCheck.validate()
+        if (validationResponse.code === 200) {
+          setValidation(validationResponse.data)
+          console.log('验证结果已更新:', validationResponse.data)
+        }
       }
     } catch (error) {
       console.error('刷新检查状态失败:', error)
     }
   }
-  
-  // 从后端获取验证结果
-  const fetchValidation = async () => {
-    try {
-      console.log('获取验证结果...')
-      const response = await clusterApiV1.environmentCheck.validate()
-      if (response.code === 200) {
-        setValidation(response.data)
-        console.log('验证结果:', response.data)
-      }
-    } catch (error) {
-      console.error('获取验证结果失败:', error)
-    }
-  }
-  
-  // 在检查状态变化时获取验证结果
-  useEffect(() => {
-    if (checkStatus.length > 0) {
-      fetchValidation()
-    }
-  }, [checkStatus])
   
   // 执行修复（带参数）
   const executeRepair = async (hostIp: string, checkKey: string, checkName: string, repairParams: RepairOptions | Record<string, never>) => {
