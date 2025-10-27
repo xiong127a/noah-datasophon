@@ -21,7 +21,7 @@ interface AddRackDialogProps {
   open: boolean
   onCancel: () => void
   onSuccess: () => void
-  clusterId: number
+  clusterId: string
 }
 
 const AddRackDialog = ({ open, onCancel, onSuccess, clusterId }: AddRackDialogProps) => {

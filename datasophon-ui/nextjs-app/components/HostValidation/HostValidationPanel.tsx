@@ -33,7 +33,7 @@ const { Panel } = Collapse
 const { Text, Title } = Typography
 
 interface HostValidationPanelProps {
-  clusterId: number
+  clusterId: string
 }
 
 /**

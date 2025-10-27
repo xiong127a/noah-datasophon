@@ -19,7 +19,7 @@ import { apiClient, API_PATHS } from "@/lib/api"
 
 // 用户数据类型定义
 interface User {
-  id: number
+  id: string
   username: string
   email: string
   role: string
@@ -103,7 +103,7 @@ export default function ClusterAuthorizationDialogSuper({
     return matchesSearch
   })
 
-  const handleUserToggle = (userId: number) => {
+  const handleUserToggle = (userId: string) => {
     setSelectedUsers((prev) => 
       prev.includes(userId) 
         ? prev.filter((u) => u !== userId) 

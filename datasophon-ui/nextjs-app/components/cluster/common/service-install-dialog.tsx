@@ -99,7 +99,7 @@ interface DataItem {
   [key: string]: unknown // 支持动态属性访问
 }
 interface ClusterInfo {
-  id: number
+  id: string
   clusterName: string
   depType: string
 }

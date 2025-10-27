@@ -20,7 +20,7 @@ import { HostValidationPanel } from './HostValidationPanel'
 const { Title, Paragraph } = Typography
 
 interface HostValidationPageProps {
-  clusterId: number
+  clusterId: string
 }
 
 /**

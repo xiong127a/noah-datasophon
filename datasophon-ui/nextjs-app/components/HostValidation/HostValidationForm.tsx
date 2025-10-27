@@ -26,7 +26,7 @@ const { TextArea } = Input
 const { Title, Text } = Typography
 
 interface HostValidationFormProps {
-  clusterId: number
+  clusterId: string
   onValidationStart?: () => void
 }
 

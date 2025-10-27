@@ -56,7 +56,7 @@ interface ConfigVersion {
 }
 
 interface RoleGroup {
-  id: number
+  id: string
   roleGroupName: string
 }
 

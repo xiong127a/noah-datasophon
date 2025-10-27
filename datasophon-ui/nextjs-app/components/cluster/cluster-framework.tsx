@@ -25,7 +25,7 @@ import { API_PATHS, apiClient } from "@/lib/api"
 
 // 定义数据类型
 interface FrameworkService {
-  id: number
+  id: string
   serviceName: string
   serviceVersion: string
   serviceDesc?: string
@@ -37,7 +37,7 @@ interface Framework {
   frameServiceList: FrameworkService[]
 }
 
-const ServiceCard = ({ service, onDelete }: { service: FrameworkService; onDelete: (id: number) => void }) => {
+const ServiceCard = ({ service, onDelete }: { service: FrameworkService; onDelete: (id: string) => void }) => {
   return (
     <Card className="rounded-xl border border-slate-200 bg-white hover:shadow-md transition-all duration-200">
       <CardContent className="p-4">
@@ -125,7 +125,7 @@ export default function ClusterFramework() {
   }
 
   // 删除服务
-  const handleDeleteService = async (serviceId: number) => {
+  const handleDeleteService = async (serviceId: string) => {
     try {
       const response = await apiClient.get(`${API_PATHS.FRAME_SERVICE_DELETE}/${serviceId}`)
       if (response.data.code === 200) {
