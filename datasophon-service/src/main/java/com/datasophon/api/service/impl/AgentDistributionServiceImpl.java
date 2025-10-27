@@ -43,19 +43,27 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     private final ConfigBean configBean;
     private final RepositoryDownloaderFactory downloaderFactory;
     
-    // SSH连接服务（延迟初始化，避免Spring容器初始化时获取上下文）
-    private SshConnectionService sshService;
+    // SSH连接服务（懒加载，第一次使用时才初始化）
+    private volatile SshConnectionService sshService;
     
     // 异步执行线程池
     private final ExecutorService executorService = Executors.newCachedThreadPool();
     
     /**
-     * Bean初始化后执行，此时Spring容器已完成初始化
+     * 获取SSH连接服务（懒加载模式）
+     * 
+     * @return SSH连接服务
      */
-    @jakarta.annotation.PostConstruct
-    public void init() {
-        this.sshService = SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
-        log.info("AgentDistributionServiceImpl 初始化完成，SSH连接服务已就绪");
+    private SshConnectionService getSshService() {
+        if (sshService == null) {
+            synchronized (this) {
+                if (sshService == null) {
+                    sshService = SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+                    log.info("SSH连接服务初始化完成");
+                }
+            }
+        }
+        return sshService;
     }
     
     @Override
@@ -150,10 +158,10 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             // 创建分发步骤列表
             List<AgentDistributionStep> steps = Arrays.asList(
                     new DownloadAgentStep(downloaderFactory),
-                    new UploadAgentStep(sshService),
-                    new VerifyMd5Step(sshService),
-                    new DecompressAgentStep(sshService),
-                    new StartAgentStep(sshService, configBean, clusterFrame)
+                    new UploadAgentStep(getSshService()),
+                    new VerifyMd5Step(getSshService()),
+                    new DecompressAgentStep(getSshService()),
+                    new StartAgentStep(getSshService(), configBean, clusterFrame)
             );
             
             int totalSteps = steps.size();
