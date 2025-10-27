@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface CheckLogsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  clusterId: number
+  clusterId: string  // 使用 string 避免 Long 精度丢失
   hostIp: string
   checkKey: string
   checkName: string

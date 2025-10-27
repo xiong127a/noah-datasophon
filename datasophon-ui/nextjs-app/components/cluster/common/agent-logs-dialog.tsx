@@ -19,7 +19,7 @@ import { API_BASE_URL } from '@/lib/api-config-v1'
 interface AgentLogsDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  clusterId: number
+  clusterId: string  // 使用 string 避免 Long 精度丢失
   hostIp: string
   hostname: string
 }

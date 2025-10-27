@@ -493,7 +493,7 @@ const AgentDeploymentDialog: React.FC<AgentDeploymentDialogProps> = ({
       <AgentLogsDialog
         open={logsDialogOpen}
         onOpenChange={setLogsDialogOpen}
-        clusterId={typeof cluster?.id === 'number' ? cluster.id : Number(cluster?.id) || 0}
+        clusterId={cluster?.id || '0'}
         hostIp={selectedHost.ip}
         hostname={selectedHost.hostname}
       />
