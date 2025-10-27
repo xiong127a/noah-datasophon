@@ -1,10 +1,10 @@
 package com.datasophon.api.controller.v1;
 
 import com.datasophon.api.annotation.ClusterId;
+import com.datasophon.api.dto.Result;
 import com.datasophon.api.service.HostManagementService;
 import com.datasophon.common.dto.host.BatchHostnameChangeRequest;
 import com.datasophon.common.dto.host.HostsSyncRequest;
-import com.datasophon.common.utils.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
