@@ -485,6 +485,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
                   onExpandedGroupsChange={setExpandedGroups}
                   onSave={async () => { await saveCurrentServiceConfig() }}
                   saving={saving}
+                  isK8s={isK8s}  // ✅ 传递集群类型标识
                 />
               ) : (
                 <div className="flex-1 flex items-center justify-center">

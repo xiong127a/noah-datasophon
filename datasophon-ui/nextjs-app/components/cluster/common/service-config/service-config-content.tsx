@@ -30,6 +30,7 @@ interface ServiceConfigContentProps {
   onExpandedGroupsChange: (expandedGroups: Set<string>) => void
   onSave: () => Promise<void>
   saving: boolean
+  isK8s?: boolean  // ✅ 添加集群类型标识
 }
 
 /**
@@ -47,7 +48,8 @@ const ServiceConfigContent: React.FC<ServiceConfigContentProps> = ({
   onFormDataChange,
   onExpandedGroupsChange,
   onSave,
-  saving
+  saving,
+  isK8s = false  // ✅ 接收集群类型标识
 }) => {
   // 处理表单字段变化
   const handleFieldChange = useCallback((fieldName: string, value: unknown) => {
@@ -155,8 +157,8 @@ const ServiceConfigContent: React.FC<ServiceConfigContentProps> = ({
               </div>
             )}
 
-            {/* Kubernetes配置 */}
-            {hasKubernetesConfig && (
+            {/* Kubernetes配置 - ✅ 只在K8S集群中显示 */}
+            {isK8s && hasKubernetesConfig && (
               <div className="mt-8">
                 <div className="relative">
                   <Separator className="mb-6 bg-gradient-to-r from-transparent via-gray-300/60 to-transparent" />
