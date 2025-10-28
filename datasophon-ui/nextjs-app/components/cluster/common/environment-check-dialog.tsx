@@ -268,7 +268,9 @@ export default function EnvironmentCheckDialog({
   
   // 自动加载全局检查结果（当所有主机检查完成后）
   useEffect(() => {
-    if (!isChecking && checkStatus.length > 0 && overallProgress.completedHosts === overallProgress.totalHosts) {
+    if (!isChecking && checkStatus.length > 0 && overallProgress && 
+        overallProgress.completedHosts === overallProgress.totalHosts && 
+        overallProgress.totalHosts > 0) {
       // 所有主机检查完成，自动加载全局检查结果
       const loadGlobalResults = async () => {
         try {
@@ -286,7 +288,7 @@ export default function EnvironmentCheckDialog({
       // 延迟1秒加载，给后端时间执行全局检查
       setTimeout(loadGlobalResults, 1000)
     }
-  }, [isChecking, checkStatus.length, overallProgress.completedHosts, overallProgress.totalHosts])
+  }, [isChecking, checkStatus.length, overallProgress])
 
   // 跳过检查项
   const handleSkipItem = async (hostIp: string, checkKey: string) => {
@@ -722,7 +724,9 @@ export default function EnvironmentCheckDialog({
           </div>
 
           {/* 第二部分：综合检查（所有主机检查完成后自动显示） */}
-          {!isChecking && checkStatus.length > 0 && overallProgress.completedHosts === overallProgress.totalHosts && (
+          {!isChecking && checkStatus.length > 0 && overallProgress && 
+           overallProgress.completedHosts === overallProgress.totalHosts && 
+           overallProgress.totalHosts > 0 && (
             <div className="space-y-4 mt-8">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
