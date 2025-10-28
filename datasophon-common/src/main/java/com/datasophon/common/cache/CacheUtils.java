@@ -140,7 +140,7 @@ public class CacheUtils {
         }
     }
 
-    public static boolean constainsKey(String key) {
+    public static boolean containsKey(String key) {
         return cache.containsKey(key);
     }
 

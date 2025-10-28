@@ -71,7 +71,7 @@ public class serviceCacheSyncActor extends AbstractActor {
             return;
         }
 
-        if (CacheUtils.constainsKey(key)) {
+        if (CacheUtils.containsKey(key)) {
             result.setObject(CacheUtils.get(key));
             logger.info("get cache value success");
         } else {

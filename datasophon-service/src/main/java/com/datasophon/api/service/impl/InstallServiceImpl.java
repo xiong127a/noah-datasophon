@@ -248,7 +248,7 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
                             hostInfo.setProgress(0);
                             hostInfo.setMessage("等待分发");
                         }
-                    } else if (!CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp())) {
+                    } else if (!CacheUtils.containsKey(distributeAgentKey + Constants.UNDERLINE + hostInfo.getIp())) {
                         // 如果没有状态且未启动过，则自动启动分发（保持原有逻辑）
                         log.info("自动启动Agent分发: {}", hostInfo.getIp());
                         try {

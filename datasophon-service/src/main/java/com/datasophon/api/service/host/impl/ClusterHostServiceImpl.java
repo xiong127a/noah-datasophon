@@ -162,7 +162,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             }
 
             String distributeAgentKey = clusterId + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
-            if (CacheUtils.constainsKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname())) {
+            if (CacheUtils.containsKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname())) {
                 CacheUtils.removeKey(distributeAgentKey + Constants.UNDERLINE + host.getHostname());
             }
 

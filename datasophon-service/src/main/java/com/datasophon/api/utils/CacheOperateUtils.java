@@ -181,7 +181,7 @@ public class CacheOperateUtils {
     }
 
     public static boolean containsKey(String key) {
-        return CacheUtils.constainsKey(key) || remoteCacheContains(key);
+        return CacheUtils.containsKey(key) || remoteCacheContains(key);
     }
 
     // 获取 String 类型的缓存
