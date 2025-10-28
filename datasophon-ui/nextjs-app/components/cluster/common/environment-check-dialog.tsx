@@ -321,12 +321,7 @@ export default function EnvironmentCheckDialog({
         reason: '用户手动跳过'
       })
       console.log(`✅ 已跳过检查项: ${hostIp} - ${checkKey}`)
-      
-      // 等待500ms后刷新状态（确保UI更新）
-      setTimeout(async () => {
-        console.log('🔄 刷新检查状态（确保UI更新）')
-        await refreshCheckStatus()
-      }, 500)
+      console.log('⚡ 等待SSE推送状态更新')
     } catch (error: any) {
       console.error('❌ 跳过检查项失败:', error)
     }
@@ -337,12 +332,7 @@ export default function EnvironmentCheckDialog({
     try {
       const result = await clusterApiV1.environmentCheck.skipAllFailed()
       console.log(`✅ 批量跳过成功:`, result)
-      
-      // 等待500ms后刷新状态（确保UI更新）
-      setTimeout(async () => {
-        console.log('🔄 刷新检查状态（确保UI更新）')
-        await refreshCheckStatus()
-      }, 500)
+      console.log('⚡ 等待SSE推送状态更新')
     } catch (error: any) {
       console.error('❌ 批量跳过失败:', error)
     }
@@ -385,20 +375,10 @@ export default function EnvironmentCheckDialog({
       })
       
       console.log('✅ 修复完成:', result)
-      
-      // 3. 修复完成后，等待1秒让SSE推送完成，然后刷新状态（作为fallback）
-      setTimeout(async () => {
-        console.log('🔄 刷新检查状态（确保UI更新）')
-        await refreshCheckStatus()
-      }, 1000)
+      console.log('⚡ 等待SSE推送状态更新')
       
     } catch (error: any) {
       console.error('修复检查项失败:', error)
-      // 即使修复失败，也刷新状态以显示最新的错误信息
-      setTimeout(async () => {
-        console.log('🔄 修复失败，刷新检查状态')
-        await refreshCheckStatus()
-      }, 500)
     }
   }
   

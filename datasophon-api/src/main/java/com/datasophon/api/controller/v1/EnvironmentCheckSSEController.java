@@ -94,10 +94,10 @@ public class EnvironmentCheckSSEController implements ApplicationListener<CheckS
         SseEmitter emitter = activeEmitters.get(emitterKey);
         
         if (emitter != null) {
-            log.debug("收到状态变更事件: 集群={}, 时间={}", clusterId, event.getEventTimestamp());
+            log.info("📥 SSE收到状态变更事件: 集群={}, 准备推送到前端", clusterId);
             pushStatusUpdate(clusterId, emitter);
         } else {
-            log.trace("没有活跃的SSE连接: 集群={}", clusterId);
+            log.warn("⚠️ 没有活跃的SSE连接: 集群={}, 无法推送", clusterId);
         }
     }
     
@@ -109,6 +109,11 @@ public class EnvironmentCheckSSEController implements ApplicationListener<CheckS
             var status = stateManager.getClusterStatus(clusterId);
             var validation = environmentCheckService.validateForNextStep(clusterId);
             
+            // 统计信息（用于日志）
+            long totalSuccess = status.stream().mapToInt(EnvironmentCheckStatusVO::getSuccessItems).sum();
+            long totalFailed = status.stream().mapToInt(EnvironmentCheckStatusVO::getFailedItems).sum();
+            long totalSkipped = status.stream().mapToInt(EnvironmentCheckStatusVO::getSkippedItems).sum();
+            
             var data = Map.of(
                     "type", "progress",
                     "data", status,
@@ -119,12 +124,14 @@ public class EnvironmentCheckSSEController implements ApplicationListener<CheckS
                     .name("progress")
                     .data(data));
             
-            log.debug("推送状态更新: 集群={}, 主机数={}", clusterId, status.size());
+            log.info("📤 SSE推送成功: 集群={}, 主机数={}, 成功={}, 失败={}, 跳过={}, 可继续={}", 
+                    clusterId, status.size(), totalSuccess, totalFailed, totalSkipped, 
+                    validation.get("canProceed"));
         } catch (IOException e) {
-            log.warn("SSE连接已断开: 集群={}", clusterId);
+            log.warn("⚠️ SSE连接已断开: 集群={}", clusterId);
             activeEmitters.remove(clusterId.toString());
         } catch (Exception e) {
-            log.error("推送状态失败: 集群={}, 错误={}", clusterId, e.getMessage(), e);
+            log.error("❌ SSE推送失败: 集群={}, 错误={}", clusterId, e.getMessage(), e);
         }
     }
     

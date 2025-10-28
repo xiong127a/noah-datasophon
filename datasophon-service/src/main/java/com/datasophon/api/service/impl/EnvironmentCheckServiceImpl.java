@@ -184,7 +184,7 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
             
             // 如果修复成功，重新执行检查
             if (repairResult.getSuccess() != null && repairResult.getSuccess()) {
-                log.info("修复成功，重新执行检查: {}", checkItemKey);
+                log.info("✅ 修复成功，重新执行检查验证结果: {}", checkItemKey);
                 var checkResult = checker.execute(context);
                 
                 // 更新检查状态
@@ -196,9 +196,18 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
                 if (itemVO != null) {
                     itemVO.setStatus(checkResult.getStatus());
                     itemVO.setMessage(checkResult.getMessage());
+                    itemVO.setCheckResult(checkResult.getDetails());
+                    itemVO.setRecommendation(checkResult.getRecommendation());
                     repairResult.setUpdatedStatus(itemVO);
+                    
+                    log.info("📤 更新检查项状态并触发SSE推送: 集群={}, 主机={}, 检查项={}, 新状态={}", 
+                            clusterId, hostIp, checkItemKey, itemVO.getStatus());
+                    
+                    // 更新状态（会自动触发SSE推送）
                     stateManager.updateCheckItemStatus(clusterId, hostIp, checkItemKey, itemVO);
                 }
+            } else {
+                log.warn("⚠️ 修复未成功: {}, 不重新检查", checkItemKey);
             }
             
             // 发布修复完成事件（由SSE控制器监听并推送）

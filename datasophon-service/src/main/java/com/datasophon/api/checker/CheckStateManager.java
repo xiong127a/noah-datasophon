@@ -107,6 +107,9 @@ public class CheckStateManager {
                     // 添加新项
                     hostStatus.getCheckItems().add(itemVO);
                 }
+                
+                // ✅ 重新计算主机统计信息（修复/跳过后需要更新统计数据）
+                recalculateHostStatistics(hostStatus);
             }
         }
         log.debug("更新检查项状态: 集群={}, 主机={}, 检查项={}, 状态={}", 
@@ -274,7 +277,7 @@ public class CheckStateManager {
      */
     private void publishStatusChangeEvent(Long clusterId) {
         eventPublisher.publishEvent(new CheckStatusChangeEvent(this, clusterId));
-        log.debug("发布状态变更事件: 集群={}", clusterId);
+        log.info("📢 发布状态变更事件，触发SSE推送: 集群={}", clusterId);
     }
 }
 
