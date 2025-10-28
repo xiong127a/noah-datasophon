@@ -81,10 +81,6 @@ ${hostsEntries}
       return
     }
 
-    if (!confirm(`确定要同步hosts文件到 ${hostIps.length} 台主机吗？`)) {
-      return
-    }
-
     setExecuting(true)
     setCompleted(false)
     setProgress(hostIps.map(ip => ({
