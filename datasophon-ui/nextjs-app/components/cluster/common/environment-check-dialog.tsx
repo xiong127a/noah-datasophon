@@ -134,7 +134,7 @@ export default function EnvironmentCheckDialog({
       const hostsToCheck = actualHostList.length > 0 ? actualHostList : hostList
       
       if (!hostsToCheck || hostsToCheck.length === 0) {
-        alert('没有可检查的主机')
+        console.warn('没有可检查的主机')
         return
       }
       
@@ -162,7 +162,7 @@ export default function EnvironmentCheckDialog({
       }
     } catch (error: any) {
       console.error('启动环境检查失败:', error)
-      alert('启动环境检查失败: ' + (error.message || '未知错误'))
+      // ✅ 移除弹窗提示，只在控制台打印错误
       setIsChecking(false)
     }
   }
@@ -173,7 +173,7 @@ export default function EnvironmentCheckDialog({
       const hostsToCheck = actualHostList.length > 0 ? actualHostList : hostList
       
       if (!hostsToCheck || hostsToCheck.length === 0) {
-        alert('没有可检查的主机')
+        console.warn('没有可检查的主机')
         return
       }
       
@@ -199,7 +199,7 @@ export default function EnvironmentCheckDialog({
       }
     } catch (error: any) {
       console.error('重新启动环境检查失败:', error)
-      alert('重新启动环境检查失败: ' + (error.message || '未知错误'))
+      // ✅ 移除弹窗提示，只在控制台打印错误
       setIsChecking(false)
     }
   }
@@ -325,7 +325,7 @@ export default function EnvironmentCheckDialog({
       // 移除手动刷新，完全依赖SSE事件驱动推送
     } catch (error: any) {
       console.error('❌ 跳过检查项失败:', error)
-      alert('跳过失败: ' + (error.message || '未知错误'))
+      // ✅ 移除弹窗提示，只在控制台打印错误
     }
   }
   
@@ -334,11 +334,11 @@ export default function EnvironmentCheckDialog({
     try {
       const result = await clusterApiV1.environmentCheck.skipAllFailed()
       console.log(`✅ 批量跳过成功:`, result)
-      alert(result.message || '批量跳过成功')
+      // ✅ 移除弹窗提示，SSE会自动推送状态更新
       console.log('⚡ SSE会自动推送状态更新')
     } catch (error: any) {
       console.error('❌ 批量跳过失败:', error)
-      alert('批量跳过失败: ' + (error.message || '未知错误'))
+      // ✅ 移除弹窗提示，只在控制台打印错误
     }
   }
 
