@@ -1,4 +1,6 @@
-export JAVA_HOME=/usr/local/jdk1.8.0_333
+# 使用统一的JDK软链接路径，支持多版本JDK（JDK8/11/17/21等）
+# 实际JDK目录由环境检查修复步骤自动创建软链接：/usr/local/jdk -> /usr/local/jdk-x.x.x
+export JAVA_HOME=/usr/local/jdk
 CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
 export JAVA_HOME CLASSPATH
 
