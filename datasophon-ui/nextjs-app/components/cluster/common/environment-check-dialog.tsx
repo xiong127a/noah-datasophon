@@ -421,10 +421,9 @@ export default function EnvironmentCheckDialog({
     }
     
     const totalHosts = checkStatus.length
+    // 判断主机是否完成：所有检查项都完成了（不管成功还是失败）
     const completedHosts = checkStatus.filter(h => 
-      h.overallStatus === 'SUCCESS' || 
-      h.overallStatus === 'PARTIAL_SUCCESS' || 
-      h.overallStatus === 'FAILED'
+      h.totalItems > 0 && (h.completedItems === h.totalItems)
     ).length
     const successHosts = checkStatus.filter(h => h.overallStatus === 'SUCCESS').length
     const partialSuccessHosts = checkStatus.filter(h => h.overallStatus === 'PARTIAL_SUCCESS').length
@@ -437,6 +436,24 @@ export default function EnvironmentCheckDialog({
   const progressPercentage = overallProgress.totalHosts > 0 
     ? Math.round((overallProgress.completedHosts / overallProgress.totalHosts) * 100)
     : 0
+
+  // 调试：输出进度信息
+  useEffect(() => {
+    if (checkStatus.length > 0) {
+      console.log('📊 检查进度:', {
+        completedHosts: overallProgress.completedHosts,
+        totalHosts: overallProgress.totalHosts,
+        percentage: progressPercentage,
+        hosts: checkStatus.map(h => ({
+          ip: h.hostIp,
+          status: h.overallStatus,
+          completed: h.completedItems,
+          total: h.totalItems,
+          isComplete: h.completedItems === h.totalItems
+        }))
+      })
+    }
+  }, [checkStatus, overallProgress, progressPercentage])
 
   // 处理上一步：清理检查数据
   const handlePrevious = async () => {
