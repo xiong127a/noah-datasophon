@@ -78,6 +78,15 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
                         log.error("环境检查失败: 集群={}, 错误={}", clusterId, error.getMessage(), error);
                     } else {
                         log.info("环境检查完成: 集群={}, 主机数={}", clusterId, results.size());
+                        
+                        // 所有主机检查完成后，自动执行全局检查
+                        log.info("所有主机检查完成，开始自动执行全局检查...");
+                        try {
+                            runGlobalChecks(clusterId);
+                            log.info("全局检查自动执行完成");
+                        } catch (Exception e) {
+                            log.error("自动执行全局检查失败: {}", e.getMessage(), e);
+                        }
                     }
                 });
         

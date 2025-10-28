@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { 
   CheckCircle2, 
   XCircle, 
@@ -20,7 +19,6 @@ import {
   SkipForward,
   Wrench,
   FileText,
-  Server,
   Globe
 } from 'lucide-react'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
@@ -101,10 +99,6 @@ export default function EnvironmentCheckDialog({
   // 全局检查相关状态
   const [globalCheckResults, setGlobalCheckResults] = useState<any[]>([])
   const [isRunningGlobalChecks, setIsRunningGlobalChecks] = useState(false)
-  const [showGlobalChecks, setShowGlobalChecks] = useState(false)
-  
-  // Tab切换状态
-  const [activeTab, setActiveTab] = useState<'host' | 'global'>('host')
   
   // 主机管理对话框状态
   const [hostnameEditDialogOpen, setHostnameEditDialogOpen] = useState(false)
@@ -272,41 +266,27 @@ export default function EnvironmentCheckDialog({
     setLogsDialogOpen(true)
   }
   
-  // 运行全局检查
-  const handleRunGlobalChecks = async () => {
-    setIsRunningGlobalChecks(true)
-    try {
-      console.log('🌐 开始运行全局检查')
-      const response = await clusterApiV1.environmentCheck.runGlobalChecks()
-      if (response.code === 200) {
-        setGlobalCheckResults(response.data || [])
-        setShowGlobalChecks(true)
-        console.log('全局检查完成:', response.data)
-      } else {
-        console.error('全局检查失败:', response.msg)
-        alert(response.msg || '运行全局检查失败')
+  // 自动加载全局检查结果（当所有主机检查完成后）
+  useEffect(() => {
+    if (!isChecking && checkStatus.length > 0 && overallProgress.completedHosts === overallProgress.totalHosts) {
+      // 所有主机检查完成，自动加载全局检查结果
+      const loadGlobalResults = async () => {
+        try {
+          console.log('🌐 所有主机检查完成，加载全局检查结果...')
+          const response = await clusterApiV1.environmentCheck.getGlobalCheckResults()
+          if (response.code === 200 && response.data) {
+            setGlobalCheckResults(response.data)
+            console.log('全局检查结果已加载:', response.data)
+          }
+        } catch (error) {
+          console.error('加载全局检查结果失败:', error)
+        }
       }
-    } catch (error) {
-      console.error('运行全局检查失败:', error)
-      alert('运行全局检查失败，请重试')
-    } finally {
-      setIsRunningGlobalChecks(false)
+      
+      // 延迟1秒加载，给后端时间执行全局检查
+      setTimeout(loadGlobalResults, 1000)
     }
-  }
-  
-  // 加载全局检查结果
-  const loadGlobalCheckResults = async () => {
-    try {
-      const response = await clusterApiV1.environmentCheck.getGlobalCheckResults()
-      if (response.code === 200 && response.data && response.data.length > 0) {
-        setGlobalCheckResults(response.data)
-        setShowGlobalChecks(true)
-        console.log('加载全局检查结果:', response.data)
-      }
-    } catch (error) {
-      console.error('加载全局检查结果失败:', error)
-    }
-  }
+  }, [isChecking, checkStatus.length, overallProgress.completedHosts, overallProgress.totalHosts])
 
   // 跳过检查项
   const handleSkipItem = async (hostIp: string, checkKey: string) => {
@@ -574,30 +554,8 @@ export default function EnvironmentCheckDialog({
             </CardContent>
           </Card>
 
-          {/* Tabs: 单主机检查 vs 综合检查 */}
-          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'host' | 'global')} className="mt-6">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="host" className="flex items-center gap-2">
-                <Server className="h-4 w-4" />
-                单主机检查
-                {checkStatus.length > 0 && (
-                  <Badge variant="outline" className="ml-2">
-                    {checkStatus.length}台
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="global" className="flex items-center gap-2">
-                <Globe className="h-4 w-4" />
-                综合检查
-                {globalCheckResults.length > 0 && (
-                  <Badge variant="outline" className="ml-2">
-                    {globalCheckResults.length}项
-                  </Badge>
-                )}
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="host" className="space-y-4 mt-6">
+          {/* 第一部分：单主机检查 */}
+          <div className="space-y-4 mt-6">
           {/* 提示信息 */}
           {!isChecking && checkStatus.length === 0 && (
             <Alert>
@@ -761,53 +719,33 @@ export default function EnvironmentCheckDialog({
               )}
             </Card>
           ))}
-            </TabsContent>
+          </div>
 
-            <TabsContent value="global" className="space-y-4 mt-6">
-              {/* 综合检查操作区域 */}
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>综合检查</CardTitle>
-                      <p className="text-sm text-gray-500 mt-1">
-                        检查集群级别的配置，如主机名唯一性、hosts文件一致性等
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleRunGlobalChecks}
-                        disabled={isRunningGlobalChecks || checkStatus.length === 0}
-                        size="sm"
-                      >
-                        {isRunningGlobalChecks ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            检查中...
-                          </>
-                        ) : (
-                          <>
-                            <Play className="mr-2 h-4 w-4" />
-                            运行综合检查
-                          </>
-                        )}
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-              </Card>
+          {/* 第二部分：综合检查（所有主机检查完成后自动显示） */}
+          {!isChecking && checkStatus.length > 0 && overallProgress.completedHosts === overallProgress.totalHosts && (
+            <div className="space-y-4 mt-8">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+                <div className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-full border border-blue-200">
+                  <Globe className="h-5 w-5 text-blue-600" />
+                  <span className="font-semibold text-blue-900">综合检查</span>
+                  {globalCheckResults.length > 0 && (
+                    <Badge variant="outline" className="ml-1 bg-white">
+                      {globalCheckResults.length}项
+                    </Badge>
+                  )}
+                </div>
+                <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
+              </div>
 
-              {/* 提示：需要先完成单主机检查 */}
-              {checkStatus.length === 0 && (
-                <Alert>
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    请先完成单主机检查，然后再运行综合检查
-                  </AlertDescription>
-                </Alert>
-              )}
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertTriangle className="h-4 w-4 text-blue-600" />
+                <AlertDescription className="text-blue-900">
+                  所有主机检查已完成，系统自动执行集群级别的综合检查（主机名唯一性、hosts文件一致性等）
+                </AlertDescription>
+              </Alert>
               
-              {showGlobalChecks && globalCheckResults.length > 0 && (
+              {globalCheckResults.length > 0 && (
                 <div className="space-y-4">
                   {globalCheckResults.map((result) => {
                     const isSuccess = result.status === 'SUCCESS'
@@ -863,42 +801,47 @@ export default function EnvironmentCheckDialog({
                 </div>
               )}
               
-              {showGlobalChecks && globalCheckResults.length === 0 && (
+              {globalCheckResults.length === 0 && (
                 <Alert>
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   <AlertDescription>
-                    暂无综合检查结果
+                    正在执行综合检查，请稍候...
                   </AlertDescription>
                 </Alert>
               )}
 
               {/* 主机管理操作 */}
-              {checkStatus.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>主机管理操作</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-3">
-                      <Button 
-                        onClick={() => setHostnameEditDialogOpen(true)} 
-                        size="sm"
-                        variant="outline"
-                      >
-                        批量修改主机名
-                      </Button>
-                      <Button 
-                        onClick={() => setHostsFileSyncDialogOpen(true)} 
-                        size="sm"
-                        variant="outline"
-                      >
-                        同步Hosts文件
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </TabsContent>
-          </Tabs>
+              <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wrench className="h-5 w-5 text-indigo-600" />
+                    主机管理操作
+                  </CardTitle>
+                  <p className="text-sm text-gray-600 mt-1">
+                    批量管理主机名称和hosts文件配置
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={() => setHostnameEditDialogOpen(true)} 
+                      size="sm"
+                      className="bg-indigo-600 hover:bg-indigo-700"
+                    >
+                      批量修改主机名
+                    </Button>
+                    <Button 
+                      onClick={() => setHostsFileSyncDialogOpen(true)} 
+                      size="sm"
+                      className="bg-purple-600 hover:bg-purple-700"
+                    >
+                      同步Hosts文件
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
           </div>
         </div>
       </div>
