@@ -444,6 +444,18 @@ export const clusterApiV1 = {
       const response = await apiV1.post(API_PATHS_V1.HOST_MANAGEMENT_SYNC_HOSTS, request)
       return response.data
     },
+    
+    /** Step1发现主机 - 拦截器自动注入集群ID */
+    discoverFromStep1: async (step1Config: any) => {
+      const response = await apiV1.post(API_PATHS_V1.HOST_DISCOVER_STEP1, step1Config)
+      return response.data
+    },
+
+    /** 保存发现的主机到数据库 - 拦截器自动注入集群ID */
+    saveDiscoveredHosts: async () => {
+      const response = await apiV1.post(API_PATHS_V1.HOST_SAVE_DISCOVERED, {})
+      return response.data
+    }
   },
 
   // Agent分发相关 API
@@ -533,20 +545,6 @@ export const clusterApiV1 = {
     }
   },
 
-  // 主机管理相关API - v1
-  hostManagement: {
-    /** Step1发现主机 - 拦截器自动注入集群ID */
-    discoverFromStep1: async (step1Config: any) => {
-      const response = await apiV1.post(API_PATHS_V1.HOST_DISCOVER_STEP1, step1Config)
-      return response.data
-    },
-
-    /** 保存发现的主机到数据库 - 拦截器自动注入集群ID */
-    saveDiscoveredHosts: async () => {
-      const response = await apiV1.post(API_PATHS_V1.HOST_SAVE_DISCOVERED, {})
-      return response.data
-    }
-  },
 
   // 服务文档相关API - v1
   doc: {
