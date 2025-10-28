@@ -203,20 +203,20 @@ export const API_PATHS_V1 = {
   ENVIRONMENT_CHECK_JDK_FILES: `${API_BASE}/environment-check/jdk-files`,
   ENVIRONMENT_CHECK_GLOBAL_RUN: `${API_BASE}/environment-check/global-checks`,
   ENVIRONMENT_CHECK_GLOBAL_RESULTS: `${API_BASE}/environment-check/global-checks`,
-  ENVIRONMENT_CHECK_SSE: `${API_BASE}/environment-check-sse/stream`,
+  ENVIRONMENT_CHECK_SSE: `${API_BASE}/sse/environment-check/stream`,
   
   // 主机管理相关 - v1
   HOST_MANAGEMENT_HOSTNAME_CONFIG: `${API_BASE}/host-management/hostname-config`,
   HOST_MANAGEMENT_PREVIEW_HOSTNAME: `${API_BASE}/host-management/preview-hostname-changes`,
   HOST_MANAGEMENT_BATCH_HOSTNAME: `${API_BASE}/host-management/batch-hostname`,
   HOST_MANAGEMENT_SYNC_HOSTS: `${API_BASE}/host-management/sync-hosts-file`,
-  HOST_MANAGEMENT_SSE: `${API_BASE}/host-management-sse/stream`,
+  HOST_MANAGEMENT_SSE: `${API_BASE}/sse/host-management/stream`,
   
   // Agent分发相关 - v1
   AGENT_DISTRIBUTION_START: `${API_BASE}/agent-distribution/start`,
   AGENT_DISTRIBUTION_STATUS: `${API_BASE}/agent-distribution/status`,
   AGENT_DISTRIBUTION_CANCEL: `${API_BASE}/agent-distribution/cancel`,
-  AGENT_DISTRIBUTION_SSE: `${API_BASE}/agent-distribution-sse/stream`,
+  AGENT_DISTRIBUTION_SSE: `${API_BASE}/sse/agent-distribution/stream`,
   
   // 服务安装相关 - v1
   GET_SERVICE_CONFIG_OPTION: `${API_BASE}/service/install/getServiceConfigOption`,
@@ -237,7 +237,7 @@ export const API_PATHS_V1 = {
   START_EXECUTE_COMMAND: `${API_BASE}/cluster/service/command/execute`,
 
   // SSE日志流相关 - v1
-  LOG_STREAM_SSE: `${API_BASE}/logs/stream`,
+  LOG_STREAM_SSE: `${API_BASE}/sse/logs/stream`,
 
   // 主机管理相关API - v1  
   HOST_DISCOVER_STEP1: `${API_BASE}/host/discover-from-step1`,

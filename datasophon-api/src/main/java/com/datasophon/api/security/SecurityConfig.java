@@ -134,20 +134,11 @@ public class SecurityConfig {
                                 "/db-scheduler-api/**")
                         .permitAll()
                         
-                        // SSE端点（EventSource无法发送自定义headers，需要放行）
+                        // SSE端点（EventSource无法发送自定义headers，需要统一放行）
+                        // 所有SSE接口统一使用 /api/v1/sse/** 路径
                         .requestMatchers(
-                                "/api/v1/environment-check-sse/**",
-                                "/api/v1/environment-logs-sse/**",
-                                "/api/v1/agent-distribution-sse/**",
-                                "/api/v1/host-management-sse/**",
-                                "/api/v1/host-validation/stream/**",
-                                "/api/v1/logs/stream/**",
-                                "/ddh/api/v1/environment-check-sse/**",
-                                "/ddh/api/v1/environment-logs-sse/**",
-                                "/ddh/api/v1/agent-distribution-sse/**",
-                                "/ddh/api/v1/host-management-sse/**",
-                                "/ddh/api/v1/host-validation/stream/**",
-                                "/ddh/api/v1/logs/stream/**")
+                                "/api/v1/sse/**",
+                                "/ddh/api/v1/sse/**")
                         .permitAll()
 
                         // 原有免登录接口

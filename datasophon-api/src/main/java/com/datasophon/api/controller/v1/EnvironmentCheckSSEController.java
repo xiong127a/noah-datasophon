@@ -27,7 +27,7 @@ import java.util.concurrent.TimeUnit;
  * @date 2025-01-23
  */
 @Slf4j
-@ApiVersion(path = "environment-check-sse")
+@ApiVersion(path = "sse/environment-check")
 @RequiredArgsConstructor
 public class EnvironmentCheckSSEController {
     

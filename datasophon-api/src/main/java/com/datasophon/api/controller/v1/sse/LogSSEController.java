@@ -39,7 +39,7 @@ import java.util.concurrent.Executors;
  * @email 635887935@qq.com
  * @date 2025-01-19
  */
-@ApiVersion(path = "logs")
+@ApiVersion(path = "sse/logs")
 public class LogSSEController {
 
     private static final Logger logger = LoggerFactory.getLogger(LogSSEController.class);

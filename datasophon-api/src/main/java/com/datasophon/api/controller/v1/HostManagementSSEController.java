@@ -18,7 +18,7 @@ import java.io.IOException;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/host-management-sse")
+@RequestMapping("/api/v1/sse/host-management")
 public class HostManagementSSEController {
     
     /**

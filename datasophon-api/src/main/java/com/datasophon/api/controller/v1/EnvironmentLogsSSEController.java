@@ -24,7 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/environment-logs-sse")
+@RequestMapping("/api/v1/sse/environment-logs")
 public class EnvironmentLogsSSEController {
     
     @Autowired

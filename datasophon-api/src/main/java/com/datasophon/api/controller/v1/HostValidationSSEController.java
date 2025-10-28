@@ -21,7 +21,7 @@ import java.util.Map;
  */
 @Slf4j
 @RestController
-@ApiVersion(path = "host-validation/stream")
+@ApiVersion(path = "sse/host-validation")
 @RequiredArgsConstructor
 public class HostValidationSSEController {
     

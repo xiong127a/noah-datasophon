@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @RestController
-@RequestMapping("/api/v1/agent-distribution-sse")
+@RequestMapping("/api/v1/sse/agent-distribution")
 @RequiredArgsConstructor
 public class AgentDistributionSSEController {
     
