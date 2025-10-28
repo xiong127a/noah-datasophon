@@ -135,7 +135,36 @@ public class CheckStateManager {
                         item.setMessage("用户选择跳过此检查项");
                         log.info("检查项已跳过: 集群={}, 主机={}, 检查项={}", clusterId, hostIp, checkKey);
                     });
+            
+            // 重新计算统计信息
+            recalculateHostStatistics(hostStatus);
         }
+    }
+    
+    /**
+     * 重新计算主机的统计信息
+     */
+    private void recalculateHostStatistics(EnvironmentCheckStatusVO hostStatus) {
+        int totalItems = hostStatus.getCheckItems().size();
+        int successItems = (int) hostStatus.getCheckItems().stream()
+                .filter(item -> item.getStatus() == com.datasophon.common.enums.CheckItemStatus.SUCCESS)
+                .count();
+        int failedItems = (int) hostStatus.getCheckItems().stream()
+                .filter(item -> item.getStatus() == com.datasophon.common.enums.CheckItemStatus.FAILED)
+                .count();
+        int skippedItems = (int) hostStatus.getCheckItems().stream()
+                .filter(item -> item.getStatus() == com.datasophon.common.enums.CheckItemStatus.SKIPPED)
+                .count();
+        int completedItems = successItems + skippedItems;
+        
+        hostStatus.setTotalItems(totalItems);
+        hostStatus.setSuccessItems(successItems);
+        hostStatus.setFailedItems(failedItems);
+        hostStatus.setSkippedItems(skippedItems);
+        hostStatus.setCompletedItems(completedItems);
+        
+        log.debug("重新计算统计: 主机={}, 总数={}, 成功={}, 失败={}, 跳过={}", 
+                hostStatus.getHostIp(), totalItems, successItems, failedItems, skippedItems);
     }
     
     /**
