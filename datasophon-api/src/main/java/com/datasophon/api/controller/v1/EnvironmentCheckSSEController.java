@@ -44,6 +44,9 @@ public class EnvironmentCheckSSEController {
     // 存储上次推送的数据（用于判断是否有变化）
     private final Map<String, String> lastPushedData = new ConcurrentHashMap<>();
     
+    // 存储验证结果缓存（避免重复验证）
+    private final Map<String, Object> validationCache = new ConcurrentHashMap<>();
+    
     // 定时推送器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     
@@ -93,30 +96,46 @@ public class EnvironmentCheckSSEController {
             try {
                 var status = stateManager.getClusterStatus(clusterId);
                 if (!status.isEmpty()) {
-                    // 同时计算验证结果（避免前端轮询）
-                    var validation = environmentCheckService.validateForNextStep(clusterId);
+                    // 序列化当前状态（不包含validation）
+                    var currentStatusData = objectMapper.writeValueAsString(status);
                     
-                    // 序列化当前数据
-                    var currentData = objectMapper.writeValueAsString(Map.of(
-                            "type", "progress",
-                            "data", status,
-                            "validation", validation
-                    ));
+                    // 获取上次推送的状态数据
+                    String lastStatusData = lastPushedData.get(emitterKey);
                     
-                    // 获取上次推送的数据
-                    String lastData = lastPushedData.get(emitterKey);
+                    // 判断状态是否变化
+                    boolean statusChanged = lastStatusData == null || !lastStatusData.equals(currentStatusData);
                     
-                    // 只在数据变化时才推送
-                    if (lastData == null || !lastData.equals(currentData)) {
+                    // 只在状态变化时才重新验证
+                    Object validation;
+                    if (statusChanged) {
+                        log.debug("检查状态已变化，重新执行验证: 集群ID={}", clusterId);
+                        validation = environmentCheckService.validateForNextStep(clusterId);
+                        validationCache.put(emitterKey, validation);
+                    } else {
+                        // 使用缓存的验证结果
+                        validation = validationCache.get(emitterKey);
+                        if (validation == null) {
+                            // 如果缓存不存在，执行一次验证
+                            validation = environmentCheckService.validateForNextStep(clusterId);
+                            validationCache.put(emitterKey, validation);
+                        }
+                    }
+                    
+                    // 只在状态变化时才推送
+                    if (statusChanged) {
+                        var dataToSend = Map.of(
+                                "type", "progress",
+                                "data", status,
+                                "validation", validation
+                        );
+                        
                         emitter.send(SseEmitter.event()
                                 .name("progress")
-                                .data(currentData));
+                                .data(dataToSend));
                         
                         // 更新缓存
-                        lastPushedData.put(emitterKey, currentData);
+                        lastPushedData.put(emitterKey, currentStatusData);
                         log.debug("检查进度已变化，推送更新: 集群ID={}", clusterId);
-                    } else {
-                        log.trace("检查进度无变化，跳过推送: 集群ID={}", clusterId);
                     }
                 }
             } catch (Exception e) {
@@ -148,6 +167,10 @@ public class EnvironmentCheckSSEController {
         
         // 清理缓存的推送数据
         lastPushedData.remove(emitterKey);
+        
+        // 清理验证结果缓存
+        validationCache.remove(emitterKey);
+        
         log.debug("清理连接缓存: key={}", emitterKey);
     }
 }

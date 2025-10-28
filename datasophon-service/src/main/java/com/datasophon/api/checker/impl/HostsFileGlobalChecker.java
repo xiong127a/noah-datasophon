@@ -208,7 +208,7 @@ public class HostsFileGlobalChecker implements GlobalCheckItem {
                 .hostIp(host.getIp())
                 .sshUser((String) connectionParams.get("sshUser"))
                 .sshPassword((String) connectionParams.get("sshPassword"))
-                .sshPort((Integer) connectionParams.getOrDefault("sshPort", 22))
+                .sshPort(getSshPort(connectionParams))
                 .build();
         
         var result = getSshService().executeCommand(context, "cat /etc/hosts", 10);
@@ -218,6 +218,24 @@ public class HostsFileGlobalChecker implements GlobalCheckItem {
         } else {
             throw new RuntimeException("无法读取hosts文件: " + result.error());
         }
+    }
+    
+    /**
+     * 安全地获取SSH端口（处理String/Integer类型）
+     */
+    private Integer getSshPort(Map<String, Object> connectionParams) {
+        Object port = connectionParams.get("sshPort");
+        if (port instanceof Integer) {
+            return (Integer) port;
+        } else if (port instanceof String) {
+            try {
+                return Integer.parseInt((String) port);
+            } catch (NumberFormatException e) {
+                log.warn("无效的SSH端口格式: {}, 使用默认端口22", port);
+                return 22;
+            }
+        }
+        return 22; // 默认值
     }
     
     /**

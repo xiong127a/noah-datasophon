@@ -31,6 +31,7 @@ import { HostLogsDialog } from './host-logs-dialog'
 import { RepairOptionsDialog, type RepairOptions } from './repair-options-dialog'
 import HostnameBatchEditDialog from './hostname-batch-edit-dialog'
 import HostsFileSyncDialog from './hosts-file-sync-dialog'
+import { GlobalCheckDetails } from './global-check-details'
 
 interface EnvironmentCheckDialogProps {
   open: boolean
@@ -588,6 +589,37 @@ export default function EnvironmentCheckDialog({
             </CardContent>
           </Card>
 
+          {/* 主机管理操作 - 始终显示在最顶部 */}
+          <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wrench className="h-5 w-5 text-indigo-600" />
+                主机管理操作
+              </CardTitle>
+              <p className="text-sm text-gray-600 mt-1">
+                批量管理主机名称和hosts文件配置
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-3">
+                <Button 
+                  onClick={() => setHostnameEditDialogOpen(true)} 
+                  size="sm"
+                  className="bg-indigo-600 hover:bg-indigo-700"
+                >
+                  批量修改主机名
+                </Button>
+                <Button 
+                  onClick={() => setHostsFileSyncDialogOpen(true)} 
+                  size="sm"
+                  className="bg-purple-600 hover:bg-purple-700"
+                >
+                  同步Hosts文件
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
           {/* 第一部分：单主机检查 */}
           <div className="space-y-4 mt-6">
           {/* 提示信息 */}
@@ -820,10 +852,11 @@ export default function EnvironmentCheckDialog({
                                 <summary className="text-sm font-medium cursor-pointer text-blue-600 hover:text-blue-700">
                                   查看详细信息
                                 </summary>
-                                <div className="mt-2 p-3 bg-gray-50 rounded text-xs font-mono">
-                                  <pre className="whitespace-pre-wrap">
-                                    {JSON.stringify(result.details, null, 2)}
-                                  </pre>
+                                <div className="mt-3">
+                                  <GlobalCheckDetails 
+                                    checkKey={result.checkKey} 
+                                    details={result.details} 
+                                  />
                                 </div>
                               </details>
                             )}
@@ -843,37 +876,6 @@ export default function EnvironmentCheckDialog({
                   </AlertDescription>
                 </Alert>
               )}
-
-              {/* 主机管理操作 */}
-              <Card className="border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Wrench className="h-5 w-5 text-indigo-600" />
-                    主机管理操作
-                  </CardTitle>
-                  <p className="text-sm text-gray-600 mt-1">
-                    批量管理主机名称和hosts文件配置
-                  </p>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-3">
-                    <Button 
-                      onClick={() => setHostnameEditDialogOpen(true)} 
-                      size="sm"
-                      className="bg-indigo-600 hover:bg-indigo-700"
-                    >
-                      批量修改主机名
-                    </Button>
-                    <Button 
-                      onClick={() => setHostsFileSyncDialogOpen(true)} 
-                      size="sm"
-                      className="bg-purple-600 hover:bg-purple-700"
-                    >
-                      同步Hosts文件
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           )}
           </div>
@@ -938,6 +940,7 @@ export default function EnvironmentCheckDialog({
       onClose={() => setHostsFileSyncDialogOpen(false)}
       clusterId={cluster?.id?.toString() || '0'}
       hostIps={actualHostList.map(h => h.ip)}
+      hostList={actualHostList}
       connectionParams={connectionParams}
       onSuccess={() => {
         console.log('Hosts文件同步成功')

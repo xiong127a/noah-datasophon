@@ -16,6 +16,7 @@ interface HostsFileSyncDialogProps {
   onClose: () => void
   clusterId: string
   hostIps: string[]
+  hostList?: Array<{ ip: string; hostname?: string }>  // 添加主机列表，包含主机名
   connectionParams: any
   onSuccess?: () => void
 }
@@ -32,6 +33,7 @@ export default function HostsFileSyncDialog({
   onClose,
   clusterId,
   hostIps,
+  hostList,
   connectionParams,
   onSuccess
 }: HostsFileSyncDialogProps) {
@@ -47,31 +49,29 @@ export default function HostsFileSyncDialog({
     if (open && !hostsEdited) {
       generateDefaultHostsContent()
     }
-  }, [open, hostIps])
+  }, [open, hostIps, hostList])
 
-  const generateDefaultHostsContent = async () => {
-    try {
-      // 尝试从后端获取主机信息
-      const response = await clusterApiV1.environmentCheck.getStatus()
-      if (response && Array.isArray(response)) {
-        const hostsEntries = response.map((host: any) => {
-          const hostname = host.hostname || host.hostIp
-          return `${host.hostIp}\t${hostname}`
-        }).join('\n')
-        
-        const defaultContent = `# DataSophon Managed Hosts - START
+  const generateDefaultHostsContent = () => {
+    // 使用传入的hostList生成hosts内容
+    let hostsEntries: string
+    
+    if (hostList && hostList.length > 0) {
+      // 有主机列表，使用IP和主机名映射
+      hostsEntries = hostList.map((host: any) => {
+        const hostname = host.hostname || host.ip
+        return `${host.ip}\t${hostname}`
+      }).join('\n')
+    } else {
+      // 没有主机列表，使用IP列表
+      hostsEntries = hostIps.map(ip => `${ip}\t${ip}`).join('\n')
+    }
+    
+    const defaultContent = `# DataSophon Managed Hosts - START
 # 此部分由DataSophon管理，请勿手动修改
 ${hostsEntries}
 # DataSophon Managed Hosts - END`
-        
-        setHostsContent(defaultContent)
-      }
-    } catch (error) {
-      console.error('生成默认hosts内容失败:', error)
-      // 使用简单的IP列表
-      const simpleContent = hostIps.map(ip => `${ip}\t${ip}`).join('\n')
-      setHostsContent(`# DataSophon Managed Hosts - START\n${simpleContent}\n# DataSophon Managed Hosts - END`)
-    }
+    
+    setHostsContent(defaultContent)
   }
 
   // 执行同步
