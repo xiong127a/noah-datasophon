@@ -74,7 +74,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
 
   // 计算步骤信息
   const isK8s = clusterType?.toLowerCase() === 'kubernetes'
-  const currentStepNumber = isK8s ? 6 : 7
+  const currentStepNumber = 8  // ✅ 服务配置 = 第8步
 
   // 从step6Data提取服务列表
   useEffect(() => {

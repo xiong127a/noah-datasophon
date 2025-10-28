@@ -58,9 +58,9 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
   const [formData, setFormData] = useState<Record<string, string | string[]>>({})
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  // 步骤配置（K8s模式跳过Agent分发）
+  // 步骤配置（K8s和PVM步骤编号一致）
   const isK8s = cluster.depType?.toLowerCase() === 'kubernetes'
-  const currentStep = isK8s ? 4 : 5 // Step5: 分配服务Master角色
+  const currentStep = 6  // ✅ 分配服务Master角色 = 第6步
 
   // 表单项配置生成
   const formItems = useMemo((): FormItem[] => {

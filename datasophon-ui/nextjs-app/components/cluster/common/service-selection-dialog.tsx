@@ -66,8 +66,8 @@ const ServiceSelectionDialog: React.FC<ServiceSelectionDialogProps> = ({
   const stepsType = isAddServiceMode ? StepsType.ADD_SERVICE : StepsType.NORMAL
   const steps = getStepsByType(stepsType, depType)
   
-  // 添加服务模式下，当前步骤是第1步（选择服务）；正常模式下是第3/4步
-  const currentStepNumber = isAddServiceMode ? 1 : (isK8s ? 3 : 4)
+  // 添加服务模式下，当前步骤是第1步（选择服务）；正常模式下统一是第5步
+  const currentStepNumber = isAddServiceMode ? 1 : 5  // ✅ 选择服务 = 第5步
 
   // 使用服务选择hook管理主要业务逻辑
   const {

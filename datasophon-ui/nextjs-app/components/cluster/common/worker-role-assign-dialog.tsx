@@ -60,7 +60,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
 
   // 计算当前步骤编号
   const isK8s = ClusterTypeUtil.isKubernetes(clusterType)
-  const currentStepNumber = isK8s ? 5 : 6
+  const currentStepNumber = 7  // ✅ 分配服务Worker与Client角色 = 第7步
 
   // 表单项生成
   const formItems = useMemo(() => {

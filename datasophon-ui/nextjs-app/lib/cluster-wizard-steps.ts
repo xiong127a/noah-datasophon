@@ -76,18 +76,19 @@ export function getStepsByType(
       break
   }
   
-  // 根据部署类型过滤
-  if (depType === ClusterType.KUBERNETES) {
-    // Kubernetes模式：过滤掉'环境检查'和'主机Agent分发'步骤
-    steps = steps.filter(step => 
-      step.title !== '环境检查' && step.title !== '主机Agent分发'
-    )
-    // 重新编号
-    steps = steps.map((step, index) => ({
-      ...step,
-      number: index + 1
-    }))
-  }
+  // ✅ 不再根据部署类型过滤和重新编号
+  // K8S和PVM使用相同的步骤编号，K8S在步骤3（环境检查）和步骤4（Agent分发）时显示"无需操作"即可
+  // if (depType === ClusterType.KUBERNETES) {
+  //   // Kubernetes模式：过滤掉'环境检查'和'主机Agent分发'步骤
+  //   steps = steps.filter(step => 
+  //     step.title !== '环境检查' && step.title !== '主机Agent分发'
+  //   )
+  //   // 重新编号
+  //   steps = steps.map((step, index) => ({
+  //     ...step,
+  //     number: index + 1
+  //   }))
+  // }
   
   return steps
 }
