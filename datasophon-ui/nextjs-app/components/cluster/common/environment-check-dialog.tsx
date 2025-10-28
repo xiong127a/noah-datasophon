@@ -206,7 +206,10 @@ export default function EnvironmentCheckDialog({
 
   // SSE连接，接收实时进度
   useEffect(() => {
-    if (!isChecking || !cluster?.id) return
+    // 只有在对话框打开且有集群ID时才建立连接
+    if (!open || !cluster?.id) return
+    // 只有在开始检查后才建立SSE连接
+    if (!isChecking) return
 
     // 建立SSE连接
     const clusterId = cluster.id
@@ -237,8 +240,10 @@ export default function EnvironmentCheckDialog({
           )
           
           if (allHostsCompleted && data.data.length > 0) {
-            console.log('✅ 所有主机检查已完成，停止检查状态')
-            setIsChecking(false)
+            console.log('✅ 所有主机检查已完成')
+            // ✅ 不关闭isChecking，保持SSE连接活跃
+            // 用户可能还需要修复、忽略等操作，需要继续接收状态更新
+            // SSE会在对话框关闭或进入下一步时自动断开
           }
         }
       } catch (error) {
@@ -251,11 +256,12 @@ export default function EnvironmentCheckDialog({
       es.close()
     }
 
+    // 清理函数：在对话框关闭或进入下一步时断开SSE
     return () => {
-      console.log('关闭SSE连接')
+      console.log('🔌 关闭SSE连接（对话框关闭或依赖变化）')
       es.close()
     }
-  }, [isChecking, cluster?.id])
+  }, [open, isChecking, cluster?.id])
 
   // 切换主机展开/收起
   const toggleHostExpand = (hostIp: string) => {
