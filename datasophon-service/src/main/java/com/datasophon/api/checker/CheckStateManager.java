@@ -27,8 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class CheckStateManager {
     
-    @Autowired
-    private ApplicationEventPublisher eventPublisher;
+    private final ApplicationEventPublisher eventPublisher;
     
     // 集群级别的检查状态缓存
     // Key: clusterId, Value: Map<hostIp, EnvironmentCheckStatusVO>
@@ -46,7 +45,13 @@ public class CheckStateManager {
     // Key: clusterId, Value: Map<hostIp, Map<String, Object>>
     private final Cache<Long, Map<String, Map<String, Object>>> hostInfoCache;
     
-    public CheckStateManager() {
+    /**
+     * 构造函数 - 使用构造函数注入事件发布器
+     */
+    @Autowired
+    public CheckStateManager(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+        
         this.clusterStateCache = Caffeine.newBuilder()
                 .maximumSize(100) // 最多缓存100个集群
                 .expireAfterWrite(Duration.ofHours(1)) // 1小时后过期
@@ -268,10 +273,8 @@ public class CheckStateManager {
      * 发布状态变更事件
      */
     private void publishStatusChangeEvent(Long clusterId) {
-        if (eventPublisher != null) {
-            eventPublisher.publishEvent(new CheckStatusChangeEvent(this, clusterId));
-            log.debug("发布状态变更事件: 集群={}", clusterId);
-        }
+        eventPublisher.publishEvent(new CheckStatusChangeEvent(this, clusterId));
+        log.debug("发布状态变更事件: 集群={}", clusterId);
     }
 }
 
