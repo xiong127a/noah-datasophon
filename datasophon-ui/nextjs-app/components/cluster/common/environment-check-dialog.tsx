@@ -266,29 +266,30 @@ export default function EnvironmentCheckDialog({
     setLogsDialogOpen(true)
   }
   
-  // 自动加载全局检查结果（当所有主机检查完成后）
+  // 自动加载全局检查结果（当检查停止后）
   useEffect(() => {
-    if (!isChecking && checkStatus.length > 0 && overallProgress && 
-        overallProgress.completedHosts === overallProgress.totalHosts && 
-        overallProgress.totalHosts > 0) {
-      // 所有主机检查完成，自动加载全局检查结果
+    if (!isChecking && checkStatus.length > 0) {
+      // 检查停止，自动加载全局检查结果
       const loadGlobalResults = async () => {
         try {
-          console.log('🌐 所有主机检查完成，加载全局检查结果...')
+          console.log('🌐 主机检查已停止，加载全局检查结果...')
           const response = await clusterApiV1.environmentCheck.getGlobalCheckResults()
           if (response.code === 200 && response.data) {
             setGlobalCheckResults(response.data)
-            console.log('全局检查结果已加载:', response.data)
+            console.log('✅ 全局检查结果已加载:', response.data)
+          } else {
+            console.log('⚠️ 暂无全局检查结果')
           }
         } catch (error) {
-          console.error('加载全局检查结果失败:', error)
+          console.error('❌ 加载全局检查结果失败:', error)
         }
       }
       
-      // 延迟1秒加载，给后端时间执行全局检查
-      setTimeout(loadGlobalResults, 1000)
+      // 延迟1.5秒加载，给后端足够时间执行全局检查
+      const timer = setTimeout(loadGlobalResults, 1500)
+      return () => clearTimeout(timer)
     }
-  }, [isChecking, checkStatus.length, overallProgress])
+  }, [isChecking, checkStatus.length])
 
   // 跳过检查项
   const handleSkipItem = async (hostIp: string, checkKey: string) => {
@@ -421,9 +422,9 @@ export default function EnvironmentCheckDialog({
     }
     
     const totalHosts = checkStatus.length
-    // 判断主机是否完成：所有检查项都完成了（不管成功还是失败）
+    // 判断主机是否完成：主机检查流程已结束（状态不是RUNNING）
     const completedHosts = checkStatus.filter(h => 
-      h.totalItems > 0 && (h.completedItems === h.totalItems)
+      h.overallStatus !== 'RUNNING'
     ).length
     const successHosts = checkStatus.filter(h => h.overallStatus === 'SUCCESS').length
     const partialSuccessHosts = checkStatus.filter(h => h.overallStatus === 'PARTIAL_SUCCESS').length
@@ -740,10 +741,8 @@ export default function EnvironmentCheckDialog({
           ))}
           </div>
 
-          {/* 第二部分：综合检查（所有主机检查完成后自动显示） */}
-          {!isChecking && checkStatus.length > 0 && overallProgress && 
-           overallProgress.completedHosts === overallProgress.totalHosts && 
-           overallProgress.totalHosts > 0 && (
+          {/* 第二部分：综合检查（检查停止后自动显示） */}
+          {!isChecking && checkStatus.length > 0 && (
             <div className="space-y-4 mt-8">
               <div className="flex items-center gap-3 mb-4">
                 <div className="h-px flex-1 bg-gradient-to-r from-transparent via-gray-300 to-transparent"></div>
@@ -762,7 +761,7 @@ export default function EnvironmentCheckDialog({
               <Alert className="border-blue-200 bg-blue-50">
                 <AlertTriangle className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-blue-900">
-                  所有主机检查已完成，系统自动执行集群级别的综合检查（主机名唯一性、hosts文件一致性等）
+                  主机检查已完成（{overallProgress.successHosts}台成功，{overallProgress.failedHosts}台失败），系统自动执行集群级别的综合检查（主机名唯一性、hosts文件一致性等）
                 </AlertDescription>
               </Alert>
               
