@@ -41,6 +41,9 @@ public class EnvironmentCheckSSEController {
     // 存储每个连接对应的定时任务
     private final Map<String, ScheduledFuture<?>> scheduledTasks = new ConcurrentHashMap<>();
     
+    // 存储上次推送的数据（用于判断是否有变化）
+    private final Map<String, String> lastPushedData = new ConcurrentHashMap<>();
+    
     // 定时推送器
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(2);
     
@@ -85,7 +88,7 @@ public class EnvironmentCheckSSEController {
             log.error("发送初始消息失败: {}", e.getMessage());
         }
         
-        // 启动定时推送任务（每秒推送一次状态和验证结果）
+        // 启动定时推送任务（每秒检查一次，但只在数据变化时推送）
         ScheduledFuture<?> task = scheduler.scheduleAtFixedRate(() -> {
             try {
                 var status = stateManager.getClusterStatus(clusterId);
@@ -93,15 +96,28 @@ public class EnvironmentCheckSSEController {
                     // 同时计算验证结果（避免前端轮询）
                     var validation = environmentCheckService.validateForNextStep(clusterId);
                     
-                    var json = objectMapper.writeValueAsString(Map.of(
+                    // 序列化当前数据
+                    var currentData = objectMapper.writeValueAsString(Map.of(
                             "type", "progress",
                             "data", status,
-                            "validation", validation  // 新增：同时推送验证结果
+                            "validation", validation
                     ));
                     
-                    emitter.send(SseEmitter.event()
-                            .name("progress")
-                            .data(json));
+                    // 获取上次推送的数据
+                    String lastData = lastPushedData.get(emitterKey);
+                    
+                    // 只在数据变化时才推送
+                    if (lastData == null || !lastData.equals(currentData)) {
+                        emitter.send(SseEmitter.event()
+                                .name("progress")
+                                .data(currentData));
+                        
+                        // 更新缓存
+                        lastPushedData.put(emitterKey, currentData);
+                        log.debug("检查进度已变化，推送更新: 集群ID={}", clusterId);
+                    } else {
+                        log.trace("检查进度无变化，跳过推送: 集群ID={}", clusterId);
+                    }
                 }
             } catch (Exception e) {
                 log.error("推送进度失败: {}", e.getMessage());
@@ -129,6 +145,10 @@ public class EnvironmentCheckSSEController {
             boolean cancelled = task.cancel(true);
             log.info("取消定时任务: key={}, 成功={}", emitterKey, cancelled);
         }
+        
+        // 清理缓存的推送数据
+        lastPushedData.remove(emitterKey);
+        log.debug("清理连接缓存: key={}", emitterKey);
     }
 }
 
