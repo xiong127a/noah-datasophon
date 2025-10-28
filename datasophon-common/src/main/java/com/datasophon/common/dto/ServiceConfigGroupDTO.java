@@ -32,6 +32,11 @@ import java.util.Map;
  */
 public record ServiceConfigGroupDTO(
         /*
+          服务实例ID（用于保存配置）
+         */
+        Long serviceId,
+        
+        /*
           分组键值映射
           key: 分组标识
           value: 分组详细信息

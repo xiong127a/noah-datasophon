@@ -237,7 +237,15 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
         // 使用分组逻辑处理配置数据，返回分组结构提升前端用户体验
         var groupedConfigs = ConfigGroupUtils.groupByConfigTargetRoleOrCommon(list);
-        return serviceConfigGroupConverter.toDto(groupedConfigs);
+        
+        // ✅ 获取serviceId，如果服务实例存在则使用其ID，否则为null
+        Long serviceId = (serviceInstanceDTO != null) ? serviceInstanceDTO.id() : null;
+        
+        // ✅ 将分组配置转换为GroupInfo映射
+        var groups = serviceConfigGroupConverter.toGroupMap(groupedConfigs);
+        
+        // ✅ 构造包含serviceId的DTO
+        return new ServiceConfigGroupDTO(serviceId, groups);
     }
 
     @Override

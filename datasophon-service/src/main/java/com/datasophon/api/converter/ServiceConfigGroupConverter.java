@@ -38,15 +38,15 @@ import java.util.Map;
 public class ServiceConfigGroupConverter {
 
     /**
-     * 将分组后的配置映射转换为DTO
+     * 将分组后的配置映射转换为分组信息映射
      * 支持Kubernetes配置的子分组处理
      * 
      * @param groupedConfigs 分组后的配置映射
-     * @return 服务配置分组DTO
+     * @return 分组信息映射
      */
-    public ServiceConfigGroupDTO toDto(Map<String, List<ServiceConfig>> groupedConfigs) {
+    public Map<String, ServiceConfigGroupDTO.GroupInfo> toGroupMap(Map<String, List<ServiceConfig>> groupedConfigs) {
         if (groupedConfigs == null || groupedConfigs.isEmpty()) {
-            return new ServiceConfigGroupDTO(Map.of());
+            return Map.of();
         }
 
         // 使用LinkedHashMap保持后端排序
@@ -56,7 +56,7 @@ public class ServiceConfigGroupConverter {
                 .filter(entry -> entry.getValue() != null && !entry.getValue().isEmpty())
                 .forEach(entry -> groups.put(entry.getKey(), processRoleGroup(entry.getKey(), entry.getValue())));
 
-        return new ServiceConfigGroupDTO(groups);
+        return groups;
     }
 
     /**

@@ -64,6 +64,7 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
   const [activeService, setActiveService] = useState<string>('')
   const [serviceTemplates, setServiceTemplates] = useState<ServiceTemplate>({})
   const [serviceConfigGroups, setServiceConfigGroups] = useState<Record<string, ServiceConfigGroupData>>({})
+  const [serviceIds, setServiceIds] = useState<Record<string, number | null>>({})  // ✅ 存储每个服务的serviceId
   
   // 表单状态
   const [formData, setFormData] = useState<FormData>({})
@@ -122,6 +123,12 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
 
       if (response.data?.code === 200 && response.data?.data) {
         const configGroupData = response.data.data as ServiceConfigGroupData
+        
+        // ✅ 存储serviceId
+        setServiceIds(prev => ({
+          ...prev,
+          [serviceName]: configGroupData.serviceId || null
+        }))
         
         // 存储配置组数据
         setServiceConfigGroups(prev => ({
@@ -188,6 +195,12 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
       throw new Error('缺少必要参数')
     }
 
+    // ✅ 获取serviceId
+    const serviceId = serviceIds[serviceName]
+    if (!serviceId) {
+      throw new Error(`未找到服务 ${serviceName} 的serviceId，请先加载配置`)
+    }
+
     const configs = serviceTemplates[serviceName] || []
     const updatedConfigs = configs.map(config => {
       const fieldName = (config.name || '').replace(/\./g, '!')
@@ -204,11 +217,11 @@ const ServiceConfigDialog: React.FC<ServiceConfigDialogProps> = ({
     )
 
     // 根据新项目的后端接口适配：
-    // @ClusterId Integer clusterId - 从请求头获取，无需在参数中传递
-    // @RequestParam("serviceName") - 需要作为请求参数
-    // @RequestParam("serviceConfig") - 需要作为请求参数
+    // @ClusterId Long clusterId - 从请求头获取，无需在参数中传递
+    // @RequestParam("serviceId") Long serviceId - ✅ 必需参数
+    // @RequestParam("serviceConfig") String serviceConfig - 必需参数
     const requestData = new URLSearchParams()
-    requestData.append('serviceName', serviceName)
+    requestData.append('serviceId', serviceId.toString())  // ✅ 添加serviceId参数
     requestData.append('serviceConfig', JSON.stringify(filteredConfigs))
 
     // 拦截器自动注入集群ID

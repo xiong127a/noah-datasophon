@@ -58,6 +58,7 @@ export interface GroupInfo {
 
 // 服务配置分组接口
 export interface ServiceConfigGroupData {
+  serviceId?: number | null  // ✅ 服务实例ID，用于保存配置
   groups: Record<string, GroupInfo>
 }
 
@@ -194,6 +195,7 @@ export interface GroupInfo {
 }
 
 export interface ServiceConfigGroupData {
+  serviceId?: number | null  // ✅ 服务实例ID，用于保存配置
   groups: Record<string, GroupInfo>
   empty?: boolean
   groupCount?: number 
