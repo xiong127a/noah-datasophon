@@ -10,7 +10,6 @@ import org.springframework.http.MediaType;
 import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.IOException;
@@ -25,8 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * @date 2025-10-28
  */
 @Slf4j
-@RestController
-@ApiVersion(path = "sse/agent-distribution-status")
+@ApiVersion(path = "sse/agent-distribution-status")  // ✅ 只用这个，它已经包含@RestController
 @RequiredArgsConstructor
 public class AgentDistributionStatusSSEController implements ApplicationListener<AgentDistributionStatusChangeEvent> {
 
