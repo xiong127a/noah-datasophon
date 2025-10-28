@@ -102,6 +102,10 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
     public void skipCheckItem(Long clusterId, String hostIp, String checkItemKey) {
         log.info("跳过检查项: 集群={}, 主机={}, 检查项={}", clusterId, hostIp, checkItemKey);
         stateManager.markItemSkipped(clusterId, hostIp, checkItemKey);
+        
+        // 跳过后立即验证检查状态，触发SSE推送更新
+        log.info("跳过成功，触发状态验证: clusterId={}, hostIp={}, checkItemKey={}", clusterId, hostIp, checkItemKey);
+        validateForNextStep(clusterId);
     }
     
     @Override
