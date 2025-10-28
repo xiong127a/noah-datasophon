@@ -98,7 +98,6 @@ export default function EnvironmentCheckDialog({
   
   // 全局检查相关状态
   const [globalCheckResults, setGlobalCheckResults] = useState<any[]>([])
-  const [isRunningGlobalChecks, setIsRunningGlobalChecks] = useState(false)
   
   // 主机管理对话框状态
   const [hostnameEditDialogOpen, setHostnameEditDialogOpen] = useState(false)
@@ -230,6 +229,16 @@ export default function EnvironmentCheckDialog({
             setValidation(data.validation)
             console.log('验证结果已更新:', data.validation)
           }
+          
+          // 检测是否所有主机都已完成检查（状态不是RUNNING）
+          const allHostsCompleted = data.data.every((host: any) => 
+            host.overallStatus !== 'RUNNING'
+          )
+          
+          if (allHostsCompleted && data.data.length > 0) {
+            console.log('✅ 所有主机检查已完成，停止检查状态')
+            setIsChecking(false)
+          }
         }
       } catch (error) {
         console.error('解析SSE消息失败:', error)
@@ -266,23 +275,28 @@ export default function EnvironmentCheckDialog({
     setLogsDialogOpen(true)
   }
   
+  // 加载全局检查结果（提取为独立函数，可被多处调用）
+  const loadGlobalCheckResults = async () => {
+    try {
+      console.log('🌐 加载全局检查结果...')
+      const response = await clusterApiV1.environmentCheck.getGlobalCheckResults()
+      if (response.code === 200 && response.data) {
+        setGlobalCheckResults(response.data)
+        console.log('✅ 全局检查结果已加载:', response.data)
+      } else {
+        console.log('⚠️ 暂无全局检查结果')
+      }
+    } catch (error) {
+      console.error('❌ 加载全局检查结果失败:', error)
+    }
+  }
+  
   // 自动加载全局检查结果（当检查停止后）
   useEffect(() => {
     if (!isChecking && checkStatus.length > 0) {
       // 检查停止，自动加载全局检查结果
       const loadGlobalResults = async () => {
-        try {
-          console.log('🌐 主机检查已停止，加载全局检查结果...')
-          const response = await clusterApiV1.environmentCheck.getGlobalCheckResults()
-          if (response.code === 200 && response.data) {
-            setGlobalCheckResults(response.data)
-            console.log('✅ 全局检查结果已加载:', response.data)
-          } else {
-            console.log('⚠️ 暂无全局检查结果')
-          }
-        } catch (error) {
-          console.error('❌ 加载全局检查结果失败:', error)
-        }
+        await loadGlobalCheckResults()
       }
       
       // 延迟1.5秒加载，给后端足够时间执行全局检查
@@ -786,9 +800,9 @@ export default function EnvironmentCheckDialog({
                               {isWarning && <AlertTriangle className="h-5 w-5 text-yellow-500" />}
                               <CardTitle className="text-base">{result.displayName}</CardTitle>
                             </div>
-                            {isSuccess && <Badge variant="success">正常</Badge>}
+                            {isSuccess && <Badge variant="outline" className="border-green-600 text-green-600">正常</Badge>}
                             {isFailed && <Badge variant="destructive">异常</Badge>}
-                            {isWarning && <Badge variant="warning">警告</Badge>}
+                            {isWarning && <Badge variant="outline" className="border-yellow-600 text-yellow-600">警告</Badge>}
                           </div>
                         </CardHeader>
                         <CardContent>
