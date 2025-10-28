@@ -2,6 +2,7 @@ package com.datasophon.api.service.impl;
 
 import com.datasophon.api.checker.CheckStateManager;
 import com.datasophon.api.config.CheckerProperties;
+import com.datasophon.api.service.EnvironmentCheckService;
 import com.datasophon.api.service.HostManagementService;
 import com.datasophon.common.dto.host.BatchHostnameChangeRequest;
 import com.datasophon.common.dto.host.HostsSyncRequest;
@@ -35,6 +36,9 @@ public class HostManagementServiceImpl implements HostManagementService {
     
     @Autowired
     private CheckStateManager checkStateManager;
+    
+    @Autowired
+    private EnvironmentCheckService environmentCheckService;
     
     private SshConnectionService sshService;
     
@@ -192,6 +196,10 @@ public class HostManagementServiceImpl implements HostManagementService {
             // 发送完成事件
             pushCompletion(taskId, true, "批量修改主机名完成");
             
+            // 修改完成后，自动触发全局检查
+            log.info("主机名修改完成，触发全局检查: clusterId={}", request.getClusterId());
+            triggerGlobalChecks(request.getClusterId());
+            
         } catch (Exception e) {
             log.error("批量修改主机名任务失败: taskId={}, error={}", taskId, e.getMessage(), e);
             pushCompletion(taskId, false, "任务失败: " + e.getMessage());
@@ -252,6 +260,10 @@ public class HostManagementServiceImpl implements HostManagementService {
             
             // 发送完成事件
             pushCompletion(taskId, true, "Hosts文件同步完成");
+            
+            // 同步完成后，自动触发全局检查
+            log.info("Hosts文件同步完成，触发全局检查: clusterId={}", request.getClusterId());
+            triggerGlobalChecks(request.getClusterId());
             
         } catch (Exception e) {
             log.error("Hosts文件同步任务失败: taskId={}, error={}", taskId, e.getMessage(), e);
@@ -486,6 +498,30 @@ public class HostManagementServiceImpl implements HostManagementService {
             }
         }
         return 22; // 默认值
+    }
+    
+    /**
+     * 触发全局检查
+     */
+    private void triggerGlobalChecks(Long clusterId) {
+        try {
+            // 延迟2秒执行全局检查，给系统一点时间更新状态
+            CompletableFuture.runAsync(() -> {
+                try {
+                    Thread.sleep(2000); // 延迟2秒
+                    log.info("开始执行全局检查: clusterId={}", clusterId);
+                    environmentCheckService.runGlobalChecks(clusterId);
+                    log.info("全局检查执行完成: clusterId={}", clusterId);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    log.error("全局检查被中断: clusterId={}", clusterId);
+                } catch (Exception e) {
+                    log.error("执行全局检查失败: clusterId={}, error={}", clusterId, e.getMessage(), e);
+                }
+            });
+        } catch (Exception e) {
+            log.error("触发全局检查失败: clusterId={}, error={}", clusterId, e.getMessage(), e);
+        }
     }
 }
 

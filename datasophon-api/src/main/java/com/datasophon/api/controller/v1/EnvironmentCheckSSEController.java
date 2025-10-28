@@ -129,19 +129,26 @@ public class EnvironmentCheckSSEController {
                                 "validation", validation
                         );
                         
-                        emitter.send(SseEmitter.event()
-                                .name("progress")
-                                .data(dataToSend));
-                        
-                        // 更新缓存
-                        lastPushedData.put(emitterKey, currentStatusData);
-                        log.debug("检查进度已变化，推送更新: 集群ID={}", clusterId);
+                        try {
+                            emitter.send(SseEmitter.event()
+                                    .name("progress")
+                                    .data(dataToSend));
+                            
+                            // 更新缓存
+                            lastPushedData.put(emitterKey, currentStatusData);
+                            log.debug("检查进度已变化，推送更新: 集群ID={}", clusterId);
+                        } catch (IOException e) {
+                            // SSE连接已断开，停止推送
+                            log.warn("SSE连接已断开，停止推送: 集群ID={}", clusterId);
+                            cleanupConnection(emitterKey);
+                            throw e; // 抛出异常以停止定时任务
+                        }
                     }
                 }
             } catch (Exception e) {
-                log.error("推送进度失败: {}", e.getMessage());
+                log.error("推送进度失败: {}, 停止定时任务", e.getMessage());
                 cleanupConnection(emitterKey);
-                emitter.completeWithError(e);
+                // 不再调用 completeWithError，因为可能已经完成
             }
         }, 0, 1, TimeUnit.SECONDS);
         
