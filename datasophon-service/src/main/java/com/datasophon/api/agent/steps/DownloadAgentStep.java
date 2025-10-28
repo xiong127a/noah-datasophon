@@ -68,17 +68,47 @@ public class DownloadAgentStep implements AgentDistributionStep {
         
         // ====== 1. 下载Agent包 ======
         log.info("下载Agent包: {}", agentPackageUrl);
+        
+        // 用于计算速率和剩余时间的变量
+        final long[] lastDownloadedBytes = {0};
+        final long[] lastUpdateTime = {System.currentTimeMillis()};
+        
         downloader.download(
                 agentPackageUrl,
                 localPackagePath,
                 (downloadedBytes, totalBytes, progress) -> {
-                    // 进度回调
-                    logWriter.logProgress(clusterId, hostIp, "download",
-                            progress, downloadedBytes, totalBytes,
-                            String.format("下载Agent包... %s / %s (%d%%)",
-                                    formatFileSize(downloadedBytes),
-                                    formatFileSize(totalBytes),
-                                    progress));
+                    long currentTime = System.currentTimeMillis();
+                    long timeDelta = currentTime - lastUpdateTime[0];
+                    
+                    // 至少间隔500ms才计算一次速率（避免频繁计算）
+                    if (timeDelta >= 500) {
+                        long bytesDelta = downloadedBytes - lastDownloadedBytes[0];
+                        
+                        // 计算实时速率 (bytes/s)
+                        double currentSpeed = timeDelta > 0 ? (bytesDelta * 1000.0 / timeDelta) : 0;
+                        
+                        // 计算预计剩余时间
+                        long remainingBytes = totalBytes - downloadedBytes;
+                        long estimatedRemainingSeconds = currentSpeed > 0 ? (long) (remainingBytes / currentSpeed) : 0;
+                        
+                        // 格式化速率和剩余时间
+                        String speedStr = formatSpeed(currentSpeed);
+                        String remainingTimeStr = formatDuration(estimatedRemainingSeconds * 1000);
+                        
+                        // 进度回调
+                        logWriter.logProgress(clusterId, hostIp, "download",
+                                progress, downloadedBytes, totalBytes,
+                                String.format("下载Agent包... %s / %s (%d%%) | 速率: %s | 剩余: %s",
+                                        formatFileSize(downloadedBytes),
+                                        formatFileSize(totalBytes),
+                                        progress,
+                                        speedStr,
+                                        remainingTimeStr));
+                        
+                        // 更新上次记录的值
+                        lastDownloadedBytes[0] = downloadedBytes;
+                        lastUpdateTime[0] = currentTime;
+                    }
                 }
         );
         
@@ -120,6 +150,33 @@ public class DownloadAgentStep implements AgentDistributionStep {
             return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
         } else {
             return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
+        }
+    }
+    
+    /**
+     * 格式化速率
+     */
+    private String formatSpeed(double bytesPerSecond) {
+        if (bytesPerSecond < 1024) {
+            return String.format("%.0f B/s", bytesPerSecond);
+        } else if (bytesPerSecond < 1024 * 1024) {
+            return String.format("%.2f KB/s", bytesPerSecond / 1024.0);
+        } else {
+            return String.format("%.2f MB/s", bytesPerSecond / (1024.0 * 1024.0));
+        }
+    }
+    
+    /**
+     * 格式化时长
+     */
+    private String formatDuration(long milliseconds) {
+        long seconds = milliseconds / 1000;
+        if (seconds < 60) {
+            return seconds + "秒";
+        } else {
+            long minutes = seconds / 60;
+            long remainingSeconds = seconds % 60;
+            return String.format("%d分%d秒", minutes, remainingSeconds);
         }
     }
 }

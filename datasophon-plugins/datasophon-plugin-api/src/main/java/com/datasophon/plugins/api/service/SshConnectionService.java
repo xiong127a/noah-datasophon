@@ -111,6 +111,19 @@ public interface SshConnectionService extends ExtensionPoint {
     boolean uploadFileFromStream(HostCheckContext context, java.io.InputStream inputStream, String remoteFilePath);
     
     /**
+     * 上传文件流到远程主机（带进度回调）
+     * 
+     * @param context 主机检查上下文
+     * @param inputStream 输入流
+     * @param remoteFilePath 远程文件路径
+     * @param totalBytes 总字节数（用于计算进度）
+     * @param progressCallback 进度回调
+     * @return 上传是否成功
+     */
+    boolean uploadFileFromStream(HostCheckContext context, java.io.InputStream inputStream, 
+                                 String remoteFilePath, long totalBytes, UploadProgressCallback progressCallback);
+    
+    /**
      * 从远程主机下载文件
      * 
      * @param context 主机检查上下文
@@ -119,6 +132,21 @@ public interface SshConnectionService extends ExtensionPoint {
      * @return 下载是否成功
      */
     boolean downloadFile(HostCheckContext context, String remoteFilePath, String localFilePath);
+    
+    /**
+     * 上传进度回调接口
+     */
+    @FunctionalInterface
+    interface UploadProgressCallback {
+        /**
+         * 进度回调
+         * 
+         * @param uploadedBytes 已上传字节数
+         * @param totalBytes 总字节数
+         * @param progress 进度百分比（0-100）
+         */
+        void onProgress(long uploadedBytes, long totalBytes, int progress);
+    }
     
     /**
      * 创建远程目录

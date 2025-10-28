@@ -265,6 +265,85 @@ public class SshConnectionServiceImpl implements SshConnectionService {
     }
     
     @Override
+    public boolean uploadFileFromStream(HostCheckContext context, InputStream inputStream, 
+                                       String remoteFilePath, long totalBytes, UploadProgressCallback progressCallback) {
+        var config = buildSshConfig(context);
+        SSHClient client = null;
+        
+        try {
+            client = SshConnectionPool.borrowClient(config);
+            
+            try (var sftp = client.newSFTPClient()) {
+                // 确保远程目录存在
+                var remoteDir = getParentPath(remoteFilePath);
+                if (remoteDir != null) {
+                    createDirectoryInternal(sftp, remoteDir);
+                }
+                
+                // 使用 RemoteFile.write() 方法直接写入数据（带进度回调）
+                try (var remoteFile = sftp.open(remoteFilePath, 
+                        java.util.EnumSet.of(
+                            net.schmizz.sshj.sftp.OpenMode.WRITE,
+                            net.schmizz.sshj.sftp.OpenMode.CREAT,
+                            net.schmizz.sshj.sftp.OpenMode.TRUNC
+                        ))) {
+                    
+                    var buffer = new byte[BUFFER_SIZE];
+                    int bytesRead;
+                    long uploadedBytes = 0;
+                    long lastReportedBytes = 0;
+                    long lastReportTime = System.currentTimeMillis();
+                    
+                    // 初始进度
+                    if (progressCallback != null) {
+                        progressCallback.onProgress(0, totalBytes, 0);
+                    }
+                    
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        remoteFile.write(uploadedBytes, buffer, 0, bytesRead);
+                        uploadedBytes += bytesRead;
+                        
+                        // 每上传至少512KB或每500ms报告一次进度
+                        long currentTime = System.currentTimeMillis();
+                        if (progressCallback != null && 
+                            (uploadedBytes - lastReportedBytes >= 512 * 1024 || 
+                             currentTime - lastReportTime >= 500)) {
+                            
+                            int progress = totalBytes > 0 ? (int) (uploadedBytes * 100 / totalBytes) : 0;
+                            progressCallback.onProgress(uploadedBytes, totalBytes, progress);
+                            lastReportedBytes = uploadedBytes;
+                            lastReportTime = currentTime;
+                        }
+                    }
+                    
+                    // 最终进度（确保100%）
+                    if (progressCallback != null) {
+                        progressCallback.onProgress(uploadedBytes, totalBytes, 100);
+                    }
+                }
+                
+                logger.info("文件流上传成功: {}, 大小: {} bytes", remoteFilePath, totalBytes);
+                return true;
+            }
+            
+        } catch (Exception e) {
+            logger.error("文件流上传失败: remote={}, error={}", remoteFilePath, e.getMessage(), e);
+            
+            if (client != null) {
+                SshConnectionPool.invalidateClient(config, client);
+                client = null;
+            }
+            
+            return false;
+            
+        } finally {
+            if (client != null) {
+                SshConnectionPool.returnClient(config, client);
+            }
+        }
+    }
+    
+    @Override
     public boolean downloadFile(HostCheckContext context, String remoteFilePath, String localFilePath) {
         var config = buildSshConfig(context);
         SSHClient client = null;

@@ -9,8 +9,6 @@ import com.datasophon.plugins.api.service.SshConnectionService;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
@@ -192,85 +190,75 @@ public class DownloadJdkStep implements RepairStep {
             return;
         }
         
-        // 大文件：分块记录进度（注意：实际还是整个上传，只是模拟进度日志）
-        log.info("上传大文件，总大小: {}, 将记录上传进度", formatFileSize(totalBytes));
+        // 大文件：使用带进度回调的上传方法
+        log.info("上传大文件，总大小: {}, 将记录实时上传进度", formatFileSize(totalBytes));
         
         try (InputStream inputStream = new ByteArrayInputStream(fileData)) {
-            // 启动上传线程
-            final boolean[] uploadSuccess = {false};
-            final Exception[] uploadException = {null};
+            // 用于计算速率和剩余时间的变量
+            final long[] lastUploadedBytes = {0};
+            final long[] lastUpdateTime = {System.currentTimeMillis()};
+            final long startTime = System.currentTimeMillis();
             
-            Thread uploadThread = new Thread(() -> {
-                try {
-                    uploadSuccess[0] = sshService.uploadFileFromStream(pluginContext, inputStream, remotePath);
-                } catch (Exception e) {
-                    uploadException[0] = e;
-                }
-            });
-            uploadThread.start();
+            boolean success = sshService.uploadFileFromStream(pluginContext, inputStream, remotePath, totalBytes,
+                    (uploadedBytes, totalBytesParam, progress) -> {
+                        long currentTime = System.currentTimeMillis();
+                        long timeDelta = currentTime - lastUpdateTime[0];
+                        
+                        // 计算实时速率 (bytes/s)
+                        long bytesDelta = uploadedBytes - lastUploadedBytes[0];
+                        double currentSpeed = timeDelta > 0 ? (bytesDelta * 1000.0 / timeDelta) : 0;
+                        
+                        // 计算预计剩余时间
+                        long remainingBytes = totalBytesParam - uploadedBytes;
+                        long estimatedRemainingSeconds = currentSpeed > 0 ? (long) (remainingBytes / currentSpeed) : 0;
+                        
+                        // 总耗时
+                        long elapsedTime = currentTime - startTime;
+                        
+                        // 构建进度信息
+                        Map<String, Object> progressInfo = new HashMap<>();
+                        progressInfo.put("elapsedTime", formatDuration(elapsedTime));
+                        progressInfo.put("totalSize", formatFileSize(totalBytesParam));
+                        progressInfo.put("uploadedSize", formatFileSize(uploadedBytes));
+                        progressInfo.put("currentSpeed", formatSpeed(currentSpeed));
+                        progressInfo.put("remainingTime", formatDuration(estimatedRemainingSeconds * 1000));
+                        progressInfo.put("fileName", remotePath.substring(remotePath.lastIndexOf("/") + 1));
+                        
+                        // 使用专门的进度日志方法
+                        logWriter.logRepairProgress(context.getClusterId(), context.getHostIp(), "java",
+                                progress,
+                                String.format("上传中... %s / %s (%d%%) | 速率: %s | 剩余: %s", 
+                                    formatFileSize(uploadedBytes), 
+                                    formatFileSize(totalBytesParam),
+                                    progress,
+                                    formatSpeed(currentSpeed),
+                                    formatDuration(estimatedRemainingSeconds * 1000)),
+                                progressInfo);
+                        
+                        log.info("上传进度: {}%, 已传输: {} / {}, 速率: {}, 剩余时间: {}", 
+                                progress, 
+                                formatFileSize(uploadedBytes),
+                                formatFileSize(totalBytesParam),
+                                formatSpeed(currentSpeed),
+                                formatDuration(estimatedRemainingSeconds * 1000));
+                        
+                        // 更新上次记录的值
+                        lastUploadedBytes[0] = uploadedBytes;
+                        lastUpdateTime[0] = currentTime;
+                    });
             
-            // 模拟进度记录（每1秒记录一次，像scp一样连续显示）
-            long startTime = System.currentTimeMillis();
-            int lastReportedProgress = 0;
-            
-            // 假设平均上传速度为 2MB/s（可根据实际调整）
-            double estimatedSpeedMBPerSec = 2.0;
-            double totalSizeMB = totalBytes / (1024.0 * 1024.0);
-            
-            while (uploadThread.isAlive()) {
-                Thread.sleep(1000); // 每1秒更新一次
-                long elapsedTime = System.currentTimeMillis() - startTime;
-                double elapsedSeconds = elapsedTime / 1000.0;
-                
-                // 估算已传输大小（基于时间和速度）
-                double uploadedMB = Math.min(totalSizeMB * 0.95, elapsedSeconds * estimatedSpeedMBPerSec);
-                long uploadedBytes = (long) (uploadedMB * 1024 * 1024);
-                
-                // 计算进度百分比（最多95%，防止超过实际进度）
-                int estimatedProgress = Math.min(95, (int) (uploadedMB / totalSizeMB * 100));
-                
-                // 只在进度变化时才推送日志（避免重复）
-                if (estimatedProgress > lastReportedProgress) {
-                    lastReportedProgress = estimatedProgress;
-                    
-                    Map<String, Object> progressInfo = new HashMap<>();
-                    progressInfo.put("elapsedTime", formatDuration(elapsedTime));
-                    progressInfo.put("totalSize", formatFileSize(totalBytes));
-                    progressInfo.put("uploadedSize", formatFileSize(uploadedBytes)); // 新增：已传输大小
-                    progressInfo.put("fileName", remotePath.substring(remotePath.lastIndexOf("/") + 1));
-                    
-                    // 使用专门的进度日志方法
-                    logWriter.logRepairProgress(context.getClusterId(), context.getHostIp(), "java",
-                            estimatedProgress,
-                            String.format("上传中... %s / %s (%d%%)", 
-                                formatFileSize(uploadedBytes), 
-                                formatFileSize(totalBytes),
-                                estimatedProgress),
-                            progressInfo);
-                    
-                    log.info("上传进度: {}%, 已传输: {} / {}, 耗时: {}", 
-                            estimatedProgress, 
-                            formatFileSize(uploadedBytes),
-                            formatFileSize(totalBytes),
-                            formatDuration(elapsedTime));
-                }
-            }
-            
-            // 检查上传结果
-            if (uploadException[0] != null) {
-                throw uploadException[0];
-            }
-            
-            if (!uploadSuccess[0]) {
+            if (!success) {
                 throw new Exception("SSH上传失败");
             }
             
-            // 上传完成，记录100%进度
+            // 上传完成，记录最终信息
+            long totalElapsedTime = System.currentTimeMillis() - startTime;
             Map<String, Object> completeInfo = new HashMap<>();
             completeInfo.put("totalSize", formatFileSize(totalBytes));
+            completeInfo.put("totalTime", formatDuration(totalElapsedTime));
             completeInfo.put("fileName", remotePath.substring(remotePath.lastIndexOf("/") + 1));
             logWriter.logRepairProgress(context.getClusterId(), context.getHostIp(), "java",
-                    100, "文件上传完成", completeInfo);
+                    100, String.format("文件上传完成，耗时: %s", formatDuration(totalElapsedTime)), completeInfo);
         }
     }
     
@@ -285,6 +273,19 @@ public class DownloadJdkStep implements RepairStep {
             long minutes = seconds / 60;
             long remainingSeconds = seconds % 60;
             return String.format("%d分%d秒", minutes, remainingSeconds);
+        }
+    }
+    
+    /**
+     * 格式化速率
+     */
+    private String formatSpeed(double bytesPerSecond) {
+        if (bytesPerSecond < 1024) {
+            return String.format("%.0f B/s", bytesPerSecond);
+        } else if (bytesPerSecond < 1024 * 1024) {
+            return String.format("%.2f KB/s", bytesPerSecond / 1024.0);
+        } else {
+            return String.format("%.2f MB/s", bytesPerSecond / (1024.0 * 1024.0));
         }
     }
     

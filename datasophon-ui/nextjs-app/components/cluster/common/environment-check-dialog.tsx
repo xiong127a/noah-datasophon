@@ -321,11 +321,14 @@ export default function EnvironmentCheckDialog({
         reason: '用户手动跳过'
       })
       console.log(`✅ 已跳过检查项: ${hostIp} - ${checkKey}`)
-      console.log('⚡ SSE会自动推送状态更新')
-      // 移除手动刷新，完全依赖SSE事件驱动推送
+      
+      // 等待500ms后刷新状态（确保UI更新）
+      setTimeout(async () => {
+        console.log('🔄 刷新检查状态（确保UI更新）')
+        await refreshCheckStatus()
+      }, 500)
     } catch (error: any) {
       console.error('❌ 跳过检查项失败:', error)
-      // ✅ 移除弹窗提示，只在控制台打印错误
     }
   }
   
@@ -334,11 +337,14 @@ export default function EnvironmentCheckDialog({
     try {
       const result = await clusterApiV1.environmentCheck.skipAllFailed()
       console.log(`✅ 批量跳过成功:`, result)
-      // ✅ 移除弹窗提示，SSE会自动推送状态更新
-      console.log('⚡ SSE会自动推送状态更新')
+      
+      // 等待500ms后刷新状态（确保UI更新）
+      setTimeout(async () => {
+        console.log('🔄 刷新检查状态（确保UI更新）')
+        await refreshCheckStatus()
+      }, 500)
     } catch (error: any) {
       console.error('❌ 批量跳过失败:', error)
-      // ✅ 移除弹窗提示，只在控制台打印错误
     }
   }
 
@@ -370,18 +376,29 @@ export default function EnvironmentCheckDialog({
       setSelectedCheckItem({ hostIp, checkKey, checkName })
       setLogsDialogOpen(true)
       
-      // 2. 调用修复API（异步执行，不阻塞）
-      clusterApiV1.environmentCheck.repairItem({
+      // 2. 调用修复API并等待完成
+      console.log(`🔧 修复请求已发送: ${hostIp} - ${checkKey}`)
+      const result = await clusterApiV1.environmentCheck.repairItem({
         hostIp,
         checkItemKey: checkKey,
         repairParams
-      }).then(result => {
-        console.log('修复结果:', result)
-      }).catch(error => {
-        console.error('修复检查项失败:', error)
       })
+      
+      console.log('✅ 修复完成:', result)
+      
+      // 3. 修复完成后，等待1秒让SSE推送完成，然后刷新状态（作为fallback）
+      setTimeout(async () => {
+        console.log('🔄 刷新检查状态（确保UI更新）')
+        await refreshCheckStatus()
+      }, 1000)
+      
     } catch (error: any) {
-      console.error('修复检查项异常:', error)
+      console.error('修复检查项失败:', error)
+      // 即使修复失败，也刷新状态以显示最新的错误信息
+      setTimeout(async () => {
+        console.log('🔄 修复失败，刷新检查状态')
+        await refreshCheckStatus()
+      }, 500)
     }
   }
   
