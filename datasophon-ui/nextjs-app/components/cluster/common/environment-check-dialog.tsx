@@ -328,6 +328,19 @@ export default function EnvironmentCheckDialog({
       alert('跳过失败: ' + (error.message || '未知错误'))
     }
   }
+  
+  // 批量跳过所有失败的检查项
+  const handleSkipAllFailed = async () => {
+    try {
+      const result = await clusterApiV1.environmentCheck.skipAllFailed()
+      console.log(`✅ 批量跳过成功:`, result)
+      alert(result.message || '批量跳过成功')
+      console.log('⚡ SSE会自动推送状态更新')
+    } catch (error: any) {
+      console.error('❌ 批量跳过失败:', error)
+      alert('批量跳过失败: ' + (error.message || '未知错误'))
+    }
+  }
 
   // 刷新检查状态（修复成功后调用）
   const refreshCheckStatus = async () => {
@@ -637,6 +650,34 @@ export default function EnvironmentCheckDialog({
               </div>
             </CardContent>
           </Card>
+          
+          {/* 批量检查操作 - 只在有失败项时显示 */}
+          {checkStatus.length > 0 && checkStatus.some(host => 
+            host.checkItems.some(item => item.status === 'FAILED' && item.canSkip)
+          ) && (
+            <Card className="border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 mt-4">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <SkipForward className="h-5 w-5 text-amber-600" />
+                  批量检查操作
+                </CardTitle>
+                <p className="text-sm text-gray-600 mt-1">
+                  快速处理所有失败的检查项
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Button 
+                  onClick={handleSkipAllFailed}
+                  size="sm"
+                  variant="outline"
+                  className="border-amber-300 text-amber-700 hover:bg-amber-100 hover:text-amber-800"
+                >
+                  <SkipForward className="h-4 w-4 mr-2" />
+                  忽略所有失败项
+                </Button>
+              </CardContent>
+            </Card>
+          )}
 
           {/* 第一部分：单主机检查 */}
           <div className="space-y-4 mt-6">

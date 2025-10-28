@@ -107,6 +107,37 @@ public class EnvironmentCheckServiceImpl implements EnvironmentCheckService {
     }
     
     @Override
+    public Map<String, Object> skipAllFailedItems(Long clusterId) {
+        log.info("批量跳过所有失败检查项: 集群={}", clusterId);
+        
+        var clusterStatus = stateManager.getClusterStatus(clusterId);
+        int totalSkipped = 0;
+        int totalHosts = 0;
+        
+        for (var hostStatus : clusterStatus) {
+            totalHosts++;
+            for (var item : hostStatus.getCheckItems()) {
+                // 只跳过状态为FAILED且允许跳过的检查项
+                if (item.getStatus() == com.datasophon.common.enums.CheckItemStatus.FAILED 
+                        && Boolean.TRUE.equals(item.getCanSkip())) {
+                    stateManager.markItemSkipped(clusterId, hostStatus.getHostIp(), item.getCheckKey());
+                    totalSkipped++;
+                    log.info("已跳过: 主机={}, 检查项={}", hostStatus.getHostIp(), item.getDisplayName());
+                }
+            }
+        }
+        
+        log.info("批量跳过完成: 集群={}, 主机数={}, 跳过项数={}", clusterId, totalHosts, totalSkipped);
+        
+        var result = new java.util.HashMap<String, Object>();
+        result.put("totalHosts", totalHosts);
+        result.put("totalSkipped", totalSkipped);
+        result.put("message", String.format("已跳过 %d 个主机上的 %d 个失败检查项", totalHosts, totalSkipped));
+        
+        return result;
+    }
+    
+    @Override
     public RepairResult repairCheckItem(Long clusterId, String hostIp, String checkItemKey, Map<String, Object> repairParams) {
         log.info("修复检查项: 集群={}, 主机={}, 检查项={}", clusterId, hostIp, checkItemKey);
         

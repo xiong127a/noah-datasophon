@@ -43,6 +43,14 @@ public interface EnvironmentCheckService {
     void skipCheckItem(Long clusterId, String hostIp, String checkItemKey);
     
     /**
+     * 批量跳过所有失败的检查项
+     * 
+     * @param clusterId 集群ID
+     * @return 批量操作结果（包含跳过的主机数和检查项数）
+     */
+    Map<String, Object> skipAllFailedItems(Long clusterId);
+    
+    /**
      * 修复失败的检查项
      * 
      * @param clusterId 集群ID

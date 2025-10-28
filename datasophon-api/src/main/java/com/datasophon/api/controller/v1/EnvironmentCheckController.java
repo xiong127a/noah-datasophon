@@ -134,6 +134,24 @@ public class EnvironmentCheckController {
     }
     
     /**
+     * 批量跳过所有失败的检查项
+     */
+    @PostMapping("/skip-all-failed")
+    public Result<Map<String, Object>> skipAllFailed(@ClusterId Long clusterId) {
+        
+        log.info("批量跳过所有失败的检查项: clusterId={}", clusterId);
+        
+        try {
+            var result = environmentCheckService.skipAllFailedItems(clusterId);
+            return Result.success(result);
+            
+        } catch (Exception e) {
+            log.error("批量跳过失败: {}", e.getMessage(), e);
+            return Result.error("批量跳过失败: " + e.getMessage());
+        }
+    }
+    
+    /**
      * 修复检查项
      */
     @PostMapping("/repair")

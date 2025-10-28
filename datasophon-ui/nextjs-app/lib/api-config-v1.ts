@@ -193,6 +193,7 @@ export const API_PATHS_V1 = {
   ENVIRONMENT_CHECK_START: `${API_BASE}/environment-check/start`,
   ENVIRONMENT_CHECK_STATUS: `${API_BASE}/environment-check/status`,
   ENVIRONMENT_CHECK_SKIP: `${API_BASE}/environment-check/skip`,
+  ENVIRONMENT_CHECK_SKIP_ALL_FAILED: `${API_BASE}/environment-check/skip-all-failed`,
   ENVIRONMENT_CHECK_REPAIR: `${API_BASE}/environment-check/repair`,
   ENVIRONMENT_CHECK_PAUSE: `${API_BASE}/environment-check/pause`,
   ENVIRONMENT_CHECK_RESUME: `${API_BASE}/environment-check/resume`,

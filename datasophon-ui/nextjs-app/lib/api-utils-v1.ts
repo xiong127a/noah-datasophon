@@ -335,6 +335,12 @@ export const clusterApiV1 = {
       return response.data
     },
     
+    /** 批量跳过所有失败的检查项 */
+    skipAllFailed: async () => {
+      const response = await apiV1.post(API_PATHS_V1.ENVIRONMENT_CHECK_SKIP_ALL_FAILED)
+      return response.data
+    },
+    
     /** 修复检查项 */
     repairItem: async (request: {
       hostIp: string
