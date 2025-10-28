@@ -4,6 +4,8 @@ import com.datasophon.api.annotation.ApiVersion;
 import com.datasophon.api.checker.CheckStateManager;
 import com.datasophon.api.event.CheckStatusChangeEvent;
 import com.datasophon.api.service.EnvironmentCheckService;
+import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
+import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
@@ -88,7 +90,7 @@ public class EnvironmentCheckSSEController implements ApplicationListener<CheckS
      * 监听状态变更事件
      */
     @Override
-    public void onApplicationEvent(CheckStatusChangeEvent event) {
+    public void onApplicationEvent(@NonNull CheckStatusChangeEvent event) {
         Long clusterId = event.getClusterId();
         String emitterKey = clusterId.toString();
         SseEmitter emitter = activeEmitters.get(emitterKey);
@@ -126,7 +128,7 @@ public class EnvironmentCheckSSEController implements ApplicationListener<CheckS
             
             log.info("📤 SSE推送成功: 集群={}, 主机数={}, 成功={}, 失败={}, 跳过={}, 可继续={}", 
                     clusterId, status.size(), totalSuccess, totalFailed, totalSkipped, 
-                    validation.get("canProceed"));
+                    validation.getCanProceed());
         } catch (IOException e) {
             log.warn("⚠️ SSE连接已断开: 集群={}", clusterId);
             activeEmitters.remove(clusterId.toString());

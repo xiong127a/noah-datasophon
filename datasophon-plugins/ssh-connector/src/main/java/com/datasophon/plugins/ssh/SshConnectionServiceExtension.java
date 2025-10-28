@@ -17,10 +17,13 @@
 
 package com.datasophon.plugins.ssh;
 
+import com.datasophon.plugins.api.model.HostCheckContext;
 import com.datasophon.plugins.api.service.SshConnectionService;
 import com.datasophon.plugins.impl.ssh.SshConnectionServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.pf4j.Extension;
+
+import java.io.InputStream;
 
 /**
  * SSH连接服务扩展点实现
@@ -43,6 +46,16 @@ public class SshConnectionServiceExtension extends SshConnectionServiceImpl impl
     public SshConnectionServiceExtension() {
         super();
         log.info("【SSH插件】SSH连接服务扩展点已加载 - 通过PF4J扩展点机制");
+    }
+    
+    /**
+     * 显式覆盖父类方法，确保字节码正确生成
+     * 解决 AbstractMethodError 问题
+     */
+    @Override
+    public boolean uploadFileFromStream(HostCheckContext context, InputStream inputStream, 
+                                       String remoteFilePath, long totalBytes, UploadProgressCallback progressCallback) {
+        return super.uploadFileFromStream(context, inputStream, remoteFilePath, totalBytes, progressCallback);
     }
 }
 
