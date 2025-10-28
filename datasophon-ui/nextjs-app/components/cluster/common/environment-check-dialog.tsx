@@ -603,14 +603,24 @@ export default function EnvironmentCheckDialog({
             <CardContent>
               <div className="flex gap-3">
                 <Button 
-                  onClick={() => setHostnameEditDialogOpen(true)} 
+                  onClick={() => {
+                    console.log('🔧 点击批量修改主机名按钮')
+                    console.log('📋 当前主机列表:', actualHostList)
+                    console.log('🆔 集群ID:', cluster?.id)
+                    console.log('🔑 连接参数:', connectionParams)
+                    setHostnameEditDialogOpen(true)
+                  }} 
                   size="sm"
                   className="bg-indigo-600 hover:bg-indigo-700"
                 >
                   批量修改主机名
                 </Button>
                 <Button 
-                  onClick={() => setHostsFileSyncDialogOpen(true)} 
+                  onClick={() => {
+                    console.log('📁 点击同步Hosts文件按钮')
+                    console.log('📋 当前主机列表:', actualHostList)
+                    setHostsFileSyncDialogOpen(true)
+                  }} 
                   size="sm"
                   className="bg-purple-600 hover:bg-purple-700"
                 >
@@ -921,33 +931,43 @@ export default function EnvironmentCheckDialog({
     )}
     
     {/* 主机名批量修改对话框 */}
-    <HostnameBatchEditDialog
-      open={hostnameEditDialogOpen}
-      onClose={() => setHostnameEditDialogOpen(false)}
-      clusterId={cluster?.id?.toString() || '0'}
-      hostIps={actualHostList.map(h => h.ip)}
-      connectionParams={connectionParams}
-      onSuccess={() => {
-        console.log('主机名修改成功')
-        // 可以选择刷新检查状态或重新运行全局检查
-        loadGlobalCheckResults()
-      }}
-    />
+    {hostnameEditDialogOpen && (
+      <HostnameBatchEditDialog
+        open={hostnameEditDialogOpen}
+        onClose={() => {
+          console.log('🚪 关闭主机名修改对话框')
+          setHostnameEditDialogOpen(false)
+        }}
+        clusterId={cluster?.id?.toString() || '0'}
+        hostIps={actualHostList.map(h => h.ip)}
+        connectionParams={connectionParams}
+        onSuccess={() => {
+          console.log('✅ 主机名修改成功')
+          // 可以选择刷新检查状态或重新运行全局检查
+          loadGlobalCheckResults()
+        }}
+      />
+    )}
     
     {/* Hosts文件同步对话框 */}
-    <HostsFileSyncDialog
-      open={hostsFileSyncDialogOpen}
-      onClose={() => setHostsFileSyncDialogOpen(false)}
-      clusterId={cluster?.id?.toString() || '0'}
-      hostIps={actualHostList.map(h => h.ip)}
-      hostList={actualHostList}
-      connectionParams={connectionParams}
-      onSuccess={() => {
-        console.log('Hosts文件同步成功')
-        // 可以选择刷新检查状态或重新运行全局检查
-        loadGlobalCheckResults()
-      }}
-    />
+    {hostsFileSyncDialogOpen && (
+      <HostsFileSyncDialog
+        open={hostsFileSyncDialogOpen}
+        onClose={() => {
+          console.log('🚪 关闭Hosts文件同步对话框')
+          setHostsFileSyncDialogOpen(false)
+        }}
+        clusterId={cluster?.id?.toString() || '0'}
+        hostIps={actualHostList.map(h => h.ip)}
+        hostList={actualHostList}
+        connectionParams={connectionParams}
+        onSuccess={() => {
+          console.log('✅ Hosts文件同步成功')
+          // 可以选择刷新检查状态或重新运行全局检查
+          loadGlobalCheckResults()
+        }}
+      />
+    )}
     </>
   )
 }

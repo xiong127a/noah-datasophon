@@ -251,16 +251,26 @@ export default function HostnameBatchEditDialog({
     return <Badge variant={config.variant}>{config.text}</Badge>
   }
 
-  if (!config) {
-    return null
-  }
-
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>批量修改主机名</DialogTitle>
         </DialogHeader>
+        
+        {/* 配置加载中 */}
+        {!config && (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center space-y-3">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-blue-500" />
+              <p className="text-sm text-gray-600">加载配置中...</p>
+            </div>
+          </div>
+        )}
+        
+        {/* 配置加载完成，显示内容 */}
+        {config && (
+        <>
 
         <div className="space-y-6">
           {/* 配置区域 */}
@@ -430,6 +440,8 @@ export default function HostnameBatchEditDialog({
             </Button>
           )}
         </DialogFooter>
+        </>
+        )}
       </DialogContent>
     </Dialog>
   )
