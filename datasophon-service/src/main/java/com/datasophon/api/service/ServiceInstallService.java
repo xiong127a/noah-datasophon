@@ -60,7 +60,7 @@ public interface ServiceInstallService {
      * 保存服务配置
      * 
      * @param clusterId   集群ID
-     * @param serviceId   服务ID
+     * @param serviceName 服务名称
      * @param configJson  配置列表
      * @param roleGroupId 角色组ID
      * @param description 描述
@@ -68,7 +68,7 @@ public interface ServiceInstallService {
      * @param username    用户名
      * @return 是否创建了新版本
      */
-    boolean saveServiceConfig(Long clusterId, Long serviceId, List<ServiceConfig> configJson,
+    boolean saveServiceConfig(Long clusterId, String serviceName, List<ServiceConfig> configJson,
                               Long roleGroupId, String description, Long userId, String username);
 
     /**

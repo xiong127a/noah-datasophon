@@ -191,13 +191,12 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         ClusterServiceInstanceDTO serviceInstanceDTO = serviceInstanceService
                 .getServiceInstanceByClusterIdAndServiceName(
                         clusterId, serviceName);
-        ClusterServiceInstanceEntity serviceInstance = null;
-        if (serviceInstanceDTO != null) {
-            serviceInstance = clusterServiceInstanceConverter.dtoToEntity(serviceInstanceDTO);
-        }
-        if (Objects.nonNull(serviceInstance)) {
+        
+        if (Objects.nonNull(serviceInstanceDTO)) {
+            ClusterServiceInstanceEntity serviceInstance = clusterServiceInstanceConverter.dtoToEntity(serviceInstanceDTO);
             list = listServiceConfigByServiceInstance(serviceInstance);
         } else {
+            // 服务实例不存在时，从框架服务获取默认配置
             // Service层：获取DTO后转换为Entity
             FrameServiceDTO frameServiceDTO = this.frameService.getServiceByFrameCodeAndServiceName(
                     clusterInfo.getClusterFrame(), serviceName);
@@ -238,28 +237,43 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // 使用分组逻辑处理配置数据，返回分组结构提升前端用户体验
         var groupedConfigs = ConfigGroupUtils.groupByConfigTargetRoleOrCommon(list);
         
-        // ✅ 获取serviceId，如果服务实例存在则使用其ID，否则为null
-        Long serviceId = (serviceInstanceDTO != null) ? serviceInstanceDTO.id() : null;
-        
         // ✅ 将分组配置转换为GroupInfo映射
         var groups = serviceConfigGroupConverter.toGroupMap(groupedConfigs);
         
-        // ✅ 构造包含serviceId的DTO
-        return new ServiceConfigGroupDTO(serviceId, groups);
+        // ✅ 构造DTO（不再需要serviceId，后端通过serviceName获取）
+        return new ServiceConfigGroupDTO(groups);
     }
 
     @Override
     public boolean saveServiceConfig(
-            Long clusterId, Long serviceId, List<ServiceConfig> list,
+            Long clusterId, String serviceName, List<ServiceConfig> list,
             Long roleGroupId, String description, Long userId, String username) {
         ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
         
-        // 通过serviceId获取集群服务实例
-        ClusterServiceInstanceEntity serviceInstance = serviceInstanceService.getById(serviceId);
-        if (serviceInstance == null) {
-            throw new BusinessException("集群服务实例不存在: " + serviceId);
+        // ✅ 通过服务名获取或创建服务实例
+        ClusterServiceInstanceDTO serviceInstanceDTO = serviceInstanceService
+                .getServiceInstanceByClusterIdAndServiceName(clusterId, serviceName);
+        ClusterServiceInstanceEntity serviceInstance;
+        
+        if (serviceInstanceDTO == null) {
+            // 如果服务实例不存在，先创建
+            FrameServiceDTO frameServiceDTO = frameService.getServiceByFrameCodeAndServiceName(
+                    clusterInfo.getClusterFrame(), serviceName);
+            if (frameServiceDTO == null) {
+                throw new BusinessException("框架服务不存在: " + serviceName);
+            }
+            FrameServiceEntity frameServiceEntity = frameServiceConverter.dtoToEntity(frameServiceDTO);
+            serviceInstance = saveServiceInstance(clusterId, serviceName, frameServiceEntity);
+            logger.info("保存配置时创建服务实例: 集群={}, 服务={}, serviceId={}", 
+                       clusterId, serviceName, serviceInstance.getId());
+            
+            // 同时创建角色组
+            var roleGroup = saveServiceInstanceRoleGroup(clusterId, serviceName, serviceInstance);
+            logger.info("创建服务角色组: serviceId={}, roleGroupId={}", 
+                       serviceInstance.getId(), roleGroup.getId());
+        } else {
+            serviceInstance = clusterServiceInstanceConverter.dtoToEntity(serviceInstanceDTO);
         }
-        String serviceName = serviceInstance.getServiceName();
         
         ServiceConfigMap.put(clusterInfo.getClusterCode() + UNDERLINE + serviceName + CONFIG,
                 list);

@@ -262,7 +262,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
             com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO roleGroupConfig = clusterServiceRoleGroupConfigService
                     .getConfigByRoleGroupId(roleInstanceDto.roleGroupId());
             List<ServiceConfig> serviceConfig = ProcessUtils.getServiceConfig(roleGroupConfig);
-            serviceInstallService.saveServiceConfig(roleInstanceDto.clusterId(), roleInstanceDto.serviceId(), serviceConfig,
+            serviceInstallService.saveServiceConfig(roleInstanceDto.clusterId(), roleInstanceDto.serviceName(), serviceConfig,
                     roleGroupConfig.roleGroupId(), "(AUTO) 生成alertManager 配置信息", -1L, "system");
         }
 
