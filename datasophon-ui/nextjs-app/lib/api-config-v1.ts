@@ -355,14 +355,8 @@ apiClientV1.interceptors.response.use(
       
       // 如果后端返回success: false或code不是200，视为业务错误
       if (success === false || (code && code !== 200)) {
-        // 使用苹果样式的错误通知
-        import('./apple-toast').then(({ apiErrorToast }) => {
-          const errorMessage = msg || '操作失败，请重试';
-          apiErrorToast.business(errorMessage, {
-            url: response.config?.url,
-            code
-          });
-        });
+        // ✅ 不在拦截器中自动显示toast，让调用方自行处理错误显示
+        // 避免与组件中的错误提示重复显示
         
         // 创建一个带有错误信息的Error对象
         const businessError = new Error(msg || '业务操作失败') as Error & { 
@@ -380,58 +374,29 @@ apiClientV1.interceptors.response.use(
   error => {
     console.error('API请求错误:', error);
     
-    // 使用苹果样式的错误通知
-    import('./apple-toast').then(({ apiErrorToast }) => {
-      if (error.response) {
-        const { status, data } = error.response;
-        
-        switch (status) {
-          case 400:
-            apiErrorToast.business(data?.msg || data?.message || '请求参数错误');
-            break;
-          case 401:
-            // 防重复显示登录过期通知
-            if (!loginExpiredShown) {
-              loginExpiredShown = true;
-              apiErrorToast.auth('登录已过期，请重新登录');
-              
-              if (typeof window !== 'undefined') {
-                // 清除本地存储的token
-                localStorage.removeItem('jwt_token');
-                localStorage.removeItem('refresh_token');
-                localStorage.removeItem('user_info');
-                
-                // 5秒后重置标志位，允许再次显示（防止页面长时间停留的情况）
-                setTimeout(() => {
-                  loginExpiredShown = false;
-                }, 5000);
-              }
-            }
-            break;
-          case 403:
-            apiErrorToast.permission('没有权限访问此资源');
-            break;
-          case 404:
-            apiErrorToast.network('请求的资源不存在', status);
-            break;
-          case 500:
-            apiErrorToast.network(data?.msg || data?.message || '服务器内部错误', status);
-            break;
-          case 502:
-            apiErrorToast.network('网关错误，服务暂时不可用', status);
-            break;
-          case 503:
-            apiErrorToast.network('服务暂时不可用，请稍后重试', status);
-            break;
-          default:
-            apiErrorToast.network(data?.msg || data?.message || `请求失败`, status);
+    // ✅ 只在401（未授权）时自动显示toast，其他错误让调用方处理
+    // 避免与组件中的错误提示重复显示
+    if (error.response?.status === 401) {
+      import('./apple-toast').then(({ apiErrorToast }) => {
+        // 防重复显示登录过期通知
+        if (!loginExpiredShown) {
+          loginExpiredShown = true;
+          apiErrorToast.auth('登录已过期，请重新登录');
+          
+          if (typeof window !== 'undefined') {
+            // 清除本地存储的token
+            localStorage.removeItem('jwt_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user_info');
+            
+            // 5秒后重置标志位，允许再次显示（防止页面长时间停留的情况）
+            setTimeout(() => {
+              loginExpiredShown = false;
+            }, 5000);
+          }
         }
-      } else if (error.request) {
-        apiErrorToast.network('网络连接失败，请检查网络设置');
-      } else {
-        apiErrorToast.business(error.message || '请求配置错误');
-      }
-    });
+      });
+    }
 
     return Promise.reject(error);
   }

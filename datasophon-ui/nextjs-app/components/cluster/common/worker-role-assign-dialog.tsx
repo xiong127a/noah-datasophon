@@ -276,7 +276,7 @@ const WorkerRoleAssignDialog: React.FC<WorkerRoleAssignDialogProps> = ({
           console.log('mappings:', mappings)
           
           // 调用保存接口（关键步骤：保存到缓存中）
-          const response = await clusterApiV1.serviceRole.saveMapping(cluster.id, mappings)
+          const response = await clusterApiV1.serviceRole.saveMapping(mappings)
           
           console.log('保存响应:', response)
           

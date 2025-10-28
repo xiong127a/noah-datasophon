@@ -244,7 +244,7 @@ const MasterRoleAssignDialog: React.FC<MasterRoleAssignDialogProps> = ({
           : [formData[serviceRole] as string]
       }))
 
-      const response = await clusterApiV1.serviceRole.saveMapping(cluster.id, mappings)
+      const response = await clusterApiV1.serviceRole.saveMapping(mappings)
       
       if (response.success) {
         toast.success('Master角色分配完成')
