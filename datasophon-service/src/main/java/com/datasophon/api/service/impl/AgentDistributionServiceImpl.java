@@ -298,27 +298,27 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
         ClusterHostEntity existingHost = clusterHostMapper.selectByClusterIdAndIp(clusterId, hostIp);
         
         if (existingHost != null) {
-            // 主机已存在，更新状态为受管
-            existingHost.setManagementStatus(ManagementStatus.MANAGED);
+            // 主机已存在，更新状态为配置中
+            existingHost.setManagementStatus(ManagementStatus.CONFIGURING);
             existingHost.setHostState(HostState.RUNNING);
             existingHost.setHostname(hostname);
             existingHost.setCheckTime(LocalDateTime.now());
             clusterHostMapper.update(existingHost);
-            log.info("更新已存在主机信息: IP={}", hostIp);
+            log.info("更新已存在主机信息: IP={}, 状态=配置中", hostIp);
         } else {
-            // 新主机，插入数据库
+            // 新主机，插入数据库，状态设置为配置中
             ClusterHostEntity newHost = ClusterHostEntity.builder()
                     .clusterId(clusterId)
                     .ip(hostIp)
                     .hostname(hostname)
                     .hostState(HostState.RUNNING)
-                    .managementStatus(ManagementStatus.MANAGED)
+                    .managementStatus(ManagementStatus.CONFIGURING)  // ✅ Agent分发完成后是配置中状态
                     .checkTime(LocalDateTime.now())
                     .rack("/default-rack")  // 默认机架
                     .build();
             
             clusterHostMapper.insert(newHost);
-            log.info("新增主机信息到数据库: IP={}, hostname={}", hostIp, hostname);
+            log.info("新增主机信息到数据库: IP={}, hostname={}, 状态=配置中", hostIp, hostname);
         }
     }
     
