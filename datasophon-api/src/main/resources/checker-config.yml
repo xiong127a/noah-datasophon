@@ -184,8 +184,8 @@ datasophon:
       timeout-seconds: 60                 # 检查超时时间
       auto-sync: false                    # 是否自动同步hosts文件
       backup-before-modify: true          # 修改前是否备份
-      managed-marker-start: "# === DataSophon Managed Hosts Start ==="  # 管理段开始标记
-      managed-marker-end: "# === DataSophon Managed Hosts End ==="      # 管理段结束标记
+      managed-marker-start: "# DataSophon Managed Hosts - START"  # 管理段开始标记
+      managed-marker-end: "# DataSophon Managed Hosts - END"      # 管理段结束标记
       backup-suffix: ".datasophon.bak"    # 备份文件后缀
       preserve-entries:                   # 需要保留的系统默认条目
         - "127.0.0.1"

@@ -92,6 +92,10 @@ public class HostsFileGlobalChecker implements GlobalCheckItem {
             Map<String, String> managedSections = new HashMap<>();
             for (Map.Entry<String, String> entry : hostsFileContents.entrySet()) {
                 String managedContent = extractManagedSection(entry.getValue(), config);
+                log.info("主机 {} 的管理段内容长度: {}, 前100字符: {}", 
+                        entry.getKey(), 
+                        managedContent.length(), 
+                        managedContent.length() > 100 ? managedContent.substring(0, 100) : managedContent);
                 managedSections.put(entry.getKey(), managedContent);
             }
             
@@ -109,12 +113,14 @@ public class HostsFileGlobalChecker implements GlobalCheckItem {
                     .collect(Collectors.toSet());
             
             Map<String, Set<String>> missingHosts = new HashMap<>();
+            log.info("开始检查缺失主机: 集群IP列表={}, 集群主机名列表={}", allClusterIps, allClusterHostnames);
             for (Map.Entry<String, String> entry : managedSections.entrySet()) {
                 Set<String> missingInThis = findMissingHosts(
                         entry.getValue(), 
                         allClusterIps, 
                         allClusterHostnames
                 );
+                log.info("主机 {} 缺失的条目: {}", entry.getKey(), missingInThis);
                 if (!missingInThis.isEmpty()) {
                     missingHosts.put(entry.getKey(), missingInThis);
                 }
@@ -245,13 +251,42 @@ public class HostsFileGlobalChecker implements GlobalCheckItem {
         String startMarker = config.getManagedMarkerStart();
         String endMarker = config.getManagedMarkerEnd();
         
+        log.info("提取管理段: 开始标记=[{}], 结束标记=[{}]", startMarker, endMarker);
+        log.info("hosts内容总长度: {} 字符，总行数: {} 行", 
+                hostsContent.length(), 
+                hostsContent.split("\\r?\\n").length);
+        
+        // 打印完整hosts内容（使用DEBUG级别，避免刷屏）
+        log.debug("完整hosts内容:\n{}", hostsContent);
+        
         int startIndex = hostsContent.indexOf(startMarker);
         int endIndex = hostsContent.indexOf(endMarker);
         
-        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
-            return hostsContent.substring(startIndex, endIndex + endMarker.length());
+        log.info("标记查找结果: startIndex={}, endIndex={}", startIndex, endIndex);
+        
+        if (startIndex == -1) {
+            log.error("❌ 未找到开始标记 [{}] in hosts文件", startMarker);
+            // 打印开头和结尾，帮助定位问题
+            String preview = hostsContent.length() > 500 ? 
+                    hostsContent.substring(0, 250) + "\n...\n" + hostsContent.substring(hostsContent.length() - 250) :
+                    hostsContent;
+            log.error("hosts文件预览（头尾各250字符）:\n{}", preview);
         }
         
+        if (endIndex == -1) {
+            log.error("❌ 未找到结束标记 [{}] in hosts文件", endMarker);
+        }
+        
+        if (startIndex != -1 && endIndex != -1 && endIndex > startIndex) {
+            String managedSection = hostsContent.substring(startIndex, endIndex + endMarker.length());
+            log.info("✅ 成功提取管理段，长度: {} 字符，行数: {} 行", 
+                    managedSection.length(), 
+                    managedSection.split("\\r?\\n").length);
+            log.debug("管理段完整内容:\n{}", managedSection);
+            return managedSection;
+        }
+        
+        log.warn("❌ 未找到管理段标记或标记位置错误");
         return ""; // 没有找到管理段
     }
     
@@ -261,14 +296,104 @@ public class HostsFileGlobalChecker implements GlobalCheckItem {
     private Set<String> findMissingHosts(String managedSection, Set<String> clusterIps, Set<String> clusterHostnames) {
         Set<String> missing = new HashSet<>();
         
-        // 检查每个IP是否在管理段中
+        log.debug("检查管理段内容: 长度={}, 内容={}", managedSection.length(), managedSection);
+        
+        // 解析hosts文件内容，提取所有IP地址（第一列）
+        Set<String> ipsInHostsFile = parseHostsFileIps(managedSection);
+        log.info("从管理段解析出的IP列表: {}", ipsInHostsFile);
+        
+        // 检查每个集群IP是否在hosts文件中
         for (String ip : clusterIps) {
-            if (!managedSection.contains(ip)) {
+            if (!ipsInHostsFile.contains(ip)) {
                 missing.add(ip);
+                log.warn("管理段中缺失IP: {}", ip);
             }
         }
         
         return missing;
+    }
+    
+    /**
+     * 解析hosts文件内容，提取所有IP地址（每行的第一列）
+     * @param hostsContent hosts文件内容
+     * @return IP地址集合
+     */
+    private Set<String> parseHostsFileIps(String hostsContent) {
+        Set<String> ips = new HashSet<>();
+        
+        if (hostsContent == null || hostsContent.trim().isEmpty()) {
+            log.warn("hosts内容为空，无法解析");
+            return ips;
+        }
+        
+        log.info("开始解析hosts内容，长度={}, 内容:\n{}", hostsContent.length(), hostsContent);
+        
+        // 按行分割
+        String[] lines = hostsContent.split("\\r?\\n");
+        log.info("分割后的行数: {}", lines.length);
+        
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            // 去除首尾空白
+            line = line.trim();
+            
+            log.debug("第{}行原始内容: [{}]", i + 1, line);
+            
+            // 跳过空行和注释行
+            if (line.isEmpty()) {
+                log.debug("第{}行: 空行，跳过", i + 1);
+                continue;
+            }
+            if (line.startsWith("#")) {
+                log.debug("第{}行: 注释行，跳过", i + 1);
+                continue;
+            }
+            
+            // 按空白符分割（空格或制表符）
+            String[] parts = line.split("\\s+");
+            log.debug("第{}行分割结果: 列数={}, 内容={}", i + 1, parts.length, String.join(" | ", parts));
+            
+            if (parts.length >= 2) {
+                // 第一列是IP地址
+                String ip = parts[0];
+                
+                // 简单验证IP格式（支持IPv4和IPv6）
+                boolean valid = isValidIp(ip);
+                log.debug("第{}行IP: [{}], 有效={}", i + 1, ip, valid);
+                
+                if (valid) {
+                    ips.add(ip);
+                    log.info("✅ 成功解析IP: {}", ip);
+                } else {
+                    log.warn("❌ IP格式无效: {}", ip);
+                }
+            } else {
+                log.warn("第{}行: 列数不足({}<2)，跳过", i + 1, parts.length);
+            }
+        }
+        
+        return ips;
+    }
+    
+    /**
+     * 简单验证IP地址格式
+     */
+    private boolean isValidIp(String ip) {
+        if (ip == null || ip.isEmpty()) {
+            return false;
+        }
+        
+        // IPv4格式：xxx.xxx.xxx.xxx
+        if (ip.matches("^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$")) {
+            return true;
+        }
+        
+        // IPv6格式（简化判断）
+        if (ip.contains(":")) {
+            return true;
+        }
+        
+        return false;
     }
     
     /**
