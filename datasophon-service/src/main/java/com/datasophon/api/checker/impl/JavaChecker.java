@@ -218,7 +218,7 @@ public class JavaChecker implements EnvironmentCheckItem {
      * 验证由框架在修复成功后自动调用 execute() 方法完成，避免重复验证。
      * 
      * @param context 主机检查上下文
-     * @param params 修复参数（可选：createSymlinks - 是否创建系统软链接）
+     * @param params 修复参数（可选：jdkPackage - 指定JDK包路径）
      * @return RepairResult 修复结果（仅表示修复操作是否成功）
      */
     @Override
@@ -316,40 +316,24 @@ public class JavaChecker implements EnvironmentCheckItem {
             String jdkFileName = selectedJdkPackage.substring(selectedJdkPackage.lastIndexOf("/") + 1);
             String tempDir = "/tmp/jdk_install_" + System.currentTimeMillis();
             
-            // 读取用户修复选项（是否创建软链接，默认false）
-            boolean createSymlinks = params != null 
-                    && Boolean.TRUE.equals(params.get("createSymlinks"));
-            
             // 记录下载信息
             Map<String, Object> downloadInfo = new HashMap<>();
             downloadInfo.put("downloadUrl", jdkDownloadUrl);
             downloadInfo.put("fileName", jdkFileName);
             downloadInfo.put("installPath", installBasePath);
             downloadInfo.put("tempDir", tempDir);
-            downloadInfo.put("createSymlinks", createSymlinks);
             downloadInfo.put("note", "JAVA_HOME将在解压后根据实际目录名设置");
             
             checkLogWriter.logRepairInfo(context.getClusterId(), context.getHostIp(),
                     getCheckKey(), "准备JDK安装", downloadInfo);
             
-            // 创建修复步骤列表（根据用户选择决定是否包含软链接步骤）
+            // 创建修复步骤列表
             // 注意：ConfigureEnvStep 会在执行时自动检测实际的JDK目录名
             java.util.List<com.datasophon.api.checker.RepairStep> steps = new java.util.ArrayList<>();
             steps.add(new com.datasophon.api.checker.steps.jdk.CreateTempDirStep(tempDir));
             steps.add(new com.datasophon.api.checker.steps.jdk.DownloadJdkStep(tempDir, jdkFileName, jdkDownloadUrl, isHttp));
             steps.add(new com.datasophon.api.checker.steps.jdk.ExtractJdkStep(tempDir, jdkFileName, installBasePath));
-            // ConfigureEnvStep 传入 installBasePath，它会自动检测实际目录名
             steps.add(new com.datasophon.api.checker.steps.jdk.ConfigureEnvStep(installBasePath));
-            
-            // 可选步骤：创建系统软链接（需要用户选择）
-            if (createSymlinks) {
-                log.info("用户选择创建系统软链接");
-                // CreateSymlinksStep 也会自动检测实际目录名
-                steps.add(new com.datasophon.api.checker.steps.jdk.CreateSymlinksStep(installBasePath));
-            } else {
-                log.info("用户未选择创建系统软链接，跳过此步骤");
-            }
-            
             steps.add(new com.datasophon.api.checker.steps.jdk.CleanupTempStep(tempDir));
             // Note: Verification is handled by framework calling execute() after successful repair
             // No need to add VerifyInstallStep here to avoid duplicate verification
