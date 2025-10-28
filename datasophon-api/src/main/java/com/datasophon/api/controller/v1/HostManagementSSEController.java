@@ -28,11 +28,9 @@ public class HostManagementSSEController {
      * @return SSE Emitter
      */
     @GetMapping(value = "/stream/{taskId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter streamProgress(
-            @PathVariable String taskId,
-            @ClusterId Long clusterId) {
+    public SseEmitter streamProgress(@PathVariable String taskId) {
         
-        log.info("创建主机管理SSE连接: taskId={}, clusterId={}", taskId, clusterId);
+        log.info("创建主机管理SSE连接: taskId={}", taskId);
         
         // 创建SSE发射器（30分钟超时）
         SseEmitter emitter = new SseEmitter(30 * 60 * 1000L);
