@@ -11,8 +11,12 @@ import com.datasophon.api.service.AgentDistributionService;
 import com.datasophon.api.service.ParcelRepositoryService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ParcelRepositoryDTO;
+import com.datasophon.common.enums.HostState;
+import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.vo.agent.AgentDistributionStatusVO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.entity.ClusterInfoEntity;
+import com.datasophon.dao.mapper.ClusterHostMapper;
 import com.datasophon.dao.mapper.ClusterInfoMapper;
 import com.datasophon.plugins.api.factory.SshConnectionServiceFactory;
 import com.datasophon.plugins.api.service.SshConnectionService;
@@ -20,10 +24,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PreDestroy;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  * Agent分发服务实现
@@ -39,6 +47,7 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     private final AgentStateManager stateManager;
     private final AgentLogWriter logWriter;
     private final ClusterInfoMapper clusterInfoMapper;
+    private final ClusterHostMapper clusterHostMapper;
     private final ParcelRepositoryService repositoryService;
     private final ConfigBean configBean;
     private final RepositoryDownloaderFactory downloaderFactory;
@@ -46,8 +55,10 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     // SSH连接服务（懒加载，第一次使用时才初始化）
     private volatile SshConnectionService sshService;
     
-    // 异步执行线程池
-    private final ExecutorService executorService = Executors.newCachedThreadPool();
+    // 异步执行线程池 - 使用虚拟线程（JDK 21）
+    // 虚拟线程非常轻量（KB级别），适合I/O密集型任务（SSH/文件传输）
+    // 可以创建数千个虚拟线程而不会耗尽资源
+    private final ExecutorService executorService = Executors.newVirtualThreadPerTaskExecutor();
     
     /**
      * 获取SSH连接服务（懒加载模式）
@@ -142,11 +153,22 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             logWriter.clearLog(clusterId, hostIp);
             
             // 启动异步分发任务（从本地上传，跳过下载步骤）
+            // 添加30分钟超时控制，防止长时间阻塞
             String finalHostname = hostname;
             CompletableFuture.runAsync(() -> {
                 distributeToHost(clusterId, hostIp, finalHostname, sshUser, sshPort, sshPassword,
                         localPackagePath, cluster.getClusterFrame());
-            }, executorService);
+            }, executorService)
+            .orTimeout(30, TimeUnit.MINUTES)  // 30分钟超时
+            .exceptionally(ex -> {
+                log.error("Agent分发失败或超时: 集群={}, 主机={}, 错误={}", 
+                        clusterId, hostIp, ex.getMessage());
+                stateManager.updateHostStatus(clusterId, hostIp, "FAILED", 0, 
+                        "", "分发失败: " + (ex instanceof TimeoutException ? "超时(30分钟)" : ex.getMessage()));
+                logWriter.logError(clusterId, hostIp, "timeout", 
+                        "分发失败: " + ex.getMessage(), null);
+                return null;
+            });
         }
         
         return "Agent分发任务已启动";
@@ -249,6 +271,15 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
                     "Agent分发成功完成", null);
             log.info("Agent分发成功完成: {}", hostIp);
             
+            // ========== 保存主机信息到数据库 ==========
+            try {
+                saveHostToDatabase(clusterId, hostIp, hostname);
+                log.info("主机信息已保存到数据库: IP={}, hostname={}", hostIp, hostname);
+            } catch (Exception e) {
+                log.error("保存主机信息失败: IP={}, 错误={}", hostIp, e.getMessage(), e);
+                // 保存失败不影响分发成功状态，仅记录日志
+            }
+            
         } catch (Exception e) {
             log.error("Agent分发异常: 主机={}, 错误={}", hostIp, e.getMessage(), e);
             stateManager.updateHostStatus(clusterId, hostIp, "FAILED", 0,
@@ -256,6 +287,38 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             
             logWriter.logError(clusterId, hostIp, "error",
                     "Agent分发异常: " + e.getMessage(), null);
+        }
+    }
+    
+    /**
+     * 保存主机信息到数据库
+     */
+    private void saveHostToDatabase(Long clusterId, String hostIp, String hostname) {
+        // 直接使用Mapper中已有的方法查询
+        ClusterHostEntity existingHost = clusterHostMapper.selectByClusterIdAndIp(clusterId, hostIp);
+        
+        if (existingHost != null) {
+            // 主机已存在，更新状态为受管
+            existingHost.setManagementStatus(ManagementStatus.MANAGED);
+            existingHost.setHostState(HostState.RUNNING);
+            existingHost.setHostname(hostname);
+            existingHost.setCheckTime(LocalDateTime.now());
+            clusterHostMapper.update(existingHost);
+            log.info("更新已存在主机信息: IP={}", hostIp);
+        } else {
+            // 新主机，插入数据库
+            ClusterHostEntity newHost = ClusterHostEntity.builder()
+                    .clusterId(clusterId)
+                    .ip(hostIp)
+                    .hostname(hostname)
+                    .hostState(HostState.RUNNING)
+                    .managementStatus(ManagementStatus.MANAGED)
+                    .checkTime(LocalDateTime.now())
+                    .rack("/default-rack")  // 默认机架
+                    .build();
+            
+            clusterHostMapper.insert(newHost);
+            log.info("新增主机信息到数据库: IP={}, hostname={}", hostIp, hostname);
         }
     }
     
@@ -320,6 +383,33 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     private boolean isLocalRepository(String url) {
         // 不以http://或https://开头的都认为是本地路径
         return !url.startsWith("http://") && !url.startsWith("https://");
+    }
+    
+    /**
+     * 服务关闭时的清理工作
+     * 优雅关闭线程池，等待正在执行的任务完成
+     */
+    @PreDestroy
+    public void shutdown() {
+        log.info("正在关闭Agent分发服务...");
+        
+        executorService.shutdown();
+        try {
+            // 等待60秒让现有任务完成
+            if (!executorService.awaitTermination(60, TimeUnit.SECONDS)) {
+                log.warn("部分Agent分发任务未在60秒内完成，强制关闭线程池");
+                List<Runnable> droppedTasks = executorService.shutdownNow();
+                log.warn("强制中断了 {} 个未完成的任务", droppedTasks.size());
+            } else {
+                log.info("所有Agent分发任务已正常完成");
+            }
+        } catch (InterruptedException e) {
+            log.error("等待线程池关闭时被中断", e);
+            executorService.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+        
+        log.info("Agent分发服务已关闭");
     }
 }
 
