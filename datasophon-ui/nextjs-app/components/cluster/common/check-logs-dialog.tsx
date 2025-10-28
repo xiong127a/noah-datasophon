@@ -77,18 +77,36 @@ export function CheckLogsDialog({
       
       // 历史日志加载完成
       eventSource.addEventListener('history-loaded', (event) => {
-        console.log('历史日志加载完成:', event.data)
+        console.log('📚 历史日志加载完成:', event.data)
         setConnectionState('connected')
+        // 使用状态更新函数来获取最新的日志数量
+        setCheckLogs(prev => {
+          setRepairLogs(prevRepair => {
+            console.log('📊 日志统计:', {
+              检查日志数量: prev.length,
+              修复日志数量: prevRepair.length
+            })
+            return prevRepair
+          })
+          return prev
+        })
       })
       
       // 接收实时日志（根据type字段分发）
       eventSource.addEventListener('log', (event) => {
         try {
           const logEntry = JSON.parse(event.data) as LogEntry
-          console.log('收到日志:', logEntry)
+          console.log('📥 收到日志:', {
+            type: logEntry.type,
+            level: logEntry.level,
+            stage: logEntry.stage,
+            message: logEntry.message?.substring(0, 50),
+            fullLog: logEntry
+          })
           
           // 根据日志类型追加到对应的日志列表
           if (logEntry.type === 'check') {
+            console.log('✅ 添加到检查日志列表')
             setCheckLogs(prev => {
               // 如果是进度日志，更新同一stage的最新进度
               if (logEntry.details?.isProgress) {
@@ -106,6 +124,7 @@ export function CheckLogsDialog({
               return [...prev, logEntry]
             })
           } else if (logEntry.type === 'repair') {
+            console.log('🔧 添加到修复日志列表')
             setRepairLogs(prev => {
               // 如果是进度日志，更新同一stage的最新进度
               if (logEntry.details?.isProgress) {
@@ -122,9 +141,11 @@ export function CheckLogsDialog({
               // 其他日志正常追加
               return [...prev, logEntry]
             })
+          } else {
+            console.warn('⚠️ 未知的日志类型:', logEntry.type, logEntry)
           }
         } catch (e) {
-          console.error('解析SSE日志失败:', e)
+          console.error('❌ 解析SSE日志失败:', e, event.data)
         }
       })
       
@@ -141,6 +162,11 @@ export function CheckLogsDialog({
         } catch (e) {
           console.error('解析修复完成事件失败:', e)
         }
+        
+        // 修复完成后主动关闭SSE连接，避免触发error事件
+        console.log('修复完成，关闭SSE连接')
+        eventSource.close()
+        eventSourceRef.current = null
       })
       
       // 连接错误
@@ -402,13 +428,23 @@ export function CheckLogsDialog({
         
         <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'check' | 'repair')} className="flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-2 flex-shrink-0">
-            <TabsTrigger value="check">
+            <TabsTrigger value="check" className="relative">
               <FileText className="h-4 w-4 mr-2" />
               检查日志
+              {checkLogs.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-blue-500 text-white text-xs rounded-full">
+                  {checkLogs.length}
+                </span>
+              )}
             </TabsTrigger>
-            <TabsTrigger value="repair">
+            <TabsTrigger value="repair" className="relative">
               <Wrench className="h-4 w-4 mr-2" />
               修复日志
+              {repairLogs.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-green-500 text-white text-xs rounded-full">
+                  {repairLogs.length}
+                </span>
+              )}
             </TabsTrigger>
           </TabsList>
           

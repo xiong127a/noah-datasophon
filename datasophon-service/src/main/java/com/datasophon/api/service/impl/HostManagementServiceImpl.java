@@ -369,32 +369,45 @@ public class HostManagementServiceImpl implements HostManagementService {
         
         var config = checkerProperties.getHostsFile();
         
-        // 智能合并hosts文件的脚本
+        // 智能合并hosts文件的脚本（使用临时文件方式，更可靠）
+        // 将hosts内容进行base64编码，避免特殊字符和换行符问题
+        String hostsContentBase64 = java.util.Base64.getEncoder().encodeToString(hostsContent.getBytes());
+        
         String script = String.format(
             "#!/bin/bash\n" +
             "HOSTS_FILE='/etc/hosts'\n" +
             "BACKUP_FILE='%s%s'\n" +
             "START_MARKER='%s'\n" +
             "END_MARKER='%s'\n" +
-            "NEW_CONTENT='%s'\n" +
+            "TEMP_FILE='/tmp/datasophon_hosts_temp_$$'\n" +
             "\n" +
             "# 备份原文件\n" +
             "sudo cp $HOSTS_FILE $BACKUP_FILE\n" +
             "\n" +
-            "# 检查是否存在管理段标记\n" +
-            "if grep -q \"$START_MARKER\" $HOSTS_FILE && grep -q \"$END_MARKER\" $HOSTS_FILE; then\n" +
-            "  # 存在标记，替换管理段\n" +
-            "  sudo sed -i \"/$START_MARKER/,/$END_MARKER/c\\\\$NEW_CONTENT\" $HOSTS_FILE\n" +
-            "else\n" +
-            "  # 不存在标记，追加到文件末尾\n" +
-            "  echo \"$NEW_CONTENT\" | sudo tee -a $HOSTS_FILE > /dev/null\n" +
-            "fi\n" +
+            "# 解码新内容到临时文件\n" +
+            "echo '%s' | base64 -d > $TEMP_FILE\n" +
+            "\n" +
+            "# 删除所有已存在的管理段（处理可能的重复情况）\n" +
+            "# 使用while循环确保删除所有出现的管理段\n" +
+            "while grep -q \"$START_MARKER\" $HOSTS_FILE; do\n" +
+            "  sudo sed -i \"/$START_MARKER/,/$END_MARKER/d\" $HOSTS_FILE\n" +
+            "done\n" +
+            "\n" +
+            "# 确保hosts文件末尾有一个换行符\n" +
+            "sudo sed -i -e '$a\\' $HOSTS_FILE\n" +
+            "\n" +
+            "# 追加新的管理段\n" +
+            "cat $TEMP_FILE | sudo tee -a $HOSTS_FILE > /dev/null\n" +
+            "\n" +
+            "# 清理临时文件\n" +
+            "rm -f $TEMP_FILE\n" +
+            "\n" +
             "echo 'Hosts file synced successfully'",
             config.isBackupBeforeModify() ? "/etc/hosts" : "/tmp/hosts",
             config.getBackupSuffix(),
             config.getManagedMarkerStart(),
             config.getManagedMarkerEnd(),
-            hostsContent.replace("\n", "\\n").replace("'", "\\'")
+            hostsContentBase64
         );
         
         var result = getSshService().executeCommand(context, script, 30);

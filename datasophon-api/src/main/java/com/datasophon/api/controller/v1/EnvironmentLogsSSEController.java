@@ -98,6 +98,11 @@ public class EnvironmentLogsSSEController {
             
             // 读取检查日志
             String checkLog = checkLogWriter.readCheckLog(clusterId, hostIp, checkKey);
+            log.info("读取检查日志: clusterId={}, hostIp={}, checkKey={}, 日志长度={}, 内容前100字符={}", 
+                    clusterId, hostIp, checkKey, 
+                    checkLog != null ? checkLog.length() : 0, 
+                    checkLog != null && checkLog.length() > 100 ? checkLog.substring(0, 100) : checkLog);
+            
             if (checkLog != null && !checkLog.isEmpty() && !checkLog.equals("[]")) {
                 try {
                     // 使用ObjectMapper解析JSON数组
@@ -127,6 +132,11 @@ public class EnvironmentLogsSSEController {
             
             // 读取修复日志
             String repairLog = checkLogWriter.readRepairLog(clusterId, hostIp, checkKey);
+            log.info("读取修复日志: clusterId={}, hostIp={}, checkKey={}, 日志长度={}, 内容前100字符={}", 
+                    clusterId, hostIp, checkKey, 
+                    repairLog != null ? repairLog.length() : 0, 
+                    repairLog != null && repairLog.length() > 100 ? repairLog.substring(0, 100) : repairLog);
+            
             if (repairLog != null && !repairLog.isEmpty() && !repairLog.equals("[]")) {
                 try {
                     // 使用ObjectMapper解析JSON数组
