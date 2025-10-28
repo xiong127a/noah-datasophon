@@ -73,25 +73,14 @@ export DDH_HOME=$BIN_DIR/..
 echo "脚本所在目录: $BIN_DIR"
 echo "DDH_HOME: $DDH_HOME"
 
-# 查找Java环境 - 只使用JAVA_HOME环境变量
+# 从环境变量获取JAVA_HOME（由 /etc/profile.d/datasophon-env.sh 提供）
 if [ -z "$JAVA_HOME" ]; then
   echo "错误: JAVA_HOME环境变量未设置! 请先配置JAVA_HOME。"
-  echo "提示: 执行 'source /etc/profile' 加载环境变量"
-  exit 1
-fi
-
-if [ ! -d "$JAVA_HOME" ]; then
-  echo "错误: JAVA_HOME目录不存在: $JAVA_HOME"
-  exit 1
-fi
-
-JAVA="$JAVA_HOME/bin/java"
-if [ ! -x "$JAVA" ]; then
-  echo "错误: Java可执行文件不存在或无执行权限: $JAVA"
   exit 1
 fi
 
 echo "使用JAVA_HOME: $JAVA_HOME"
+JAVA="$JAVA_HOME/bin/java"
 export PATH=$JAVA_HOME/bin:$PATH
 
 export HOSTNAME=`hostname`
