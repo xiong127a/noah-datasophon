@@ -5,10 +5,11 @@ import com.datasophon.api.agent.AgentDistributionStep;
 import com.datasophon.api.agent.util.AgentLogWriter;
 import com.datasophon.api.repository.RepositoryDownloader;
 import com.datasophon.api.repository.RepositoryDownloaderFactory;
-import com.datasophon.common.Constants;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -51,8 +52,9 @@ public class DownloadAgentStep implements AgentDistributionStep {
         
         log.info("开始准备Agent包: {} -> {}", agentPackageUrl, localPackagePath);
         
-        // 确保目标目录存在
-        File packageDir = new File(Constants.MASTER_MANAGE_PACKAGE_PATH);
+        // 确保目标目录存在（从localPackagePath中提取目录路径）
+        Path packagePath = Paths.get(localPackagePath);
+        File packageDir = packagePath.getParent().toFile();
         if (!packageDir.exists()) {
             packageDir.mkdirs();
             log.info("创建Agent包目录: {}", packageDir.getAbsolutePath());
