@@ -11,7 +11,8 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { clusterApiV1 } from '@/lib/api-utils-v1'
 import { API_BASE_URL, API_PATHS_V1 } from '@/lib/api-config-v1'
-import { CheckCircle2, XCircle, Loader2, Eye, Play, AlertCircle } from 'lucide-react'
+import { CheckCircle2, XCircle, Loader2, Eye, Play, AlertCircle, Edit2, RotateCcw, Sparkles } from 'lucide-react'
+import { Card, CardContent } from '@/components/ui/card'
 
 interface HostnameBatchEditDialogProps {
   open: boolean
@@ -56,6 +57,7 @@ export default function HostnameBatchEditDialog({
   const [suffixFormatIndex, setSuffixFormatIndex] = useState(0)
   const [startIndex, setStartIndex] = useState(1)
   const [preview, setPreview] = useState<Record<string, string>>({})
+  const [editableHostnames, setEditableHostnames] = useState<Record<string, string>>({}) // 可编辑的主机名
   const [showPreview, setShowPreview] = useState(false)
   const [executing, setExecuting] = useState(false)
   const [progress, setProgress] = useState<HostProgress[]>([])
@@ -106,6 +108,7 @@ export default function HostnameBatchEditDialog({
 
       if (response.code === 200) {
         setPreview(response.data)
+        setEditableHostnames(response.data) // 初始化可编辑的主机名
         setShowPreview(true)
       } else {
         alert(response.msg || '预览失败')
@@ -116,6 +119,27 @@ export default function HostnameBatchEditDialog({
     } finally {
       setLoading(false)
     }
+  }
+  
+  // 重置为预览值
+  const handleResetHostname = (ip: string) => {
+    setEditableHostnames(prev => ({
+      ...prev,
+      [ip]: preview[ip]
+    }))
+  }
+  
+  // 重置所有主机名为预览值
+  const handleResetAll = () => {
+    setEditableHostnames({ ...preview })
+  }
+  
+  // 更新单个主机名
+  const handleHostnameChange = (ip: string, newHostname: string) => {
+    setEditableHostnames(prev => ({
+      ...prev,
+      [ip]: newHostname
+    }))
   }
 
   // 执行批量修改
@@ -131,16 +155,18 @@ export default function HostnameBatchEditDialog({
       hostIp: ip,
       status: 'pending',
       message: '等待中...',
-      newHostname: preview[ip]
+      newHostname: editableHostnames[ip] || preview[ip]
     })))
 
     try {
+      // 使用自定义的主机名映射
       const response = await clusterApiV1.hostManagement.batchChangeHostnames({
         prefix: prefix.trim(),
         suffixFormatIndex,
         startIndex,
         hostIps,
-        connectionParams
+        connectionParams,
+        customHostnames: editableHostnames // 传递自定义的主机名
       })
 
       if (response.code === 200) {
@@ -339,32 +365,89 @@ export default function HostnameBatchEditDialog({
             </div>
           )}
 
-          {/* 预览表格 */}
+          {/* 预览表格 - 可编辑版本 */}
           {showPreview && !executing && !completed && (
-            <div className="space-y-2">
-              <Alert>
-                <AlertDescription>
-                  以下是预览的主机名变更，确认无误后点击"开始执行"按钮
-                </AlertDescription>
-              </Alert>
-              <div className="border rounded-md">
+            <div className="space-y-3">
+              <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
+                <CardContent className="pt-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-blue-600" />
+                      <span className="text-sm font-medium text-blue-900">
+                        预览并编辑主机名变更（共 {Object.keys(preview).length} 台主机）
+                      </span>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setEditableHostnames({ ...preview })}
+                      className="text-xs"
+                    >
+                      <RotateCcw className="h-3 w-3 mr-1" />
+                      重置全部
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
+              <div className="border rounded-lg overflow-hidden shadow-sm">
                 <Table>
-                  <TableHeader>
+                  <TableHeader className="bg-gradient-to-r from-gray-50 to-gray-100">
                     <TableRow>
-                      <TableHead>主机IP</TableHead>
-                      <TableHead>新主机名</TableHead>
+                      <TableHead className="w-[200px] font-semibold">主机IP</TableHead>
+                      <TableHead className="font-semibold">新主机名</TableHead>
+                      <TableHead className="w-[100px] text-center font-semibold">操作</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {Object.entries(preview).map(([ip, hostname]) => (
-                      <TableRow key={ip}>
-                        <TableCell className="font-mono">{ip}</TableCell>
-                        <TableCell className="font-semibold text-blue-600">{hostname}</TableCell>
-                      </TableRow>
-                    ))}
+                    {Object.entries(preview).map(([ip, originalHostname]) => {
+                      const currentHostname = editableHostnames[ip] || originalHostname
+                      const isModified = currentHostname !== originalHostname
+                      
+                      return (
+                        <TableRow key={ip} className="hover:bg-gray-50 transition-colors">
+                          <TableCell className="font-medium text-gray-700">{ip}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <Input
+                                value={currentHostname}
+                                onChange={(e) => setEditableHostnames(prev => ({ ...prev, [ip]: e.target.value }))}
+                                className={`max-w-md ${isModified ? 'border-blue-400 bg-blue-50' : ''}`}
+                                placeholder="输入主机名"
+                              />
+                              {isModified && (
+                                <Badge variant="outline" className="text-blue-600 border-blue-400 text-xs">
+                                  已修改
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-center">
+                            {isModified && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setEditableHostnames(prev => ({ ...prev, [ip]: preview[ip] }))}
+                                className="h-8 px-2"
+                                title="重置为预览值"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
                   </TableBody>
                 </Table>
               </div>
+              
+              <Alert className="border-amber-200 bg-amber-50">
+                <Edit2 className="h-4 w-4 text-amber-600" />
+                <AlertDescription className="text-amber-900">
+                  💡 提示：您可以直接编辑主机名，修改后点击"开始执行"即可应用更改
+                </AlertDescription>
+              </Alert>
             </div>
           )}
 

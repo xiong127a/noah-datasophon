@@ -43,5 +43,11 @@ public class BatchHostnameChangeRequest {
      * SSH连接参数
      */
     private Map<String, Object> connectionParams;
+    
+    /**
+     * 自定义的主机名映射（用户手动编辑后的主机名）
+     * key: hostIp, value: customHostname
+     */
+    private Map<String, String> customHostnames;
 }
 

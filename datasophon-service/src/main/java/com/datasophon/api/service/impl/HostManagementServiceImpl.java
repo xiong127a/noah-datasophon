@@ -138,8 +138,15 @@ public class HostManagementServiceImpl implements HostManagementService {
         log.info("执行批量主机名修改任务: taskId={}", taskId);
         
         try {
-            // 生成主机名映射
-            Map<String, String> hostnameMap = previewHostnameChanges(request);
+            // 优先使用用户自定义的主机名映射，否则生成主机名映射
+            Map<String, String> hostnameMap;
+            if (request.getCustomHostnames() != null && !request.getCustomHostnames().isEmpty()) {
+                hostnameMap = request.getCustomHostnames();
+                log.info("使用用户自定义的主机名映射: {}", hostnameMap);
+            } else {
+                hostnameMap = previewHostnameChanges(request);
+                log.info("使用自动生成的主机名映射: {}", hostnameMap);
+            }
             
             // 逐个修改主机名
             for (Map.Entry<String, String> entry : hostnameMap.entrySet()) {
