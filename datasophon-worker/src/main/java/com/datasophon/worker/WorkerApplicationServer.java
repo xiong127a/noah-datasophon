@@ -126,14 +126,15 @@ public class WorkerApplicationServer {
     }
 
     private static ActorSystem initActor(String hostname) {
-        // 使用新的配置方式，适应Akka 2.10.7-M1
-        Config config = ConfigFactory.parseString("akka.remote.artery.canonical.hostname=" + hostname);
+        // 使用Pekko配置方式，设置canonical.hostname为实际主机名
+        Config config = ConfigFactory.parseString("pekko.remote.artery.canonical.hostname=" + hostname);
         ActorSystem system = ActorSystem.create("datasophon", config.withFallback(ConfigFactory.load()));
         system.actorOf(Props.create(WorkerActor.class), WORKER);
 
         // 设置ActorSystem到FreemakerUtils，用于模板获取
         WorkerFreemarkerUtils.setActorSystem(system);
 
+        logger.info("Pekko ActorSystem已初始化，主机名: {}, 端口: 2552", hostname);
         return system;
     }
 

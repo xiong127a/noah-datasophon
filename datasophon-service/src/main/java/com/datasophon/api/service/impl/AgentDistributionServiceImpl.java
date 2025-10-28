@@ -8,6 +8,7 @@ import com.datasophon.api.agent.util.AgentLogWriter;
 import com.datasophon.api.load.ConfigBean;
 import com.datasophon.api.repository.RepositoryDownloaderFactory;
 import com.datasophon.api.service.AgentDistributionService;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.service.ParcelRepositoryService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.dto.ParcelRepositoryDTO;
@@ -48,6 +49,7 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     private final AgentLogWriter logWriter;
     private final ClusterInfoMapper clusterInfoMapper;
     private final ClusterHostMapper clusterHostMapper;
+    private final ClusterHostService clusterHostService;
     private final ParcelRepositoryService repositoryService;
     private final ConfigBean configBean;
     private final RepositoryDownloaderFactory downloaderFactory;
@@ -214,7 +216,8 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
                     new UploadAgentStep(getSshService()),
                     new VerifyMd5Step(getSshService()),
                     new DecompressAgentStep(getSshService()),
-                    new StartAgentStep(getSshService(), configBean, clusterFrame)
+                    new StartAgentStep(getSshService(), configBean, clusterFrame),
+                    new VerifyWorkerConnectionStep(clusterHostService)  // ✅ 验证Worker连接并收集硬件信息
             );
             
             int totalSteps = steps.size();
