@@ -189,20 +189,59 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
             checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
                     "修复前检查: " + beforeResult.getMessage(), beforeDetails);
             
-            // 步骤2：获取本地管理端时间（格式化）
+            // 步骤2：获取本地管理端时间和时区
+            ZoneId localZoneId = ZoneId.systemDefault();
+            String timeZone = localZoneId.getId(); // 例如: Asia/Shanghai
             LocalDateTime localTime = LocalDateTime.now();
             String timeString = localTime.format(DATE_FORMATTER);
             long localTimestamp = System.currentTimeMillis() / 1000;
             
-            log.info("本地管理端时间: timeString={}, timestamp={}", timeString, localTimestamp);
+            log.info("本地管理端时间: timeString={}, timezone={}, timestamp={}", timeString, timeZone, localTimestamp);
             
             Map<String, Object> timeDetails = new HashMap<>();
             timeDetails.put("managementTime", timeString);
+            timeDetails.put("timezone", timeZone);
             timeDetails.put("timestamp", localTimestamp);
             checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
-                    "管理端当前时间: " + timeString, timeDetails);
+                    "管理端当前时间: " + timeString + " (时区: " + timeZone + ")", timeDetails);
             
-            // 步骤3：分步执行时间同步（先date -s，成功后再hwclock）
+            // 步骤3：先设置远程主机的时区为管理端时区
+            String timezoneCommand = String.format("sudo timedatectl set-timezone %s", timeZone);
+            log.info("设置远程主机时区: host={}, timezone={}, command={}", hostIp, timeZone, timezoneCommand);
+            checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                    "设置远程主机时区: " + timeZone, Map.of("command", timezoneCommand));
+            
+            var timezoneResult = getSshService().executeCommand(
+                toPluginContext(context), 
+                timezoneCommand, 
+                30
+            );
+            
+            if (!timezoneResult.isSuccess()) {
+                // 如果timedatectl失败，尝试使用传统方法设置时区
+                log.warn("timedatectl设置时区失败，尝试传统方法: host={}, error={}", hostIp, timezoneResult.error());
+                String fallbackCommand = String.format("sudo ln -sf /usr/share/zoneinfo/%s /etc/localtime", timeZone);
+                checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                        "使用传统方法设置时区", Map.of("command", fallbackCommand));
+                
+                var fallbackResult = getSshService().executeCommand(
+                    toPluginContext(context), 
+                    fallbackCommand, 
+                    30
+                );
+                
+                if (!fallbackResult.isSuccess()) {
+                    String errorMsg = "设置时区失败，但继续尝试同步时间";
+                    log.warn("{}: host={}", errorMsg, hostIp);
+                    checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, errorMsg, Map.of("error", fallbackResult.error()));
+                }
+            } else {
+                log.info("时区设置成功: host={}, timezone={}", hostIp, timeZone);
+                checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
+                        "时区设置成功", Map.of("timezone", timeZone, "output", timezoneResult.output()));
+            }
+            
+            // 步骤4：分步执行时间同步（先date -s，成功后再hwclock）
             String dateCommand = String.format("sudo %s \"%s\"", 
                     checkerProperties.getTimeSync().getSyncCommand(), timeString);
             
@@ -236,7 +275,7 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
             checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
                     "系统时间设置成功", Map.of("output", dateResult.output()));
             
-            // 步骤4：同步到硬件时钟
+            // 步骤5：同步到硬件时钟
             String hwclockCommand = "sudo hwclock --systohc";
             checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
                     "同步到硬件时钟", Map.of("command", hwclockCommand));
@@ -259,12 +298,12 @@ public class TimeSyncChecker implements EnvironmentCheckItem {
                         "硬件时钟同步成功", Map.of("output", hwclockResult.output()));
             }
             
-            // 步骤5：等待2秒后验证（给足够时间让时间同步生效）
+            // 步骤6：等待2秒后验证（给足够时间让时间同步生效）
             checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
                     "等待时间同步生效...", null);
             Thread.sleep(2000);
             
-            // 步骤6：验证时间差是否已在允许范围内
+            // 步骤7：验证时间差是否已在允许范围内
             checkLogWriter.logRepairInfo(clusterId, hostIp, checkKey, 
                     "验证时间同步结果...", null);
             

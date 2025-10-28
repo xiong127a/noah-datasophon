@@ -114,7 +114,8 @@ public class EnvironmentLogsSSEController {
                                     .name("log")
                                     .data(logJson));
                         } catch (IOException e) {
-                            log.error("推送检查日志条目失败", e);
+                            // SSE连接已断开，停止推送
+                            log.warn("SSE连接已断开，停止推送检查日志");
                             return;
                         }
                     }
@@ -142,7 +143,8 @@ public class EnvironmentLogsSSEController {
                                     .name("log")
                                     .data(logJson));
                         } catch (IOException e) {
-                            log.error("推送修复日志条目失败", e);
+                            // SSE连接已断开，停止推送
+                            log.warn("SSE连接已断开，停止推送修复日志");
                             return;
                         }
                     }
@@ -153,9 +155,15 @@ public class EnvironmentLogsSSEController {
             }
             
             // 发送历史日志加载完成事件
-            emitter.send(SseEmitter.event()
-                    .name("history-loaded")
-                    .data("{\"message\":\"历史日志加载完成\"}"));
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("history-loaded")
+                        .data("{\"message\":\"历史日志加载完成\"}"));
+            } catch (IOException e) {
+                // SSE连接已断开，停止推送
+                log.warn("SSE连接已断开，停止推送历史日志加载完成事件");
+                return;
+            }
             
             log.info("历史日志推送完成: clusterId={}, hostIp={}, checkKey={}", clusterId, hostIp, checkKey);
             
@@ -177,7 +185,8 @@ public class EnvironmentLogsSSEController {
                         .name("log")
                         .data(logJson));
             } catch (IOException e) {
-                log.error("推送日志失败: key={}", key, e);
+                // SSE连接已断开（用户可能关闭了对话框），这是正常情况
+                log.warn("SSE连接已断开，停止推送日志: key={}", key);
                 sseEmitters.remove(key);
             }
         }
@@ -215,7 +224,8 @@ public class EnvironmentLogsSSEController {
                 emitter.complete();
                 sseEmitters.remove(key);
             } catch (IOException e) {
-                log.error("推送完成消息失败: key={}", key, e);
+                // SSE连接已断开（用户可能关闭了对话框），这是正常情况
+                log.warn("SSE连接已断开，停止推送完成消息: key={}", key);
                 sseEmitters.remove(key);
             }
         }
@@ -253,7 +263,7 @@ public class EnvironmentLogsSSEController {
             new Thread(() -> pushHostHistoricalLogs(emitter, clusterId, hostIp)).start();
             
         } catch (IOException e) {
-            log.error("发送连接成功消息失败", e);
+            log.warn("发送连接成功消息失败，SSE连接可能已断开");
         }
         
         return emitter;
@@ -312,7 +322,8 @@ public class EnvironmentLogsSSEController {
                                         .name("log")
                                         .data(logJson));
                             } catch (IOException e) {
-                                log.error("推送日志条目失败", e);
+                                // SSE连接已断开，停止推送
+                                log.warn("SSE连接已断开，停止推送主机日志");
                                 return;
                             }
                         }
@@ -324,9 +335,15 @@ public class EnvironmentLogsSSEController {
             }
             
             // 发送历史日志加载完成事件
-            emitter.send(SseEmitter.event()
-                    .name("history-loaded")
-                    .data("{\"message\":\"历史日志加载完成\"}"));
+            try {
+                emitter.send(SseEmitter.event()
+                        .name("history-loaded")
+                        .data("{\"message\":\"历史日志加载完成\"}"));
+            } catch (IOException e) {
+                // SSE连接已断开，停止推送
+                log.warn("SSE连接已断开，停止推送主机历史日志加载完成事件");
+                return;
+            }
             
             log.info("主机历史日志推送完成: clusterId={}, hostIp={}", clusterId, hostIp);
             
