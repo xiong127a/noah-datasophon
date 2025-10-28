@@ -113,82 +113,101 @@ public class UploadAgentStep implements AgentDistributionStep {
         // 转换为Plugin需要的Context
         HostCheckContext pluginContext = toPluginContext(context);
         
-        // 小文件直接上传
-        if (totalSize < 10 * 1024 * 1024) { // 小于10MB
+        // 小文件直接上传（小于10MB）
+        if (totalSize < 10 * 1024 * 1024) {
             boolean success = sshService.uploadFile(pluginContext, localPath, remotePath);
             if (!success) {
                 throw new Exception("SSH上传失败");
             }
+            logWriter.logProgress(clusterId, hostIp, "upload",
+                    100, totalSize, totalSize, "文件上传完成");
             return;
         }
         
-        // 大文件：启动异步上传并模拟进度记录
-        log.info("上传大文件，总大小: {}, 将记录上传进度", formatFileSize(totalSize));
+        // 大文件：使用带进度的真实上传
+        log.info("上传大文件，总大小: {}, 将记录实时上传进度", formatFileSize(totalSize));
         
-        final boolean[] uploadSuccess = {false};
-        final Exception[] uploadException = {null};
+        // 用于计算速率和剩余时间的变量
+        final long[] lastUploadedBytes = {0};
+        final long[] lastUpdateTime = {System.currentTimeMillis()};
         
-        // 启动上传线程
-        Thread uploadThread = new Thread(() -> {
-            try {
-                uploadSuccess[0] = sshService.uploadFile(pluginContext, localPath, remotePath);
-            } catch (Exception e) {
-                uploadException[0] = e;
+        try (InputStream inputStream = new FileInputStream(localPath)) {
+            boolean success = sshService.uploadFileFromStream(
+                    pluginContext, 
+                    inputStream, 
+                    remotePath, 
+                    totalSize,
+                    (uploadedBytes, totalBytesParam, progress) -> {
+                        long currentTime = System.currentTimeMillis();
+                        long timeDelta = currentTime - lastUpdateTime[0];
+                        
+                        // 至少间隔500ms或每传512KB才更新一次（避免过于频繁）
+                        if (timeDelta >= 500 || uploadedBytes - lastUploadedBytes[0] >= 512 * 1024) {
+                            long bytesDelta = uploadedBytes - lastUploadedBytes[0];
+                            
+                            // 计算实时速率 (bytes/s)
+                            double currentSpeed = timeDelta > 0 ? (bytesDelta * 1000.0 / timeDelta) : 0;
+                            
+                            // 计算预计剩余时间
+                            long remainingBytes = totalBytesParam - uploadedBytes;
+                            long estimatedRemainingSeconds = currentSpeed > 0 ? (long) (remainingBytes / currentSpeed) : 0;
+                            
+                            // 格式化速率和剩余时间
+                            String speedStr = formatSpeed(currentSpeed);
+                            String remainingTimeStr = formatDuration(estimatedRemainingSeconds * 1000);
+                            
+                            // 记录进度
+                            logWriter.logProgress(clusterId, hostIp, "upload",
+                                    progress, uploadedBytes, totalBytesParam,
+                                    String.format("上传Agent包... %s / %s (%d%%) | 速率: %s | 剩余: %s",
+                                            formatFileSize(uploadedBytes),
+                                            formatFileSize(totalBytesParam),
+                                            progress,
+                                            speedStr,
+                                            remainingTimeStr));
+                            
+                            // 更新上次记录的值
+                            lastUploadedBytes[0] = uploadedBytes;
+                            lastUpdateTime[0] = currentTime;
+                        }
+                    }
+            );
+            
+            if (!success) {
+                throw new Exception("SSH上传失败");
             }
-        });
-        uploadThread.start();
-        
-        // 模拟进度记录（每1秒记录一次）
-        long startTime = System.currentTimeMillis();
-        int lastReportedProgress = 0;
-        
-        // 假设平均上传速度为 2MB/s
-        double estimatedSpeedMBPerSec = 2.0;
-        double totalSizeMB = totalSize / (1024.0 * 1024.0);
-        
-        while (uploadThread.isAlive()) {
-            Thread.sleep(1000); // 每1秒更新一次
-            long elapsedTime = System.currentTimeMillis() - startTime;
-            double elapsedSeconds = elapsedTime / 1000.0;
             
-            // 估算已传输大小（基于时间和速度，最多95%）
-            double uploadedMB = Math.min(totalSizeMB * 0.95, elapsedSeconds * estimatedSpeedMBPerSec);
-            long uploadedBytes = (long) (uploadedMB * 1024 * 1024);
-            
-            // 计算进度百分比（最多95%，防止超过实际进度）
-            int estimatedProgress = Math.min(95, (int) (uploadedMB / totalSizeMB * 100));
-            
-            // 只在进度变化时才推送日志
-            if (estimatedProgress > lastReportedProgress) {
-                lastReportedProgress = estimatedProgress;
-                
-                logWriter.logProgress(clusterId, hostIp, "upload",
-                        estimatedProgress, uploadedBytes, totalSize,
-                        String.format("上传中... %s / %s (%d%%)",
-                                formatFileSize(uploadedBytes),
-                                formatFileSize(totalSize),
-                                estimatedProgress));
-                
-                log.info("上传进度: {}%, {} / {}, 耗时: {}s", 
-                        estimatedProgress, 
-                        formatFileSize(uploadedBytes),
-                        formatFileSize(totalSize),
-                        elapsedSeconds);
-            }
+            // 上传完成，记录100%进度
+            logWriter.logProgress(clusterId, hostIp, "upload",
+                    100, totalSize, totalSize, "文件上传完成");
         }
-        
-        // 检查上传结果
-        if (uploadException[0] != null) {
-            throw uploadException[0];
+    }
+    
+    /**
+     * 格式化速率
+     */
+    private String formatSpeed(double bytesPerSecond) {
+        if (bytesPerSecond < 1024) {
+            return String.format("%.0f B/s", bytesPerSecond);
+        } else if (bytesPerSecond < 1024 * 1024) {
+            return String.format("%.2f KB/s", bytesPerSecond / 1024.0);
+        } else {
+            return String.format("%.2f MB/s", bytesPerSecond / (1024.0 * 1024.0));
         }
-        
-        if (!uploadSuccess[0]) {
-            throw new Exception("SSH上传失败");
+    }
+    
+    /**
+     * 格式化时长
+     */
+    private String formatDuration(long milliseconds) {
+        long seconds = milliseconds / 1000;
+        if (seconds < 60) {
+            return seconds + "秒";
+        } else {
+            long minutes = seconds / 60;
+            long remainingSeconds = seconds % 60;
+            return String.format("%d分%d秒", minutes, remainingSeconds);
         }
-        
-        // 上传完成，记录100%进度
-        logWriter.logProgress(clusterId, hostIp, "upload",
-                100, totalSize, totalSize, "文件上传完成");
     }
     
     /**
