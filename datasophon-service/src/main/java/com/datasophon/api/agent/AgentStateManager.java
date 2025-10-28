@@ -1,9 +1,12 @@
 package com.datasophon.api.agent;
 
+import com.datasophon.api.event.AgentDistributionStatusChangeEvent;
 import com.datasophon.common.vo.agent.AgentDistributionStatusVO;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -23,6 +26,8 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class AgentStateManager {
     
+    private final ApplicationEventPublisher eventPublisher;
+    
     // 集群级别的分发状态缓存
     // Key: clusterId, Value: Map<hostIp, AgentDistributionStatusVO>
     private final Cache<Long, Map<String, AgentDistributionStatusVO>> clusterStateCache;
@@ -31,7 +36,9 @@ public class AgentStateManager {
     // Key: clusterId, Value: isCancelled
     private final Map<Long, Boolean> cancelledClusters = new ConcurrentHashMap<>();
     
-    public AgentStateManager() {
+    @Autowired
+    public AgentStateManager(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
         this.clusterStateCache = Caffeine.newBuilder()
                 .maximumSize(100) // 最多缓存100个集群
                 .expireAfterWrite(Duration.ofHours(2)) // 2小时后过期
@@ -94,6 +101,17 @@ public class AgentStateManager {
         
         log.debug("更新主机分发状态: 集群={}, 主机={}, 状态={}, 进度={}%, 步骤={}",
                 clusterId, hostIp, status, progress, currentStep);
+        
+        // 发布状态变更事件，触发SSE推送
+        publishStatusChangeEvent(clusterId, hostIp);
+    }
+    
+    /**
+     * 发布Agent分发状态变更事件
+     */
+    private void publishStatusChangeEvent(Long clusterId, String hostIp) {
+        eventPublisher.publishEvent(new AgentDistributionStatusChangeEvent(this, clusterId, hostIp));
+        log.debug("发布Agent分发状态变更事件: 集群={}, 主机={}", clusterId, hostIp);
     }
     
     /**

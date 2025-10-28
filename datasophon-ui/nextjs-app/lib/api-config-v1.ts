@@ -217,7 +217,8 @@ export const API_PATHS_V1 = {
   AGENT_DISTRIBUTION_START: `${API_BASE}/agent-distribution/start`,
   AGENT_DISTRIBUTION_STATUS: `${API_BASE}/agent-distribution/status`,
   AGENT_DISTRIBUTION_CANCEL: `${API_BASE}/agent-distribution/cancel`,
-  AGENT_DISTRIBUTION_SSE: `${API_BASE}/sse/agent-distribution/stream`,
+  AGENT_DISTRIBUTION_LOGS_SSE: `${API_BASE}/sse/agent-distribution/stream`, // 单个主机日志SSE
+  AGENT_DISTRIBUTION_STATUS_SSE: `${API_BASE}/sse/agent-distribution-status/stream`, // 所有主机状态SSE
   
   // 服务安装相关 - v1
   GET_SERVICE_CONFIG_OPTION: `${API_BASE}/service/install/getServiceConfigOption`,
