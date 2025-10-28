@@ -63,7 +63,7 @@ export function CheckLogsDialog({
       setConnectionState('connecting')
       
       // 建立SSE连接（历史日志和实时日志都通过SSE推送）
-      const sseUrl = `${API_BASE_URL}/api/v1/environment-logs-sse/stream/${clusterId}/${hostIp}/${checkKey}`
+      const sseUrl = `${API_BASE_URL}/api/v1/sse/environment-logs/stream/${clusterId}/${hostIp}/${checkKey}`
       console.log('建立日志SSE连接:', sseUrl)
       
       const eventSource = new EventSource(sseUrl)

@@ -65,7 +65,7 @@ export const useHostValidation = (clusterId: string) => {
       statusSSE.current.close()
     }
 
-    const url = `/ddh/api/v1/host-validation/stream/status/${clusterId}`
+    const url = `/ddh/api/v1/sse/host-validation/status/${clusterId}`
     statusSSE.current = new EventSource(url)
 
     statusSSE.current.onopen = () => {
@@ -117,8 +117,8 @@ export const useHostValidation = (clusterId: string) => {
     }
 
     const url = hostIp 
-      ? `/ddh/api/v1/host-validation/stream/logs/${clusterId}?hostIp=${hostIp}`
-      : `/ddh/api/v1/host-validation/stream/logs/${clusterId}`
+      ? `/ddh/api/v1/sse/host-validation/logs/${clusterId}?hostIp=${hostIp}`
+      : `/ddh/api/v1/sse/host-validation/logs/${clusterId}`
     
     logSSE.current = new EventSource(url)
 

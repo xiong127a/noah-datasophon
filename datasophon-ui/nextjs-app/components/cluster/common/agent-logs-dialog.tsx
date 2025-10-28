@@ -80,7 +80,7 @@ export function AgentLogsDialog({
     setLogs([])
 
     // 构建SSE URL（使用绝对路径）
-    const sseUrl = `${API_BASE_URL}/api/v1/agent-distribution-sse/stream/${hostIp}?clusterId=${clusterId}`
+    const sseUrl = `${API_BASE_URL}/api/v1/sse/agent-distribution/stream/${hostIp}?clusterId=${clusterId}`
     const eventSource = new EventSource(sseUrl, { withCredentials: true })
     eventSourceRef.current = eventSource
 

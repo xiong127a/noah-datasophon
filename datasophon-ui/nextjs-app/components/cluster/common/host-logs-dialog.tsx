@@ -89,7 +89,7 @@ export function HostLogsDialog({
       setConnectionState('connecting')
       
       // 建立SSE连接（主机级别，返回所有检查项的日志）
-      const sseUrl = `${API_BASE_URL}/api/v1/environment-logs-sse/host/${clusterId}/${hostIp}`
+      const sseUrl = `${API_BASE_URL}/api/v1/sse/environment-logs/host/${clusterId}/${hostIp}`
       console.log('建立主机日志SSE连接:', sseUrl)
       
       const eventSource = new EventSource(sseUrl)
