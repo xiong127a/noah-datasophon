@@ -260,7 +260,7 @@ public class HostManagementServiceImpl implements HostManagementService {
                 .hostIp(hostIp)
                 .sshUser((String) connectionParams.get("sshUser"))
                 .sshPassword((String) connectionParams.get("sshPassword"))
-                .sshPort((Integer) connectionParams.getOrDefault("sshPort", 22))
+                .sshPort(getSshPort(connectionParams))
                 .build();
         
         // 修改主机名的命令
@@ -307,7 +307,7 @@ public class HostManagementServiceImpl implements HostManagementService {
                             .hostIp(hostIp)
                             .sshUser((String) request.getConnectionParams().get("sshUser"))
                             .sshPassword((String) request.getConnectionParams().get("sshPassword"))
-                            .sshPort((Integer) request.getConnectionParams().getOrDefault("sshPort", 22))
+                            .sshPort(getSshPort(request.getConnectionParams()))
                             .build();
                     
                     var result = getSshService().executeCommand(context, "hostname", 10);
@@ -345,7 +345,7 @@ public class HostManagementServiceImpl implements HostManagementService {
                 .hostIp(hostIp)
                 .sshUser((String) connectionParams.get("sshUser"))
                 .sshPassword((String) connectionParams.get("sshPassword"))
-                .sshPort((Integer) connectionParams.getOrDefault("sshPort", 22))
+                .sshPort(getSshPort(connectionParams))
                 .build();
         
         var config = checkerProperties.getHostsFile();
@@ -461,6 +461,24 @@ public class HostManagementServiceImpl implements HostManagementService {
      */
     public static void unregisterSseEmitter(String taskId) {
         sseEmitters.remove(taskId);
+    }
+    
+    /**
+     * 安全获取SSH端口（处理String和Integer类型）
+     */
+    private Integer getSshPort(Map<String, Object> connectionParams) {
+        Object port = connectionParams.get("sshPort");
+        if (port instanceof Integer) {
+            return (Integer) port;
+        } else if (port instanceof String) {
+            try {
+                return Integer.parseInt((String) port);
+            } catch (NumberFormatException e) {
+                log.warn("无效的SSH端口格式: {}, 使用默认端口22", port);
+                return 22;
+            }
+        }
+        return 22; // 默认值
     }
 }
 
