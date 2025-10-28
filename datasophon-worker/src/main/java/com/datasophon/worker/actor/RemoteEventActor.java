@@ -24,10 +24,10 @@ import org.apache.pekko.actor.AbstractActor;
 import org.apache.pekko.japi.pf.ReceiveBuilder;
 
 /**
- * Actor for handling remote events in Akka Artery remoting.
+ * Actor for handling remote events in Pekko Artery remoting.
  * Note: Classic remoting events (AssociationErrorEvent, AssociatedEvent,
  * DisassociatedEvent)
- * are no longer available in Akka 2.10.7-M1 with Artery remoting.
+ * are no longer available in Pekko with Artery remoting.
  */
 public class RemoteEventActor extends AbstractActor {
 

@@ -36,7 +36,7 @@ import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 /**
  * Worker扩展版Freemarker工具类
- * 作为桥接器，负责从Akka获取模板内容，然后传递给common中的FreemarkerUtils处理
+ * 作为桥接器，负责从Pekko获取模板内容，然后传递给common中的FreemarkerUtils处理
  */
 @UtilityClass
 public class WorkerFreemarkerUtils {

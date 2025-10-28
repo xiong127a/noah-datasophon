@@ -142,8 +142,8 @@ public class WorkerApplicationServer {
         // 使用Props.create()方法创建RemoteEventActor
         ActorRef remoteEventActor = system.actorOf(Props.create(RemoteEventActor.class), "remoteEventActor");
         EventStream eventStream = system.eventStream();
-        // 在Akka 2.10.7-M1中，经典remoting事件已被弃用
-        // 如果需要监控远程连接状态，请使用Akka集群的成员事件
+        // 在Pekko中，经典remoting事件已被弃用
+        // 如果需要监控远程连接状态，请使用Pekko集群的成员事件
         eventStream.subscribe(remoteEventActor, Object.class);
     }
 
