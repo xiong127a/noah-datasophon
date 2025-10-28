@@ -314,9 +314,11 @@ export default function EnvironmentCheckDialog({
         checkItemKey: checkKey,
         reason: '用户手动跳过'
       })
-      console.log(`已跳过检查项: ${hostIp} - ${checkKey}`)
+      console.log(`✅ 已跳过检查项: ${hostIp} - ${checkKey}`)
+      console.log('⚡ SSE会自动推送状态更新')
+      // 移除手动刷新，完全依赖SSE事件驱动推送
     } catch (error: any) {
-      console.error('跳过检查项失败:', error)
+      console.error('❌ 跳过检查项失败:', error)
       alert('跳过失败: ' + (error.message || '未知错误'))
     }
   }

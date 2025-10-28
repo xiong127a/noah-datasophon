@@ -1,10 +1,13 @@
 package com.datasophon.api.checker;
 
+import com.datasophon.api.event.CheckStatusChangeEvent;
 import com.datasophon.common.vo.environment.CheckItemStatusVO;
 import com.datasophon.common.vo.environment.EnvironmentCheckStatusVO;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
@@ -23,6 +26,9 @@ import java.util.concurrent.ConcurrentHashMap;
 @Slf4j
 @Component
 public class CheckStateManager {
+    
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
     
     // 集群级别的检查状态缓存
     // Key: clusterId, Value: Map<hostIp, EnvironmentCheckStatusVO>
@@ -70,6 +76,9 @@ public class CheckStateManager {
         }
         log.debug("更新主机状态: 集群={}, 主机={}, 状态={}", 
                 clusterId, hostIp, statusVO.getOverallStatus());
+        
+        // 发布状态变更事件
+        publishStatusChangeEvent(clusterId);
     }
     
     /**
@@ -97,6 +106,9 @@ public class CheckStateManager {
         }
         log.debug("更新检查项状态: 集群={}, 主机={}, 检查项={}, 状态={}", 
                 clusterId, hostIp, checkKey, itemVO.getStatus());
+        
+        // 发布状态变更事件
+        publishStatusChangeEvent(clusterId);
     }
     
     /**
@@ -138,6 +150,9 @@ public class CheckStateManager {
             
             // 重新计算统计信息
             recalculateHostStatistics(hostStatus);
+            
+            // 发布状态变更事件
+            publishStatusChangeEvent(clusterId);
         }
     }
     
@@ -247,6 +262,16 @@ public class CheckStateManager {
         hostInfoCache.invalidate(clusterId);
         pausedClusters.remove(clusterId);
         log.info("清除集群 {} 的检查状态", clusterId);
+    }
+    
+    /**
+     * 发布状态变更事件
+     */
+    private void publishStatusChangeEvent(Long clusterId) {
+        if (eventPublisher != null) {
+            eventPublisher.publishEvent(new CheckStatusChangeEvent(this, clusterId));
+            log.debug("发布状态变更事件: 集群={}", clusterId);
+        }
     }
 }
 
