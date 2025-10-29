@@ -26,11 +26,12 @@
       <page-footer style="position: absolute;bottom:0;left:0;right:0;display:none" :link-list="footerLinks" :copyright="copyright"></page-footer>
     </common-layout> -->
     <div class="container" v-if="!isSsoLogin">
-      <div class="company-logo">
+      <!-- <div class="company-logo">
         <img src="@/assets/login-img/company.png">
-      </div>
+      </div> -->
       <div class="product_logo">
-        <img src="@/assets/login-img/product.png">
+        大数据平台
+        <!-- <img src="@/assets/login-img/product.png"> -->
       </div>
       <div class="right">
         <div class="submitform">
@@ -58,12 +59,12 @@
           </a-form>
         </div>
       </div>
-      <div class="copyright">
+      <!-- <div class="copyright">
         北京中兵数字科技集团有限公司 版权所有copyright@2024
       </div>
       <div class="companybot-logo">
         <img src="@/assets/login-img/company.png">
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
@@ -330,6 +331,8 @@ export default {
     left: 50%;
     top: 160px;
     transform: translate(-50%, -50%);
+    color: white;
+    font-size: 50px;
 
     img {
       height: 36px;
