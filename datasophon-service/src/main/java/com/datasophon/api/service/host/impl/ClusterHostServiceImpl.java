@@ -18,8 +18,10 @@
 package com.datasophon.api.service.host.impl;
 
 import cn.hutool.core.convert.Convert;
+import cn.hutool.core.bean.BeanUtil;
 import com.datasophon.api.service.RackConfigurationService;
 import com.datasophon.dao.entity.ClusterHostEntity;
+import com.datasophon.common.dto.ClusterHostDTO;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.enums.Status;
@@ -55,6 +57,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * 集群主机服务实现
@@ -128,6 +131,35 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         logger.info("🔍 [Service调试] DAO查询结果 - 集群ID: {}, 返回数量: {}", clusterId, result.size());
         
         return result;
+    }
+    
+    @Override
+    public List<ClusterHostDTO> getAllManagedHostsDTOByClusterId(Long clusterId) {
+        List<ClusterHostEntity> entities = getAllManagedHostsByClusterId(clusterId);
+        return entities.stream()
+                .map(entity -> BeanUtil.copyProperties(entity, ClusterHostDTO.class))
+                .collect(Collectors.toList());
+    }
+    
+    @Override
+    public ClusterHostDTO getHostDTOById(Long id) {
+        ClusterHostEntity entity = getById(id);
+        if (entity == null) {
+            return null;
+        }
+        return BeanUtil.copyProperties(entity, ClusterHostDTO.class);
+    }
+    
+    @Override
+    public void saveHost(ClusterHostDTO clusterHostDTO) {
+        ClusterHostEntity entity = BeanUtil.copyProperties(clusterHostDTO, ClusterHostEntity.class);
+        save(entity);
+    }
+    
+    @Override
+    public void updateHost(ClusterHostDTO clusterHostDTO) {
+        ClusterHostEntity entity = BeanUtil.copyProperties(clusterHostDTO, ClusterHostEntity.class);
+        updateById(entity);
     }
 
     @Override

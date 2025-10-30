@@ -19,7 +19,7 @@ package com.datasophon.api.controller.v1.cluster;
 
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.dto.Result;
-import com.datasophon.dao.entity.ClusterHostEntity;
+import com.datasophon.common.dto.ClusterHostDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,8 +49,8 @@ public class ClusterHostController {
      */
     @GetMapping("/all")
     @Timed(value = "cluster.host.all", description = "获取集群所有主机的时间")
-    public Result<List<ClusterHostEntity>> all(@ClusterId Long clusterId) {
-        List<ClusterHostEntity> list = clusterHostService.getAllManagedHostsByClusterId(clusterId);
+    public Result<List<ClusterHostDTO>> all(@ClusterId Long clusterId) {
+        List<ClusterHostDTO> list = clusterHostService.getAllManagedHostsDTOByClusterId(clusterId);
         
         return Result.success(list);
     }
@@ -95,8 +95,8 @@ public class ClusterHostController {
      * 信息
      */
     @GetMapping("/info/{id}")
-    public Result<ClusterHostEntity> info(@PathVariable("id") Long id) {
-        ClusterHostEntity clusterHost = clusterHostService.getById(id);
+    public Result<ClusterHostDTO> info(@PathVariable("id") Long id) {
+        ClusterHostDTO clusterHost = clusterHostService.getHostDTOById(id);
 
         return Result.success(clusterHost);
     }
@@ -105,8 +105,8 @@ public class ClusterHostController {
      * 保存
      */
     @PostMapping("/save")
-    public Result<Void> save(@RequestBody ClusterHostEntity clusterHost) {
-        clusterHostService.save(clusterHost);
+    public Result<Void> save(@RequestBody ClusterHostDTO clusterHost) {
+        clusterHostService.saveHost(clusterHost);
 
         return Result.success();
     }
@@ -115,8 +115,8 @@ public class ClusterHostController {
      * 修改
      */
     @PutMapping("/update")
-    public Result<Void> update(@RequestBody ClusterHostEntity clusterHost) {
-        clusterHostService.updateById(clusterHost);
+    public Result<Void> update(@RequestBody ClusterHostDTO clusterHost) {
+        clusterHostService.updateHost(clusterHost);
 
         return Result.success();
     }

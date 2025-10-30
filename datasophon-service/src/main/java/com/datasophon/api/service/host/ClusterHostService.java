@@ -44,6 +44,30 @@ public interface ClusterHostService extends IService<ClusterHostEntity> {
      * 获取集群所有受管理的主机，按主机名排序
      */
     List<ClusterHostEntity> getAllManagedHostsByClusterId(Long clusterId);
+    
+    /**
+     * 获取集群所有受管理的主机DTO列表
+     * Controller层应该使用此方法
+     */
+    List<com.datasophon.common.dto.ClusterHostDTO> getAllManagedHostsDTOByClusterId(Long clusterId);
+    
+    /**
+     * 根据ID获取主机DTO
+     * Controller层应该使用此方法
+     */
+    com.datasophon.common.dto.ClusterHostDTO getHostDTOById(Long id);
+    
+    /**
+     * 保存主机（接收DTO）
+     * Controller层应该使用此方法
+     */
+    void saveHost(com.datasophon.common.dto.ClusterHostDTO clusterHostDTO);
+    
+    /**
+     * 更新主机（接收DTO）
+     * Controller层应该使用此方法
+     */
+    void updateHost(com.datasophon.common.dto.ClusterHostDTO clusterHostDTO);
 
     List<ClusterServiceRoleInstanceDTO> getRoleListByHostname(Long clusterId, String hostname);
 
