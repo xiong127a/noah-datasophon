@@ -22,7 +22,6 @@ import cn.hutool.core.util.NumberUtil;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.service.ClusterUserGroupService;
 import com.datasophon.api.service.ClusterUserService;
@@ -50,18 +49,11 @@ import com.datasophon.kubernetes.util.KubernetesMinaUtils;
 
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -69,7 +61,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import static com.datasophon.common.utils.OpenldapUtils.openldapProcess;
 
@@ -141,28 +132,19 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         ClusterGroupEntity mainGroup = groupService.getById(mainGroupId);
         // sync to all hosts
         for (ClusterHostEntity clusterHost : hostList) {
-
-            ActorSelection unixUserActor = ActorUtils.actorSystem.actorSelection(
-                    "pekko://datasophon@" + clusterHost.getHostname() + ":2552/user/worker/unixUserActor");
-
             CreateUnixUserCommand createUnixUserCommand = new CreateUnixUserCommand();
             createUnixUserCommand.setUsername(username);
             createUnixUserCommand.setMainGroup(mainGroup.getGroupName());
             createUnixUserCommand.setOtherGroups(otherGroup);
 
-            Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-            Future<Object> execFuture = Patterns.ask(unixUserActor, createUnixUserCommand, timeout);
-            ExecResult execResult;
-            try {
-                execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-                if (execResult.getExecResult()) {
-                    logger.info("create unix user {} success at {}", username, clusterHost.getHostname());
-                } else {
-                    logger.info(execResult.getExecOut());
-                    throw new ServiceException(500,
-                            "create unix user " + username + " failed at " + clusterHost.getHostname());
-                }
-            } catch (Exception e) {
+            // 使用HTTP方式提交任务到Worker
+            ExecResult execResult = WorkerTaskHelper.submitAndWait(
+                    clusterHost.getHostname(), createUnixUserCommand, 180);
+            
+            if (execResult.getExecResult()) {
+                logger.info("create unix user {} success at {}", username, clusterHost.getHostname());
+            } else {
+                logger.info(execResult.getExecOut());
                 throw new ServiceException(500,
                         "create unix user " + username + " failed at " + clusterHost.getHostname());
             }
@@ -170,8 +152,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         // create ldap user
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        // pekko://datasophon@hadoop1:2552/user/worker/openldapActor
-        ActorRef ldapActor = ActorUtils.getRemoteActor(globalVariables.get("${openldapIp}"), "openldapActor");
+        String openldapIp = globalVariables.get("${openldapIp}");
 
         LdapCommand ldapCommand = new LdapCommand();
         ldapCommand.setOperation("add");
@@ -194,21 +175,14 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         }
         ldapCommand.setGidNumber("55");
 
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> execFuture = Patterns.ask(ldapActor, ldapCommand, timeout);
-        ExecResult execResult;
-        try {
-            execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            if (execResult.getExecResult()) {
-                logger.info("create ldap user {} success", username);
-            } else {
-                logger.error("create ldap user {} failed", username);
-                logger.error(execResult.getExecOut());
-                logger.error(execResult.getExecErrOut());
-            }
-        } catch (Exception e) {
+        // 使用HTTP方式提交任务到Worker (LDAP服务所在主机)
+        ExecResult execResult = WorkerTaskHelper.submitAndWait(openldapIp, ldapCommand, 180);
+        if (execResult.getExecResult()) {
+            logger.info("create ldap user {} success", username);
+        } else {
             logger.error("create ldap user {} failed", username);
-            logger.error(e.getMessage());
+            logger.error(execResult.getExecOut());
+            logger.error(execResult.getExecErrOut());
         }
 
         return clusterUserConverter.entityToDto(clusterUserEntity);
@@ -377,29 +351,23 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterUserEntity.getClusterId());
         // sync to all hosts
         for (ClusterHostEntity clusterHost : hostList) {
-            ActorSelection unixUserActor = ActorUtils.actorSystem.actorSelection(
-                    "pekko://datasophon@" + clusterHost.getHostname() + ":2552/user/worker/unixUserActor");
             DelUnixUserCommand createUnixUserCommand = new DelUnixUserCommand();
-            Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
             createUnixUserCommand.setUsername(clusterUserEntity.getUsername());
-            Future<Object> execFuture = Patterns.ask(unixUserActor, createUnixUserCommand, timeout);
-            ExecResult execResult;
-            try {
-                execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-                if (execResult.getExecResult()) {
-                    logger.info("del unix user success at {}", clusterHost.getHostname());
-                } else {
-                    logger.info("del unix user failed at {}", clusterHost.getHostname());
-                }
-            } catch (Exception e) {
+            
+            // 使用HTTP方式提交任务到Worker
+            ExecResult execResult = WorkerTaskHelper.submitAndWait(
+                    clusterHost.getHostname(), createUnixUserCommand, 180);
+            
+            if (execResult.getExecResult()) {
+                logger.info("del unix user success at {}", clusterHost.getHostname());
+            } else {
                 logger.info("del unix user failed at {}", clusterHost.getHostname());
             }
         }
 
         // delete ldap user
         Map<String, String> globalVariables = GlobalVariables.get(clusterUserEntity.getClusterId());
-        // pekko://datasophon@hadoop1:2552/user/worker/openldapActor
-        ActorRef ldapActor = ActorUtils.getRemoteActor(globalVariables.get("${openldapIp}"), "openldapActor");
+        String openldapIp = globalVariables.get("${openldapIp}");
 
         LdapCommand ldapCommand = new LdapCommand();
         ldapCommand.setOperation("delete");
@@ -409,21 +377,14 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         ldapCommand.setUsername(clusterUserEntity.getUsername());
         ldapCommand.setUserRootDn(globalVariables.get("${syncLdapUserSearchBase}"));
 
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> execFuture = Patterns.ask(ldapActor, ldapCommand, timeout);
-        ExecResult execResult;
-        try {
-            execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            if (execResult.getExecResult()) {
-                logger.info("delete ldap user {} success", clusterUserEntity.getUsername());
-            } else {
-                logger.error("delete ldap user {} failed", clusterUserEntity.getUsername());
-                logger.error(execResult.getExecOut());
-                logger.error(execResult.getExecErrOut());
-            }
-        } catch (Exception e) {
+        // 使用HTTP方式提交任务到Worker (LDAP服务所在主机)
+        ExecResult execResult = WorkerTaskHelper.submitAndWait(openldapIp, ldapCommand, 180);
+        if (execResult.getExecResult()) {
+            logger.info("delete ldap user {} success", clusterUserEntity.getUsername());
+        } else {
             logger.error("delete ldap user {} failed", clusterUserEntity.getUsername());
-            logger.error(e.getMessage());
+            logger.error(execResult.getExecOut());
+            logger.error(execResult.getExecErrOut());
         }
 
         return this.removeById(id);

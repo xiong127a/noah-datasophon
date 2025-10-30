@@ -1,0 +1,57 @@
+# DataSophon Worker Configuration
+server:
+  port: 2552  # 保持与原Pekko端口一致，避免防火墙配置变更
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json
+  jetty:
+    threads:
+      max: 200
+      min: 10
+
+spring:
+  application:
+    name: datasophon-worker
+  
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+  
+  # 线程池配置
+  task:
+    execution:
+      pool:
+        core-size: 10
+        max-size: 50
+        queue-capacity: 200
+        keep-alive: 60s
+      thread-name-prefix: worker-task-
+
+logging:
+  level:
+    root: INFO
+    com.datasophon: INFO
+  pattern:
+    console: "[%level] %d{yyyy-MM-dd HH:mm:ss} %logger{36}:[%line] - %msg%n"
+    file: "[%level] %d{yyyy-MM-dd HH:mm:ss} %logger{36}:[%line] - %msg%n"
+  file:
+    name: logs/datasophon-worker.log
+    max-size: 100MB
+    max-history: 30
+
+# Worker自定义配置
+worker:
+  # 任务超时时间（秒）
+  task-timeout: 3600
+  # SSE连接超时时间（毫秒，0表示无超时）
+  sse-timeout: 0
+  # 任务清理间隔（秒）
+  task-cleanup-interval: 300
+

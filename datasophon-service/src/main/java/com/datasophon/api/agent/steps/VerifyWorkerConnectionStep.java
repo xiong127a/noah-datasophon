@@ -20,37 +20,30 @@ package com.datasophon.api.agent.steps;
 import com.datasophon.api.agent.AgentDistributionContext;
 import com.datasophon.api.agent.AgentDistributionStep;
 import com.datasophon.api.agent.util.AgentLogWriter;
-import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.client.WorkerHttpClient;
 import com.datasophon.api.service.host.ClusterHostService;
-import com.datasophon.common.command.CollectSystemInfoCommand;
-import com.datasophon.common.command.PingCommand;
 import com.datasophon.common.command.SystemInfoResult;
-import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostEntity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
+import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
- * 验证Worker连接并收集硬件信息步骤
+ * 验证Worker连接并收集硬件信息步骤（HTTP方式）
  * 
  * @author DataSophon Team
  * @date 2025-01-31
  */
 @Slf4j
+@Component
 @RequiredArgsConstructor
 public class VerifyWorkerConnectionStep implements AgentDistributionStep {
     
     private final ClusterHostService clusterHostService;
+    private final WorkerHttpClient workerHttpClient;
     
     @Override
     public String getStepName() {
@@ -64,15 +57,15 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
         String hostIp = context.getHostIp();
         String hostname = context.getHostname();
         
-        logWriter.logInfo(clusterId, hostIp, "verify", "开始验证Worker连接", null);
-        log.info("开始验证Worker连接: hostname={}, ip={}", hostname, hostIp);
+        logWriter.logInfo(clusterId, hostIp, "verify", "开始验证Worker连接（HTTP方式）", null);
+        log.info("开始验证Worker连接（HTTP）: hostname={}, ip={}", hostname, hostIp);
         
         try {
-            // 1. 等待Worker服务完全启动（Pekko系统初始化需要时间）
+            // 1. 等待Worker服务完全启动（Spring Boot初始化需要时间）
             logWriter.logInfo(clusterId, hostIp, "verify", "等待Worker服务完全启动...", null);
             Thread.sleep(5000); // 等待5秒
             
-            // 2. 尝试连接Worker并发送Ping命令（使用hostname，Master能解析Worker的hostname）
+            // 2. 尝试Ping Worker（HTTP方式）
             logWriter.logInfo(clusterId, hostIp, "verify", "尝试连接Worker节点...", null);
             boolean pingSuccess = pingWorker(hostname);
             
@@ -93,7 +86,7 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
             logWriter.logSuccess(clusterId, hostIp, "verify", 
                     "Worker连接成功", pingInfo);
             
-            // 3. 收集硬件信息（使用hostname）
+            // 3. 收集硬件信息（HTTP方式）
             logWriter.logInfo(clusterId, hostIp, "verify", "开始收集硬件信息...", null);
             SystemInfoResult systemInfo = collectSystemInfo(hostname, clusterId);
             
@@ -136,55 +129,46 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
     }
     
     /**
-     * Ping Worker节点
+     * Ping Worker节点（HTTP方式）
      */
     private boolean pingWorker(String hostname) {
-        String actorPath = "pekko://datasophon@" + hostname + ":2552/user/worker/pingActor";
         try {
-            log.info("尝试连接Worker节点: {}, 完整路径: {}", hostname, actorPath);
+            log.info("尝试连接Worker节点（HTTP）: http://{}:2552/api/ping", hostname);
             
-            ActorSelection pingActor = ActorUtils.actorSystem.actorSelection(actorPath);
+            boolean success = workerHttpClient.ping(hostname);
             
-            PingCommand pingCommand = new PingCommand();
-            pingCommand.setMessage("agent_distribution_verify");
+            if (success) {
+                log.info("收到Worker节点{}的Ping响应（HTTP）", hostname);
+            }
             
-            log.info("发送Ping命令到: {}", actorPath);
-            Timeout timeout = new Timeout(Duration.create(10, TimeUnit.SECONDS));
-            Future<Object> future = Patterns.ask(pingActor, pingCommand, timeout);
-            
-            ExecResult result = (ExecResult) Await.result(future, timeout.duration());
-            log.info("收到Worker节点{}的Ping响应: {}", hostname, result.getExecOut());
-            return result.getExecResult();
+            return success;
             
         } catch (Exception e) {
-            log.error("Ping Worker节点{}失败 (路径: {}): {}", hostname, actorPath, e.getMessage(), e);
+            log.error("Ping Worker节点{}失败（HTTP）: {}", hostname, e.getMessage());
             return false;
         }
     }
     
     /**
-     * 收集Worker系统信息
+     * 收集Worker系统信息（HTTP方式）
      */
     private SystemInfoResult collectSystemInfo(String hostname, Long clusterId) {
         try {
-            // 向Worker的SystemInfoActor发送收集命令
-            ActorSelection systemInfoActor = ActorUtils.actorSystem.actorSelection(
-                    "pekko://datasophon@" + hostname + ":2552/user/worker/systemInfoActor");
+            log.info("通过HTTP收集Worker系统信息: http://{}:2552/api/info", hostname);
             
-            CollectSystemInfoCommand collectCommand = new CollectSystemInfoCommand();
-            collectCommand.setClusterId(clusterId);
-            collectCommand.setHostname(hostname);
+            SystemInfoResult systemInfo = workerHttpClient.getSystemInfo(hostname);
             
-            Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
-            Future<Object> future = Patterns.ask(systemInfoActor, collectCommand, timeout);
-            
-            SystemInfoResult result = (SystemInfoResult) Await.result(future, timeout.duration());
-            return result;
+            if (systemInfo != null && systemInfo.getExecResult()) {
+                systemInfo.setClusterId(clusterId);
+                log.info("成功收集Worker{}的系统信息（HTTP）", hostname);
+                return systemInfo;
+            }
             
         } catch (Exception e) {
-            log.error("收集Worker{}系统信息失败: {}", hostname, e.getMessage(), e);
-            return null;
+            log.error("收集Worker{}系统信息失败（HTTP）: {}", hostname, e.getMessage());
         }
+        
+        return null;
     }
     
     /**
@@ -213,7 +197,6 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
      */
     private Integer extractTotalMemory(String memoryInfo) {
         try {
-            // 从 "free -h" 输出中提取总内存，格式: "Mem:  15Gi  ..."
             if (memoryInfo != null && memoryInfo.contains("Mem:")) {
                 String[] lines = memoryInfo.split("\n");
                 for (String line : lines) {
@@ -237,7 +220,6 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
      */
     private Integer extractTotalDisk(String diskInfo) {
         try {
-            // 从 "df -h" 输出中提取根分区总磁盘，格式: "/dev/sda1  100G  ..."
             if (diskInfo != null) {
                 String[] lines = diskInfo.split("\n");
                 for (String line : lines) {
@@ -256,4 +238,3 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
         return null;
     }
 }
-

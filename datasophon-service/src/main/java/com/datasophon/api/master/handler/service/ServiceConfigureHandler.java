@@ -17,10 +17,6 @@
 
 package com.datasophon.api.master.handler.service;
 
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateServiceConfigCommand;
 import com.datasophon.common.model.Generators;
@@ -32,14 +28,10 @@ import com.datasophon.common.utils.TemplatePathUtils;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 public class ServiceConfigureHandler extends ServiceHandler {
 
@@ -64,23 +56,16 @@ public class ServiceConfigureHandler extends ServiceHandler {
         // 打包模板内容到命令中，避免 Worker 回连 API 获取
         packTemplateContents(generateServiceConfigCommand, serviceRoleInfo.getConfigFileMap());
         
-        ActorSelection configActor = ActorUtils.actorSystem.actorSelection(
-                "pekko://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/configureServiceActor");
-
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> configureFuture = Patterns.ask(configActor, generateServiceConfigCommand, timeout);
-        try {
-            ExecResult configResult = (ExecResult) Await.result(configureFuture, timeout.duration());
-            if (Objects.nonNull(configResult) && configResult.getExecResult()) {
-                if (Objects.nonNull(getNext())) {
-                    return getNext().handlerRequest(serviceRoleInfo);
-                }
+        // 使用HTTP方式提交任务到Worker
+        ExecResult configResult = WorkerTaskHelper.submitAndWait(
+                serviceRoleInfo.getHostname(), generateServiceConfigCommand, 180);
+        
+        if (Objects.nonNull(configResult) && configResult.getExecResult()) {
+            if (Objects.nonNull(getNext())) {
+                return getNext().handlerRequest(serviceRoleInfo);
             }
-            return configResult;
-        } catch (Exception e) {
-            logger.error("配置服务失败", e);
-            return new ExecResult();
         }
+        return configResult;
     }
     
     /**

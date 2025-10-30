@@ -202,11 +202,8 @@ public interface ServiceRoleStrategy {
 
                 execResult = KubernetesUtil.exec(k8sServiceRoleInfo, kubeConfig, cmdCommand);
             } else {
-                // 对于非 Kubernetes 服务，使用 Actor 系统执行命令
-                Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
-                ActorRef actorRef = ActorUtils.getRemoteActor(roleInstanceDto.hostname(), actorName);
-                Future<Object> execFuture = Patterns.ask(actorRef, cmdCommand, timeout);
-                execResult = (ExecResult) Await.result(execFuture, timeout.duration());
+                // 对于非 Kubernetes 服务，使用HTTP方式执行命令
+                execResult = WorkerTaskHelper.submitAndWait(roleInstanceDto.hostname(), cmdCommand, 30);
             }
         } catch (Exception e) {
             log.error("exec command error", e);

@@ -21,11 +21,10 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.exceptions.ServiceException;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.TenantRangerActor;
 import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.api.service.ClusterUserTenantService;
+import com.datasophon.api.service.TenantRangerService;
 import com.datasophon.common.command.TenantRangerCommand;
 import com.datasophon.common.enums.RangerOpType;
 import com.datasophon.common.utils.ExecResult;
@@ -36,22 +35,15 @@ import com.datasophon.dao.entity.ClusterUserTenantEntity;
 import com.datasophon.dao.mapper.ClusterUserTenantMapper;
 import com.datasophon.dao.mapper.ClusterTenantMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Service("clusterUserTenantService")
@@ -66,6 +58,9 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
 
     @Autowired
     private ClusterTenantService clusterTenantService;
+    
+    @Autowired
+    private TenantRangerService tenantRangerService;
 
     @Override
     public void addUserToTenant(Long clusterId, Long userId, String tenantIds) {
@@ -118,8 +113,6 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
         // SQL逻辑已迁移到DAO层，通过ClusterTenantService调用
         List<ClusterTenantEntity> tenantList = ((ClusterTenantMapper) clusterTenantService.getMapper())
                 .selectByClusterIdAndIds(clusterId, tenantIdList);
-        ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
-
         for (ClusterTenantEntity clusterTenantEntity : tenantList) {
             List<Long> exitsUserIds = allUserTenants.stream()
                     .filter(t -> Objects.equals(t.getClusterId(), clusterId) && Objects.equals(t.getTenantId(), clusterTenantEntity.getId()))
@@ -135,21 +128,14 @@ public class ClusterUserTenantServiceImpl extends ServiceImpl<ClusterUserTenantM
             tenantRangerCommand.setRoleName(clusterTenantEntity.getTenantName());
             tenantRangerCommand.setOperateType(RangerOpType.OP_USER_TO_ROLE);
             tenantRangerCommand.setUserList(exitsUserNames);
-            Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-            Future<Object> execFuture = Patterns.ask(tenantRangerActor, tenantRangerCommand, timeout);
-            ExecResult execResult;
-            try {
-                execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-                if (execResult.getExecResult()) {
-                    logger.info("operate user to ranger role success");
-                } else {
-                    logger.error(execResult.getExecOut());
-                    throw new ServiceException(500, "operate user to ranger role failed");
-                }
-            } catch (Exception e) {
+            
+            ExecResult execResult = tenantRangerService.handleTenantRangerCommand(tenantRangerCommand);
+            if (execResult.getExecResult()) {
+                logger.info("operate user to ranger role success");
+            } else {
+                logger.error(execResult.getExecOut());
                 throw new ServiceException(500, "operate user to ranger role failed");
             }
-
         }
     }
 

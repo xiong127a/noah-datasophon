@@ -17,13 +17,9 @@
 
 package com.datasophon.api.master.handler.service;
 
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ServiceRoleOperateCommand;
@@ -32,13 +28,9 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 public class ServiceStartHandler extends ServiceHandler {
 
@@ -82,21 +74,16 @@ public class ServiceStartHandler extends ServiceHandler {
             }
             return execResult;
         }
-        ActorSelection startActor = ActorUtils.actorSystem.actorSelection(
-                "pekko://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/startServiceActor");
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> startFuture = Patterns.ask(startActor, serviceRoleOperateCommand, timeout);
-        try {
-            ExecResult startResult = (ExecResult) Await.result(startFuture, timeout.duration());
-            if (Objects.nonNull(startResult) && startResult.getExecResult()) {
-                // 角色启动成功
-                if (Objects.nonNull(getNext())) {
-                    return getNext().handlerRequest(serviceRoleInfo);
-                }
+        // 使用HTTP方式提交任务到Worker
+        ExecResult startResult = WorkerTaskHelper.submitAndWait(
+                serviceRoleInfo.getHostname(), serviceRoleOperateCommand, 180);
+        
+        if (Objects.nonNull(startResult) && startResult.getExecResult()) {
+            // 角色启动成功
+            if (Objects.nonNull(getNext())) {
+                return getNext().handlerRequest(serviceRoleInfo);
             }
-            return startResult;
-        } catch (Exception e) {
-            return new ExecResult();
         }
+        return startResult;
     }
 }

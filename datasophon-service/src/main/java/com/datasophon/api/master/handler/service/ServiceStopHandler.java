@@ -17,20 +17,12 @@
 
 package com.datasophon.api.master.handler.service;
 
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.common.command.ServiceRoleOperateCommand;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 public class ServiceStopHandler extends ServiceHandler {
 
@@ -52,21 +44,16 @@ public class ServiceStopHandler extends ServiceHandler {
             }
             return execResult;
         }
-        ActorSelection stopActor = ActorUtils.actorSystem.actorSelection(
-                "pekko://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/stopServiceActor");
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> startFuture = Patterns.ask(stopActor, serviceRoleOperateCommand, timeout);
-        try {
-            ExecResult execResult = (ExecResult) Await.result(startFuture, timeout.duration());
-            if (Objects.nonNull(execResult) && execResult.getExecResult()) {
-                // 角色安装成功
-                if (Objects.nonNull(getNext())) {
-                    return getNext().handlerRequest(serviceRoleInfo);
-                }
+        // 使用HTTP方式提交任务到Worker
+        ExecResult execResult = WorkerTaskHelper.submitAndWait(
+                serviceRoleInfo.getHostname(), serviceRoleOperateCommand, 180);
+        
+        if (Objects.nonNull(execResult) && execResult.getExecResult()) {
+            // 角色停止成功
+            if (Objects.nonNull(getNext())) {
+                return getNext().handlerRequest(serviceRoleInfo);
             }
-            return execResult;
-        } catch (Exception e) {
-            return new ExecResult();
         }
+        return execResult;
     }
 }

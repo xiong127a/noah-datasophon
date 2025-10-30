@@ -159,29 +159,21 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
                 hostname = roleInstanceDto.hostname();
             }
         }
-        ActorSelection execCmdActor = ActorUtils.actorSystem
-                .actorSelection("pekko://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
         ExecuteCmdCommand command = new ExecuteCmdCommand();
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         ArrayList<String> commands = new ArrayList<>();
         commands.add(Constants.INSTALL_PATH + "/hadoop-3.3.3/bin/yarn");
         commands.add("rmadmin");
         commands.add("-refreshQueues");
         command.setCommands(commands);
-        try {
-            Future<Object> execFuture = Patterns.ask(execCmdActor, command, timeout);
-            ExecResult execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            if (execResult.getExecResult()) {
-                logger.info("yarn dfsadmin -refreshQueues success at {}", hostname);
-            } else {
-                logger.info(execResult.getExecOut());
-                throw new BusinessException(Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getCode(),
-                        Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getMsg());
-            }
-        } catch (Exception e) {
-            logger.error("Failed to refresh yarn queues", e);
+        
+        // 使用HTTP方式提交任务到Worker
+        ExecResult execResult = WorkerTaskHelper.submitAndWait(hostname, command, 180);
+        if (execResult.getExecResult()) {
+            logger.info("yarn dfsadmin -refreshQueues success at {}", hostname);
+        } else {
+            logger.info(execResult.getExecOut());
             throw new BusinessException(Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getCode(),
-                    "刷新队列失败: " + e.getMessage());
+                    Status.FAILED_REFRESH_THE_QUEUE_TO_YARN.getMsg());
         }
     }
 

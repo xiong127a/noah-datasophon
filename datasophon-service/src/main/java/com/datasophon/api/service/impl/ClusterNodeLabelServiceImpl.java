@@ -145,20 +145,14 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
         if (CollUtil.isNotEmpty(roleList)) {
             String hostname = roleList.getFirst().getHostname();
             if (depMode == ClusterType.PVM) {
-                ActorSelection execCmdActor = ActorUtils.actorSystem
-                        .actorSelection("pekko://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
                 ExecuteCmdCommand command = new ExecuteCmdCommand();
-                Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
                 command.setCommands(commands);
-                Future<Object> execFuture = Patterns.ask(execCmdActor, command, timeout);
-                try {
-                    ExecResult execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-                    if (execResult.getExecResult()) {
-                        logger.info("add yarn node label success at {}", hostname);
-                        return true;
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
+                
+                // 使用HTTP方式提交任务到Worker
+                ExecResult execResult = WorkerTaskHelper.submitAndWait(hostname, command, 180);
+                if (execResult.getExecResult()) {
+                    logger.info("add yarn node label success at {}", hostname);
+                    return true;
                 }
                 logger.info("add yarn node label failed");
                 return false;

@@ -244,23 +244,22 @@ public class ClusterServiceRoleInstanceServiceImpl
             kubernetesGetLogCommand.setKubeConfig(kubeConfig);
             kubernetesGetLogCommand.setServiceRoleFullName(CommonUtil
                     .generateServiceRoleFullName(roleInstance.getServiceName(), roleInstance.getServiceRoleName()));
-            ActorRef kubernetesLog = ActorUtils.getLocalActor(KubernetesLogActor.class,
-                    ActorUtils.getActorRefName(KubernetesLogActor.class));
-            logFuture = Patterns.ask(kubernetesLog, kubernetesGetLogCommand, timeout);
+            // TODO: Kubernetes日志获取待迁移，暂时返回提示信息
+            return "Kubernetes log retrieval - HTTP migration pending";
         } else {
             GetLogCommand command = new GetLogCommand();
             command.setLogFile(logFile);
             command.setDecompressPackageName(frameServiceEntity.getDecompressPackageName());
-            ActorSelection configActor = ActorUtils.actorSystem
-                    .actorSelection(
-                            "pekko://datasophon@" + roleInstance.getHostname() + ":2552/user/worker/logActor");
-            logFuture = Patterns.ask(configActor, command, timeout);
+            
+            // 使用HTTP方式获取Worker日志
+            ExecResult logResult = WorkerTaskHelper.submitAndWait(
+                    roleInstance.getHostname(), command, 60);
+            
+            if (Objects.nonNull(logResult) && logResult.getExecResult()) {
+                return logResult.getExecOut();
+            }
+            return "No log available";
         }
-        ExecResult logResult = (ExecResult) Await.result(logFuture, timeout.duration());
-        if (Objects.nonNull(logResult) && logResult.getExecResult()) {
-            return logResult.getExecOut();
-        }
-        return "No log available";
     }
 
     @Override

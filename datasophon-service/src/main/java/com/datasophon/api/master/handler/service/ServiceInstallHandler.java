@@ -17,12 +17,8 @@
 
 package com.datasophon.api.master.handler.service;
 
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
@@ -33,17 +29,14 @@ import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.nio.charset.Charset;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 public class ServiceInstallHandler extends ServiceHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(ServiceInstallHandler.class);
+    
     @Override
     public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
         ClusterServiceRoleInstanceService roleInstanceService =
@@ -82,20 +75,15 @@ public class ServiceInstallHandler extends ServiceHandler {
         }
         installServiceRoleCommand.setPackageMd5(md5);
 
-        ActorSelection actorSelection = ActorUtils.actorSystem.actorSelection(
-                "pekko://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/installServiceActor");
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> future = Patterns.ask(actorSelection, installServiceRoleCommand, timeout);
-        try {
-            ExecResult installResult = (ExecResult) Await.result(future, timeout.duration());
-            if (Objects.nonNull(installResult) && installResult.getExecResult()) {
-                if (Objects.nonNull(getNext())) {
-                    return getNext().handlerRequest(serviceRoleInfo);
-                }
+        // 使用HTTP方式提交任务到Worker
+        ExecResult installResult = WorkerTaskHelper.submitAndWait(
+                serviceRoleInfo.getHostname(), installServiceRoleCommand, 180);
+        
+        if (Objects.nonNull(installResult) && installResult.getExecResult()) {
+            if (Objects.nonNull(getNext())) {
+                return getNext().handlerRequest(serviceRoleInfo);
             }
-            return installResult;
-        } catch (Exception e) {
-            return new ExecResult();
         }
+        return installResult;
     }
 }

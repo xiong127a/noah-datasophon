@@ -24,16 +24,10 @@ import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.command.PingCommand;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.client.WorkerHttpClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -405,22 +399,13 @@ public class WorkerScheduleService {
     // ================== 工具方法 ==================
 
     /**
-     * 检查Worker连接状态
+     * 检查Worker连接状态（HTTP方式）
      */
     private boolean checkWorkerConnection(String hostname) {
         try {
-            ActorSelection workerActor = ActorUtils.actorSystem.actorSelection(
-                "pekko://datasophon@" + hostname + ":2552/user/worker");
-            
-            PingCommand pingCommand = new PingCommand();
-            pingCommand.setMessage("db_scheduler_discovery");
-            
-            Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
-            Future<Object> future = Patterns.ask(workerActor, pingCommand, timeout);
-            
-            ExecResult result = (ExecResult) Await.result(future, timeout.duration());
-            return result.getExecResult();
-            
+            String result = workerHttpClient.ping(hostname)
+                    .block(java.time.Duration.ofSeconds(30));
+            return "pong".equals(result);
         } catch (Exception e) {
             log.debug("Worker节点{}连接检查失败: {}", hostname, e.getMessage());
             return false;
@@ -428,22 +413,13 @@ public class WorkerScheduleService {
     }
 
     /**
-     * 快速健康检查
+     * 快速健康检查（HTTP方式）
      */
     private boolean quickHealthCheck(String hostname) {
         try {
-            ActorSelection pingActor = ActorUtils.actorSystem.actorSelection(
-                "pekko://datasophon@" + hostname + ":2552/user/worker/pingActor");
-            
-            PingCommand pingCommand = new PingCommand();
-            pingCommand.setMessage("quick_health");
-            
-            Timeout timeout = new Timeout(Duration.create(10, TimeUnit.SECONDS));
-            Future<Object> future = Patterns.ask(pingActor, pingCommand, timeout);
-            
-            ExecResult result = (ExecResult) Await.result(future, timeout.duration());
-            return result.getExecResult();
-            
+            String result = workerHttpClient.checkHealth(hostname)
+                    .block(java.time.Duration.ofSeconds(10));
+            return "OK".equals(result);
         } catch (Exception e) {
             return false;
         }
@@ -511,22 +487,13 @@ public class WorkerScheduleService {
     }
 
     /**
-     * 收集Worker系统信息
+     * 收集Worker系统信息（HTTP方式）
      */
     private void collectWorkerSystemInfo(String hostname) {
         try {
-            ActorSelection systemInfoActor = ActorUtils.actorSystem.actorSelection(
-                "pekko://datasophon@" + hostname + ":2552/user/worker/systemInfoActor");
-            
-            // 系统信息收集命令
-            var collectCommand = new Object();
-            
-            Timeout timeout = new Timeout(Duration.create(60, TimeUnit.SECONDS));
-            Future<Object> future = Patterns.ask(systemInfoActor, collectCommand, timeout);
-            
-            Await.result(future, timeout.duration());
+            workerHttpClient.getSystemInfo(hostname)
+                    .block(java.time.Duration.ofSeconds(60));
             log.debug("成功收集Worker节点{}的系统信息", hostname);
-            
         } catch (Exception e) {
             log.debug("收集Worker节点{}系统信息失败: {}", hostname, e.getMessage());
         }

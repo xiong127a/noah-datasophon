@@ -17,21 +17,13 @@
 
 package com.datasophon.api.master.handler.service;
 
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateServiceConfigCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.dispatch.OnComplete;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 public class ServiceConfigureAsyncHandler extends ServiceHandler {
 
@@ -56,24 +48,23 @@ public class ServiceConfigureAsyncHandler extends ServiceHandler {
       generateServiceConfigCommand.setMyid((Integer) CacheUtils.get("zkserver_" + serviceRoleInfo.getHostname()));
     }
     generateServiceConfigCommand.setServiceRoleName(serviceRoleInfo.getName());
-    ActorSelection configActor = ActorUtils.actorSystem.actorSelection(
-        "pekko://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/configureServiceActor");
-
-    Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-    final Future<Object> configureFuture = Patterns.ask(configActor, generateServiceConfigCommand, timeout);
-    configureFuture.onComplete(new OnComplete<>() {
-        @Override
-        public void onComplete(Throwable failure, Object success) throws Throwable {
-            if (failure != null) {
-                function.onComplete(failure, success);
-            } else {
-                ExecResult configResult = (ExecResult) success;
-                if (Objects.nonNull(configResult) && configResult.getExecResult() && Objects.nonNull(getNext())) {
-                    getNext().handlerRequest(serviceRoleInfo);
-                }
-            }
+    // 使用HTTP方式提交任务到Worker（改为同步调用，简化异步逻辑）
+    ExecResult configResult = WorkerTaskHelper.submitAndWait(
+            serviceRoleInfo.getHostname(), generateServiceConfigCommand, 180);
+    
+    if (Objects.nonNull(configResult) && configResult.getExecResult() && Objects.nonNull(getNext())) {
+        return getNext().handlerRequest(serviceRoleInfo);
+    }
+    
+    // 如果有回调函数，执行它
+    if (function != null) {
+        try {
+            function.onComplete(null, configResult);
+        } catch (Throwable e) {
+            // 忽略回调异常
         }
-    }, ActorUtils.actorSystem.dispatcher());
-    return execResult;
+    }
+    
+    return configResult;
   }
 }

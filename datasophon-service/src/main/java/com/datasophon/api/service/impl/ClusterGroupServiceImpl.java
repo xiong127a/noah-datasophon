@@ -112,22 +112,16 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
         List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterId);
         for (ClusterHostEntity clusterHost : hostList) {
-            ActorRef unixGroupActor = ActorUtils.getRemoteActor(clusterHost.getHostname(), "unixGroupActor");
             CreateUnixGroupCommand createUnixGroupCommand = new CreateUnixGroupCommand();
             createUnixGroupCommand.setGroupName(groupName);
-            Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-            Future<Object> execFuture = Patterns.ask(unixGroupActor, createUnixGroupCommand, timeout);
-            ExecResult execResult;
-            try {
-                execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-                if (execResult.getExecResult()) {
-                    logger.info("create unix group success at {}", clusterHost.getHostname());
-                } else {
-                    logger.info(execResult.getExecOut());
-                    throw new ServiceException(500,
-                            "create unix group " + groupName + " failed at " + clusterHost.getHostname());
-                }
-            } catch (Exception e) {
+            
+            ExecResult execResult = WorkerTaskHelper.submitAndWait(
+                    clusterHost.getHostname(), createUnixGroupCommand, 180);
+            
+            if (execResult.getExecResult()) {
+                logger.info("create unix group success at {}", clusterHost.getHostname());
+            } else {
+                logger.info(execResult.getExecOut());
                 throw new ServiceException(500,
                         "create unix group " + groupName + " failed at " + clusterHost.getHostname());
             }
@@ -242,20 +236,15 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
         this.removeById(id);
         List<ClusterHostEntity> hostList = hostService.getHostListByClusterIdAndManaged(clusterGroupEntity.getClusterId());
         for (ClusterHostEntity clusterHost : hostList) {
-            ActorRef unixGroupActor = ActorUtils.getRemoteActor(clusterHost.getHostname(), "unixGroupActor");
             DelUnixGroupCommand delUnixGroupCommand = new DelUnixGroupCommand();
             delUnixGroupCommand.setGroupName(clusterGroupEntity.getGroupName());
-            Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-            Future<Object> execFuture = Patterns.ask(unixGroupActor, delUnixGroupCommand, timeout);
-            ExecResult execResult;
-            try {
-                execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-                if (execResult.getExecResult()) {
-                    logger.info("del unix group success at {}", clusterHost.getHostname());
-                } else {
-                    logger.info("del unix group failed at {}", clusterHost.getHostname());
-                }
-            } catch (Exception e) {
+            
+            ExecResult execResult = WorkerTaskHelper.submitAndWait(
+                    clusterHost.getHostname(), delUnixGroupCommand, 180);
+            
+            if (execResult.getExecResult()) {
+                logger.info("del unix group success at {}", clusterHost.getHostname());
+            } else {
                 logger.info("del unix group failed at {}", clusterHost.getHostname());
             }
         }
@@ -322,25 +311,18 @@ public class ClusterGroupServiceImpl extends ServiceImpl<ClusterGroupMapper, Clu
 
     @Override
     public void createUnixGroupOnHost(String hostname, String groupName) {
-        ActorRef unixGroupActor = ActorUtils.getRemoteActor(hostname, "unixGroupActor");
-        createUnixGroup(hostname, unixGroupActor, groupName);
+        createUnixGroup(hostname, groupName);
     }
 
-    private void createUnixGroup(String hostname, ActorRef unixGroupActor, String groupName) {
+    private void createUnixGroup(String hostname, String groupName) {
         CreateUnixGroupCommand createUnixGroupCommand = new CreateUnixGroupCommand();
         createUnixGroupCommand.setGroupName(groupName);
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> execFuture = Patterns.ask(unixGroupActor, createUnixGroupCommand, timeout);
-        ExecResult execResult;
-        try {
-            execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            if (execResult.getExecResult()) {
-                logger.info("create unix group success at {}", hostname);
-            } else {
-                logger.info(execResult.getExecOut());
-                throw new ServiceException(500, "create unix group " + groupName + " failed at " + hostname);
-            }
-        } catch (Exception e) {
+        
+        ExecResult execResult = WorkerTaskHelper.submitAndWait(hostname, createUnixGroupCommand, 180);
+        if (execResult.getExecResult()) {
+            logger.info("create unix group success at {}", hostname);
+        } else {
+            logger.info(execResult.getExecOut());
             throw new ServiceException(500, "create unix group " + groupName + " failed at " + hostname);
         }
     }
