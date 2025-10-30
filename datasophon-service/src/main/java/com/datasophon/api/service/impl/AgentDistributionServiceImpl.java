@@ -366,9 +366,7 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             throw new IllegalStateException(errorMsg);
         }
         
-        String repoUrl = repository.getRepoUrl();
-        // 确保URL末尾没有斜杠
-        String baseUrl = repoUrl.endsWith("/") ? repoUrl.substring(0, repoUrl.length() - 1) : repoUrl;
+        String baseUrl = repository.getRepoUrl();
         
         // 框架版本号是必需的
         String frameVersion = cluster.getFrameVersion();
@@ -378,8 +376,9 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             throw new IllegalStateException(errorMsg);
         }
         
-        // 构建包含框架版本号的路径: baseUrl/frameVersion/datasophon-worker.tar.gz
-        String agentPackagePath = baseUrl + "/" + frameVersion + "/" + Constants.WORKER_PACKAGE_NAME;
+        // 使用统一的URL构建工具类: baseUrl/frameVersion/datasophon-worker.tar.gz
+        String agentPackagePath = com.datasophon.api.utils.RepositoryUrlBuilder.buildPackageUrl(
+                baseUrl, frameVersion, Constants.WORKER_PACKAGE_NAME);
         
         log.info("从存储库获取Agent包路径: type={}, version={}, url={}", 
                 repository.getRepoType(), frameVersion, agentPackagePath);
