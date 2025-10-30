@@ -15,39 +15,36 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.master;
+package com.datasophon.api.service.impl;
 
+import com.datasophon.api.service.HdfsEcService;
 import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.command.HdfsEcCommand;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.mybatisflex.core.query.QueryChain;
-import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 /**
- * Used to manage hdfs capacity expansion and reduction
+ * HDFS纠删码服务实现
+ * 替代HdfsECActor，用于管理HDFS容量扩容和缩容
  */
-public class HdfsECActor extends AbstractActor {
+@Service
+public class HdfsEcServiceImpl implements HdfsEcService {
 
-    private static final Logger logger = LoggerFactory.getLogger(HdfsECActor.class);
+    private static final Logger logger = LoggerFactory.getLogger(HdfsEcServiceImpl.class);
 
     @Override
-    public Receive createReceive() {
-        return ReceiveBuilder.create()
-                .match(HdfsEcCommand.class, this::handleHdfsEcCommand)
-                .matchAny(this::unhandled)
-                .build();
-    }
-
-    private void handleHdfsEcCommand(HdfsEcCommand hdfsEcCommand) {
+    @Async("taskExecutor")
+    public void handleHdfsEcCommand(HdfsEcCommand hdfsEcCommand) {
         try {
-            // list datanode
+            // 查询DataNode列表
             List<ClusterServiceRoleInstanceEntity> datanodes = QueryChain.of(ClusterServiceRoleInstanceEntity.class)
                     .where(ClusterServiceRoleInstanceEntity::getServiceId).eq(hdfsEcCommand.getServiceInstanceId())
                     .and(ClusterServiceRoleInstanceEntity::getServiceRoleName).eq("DataNode")
@@ -58,8 +55,11 @@ public class HdfsECActor extends AbstractActor {
                     .collect(Collectors.toCollection(TreeSet::new));
 
             ProcessUtils.hdfsEcMethond(hdfsEcCommand.getServiceInstanceId(), list, "whitelist", "NameNode");
+            
+            logger.info("HDFS纠删码配置成功，serviceInstanceId: {}", hdfsEcCommand.getServiceInstanceId());
         } catch (Exception e) {
-            logger.error("Error handling HdfsEcCommand", e);
+            logger.error("处理HdfsEcCommand时出错", e);
         }
     }
 }
+

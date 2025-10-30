@@ -29,8 +29,7 @@ import com.datasophon.common.enums.ClusterType;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.load.ConfigBean;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.ClusterActor;
+import com.datasophon.api.service.ClusterManagementService;
 import com.datasophon.api.service.*;
 import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.PackageUtils;
@@ -117,6 +116,9 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
 
     @Autowired
     private ClusterRackService rackService;
+
+    @Autowired
+    private ClusterManagementService clusterManagementService;
 
     @org.springframework.context.annotation.Lazy
     @Autowired
@@ -328,9 +330,9 @@ public class ClusterInfoServiceImpl extends ServiceImpl<ClusterInfoMapper, Clust
                     .dtoListToEntityList(serviceInstanceDTOList);
             if (serviceInstanceList.stream()
                     .noneMatch(instance -> clusterServiceInstanceService.hasRunningRoleInstance(instance.getId()))) {
-                ActorUtils.getLocalActor(
-                        ClusterActor.class, "clusterActor")
-                        .tell(new ClusterCommand(ClusterCommandType.DELETE, id), ActorRef.noSender());
+                // 使用Service代替Actor
+                clusterManagementService.handleClusterCommand(
+                        new ClusterCommand(ClusterCommandType.DELETE, id));
 
                 updateClusterState(id, ClusterState.DELETING.getValue());
             }

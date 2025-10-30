@@ -18,11 +18,10 @@
 package com.datasophon.api.service.impl;
 
 import com.datasophon.api.converter.ClusterAlertHistoryConverter;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.PrometheusActor;
-import com.datasophon.api.master.alert.AlertActor;
+import com.datasophon.api.service.AlertService;
 import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.PrometheusIntegrationService;
 import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.dto.ClusterAlertHistoryDTO;
@@ -32,16 +31,13 @@ import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import scala.concurrent.duration.FiniteDuration;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 集群告警历史服务实现类
@@ -66,16 +62,18 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
 
         @Autowired
         private ClusterInfoService clusterInfoService;
+        
+        @Autowired
+        private AlertService alertService;
+        
+        @Autowired(required = false)
+        private PrometheusIntegrationService prometheusService;
 
         @Override
         public void saveAlertHistory(String alertMessage) {
                 logger.warn("Receive Alert Message : {}", alertMessage);
-                ActorRef alertActor = ActorUtils.getLocalActor(AlertActor.class, "alertActor");
-                ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
-                                2L, TimeUnit.SECONDS),
-                                alertActor, alertMessage,
-                                ActorUtils.actorSystem.dispatcher(),
-                                ActorRef.noSender());
+                // 替换Actor调用为Service调用
+                alertService.handleAlertMessage(alertMessage);
         }
 
         @Override
@@ -132,14 +130,14 @@ public class ClusterAlertHistoryServiceImpl extends ServiceImpl<ClusterAlertHist
                         // DAO层：直接删除符合条件的记录
                         getMapper().removeEnabledByRoleInstanceIds(ids);
 
-                        // 重新配置prometheus
-                        ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
-                                        ActorUtils.getActorRefName(PrometheusActor.class));
-                        GeneratePrometheusConfigCommand prometheusConfigCommand = new GeneratePrometheusConfigCommand();
-                        prometheusConfigCommand.setServiceInstanceId(roleInstanceEntity.getServiceId());
-                        prometheusConfigCommand.setClusterFrame(clusterInfoEntity.getClusterFrame());
-                        prometheusConfigCommand.setClusterId(roleInstanceEntity.getClusterId());
-                        prometheusActor.tell(prometheusConfigCommand, ActorRef.noSender());
+                        // 重新配置prometheus - 替换Actor调用为Service调用
+                        if (prometheusService != null) {
+                                GeneratePrometheusConfigCommand prometheusConfigCommand = new GeneratePrometheusConfigCommand();
+                                prometheusConfigCommand.setServiceInstanceId(roleInstanceEntity.getServiceId());
+                                prometheusConfigCommand.setClusterFrame(clusterInfoEntity.getClusterFrame());
+                                prometheusConfigCommand.setClusterId(roleInstanceEntity.getClusterId());
+                                prometheusService.generatePrometheusConfig(prometheusConfigCommand);
+                        }
 
                         logger.info("删除角色实例相关告警历史成功，角色实例ID: {}", ids);
                 } catch (Exception e) {

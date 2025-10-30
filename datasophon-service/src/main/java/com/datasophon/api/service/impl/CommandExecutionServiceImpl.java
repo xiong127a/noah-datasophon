@@ -18,13 +18,11 @@
 package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.IdUtil;
-// 移除未使用的import
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.CancelCommandMap;
-import com.datasophon.api.master.ServiceCommandActor;
-import com.datasophon.api.master.ServiceExecuteResultActor;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.CommandExecutionService;
+import com.datasophon.api.service.ServiceCommandService;
+import com.datasophon.api.service.ServiceExecuteResultService;
 import com.datasophon.api.converter.ClusterServiceCommandHostCommandConverter;
 import com.datasophon.common.Constants;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
@@ -43,19 +41,15 @@ import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.common.enums.CommandState;
 import com.datasophon.common.enums.RoleType;
 import com.datasophon.common.enums.ServiceRoleType;
-import org.apache.pekko.actor.ActorRef;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import scala.concurrent.duration.FiniteDuration;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 命令执行管理服务实现
@@ -74,13 +68,18 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
 
     @Autowired
     private ClusterServiceCommandHostCommandConverter hostCommandConverter;
+    
+    @Autowired
+    private ServiceCommandService serviceCommandService;
+    
+    @Autowired
+    private ServiceExecuteResultService serviceExecuteResultService;
 
     @Override
     public void updateCommandStateToFailed(List<Long> commandIds) {
         for (Long commandId : commandIds) {
             logger.info("command id is {}", commandId);
             // cancel worker and sub node
-            ActorRef commandActor = ActorUtils.getLocalActor(ServiceCommandActor.class, "commandActor");
             List<ClusterServiceCommandHostCommandDTO> hostCommandList = hostCommandService
                     .getHostCommandListByCommandId(commandId);
             for (ClusterServiceCommandHostCommandDTO hostCommandDTO : hostCommandList) {
@@ -104,12 +103,8 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
                     } else {
                         message.setServiceRoleType(ServiceRoleType.WORKER);
                     }
-                    ActorUtils.actorSystem.scheduler().scheduleOnce(
-                            FiniteDuration.apply(3L, TimeUnit.SECONDS),
-                            commandActor,
-                            message,
-                            ActorUtils.actorSystem.dispatcher(),
-                            ActorRef.noSender());
+                    // 替换Actor调用为Service调用
+                    serviceCommandService.handleUpdateCommandHostMessage(message);
                 }
             }
         }
@@ -147,20 +142,13 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
             message.setServiceRoleType(ServiceRoleType.WORKER);
         }
 
-        ActorRef commandActor = ActorUtils.getLocalActor(ServiceCommandActor.class, "commandActor");
-        ActorUtils.actorSystem.scheduler().scheduleOnce(FiniteDuration.apply(
-                1L, TimeUnit.SECONDS),
-                commandActor, message,
-                ActorUtils.actorSystem.dispatcher(),
-                ActorRef.noSender());
+        // 替换Actor调用为Service调用
+        serviceCommandService.handleUpdateCommandHostMessage(message);
     }
 
     @Override
     public void tellCommandActorResult(String serviceName, ExecuteServiceRoleCommand executeServiceRoleCommand,
             ServiceExecuteState state) {
-        ActorRef serviceExecuteResultActor = ActorUtils.getLocalActor(ServiceExecuteResultActor.class,
-                ActorUtils.getActorRefName(ServiceExecuteResultActor.class));
-
         ServiceExecuteResultMessage serviceExecuteResultMessage = new ServiceExecuteResultMessage();
         serviceExecuteResultMessage.setServiceExecuteState(state);
         serviceExecuteResultMessage.setDag(executeServiceRoleCommand.getDag());
@@ -175,7 +163,8 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
         serviceExecuteResultMessage.setReadyToSubmitTaskList(executeServiceRoleCommand.getReadyToSubmitTaskList());
         serviceExecuteResultMessage.setCompleteTaskList(executeServiceRoleCommand.getCompleteTaskList());
 
-        serviceExecuteResultActor.tell(serviceExecuteResultMessage, ActorRef.noSender());
+        // 替换Actor调用为Service调用
+        serviceExecuteResultService.handleServiceExecuteResult(serviceExecuteResultMessage);
     }
 
     @Override
@@ -191,21 +180,26 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
             String node,
             List<ServiceRoleInfo> masterRoles,
             ServiceRoleInfo workerRole,
-            ActorRef serviceActor,
+            ActorRef serviceActor, // DEPRECATED: Actor已废弃，保留参数仅为兼容性
             ServiceRoleType serviceRoleType) {
-        ExecuteServiceRoleCommand executeServiceRoleCommand = new ExecuteServiceRoleCommand(clusterId, node,
-                masterRoles);
-        executeServiceRoleCommand.setServiceRoleType(serviceRoleType);
-        executeServiceRoleCommand.setCommandType(commandType);
-        executeServiceRoleCommand.setDag(dag);
-        executeServiceRoleCommand.setClusterCode(clusterCode);
-        executeServiceRoleCommand.setClusterId(clusterId);
-        executeServiceRoleCommand.setActiveTaskList(activeTaskList);
-        executeServiceRoleCommand.setErrorTaskList(errorTaskList);
-        executeServiceRoleCommand.setReadyToSubmitTaskList(readyToSubmitTaskList);
-        executeServiceRoleCommand.setCompleteTaskList(completeTaskList);
-        executeServiceRoleCommand.setWorkerRole(workerRole);
-        serviceActor.tell(executeServiceRoleCommand, ActorRef.noSender());
+        // 注意：此方法已被ServiceExecuteResultServiceImpl中的WorkerServiceExecutionService替代
+        // ActorRef参数已废弃，保留仅为接口兼容性，后续会完全移除
+        logger.warn("buildExecuteServiceRoleCommand被调用，但此方法已废弃，应使用WorkerServiceExecutionService");
+        
+        // TODO: 完全移除此方法及其调用者
+        // ExecuteServiceRoleCommand executeServiceRoleCommand = new ExecuteServiceRoleCommand(clusterId, node,
+        //         masterRoles);
+        // executeServiceRoleCommand.setServiceRoleType(serviceRoleType);
+        // executeServiceRoleCommand.setCommandType(commandType);
+        // executeServiceRoleCommand.setDag(dag);
+        // executeServiceRoleCommand.setClusterCode(clusterCode);
+        // executeServiceRoleCommand.setClusterId(clusterId);
+        // executeServiceRoleCommand.setActiveTaskList(activeTaskList);
+        // executeServiceRoleCommand.setErrorTaskList(errorTaskList);
+        // executeServiceRoleCommand.setReadyToSubmitTaskList(readyToSubmitTaskList);
+        // executeServiceRoleCommand.setCompleteTaskList(completeTaskList);
+        // executeServiceRoleCommand.setWorkerRole(workerRole);
+        // serviceActor.tell(executeServiceRoleCommand, ActorRef.noSender()); // Actor已废弃
     }
 
     @Override

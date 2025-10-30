@@ -23,13 +23,12 @@ import cn.hutool.core.convert.Convert;
 import cn.hutool.core.lang.TypeReference;
 import cn.hutool.core.util.StrUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.TenantRangerActor;
-import com.datasophon.api.master.TenantResourceDispatcherActor;
 import com.datasophon.api.converter.ClusterTenantConverter;
 import com.datasophon.api.service.ClusterTenantService;
 import com.datasophon.api.service.ClusterUserService;
 import com.datasophon.api.service.ClusterUserTenantService;
+import com.datasophon.api.service.TenantRangerService;
+import com.datasophon.api.service.TenantResourceDispatcherService;
 import com.datasophon.api.utils.string.validator.LengthValidator;
 import com.datasophon.api.utils.string.validator.NotEmptyValidator;
 import com.datasophon.api.utils.string.validator.WordValidator;
@@ -49,7 +48,6 @@ import com.datasophon.dao.entity.tenantResource.TenantYarnResourceEntity;
 import com.datasophon.dao.mapper.ClusterTenantMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pekko.actor.ActorRef;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
@@ -83,6 +81,12 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
 
     @Autowired
     private ClusterUserService clusterUserService;
+    
+    @Autowired
+    private TenantRangerService tenantRangerService;
+    
+    @Autowired(required = false)
+    private TenantResourceDispatcherService tenantResourceDispatcherService;
 
     @Override
     public PageResult<ClusterTenantDTO> listTenant(Long clusterId, Integer page, Integer size, String tenantName) {
@@ -120,20 +124,19 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
                 resource.getYarnResourceList().stream().map(t -> (TenantFrameResource) t)
                         .peek(t -> t.setClusterId(clusterTenantEntity.getClusterId())).collect(Collectors.toList()));
 
-        // 框架资源操作
+        // 框架资源操作 - 使用Service替代Actor
         Map<String, String> globalVariables = GlobalVariables.get(clusterTenantEntity.getClusterId());
-        ActorRef tenantResourceDispatcherActor = ActorUtils.getLocalActor(TenantResourceDispatcherActor.class,
-                "tenantResourceDispatcherActor");
-        for (TenantFrameResource tenantFrameResource : allFrameResource) {
-            String enableKerberos = globalVariables
-                    .get("${enable" + tenantFrameResource.getServiceName() + "Kerberos}");
-            tenantFrameResource.setEnableKerberos(StrUtil.isNotEmpty(enableKerberos) && "true".equals(enableKerberos));
-            tenantResourceDispatcherActor.tell(tenantFrameResource, ActorRef.noSender());
+        if (tenantResourceDispatcherService != null) {
+            for (TenantFrameResource tenantFrameResource : allFrameResource) {
+                String enableKerberos = globalVariables
+                        .get("${enable" + tenantFrameResource.getServiceName() + "Kerberos}");
+                tenantFrameResource.setEnableKerberos(StrUtil.isNotEmpty(enableKerberos) && "true".equals(enableKerberos));
+                tenantResourceDispatcherService.handleTenantFrameResource(tenantFrameResource);
+            }
         }
 
-        // ranger策略操作
-        ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
-        tenantRangerActor.tell(resource, ActorRef.noSender());
+        // ranger策略操作 - 使用Service替代Actor
+        tenantRangerService.handleTenantResource(resource);
 
         this.saveOrUpdate(clusterTenantEntity);
 
@@ -174,9 +177,8 @@ public class ClusterTenantServiceImpl extends ServiceImpl<ClusterTenantMapper, C
         command.setTenantName(tenant.getTenantName());
         command.setOperateType(DELETE_TENANT);
 
-        // 删除所有ranger相关策略及角色
-        ActorRef tenantRangerActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
-        tenantRangerActor.tell(command, ActorRef.noSender());
+        // 删除所有ranger相关策略及角色 - 使用Service替代Actor
+        tenantRangerService.handleTenantRangerCommand(command);
 
         return this.removeById(id);
     }

@@ -15,25 +15,19 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.master;
+package com.datasophon.api.service;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
-
-public class RemoteEventActor extends AbstractActor {
-
-    private static final Logger logger = LoggerFactory.getLogger(RemoteEventActor.class);
-
-    @Override
-    public Receive createReceive() {
-        return receiveBuilder()
-                .matchAny(msg -> {
-                    // 处理任何与远程连接相关的事件
-                    logger.info("Remote event: {}", msg);
-                })
-                .build();
-    }
+/**
+ * 告警处理服务
+ * 替代AlertActor，使用Spring Service实现
+ * 负责处理集群告警消息，更新主机和服务状态，记录告警历史
+ */
+public interface AlertService {
+    
+    /**
+     * 处理告警消息
+     * @param alertMessage JSON格式的告警消息
+     */
+    void handleAlertMessage(String alertMessage);
 }
+

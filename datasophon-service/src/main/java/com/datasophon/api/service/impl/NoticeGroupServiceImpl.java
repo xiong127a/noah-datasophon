@@ -18,8 +18,7 @@
 package com.datasophon.api.service.impl;
 
 import com.datasophon.api.exceptions.ServiceException;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.AlertManagersActor;
+import com.datasophon.api.service.AlertManagersConfigService;
 import com.datasophon.api.service.ClusterAlertQuotaService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
@@ -76,6 +75,9 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     private ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
     @Autowired
     private ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
+
+    @Autowired
+    private AlertManagersConfigService alertManagersConfigService;
 
     @Override
     public PageResult<NoticeGroupDTO> getNoticeGroupList(String noticeGroupName, Integer page, Integer pageSize) {
@@ -266,10 +268,8 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
                     roleGroupConfig.roleGroupId(), "(AUTO) 生成alertManager 配置信息", -1L, "system");
         }
 
-        // 调用配置生成
-        ActorRef localActor = ActorUtils.getLocalActor(AlertManagersActor.class,
-                ActorUtils.getActorRefName(AlertManagersActor.class));
-        localActor.tell(1, ActorRef.noSender());
+        // 调用配置生成 - 使用Service代替Actor
+        alertManagersConfigService.generateAlertManagerConfig();
     }
 
     // Manual conversion methods

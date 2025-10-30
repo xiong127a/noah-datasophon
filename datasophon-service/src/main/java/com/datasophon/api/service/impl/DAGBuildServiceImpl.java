@@ -15,94 +15,94 @@
  *  limitations under the License.
  */
 
-package com.datasophon.api.master;
+package com.datasophon.api.service.impl;
 
 import cn.hutool.core.util.ArrayUtil;
-import cn.hutool.extra.spring.SpringUtil;
 import com.alibaba.fastjson2.JSONObject;
-import com.datasophon.api.service.ClusterInfoService;
-import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
-import com.datasophon.api.service.FrameServiceRoleService;
-import com.datasophon.api.service.FrameServiceService;
+import com.datasophon.api.converter.FrameServiceConverter;
+import com.datasophon.api.converter.FrameServiceRoleConverter;
+import com.datasophon.api.service.*;
+import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.strategy.ServiceRoleStrategy;
 import com.datasophon.api.strategy.ServiceRoleStrategyContext;
-import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.common.Constants;
-import com.datasophon.dao.entity.ClusterHostEntity;
-import com.datasophon.common.enums.ManagementStatus;
-import com.datasophon.common.enums.ClusterState;
 import com.datasophon.common.command.StartExecuteCommandCommand;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
+import com.datasophon.common.dto.*;
+import com.datasophon.common.enums.ClusterState;
 import com.datasophon.common.enums.CommandType;
+import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.DAGGraph;
 import com.datasophon.common.model.ServiceNode;
 import com.datasophon.common.model.ServiceRoleInfo;
-import com.datasophon.common.dto.ClusterInfoDTO;
-import com.datasophon.common.dto.ClusterServiceCommandDTO;
-import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
-import com.datasophon.common.dto.FrameServiceDTO;
-import com.datasophon.common.dto.FrameServiceRoleDTO;
+import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.datasophon.dao.entity.FrameServiceRoleEntity;
-import com.datasophon.api.converter.FrameServiceConverter;
-import com.datasophon.api.converter.FrameServiceRoleConverter;
-import com.datasophon.api.service.ClusterServiceCommandService;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pekko.actor.AbstractActor;
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.japi.pf.ReceiveBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class DAGBuildActor extends AbstractActor {
+/**
+ * DAG构建服务实现
+ * 替代DAGBuildActor，用于构建和执行服务依赖DAG图
+ */
+@Service
+public class DAGBuildServiceImpl implements DAGBuildService {
 
-    private static final Logger logger = LoggerFactory.getLogger(DAGBuildActor.class);
+    private static final Logger logger = LoggerFactory.getLogger(DAGBuildServiceImpl.class);
+
+    @Autowired
+    private ClusterServiceCommandHostCommandService hostCommandService;
+
+    @Autowired
+    private FrameServiceRoleService frameServiceRoleService;
+
+    @Autowired
+    private FrameServiceService frameService;
+
+    @Autowired
+    private ClusterInfoService clusterInfoService;
+
+    @Autowired
+    private ClusterServiceCommandService clusterServiceCommandService;
+
+    @Autowired
+    private ClusterHostService clusterHostService;
+
+    @Autowired
+    private FrameServiceConverter serviceConverter;
+
+    @Autowired
+    private FrameServiceRoleConverter roleConverter;
+
+    @Autowired
+    private SubmitTaskNodeService submitTaskNodeService;
 
     @Override
-    public void preRestart(Throwable reason, Optional<Object> message) throws Exception {
-        logger.info("restart actor {}", reason.getMessage());
-        super.preRestart(reason, message);
-    }
-
-    @Override
-    public Receive createReceive() {
-        return ReceiveBuilder.create()
-                .match(StartExecuteCommandCommand.class, this::handleStartExecuteCommand)
-                .matchAny(this::unhandled)
-                .build();
-    }
-
-    private void handleStartExecuteCommand(StartExecuteCommandCommand executeCommandCommand) {
+    @Async("taskExecutor")
+    public void handleStartExecuteCommand(StartExecuteCommandCommand executeCommandCommand) {
         try {
             DAGGraph<String, ServiceNode, String> dag = new DAGGraph<>();
             CommandType commandType = executeCommandCommand.getCommandType();
             logger.info("start execute command: commandType={}", commandType);
-            
-            ClusterServiceCommandHostCommandService hostCommandService = SpringUtil
-                    .getBean(ClusterServiceCommandHostCommandService.class);
-            FrameServiceRoleService frameServiceRoleService = SpringUtil.getBean(FrameServiceRoleService.class);
-            FrameServiceService frameService = SpringUtil.getBean(FrameServiceService.class);
-            ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
 
             ClusterInfoDTO clusterInfo = clusterInfoService.getClusterById(executeCommandCommand.getClusterId());
-            
+
             // 如果是安装服务命令，立即更新主机和集群状态
             if (commandType == CommandType.INSTALL_SERVICE) {
                 logger.info("检测到安装服务命令，立即更新集群和主机状态: clusterId={}", clusterInfo.id());
                 updateClusterAndHostStatusForInstall(clusterInfo);
             }
+
             // 获取命令列表
-            ClusterServiceCommandService clusterServiceCommandService = SpringUtil.getBean(ClusterServiceCommandService.class);
             List<ClusterServiceCommandDTO> commandList = new ArrayList<>();
             for (Long commandId : executeCommandCommand.getCommandIds()) {
                 ClusterServiceCommandDTO command = clusterServiceCommandService.getCommandById(commandId);
@@ -124,8 +124,6 @@ public class DAGBuildActor extends AbstractActor {
 
                     FrameServiceDTO serviceDto = frameService.getServiceByFrameCodeAndServiceName(
                             clusterInfo.clusterFrame(), command.serviceName());
-                    // 使用MapStruct Converter进行转换
-                    FrameServiceConverter serviceConverter = SpringUtil.getBean(FrameServiceConverter.class);
                     FrameServiceEntity serviceEntity = serviceConverter.dtoToEntity(serviceDto);
                     frameServiceList.add(serviceEntity);
 
@@ -135,8 +133,6 @@ public class DAGBuildActor extends AbstractActor {
                         FrameServiceRoleDTO frameServiceRoleDto = frameServiceRoleService
                                 .getServiceRoleByFrameCodeAndServiceRoleName(
                                         clusterInfo.clusterFrame(), hostCommand.serviceRoleName());
-                        // 使用MapStruct Converter进行转换
-                        FrameServiceRoleConverter roleConverter = SpringUtil.getBean(FrameServiceRoleConverter.class);
                         FrameServiceRoleEntity frameServiceRoleEntity = roleConverter.dtoToEntity(frameServiceRoleDto);
 
                         ServiceRoleInfo serviceRoleInfo = JSONObject
@@ -166,6 +162,7 @@ public class DAGBuildActor extends AbstractActor {
                     serviceNode.setElseRoles(elseRoles);
                     dag.addNode(command.serviceName(), serviceNode);
                 }
+                
                 // build edge
                 for (FrameServiceEntity serviceEntity : frameServiceList) {
                     if (StringUtils.isNotBlank(serviceEntity.getDependencies())) {
@@ -205,14 +202,13 @@ public class DAGBuildActor extends AbstractActor {
             submitActiveTaskNodeCommand.setClusterCode(clusterInfo.clusterCode());
             submitActiveTaskNodeCommand.setRollingRestartInfo(executeCommandCommand.getRollingRestartInfo());
 
-            ActorRef submitTaskNodeActor = ActorUtils.getLocalActor(SubmitTaskNodeActor.class,
-                    ActorUtils.getActorRefName(SubmitTaskNodeActor.class));
-            submitTaskNodeActor.tell(submitActiveTaskNodeCommand, getSelf());
+            // 使用Service代替Actor
+            submitTaskNodeService.handleSubmitActiveTaskNode(submitActiveTaskNodeCommand);
         } catch (Exception e) {
             logger.error("Error handling StartExecuteCommandCommand", e);
         }
     }
-    
+
     /**
      * 为安装服务更新集群和主机状态
      */
@@ -220,7 +216,6 @@ public class DAGBuildActor extends AbstractActor {
         try {
             // 1. 更新集群内所有主机状态为已受管
             try {
-                ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
                 List<ClusterHostEntity> hosts = clusterHostService.getHostListByClusterId(clusterInfo.id());
                 if (!hosts.isEmpty()) {
                     hosts.forEach(host -> {
@@ -235,11 +230,10 @@ public class DAGBuildActor extends AbstractActor {
             } catch (Exception e) {
                 logger.error("更新主机管理状态失败: clusterId={}", clusterInfo.id(), e);
             }
-            
+
             // 2. 更新集群状态为运行中
             try {
                 if (clusterInfo.clusterState() != ClusterState.RUNNING.getValue()) {
-                    ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
                     boolean updateResult = clusterInfoService.updateClusterState(clusterInfo.id(), ClusterState.RUNNING.getValue());
                     if (updateResult) {
                         logger.info("成功更新集群状态为运行中: clusterId={}", clusterInfo.id());
@@ -257,3 +251,4 @@ public class DAGBuildActor extends AbstractActor {
         }
     }
 }
+

@@ -61,18 +61,6 @@
             <groupId>org.apache.httpcomponents.client5</groupId>
             <artifactId>httpclient5</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.pekko</groupId>
-            <artifactId>pekko-actor_3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.pekko</groupId>
-            <artifactId>pekko-remote_3</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.pekko</groupId>
-            <artifactId>pekko-persistence_3</artifactId>
-        </dependency>
 
         <!-- 插件生态系统依赖 -->
         <dependency>

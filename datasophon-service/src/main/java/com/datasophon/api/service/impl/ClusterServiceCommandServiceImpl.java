@@ -31,12 +31,11 @@ import com.datasophon.common.dto.ClusterServiceInstanceDTO;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.RoleType;
 import com.datasophon.common.enums.Status;
-import com.datasophon.api.master.ActorUtils;
 
 import java.time.LocalDateTime;
 
-import com.datasophon.api.master.DAGBuildActor;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.DAGBuildService;
 import com.datasophon.api.service.ClusterServiceCommandHostCommandService;
 import com.datasophon.api.service.ClusterServiceCommandHostService;
 import com.datasophon.api.service.ClusterServiceCommandService;
@@ -130,6 +129,9 @@ public class ClusterServiceCommandServiceImpl
 
     @Autowired
     private RoleInstanceQueryService roleInstanceQueryService;
+
+    @Autowired
+    private DAGBuildService dagBuildService;
 
     @Override
     @Transactional
@@ -478,10 +480,9 @@ public class ClusterServiceCommandServiceImpl
             commandHostService.saveBatch(commandHostList);
             hostCommandService.saveBatch(hostCommandList);
 
-            // 通知commandActor执行命令
-            ActorRef dagBuildActor = ActorUtils.getLocalActor(DAGBuildActor.class,
-                    ActorUtils.getActorRefName(DAGBuildActor.class));
-            dagBuildActor.tell(new StartExecuteCommandCommand(commandIds, clusterId, commandType), ActorRef.noSender());
+            // 使用Service代替Actor执行命令
+            dagBuildService.handleStartExecuteCommand(
+                    new StartExecuteCommandCommand(commandIds, clusterId, commandType));
         }
         return commandIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
     }
@@ -535,11 +536,9 @@ public class ClusterServiceCommandServiceImpl
         commandHostService.saveBatch(commandHostList);
         hostCommandService.saveBatch(hostCommandList);
 
-        // 通知commandActor执行命令
-        ActorRef dagBuildActor = ActorUtils.getLocalActor(DAGBuildActor.class,
-                ActorUtils.getActorRefName(DAGBuildActor.class));
-        dagBuildActor.tell(new StartExecuteCommandCommand(commandIds, clusterId, commandType, rollingRestartInfo),
-                ActorRef.noSender());
+        // 使用Service代替Actor执行命令
+        dagBuildService.handleStartExecuteCommand(
+                new StartExecuteCommandCommand(commandIds, clusterId, commandType, rollingRestartInfo));
         return commandIds.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
     }
 
@@ -547,10 +546,8 @@ public class ClusterServiceCommandServiceImpl
     public void startExecuteCommand(Long clusterId, String commandType, String commandIds) {
         List<Long> list = Arrays.stream(StrUtil.splitToLong(commandIds,",")).boxed().toList();
         CommandType command = EnumUtil.fromString(CommandType.class, commandType);
-        // 通知commandActor执行命令
-        ActorRef dagBuildActor = ActorUtils.getLocalActor(DAGBuildActor.class,
-                ActorUtils.getActorRefName(DAGBuildActor.class));
-        dagBuildActor.tell(new StartExecuteCommandCommand(list, clusterId, command), ActorRef.noSender());
+        // 使用Service代替Actor执行命令
+        dagBuildService.handleStartExecuteCommand(new StartExecuteCommandCommand(list, clusterId, command));
     }
 
     @Override
