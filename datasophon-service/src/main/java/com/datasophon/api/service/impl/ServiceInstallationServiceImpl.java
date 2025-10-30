@@ -214,7 +214,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         clusterHostEntity.setIp(HostUtils.getIpByHost(message.getHostname()));
         clusterHostEntity.setHostState(HostState.RUNNING);
         clusterHostEntity.setManagementStatus(ManagementStatus.MANAGED);
-        clusterHostService.saveHost(clusterHostEntity);
+        clusterHostService.saveHostEntity(clusterHostEntity);
     }
 
     @Override

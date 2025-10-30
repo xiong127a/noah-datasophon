@@ -230,7 +230,7 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     }
 
     @Override
-    public void saveHost(ClusterHostEntity clusterHostEntity) {
+    public void saveHostEntity(ClusterHostEntity clusterHostEntity) {
         // 直接调用重写后的save方法，避免重复检查
         this.save(clusterHostEntity);
     }

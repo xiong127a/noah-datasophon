@@ -108,11 +108,12 @@ public interface ClusterHostService extends IService<ClusterHostEntity> {
     List<ClusterHostEntity> getHostsByIpList(Long clusterId, List<String> ipList);
 
     /**
-     * 保存主机信息
+     * 保存主机信息（内部使用，接收Entity）
+     * Service层内部使用此方法
      *
      * @param clusterHostEntity 主机信息
      */
-    void saveHost(ClusterHostEntity clusterHostEntity);
+    void saveHostEntity(ClusterHostEntity clusterHostEntity);
 
     /**
      * 获取集群主机总数
