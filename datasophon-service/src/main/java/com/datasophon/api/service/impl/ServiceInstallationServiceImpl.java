@@ -62,6 +62,7 @@ import com.datasophon.common.enums.ServiceState;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -88,6 +89,7 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
     private ClusterServiceInstanceConfigService serviceInstanceConfigService;
 
     @Autowired
+    @Lazy
     private ClusterServiceRoleInstanceService serviceRoleInstanceService;
 
     @Autowired

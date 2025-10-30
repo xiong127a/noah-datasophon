@@ -82,6 +82,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -137,6 +138,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     @Autowired
     private ClusterServiceRoleGroupConfigService groupConfigService;
     @Autowired
+    @Lazy
     private ClusterServiceRoleInstanceService roleInstanceService;
     @Autowired
     private ConfigVersionInfoService configVersionInfoService;

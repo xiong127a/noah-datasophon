@@ -40,6 +40,7 @@ import com.datasophon.dao.mapper.NoticeGroupMapper;
 
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -73,6 +74,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     @Autowired
     private ClusterServiceRoleGroupConfigService clusterServiceRoleGroupConfigService;
     @Autowired
+    @Lazy
     private ClusterServiceRoleInstanceService clusterServiceRoleInstanceService;
 
     @Autowired

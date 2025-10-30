@@ -33,6 +33,7 @@ import com.datasophon.dao.mapper.ClusterAlertHistoryMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -52,6 +53,7 @@ public class ServiceStateManagementServiceImpl implements ServiceStateManagement
     private static final Logger logger = LoggerFactory.getLogger(ServiceStateManagementServiceImpl.class);
 
     @Autowired
+    @Lazy
     private ClusterServiceRoleInstanceService serviceRoleInstanceService;
     @Autowired
     private ClusterAlertHistoryMapper clusterAlertHistoryMapper;
