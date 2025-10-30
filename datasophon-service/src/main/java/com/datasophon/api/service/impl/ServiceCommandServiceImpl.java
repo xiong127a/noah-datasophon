@@ -21,7 +21,6 @@ import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.service.*;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.command.GenerateSRPromConfigCommand;
-import com.datasophon.common.command.HdfsEcCommand;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceCommandDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
@@ -194,9 +193,9 @@ public class ServiceCommandServiceImpl implements ServiceCommandService {
                                             String serviceName, ClusterInfoDTO clusterInfo) {
         // HDFS纠删码配置
         if (HDFS.equalsIgnoreCase(serviceName) && hdfsEcService != null) {
-            HdfsEcCommand hdfsEcCommand = new HdfsEcCommand();
-            hdfsEcCommand.setServiceInstanceId(command.serviceInstanceId());
-            hdfsEcService.handleHdfsEcCommand(hdfsEcCommand);
+            // HDFS纠删码服务已迁移到HdfsEcService，暂不自动调用
+            // 需要明确的主机列表、类型和角色名称参数
+            logger.info("HDFS服务安装完成，EC配置需要手动触发或在扩容/缩容时处理");
         }
 
         // 生成Prometheus配置

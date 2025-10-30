@@ -48,7 +48,6 @@ import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.dto.ClusterVariableDTO;
-import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 
 import com.datasophon.common.dto.ServiceConfigGroupDTO;
 

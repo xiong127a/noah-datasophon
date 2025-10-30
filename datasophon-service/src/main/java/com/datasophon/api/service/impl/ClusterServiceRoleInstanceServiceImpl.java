@@ -237,7 +237,7 @@ public class ClusterServiceRoleInstanceServiceImpl
             // Kubernetes日志获取 - 使用kubernetes-client API
             // 注意：需要配置kubeconfig访问权限
             logger.info("获取Kubernetes Pod日志: serviceRoleName={}, hostname={}", 
-                    serviceRoleName, hostname);
+                    roleInstance.getServiceRoleName(), roleInstance.getHostname());
             return "Kubernetes日志获取功能 - 需要通过kubernetes-client API实现，请使用kubectl查看日志";
         } else {
             GetLogCommand command = new GetLogCommand();
