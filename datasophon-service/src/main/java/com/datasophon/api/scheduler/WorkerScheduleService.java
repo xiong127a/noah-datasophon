@@ -431,7 +431,7 @@ public class WorkerScheduleService {
     private void updateWorkerStatus(ClusterHostEntity host, boolean isOnline) {
         try {
             host.setManagementStatus(isOnline ? ManagementStatus.MANAGED : ManagementStatus.UNMANAGED);
-            clusterHostService.saveHost(host);
+            clusterHostService.saveHostEntity(host);
             
             log.debug("更新Worker节点{}状态: {}", host.getHostname(), 
                 isOnline ? "在线" : "离线");
