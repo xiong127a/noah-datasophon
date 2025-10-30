@@ -29,7 +29,6 @@ import com.mybatisflex.core.query.QueryChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -53,7 +52,7 @@ public class TenantResourceDispatcherServiceImpl implements TenantResourceDispat
     private YarnQueueService yarnQueueService;
 
     @Override
-    @Async("taskExecutor")
+    // @Async removed - 改为同步执行，避免Spring线程池卡死问题
     public void handleTenantFrameResource(TenantFrameResource tenantFrameResource) {
         try {
             Map<String, String> roleHostMap = getRoleHostMap(tenantFrameResource.getClusterId());

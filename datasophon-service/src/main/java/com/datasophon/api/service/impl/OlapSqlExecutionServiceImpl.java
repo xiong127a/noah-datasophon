@@ -24,7 +24,6 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.OlapUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
@@ -48,7 +47,7 @@ public class OlapSqlExecutionServiceImpl implements OlapSqlExecutionService {
     private static final int RETRY_INTERVAL_SECONDS = 10;
 
     @Override
-    @Async("taskExecutor")
+    // @Async removed - 改为同步执行，避免Spring线程池卡死问题
     public void executeOlapSqlCommand(OlapSqlExecCommand command) {
         try {
             logger.info("OlapSqlExecutionService 接收到命令: {}", JSONUtil.toJsonStr(command));

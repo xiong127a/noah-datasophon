@@ -36,7 +36,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -76,7 +75,7 @@ public class RackConfigurationServiceImpl implements RackConfigurationService {
     private ClusterInfoService clusterInfoService;
 
     @Override
-    @Async("taskExecutor")
+    // @Async removed - 改为同步执行，避免Spring线程池卡死问题
     public void generateRackProperties(GenerateRackPropCommand command) {
         try {
             logger.info("开始生成集群 {} 的机架配置文件", command.getClusterId());

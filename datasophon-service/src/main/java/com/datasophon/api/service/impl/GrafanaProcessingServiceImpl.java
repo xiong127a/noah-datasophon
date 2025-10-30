@@ -24,7 +24,6 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.Sqlite3Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.TimeUnit;
@@ -52,7 +51,7 @@ public class GrafanaProcessingServiceImpl implements GrafanaProcessingService {
     private static final int RETRY_INTERVAL_SECONDS = 10;
 
     @Override
-    @Async("taskExecutor")
+    // @Async removed - 改为同步执行，避免Spring线程池卡死问题
     public void processSqlite3Command(Sqlite3ExecCommand command) {
         try {
             logger.info("GrafanaProcessingService 接收到命令: {}", JSONUtil.toJsonStr(command));

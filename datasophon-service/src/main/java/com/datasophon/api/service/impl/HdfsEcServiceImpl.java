@@ -24,7 +24,6 @@ import com.datasophon.dao.entity.ClusterServiceRoleInstanceEntity;
 import com.mybatisflex.core.query.QueryChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -41,7 +40,7 @@ public class HdfsEcServiceImpl implements HdfsEcService {
     private static final Logger logger = LoggerFactory.getLogger(HdfsEcServiceImpl.class);
 
     @Override
-    @Async("taskExecutor")
+    // @Async removed - 改为同步执行，避免Spring线程池卡死问题
     public void handleHdfsEcCommand(HdfsEcCommand hdfsEcCommand) {
         try {
             // 查询DataNode列表

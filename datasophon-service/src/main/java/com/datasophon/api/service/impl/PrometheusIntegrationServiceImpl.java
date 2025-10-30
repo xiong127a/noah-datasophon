@@ -48,7 +48,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -104,7 +103,7 @@ public class PrometheusIntegrationServiceImpl implements PrometheusIntegrationSe
     private ClusterHostService clusterHostService;
 
     @Override
-    @Async("taskExecutor")
+    // @Async removed - 改为同步执行，避免Spring线程池卡死问题
     public void generatePrometheusConfig(GeneratePrometheusConfigCommand command) {
         try {
             Long clusterId = command.getClusterId();
@@ -210,7 +209,7 @@ public class PrometheusIntegrationServiceImpl implements PrometheusIntegrationSe
     }
 
     @Override
-    @Async("taskExecutor")
+    // @Async removed - 改为同步执行，避免Spring线程池卡死问题
     public void generateStarRocksPrometheusConfig(GenerateSRPromConfigCommand command) {
         try {
             ClusterServiceInstanceDTO serviceInstance = serviceInstanceConverter
@@ -317,7 +316,7 @@ public class PrometheusIntegrationServiceImpl implements PrometheusIntegrationSe
     }
     
     @Override
-    @Async("taskExecutor")
+    // @Async removed - 改为同步执行，避免Spring线程池卡死问题
     public void generateAlertConfig(GenerateAlertConfigCommand command) {
         try {
             Long clusterId = command.getClusterId();
