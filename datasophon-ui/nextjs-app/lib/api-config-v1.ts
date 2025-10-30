@@ -226,6 +226,8 @@ export const API_PATHS_V1 = {
   SAVE_SERVICE_ROLE_HOST_MAPPING_V2: `${API_BASE}/service/install/saveServiceRoleHostMapping`,
   LIST_SERVICE_TAB: `${API_BASE}/service/install/listServiceTab`,
   // 服务命令相关API（基于ClusterServiceCommandController）
+  GENERATE_SERVICE_INSTALL_COMMAND: `${API_BASE}/cluster/service/command/generate`,  // 生成服务安装命令
+  GENERATE_SERVICE_COMMAND: `${API_BASE}/cluster/service/command/generate/service`,  // 生成服务实例命令
   GENERATE_SERVICE_ROLE_COMMAND: `${API_BASE}/cluster/service/command/generate/role`,
   
   // 节点退役相关API

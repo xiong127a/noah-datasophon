@@ -89,7 +89,6 @@ public class DAGBuildServiceImpl implements DAGBuildService {
     private SubmitTaskNodeService submitTaskNodeService;
 
     @Override
-    @Async("taskExecutor")
     public void handleStartExecuteCommand(StartExecuteCommandCommand executeCommandCommand) {
         try {
             DAGGraph<String, ServiceNode, String> dag = new DAGGraph<>();

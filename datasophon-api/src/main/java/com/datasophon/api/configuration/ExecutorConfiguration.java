@@ -21,6 +21,17 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class ExecutorConfiguration {
 
+    /**
+     * 创建任务执行器（用于异步任务执行）
+     * 用于 @Async("taskExecutor") 注解的方法
+     * 
+     * @return 任务执行器
+     */
+    @Bean(name = "taskExecutor")
+    public ExecutorService taskExecutor() {
+        return createThreadPool("task-executor", 50);
+    }
+
     // 临时注释掉所有executor bean以解决启动冲突问题
     // 后续需要重新设计这些线程池的依赖注入方式
 

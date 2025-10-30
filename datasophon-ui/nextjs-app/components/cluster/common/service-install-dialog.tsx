@@ -300,8 +300,7 @@ const ServiceInstallDialog: React.FC<ServiceInstallDialogProps> = ({
         {
           commandType: 'INSTALL_SERVICE',
           commandIds
-        },
-        { headers }
+        }
       );
 
       // 统一错误处理会自动处理业务错误，这里直接使用数据
