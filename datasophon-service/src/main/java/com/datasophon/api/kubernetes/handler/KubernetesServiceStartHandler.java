@@ -9,7 +9,6 @@ import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.api.utils.ClusterInfoUtils;
-import com.datasophon.kubernetes.actor.KubernetesStartServiceActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -17,7 +16,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import static com.datasophon.api.utils.ProcessUtils.enableKerberos;
 

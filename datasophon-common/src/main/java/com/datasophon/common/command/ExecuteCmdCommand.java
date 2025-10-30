@@ -18,13 +18,14 @@
 package com.datasophon.common.command;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.util.List;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-public class ExecuteCmdCommand implements Serializable {
+@EqualsAndHashCode(callSuper = false)
+public class ExecuteCmdCommand extends BaseCommand {
 
     @Serial
     private static final long serialVersionUID = 8665156195475027337L;

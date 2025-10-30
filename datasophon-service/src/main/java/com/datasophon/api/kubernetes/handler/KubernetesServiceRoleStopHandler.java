@@ -8,12 +8,10 @@ import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.api.utils.ClusterInfoUtils;
-import com.datasophon.kubernetes.actor.KubernetesStopRolePodActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 public class KubernetesServiceRoleStopHandler extends ServiceHandler {
 
