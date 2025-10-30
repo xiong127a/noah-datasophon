@@ -146,6 +146,8 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
     private ClusterServiceInstanceRoleGroupMapper roleGroupMapper;
     @Autowired
     private ClusterHostMapper clusterHostMapper;
+    @Autowired
+    private com.datasophon.dao.mapper.ClusterServiceRoleGroupConfigMapper roleGroupConfigMapper;
 
     // Converter依赖注入 - 按照架构重构规范
     @Autowired
@@ -351,23 +353,48 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         }
 
         configNeedUpdate(serviceInstanceEntity, list, configUpdateRoleSet);
-        ClusterServiceRoleGroupConfigEntity roleGroupConfig;
+        ClusterServiceRoleGroupConfigEntity roleGroupConfig = null;
+        Long actualRoleGroupId = null;
+        
         if (Objects.isNull(roleGroupId)) {
             // Service层：获取DTO后转换为Entity
             ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService.getRoleGroupByServiceInstanceId(
                     serviceInstanceEntity.getId());
-            ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
-            ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService
-                    .getConfigByRoleGroupId(roleGroup.getId());
-            roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
+            if (roleGroupDTO != null) {
+                ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
+                actualRoleGroupId = roleGroup.getId();
+                ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService
+                        .getConfigByRoleGroupId(roleGroup.getId());
+                if (configDTO != null) {
+                    roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
+                }
+            }
         } else {
             // Service层：获取DTO后转换为Entity
+            actualRoleGroupId = roleGroupId;
             ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService.getConfigByRoleGroupId(roleGroupId);
-            roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
+            if (configDTO != null) {
+                roleGroupConfig = roleGroupConfigConverter.dtoToEntity(configDTO);
+            }
         }
-        CacheUtils.put(
-                "UseRoleGroup_" + serviceInstanceEntity.getId(),
-                roleGroupConfig.getRoleGroupId());
+        
+        // 如果配置不存在（新创建的服务），则需要创建初始配置
+        if (roleGroupConfig == null && actualRoleGroupId != null) {
+            logger.info("角色组配置不存在，创建初始配置: roleGroupId={}", actualRoleGroupId);
+            roleGroupConfig = new ClusterServiceRoleGroupConfigEntity();
+            roleGroupConfig.setRoleGroupId(actualRoleGroupId);
+            roleGroupConfig.setConfigVersion(1);
+            roleGroupConfig.setConfigJson(JSONArray.toJSONString(list));
+            // 使用 DAO 层直接保存 Entity
+            roleGroupConfigMapper.insert(roleGroupConfig);
+            logger.info("创建初始配置成功: roleGroupId={}, version=1", actualRoleGroupId);
+        }
+        
+        if (roleGroupConfig != null) {
+            CacheUtils.put(
+                    "UseRoleGroup_" + serviceInstanceEntity.getId(),
+                    roleGroupConfig.getRoleGroupId());
+        }
         if (!configUpdateRoleSet.isEmpty()) {
             ClusterServiceRoleGroupConfigEntity newRoleGroupConfig = new ClusterServiceRoleGroupConfigEntity();
             if (Objects.isNull(roleGroupId)) {
@@ -377,8 +404,14 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 CacheUtils.put(
                         "UseRoleGroup_" + serviceInstanceEntity.getId(), roleGroup.getId());
             } else {
-                newRoleGroupConfig.setConfigVersion(roleGroupConfig.getConfigVersion() + 1);
-                newRoleGroupConfig.setRoleGroupId(roleGroupConfig.getRoleGroupId());
+                if (roleGroupConfig == null) {
+                    logger.warn("角色组配置为null，使用版本1: roleGroupId={}", roleGroupId);
+                    newRoleGroupConfig.setConfigVersion(1);
+                    newRoleGroupConfig.setRoleGroupId(roleGroupId);
+                } else {
+                    newRoleGroupConfig.setConfigVersion(roleGroupConfig.getConfigVersion() + 1);
+                    newRoleGroupConfig.setRoleGroupId(roleGroupConfig.getRoleGroupId());
+                }
                 roleGroupService.updateToNeedRestart(roleGroupId);
 
                 boolean hasCommonConfig = configUpdateRoleSet.contains(GENERAL);
@@ -936,9 +969,27 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         // Service层：获取DTO后转换为Entity
         ClusterServiceInstanceRoleGroupDTO roleGroupDTO = roleGroupService
                 .getRoleGroupByServiceInstanceId(serviceInstance.getId());
+        
+        if (roleGroupDTO == null) {
+            logger.warn("角色组不存在，服务实例ID: {}", serviceInstance.getId());
+            return new ArrayList<>();
+        }
+        
         ClusterServiceInstanceRoleGroupEntity roleGroup = roleGroupConverter.dtoToEntity(roleGroupDTO);
         ClusterServiceRoleGroupConfigDTO configDTO = groupConfigService.getConfigByRoleGroupId(roleGroup.getId());
+        
+        if (configDTO == null) {
+            logger.warn("角色组配置不存在，角色组ID: {}", roleGroup.getId());
+            return new ArrayList<>();
+        }
+        
         ClusterServiceRoleGroupConfigEntity config = roleGroupConfigConverter.dtoToEntity(configDTO);
+        
+        if (config == null || config.getConfigJson() == null) {
+            logger.warn("配置JSON为空，角色组ID: {}", roleGroup.getId());
+            return new ArrayList<>();
+        }
+        
         return JSONArray.parseArray(config.getConfigJson(), ServiceConfig.class);
     }
 
