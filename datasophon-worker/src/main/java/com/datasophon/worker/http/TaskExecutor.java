@@ -55,7 +55,7 @@ import java.util.concurrent.Executor;
  * 任务执行器
  * 负责接收命令、分发到对应的Service、管理任务生命周期、推送SSE事件
  */
-@Component
+@Component("workerTaskExecutor")
 public class TaskExecutor {
 
     private static final Logger logger = LoggerFactory.getLogger(TaskExecutor.class);
