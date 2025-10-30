@@ -19,9 +19,25 @@
 
 package com.datasophon.worker.http;
 
-import com.datasophon.common.command.*;
+import com.datasophon.common.command.BaseCommand;
+import com.datasophon.common.command.CollectSystemInfoCommand;
+import com.datasophon.common.command.ExecuteCmdCommand;
+import com.datasophon.common.command.FileOperateCommand;
+import com.datasophon.common.command.GenerateServiceConfigCommand;
+import com.datasophon.common.command.GetLogCommand;
+import com.datasophon.common.command.InstallServiceRoleCommand;
+import com.datasophon.common.command.PingCommand;
+import com.datasophon.common.command.ServiceRoleOperateCommand;
+import com.datasophon.common.command.remote.CreateUnixUserCommand;
+import com.datasophon.common.command.remote.CreateUnixGroupCommand;
+import com.datasophon.common.command.remote.DelUnixUserCommand;
+import com.datasophon.common.command.remote.DelUnixGroupCommand;
+import com.datasophon.common.command.remote.GenerateKeytabFileCommand;
+import com.datasophon.common.utils.ExecResult;
 import com.datasophon.worker.http.event.TaskResultEvent;
 import com.datasophon.worker.http.event.TaskStatusEvent;
+
+import static com.datasophon.common.enums.CommandType.*;
 import com.datasophon.worker.service.*;
 import com.datasophon.worker.service.ConfigureServiceService;
 import org.slf4j.Logger;
@@ -194,16 +210,11 @@ public class TaskExecutor {
             case "CollectSystemInfoCommand" -> handleCollectSystemInfo((CollectSystemInfoCommand) command, taskId);
             case "PingCommand" -> handlePing((PingCommand) command, taskId);
             case "GetLogCommand" -> handleGetLog((GetLogCommand) command, taskId);
-            case "CreateUnixUserCommand" -> handleCreateUnixUser(
-                (com.datasophon.common.command.remote.CreateUnixUserCommand) command, taskId);
-            case "CreateUnixGroupCommand" -> handleCreateUnixGroup(
-                (com.datasophon.common.command.remote.CreateUnixGroupCommand) command, taskId);
-            case "DelUnixUserCommand" -> handleDelUnixUser(
-                (com.datasophon.common.command.remote.DelUnixUserCommand) command, taskId);
-            case "DelUnixGroupCommand" -> handleDelUnixGroup(
-                (com.datasophon.common.command.remote.DelUnixGroupCommand) command, taskId);
-            case "GenerateKeytabFileCommand" -> handleGenerateKeytab(
-                (com.datasophon.common.command.remote.GenerateKeytabFileCommand) command, taskId);
+            case "CreateUnixUserCommand" -> handleCreateUnixUser((CreateUnixUserCommand) command, taskId);
+            case "CreateUnixGroupCommand" -> handleCreateUnixGroup((CreateUnixGroupCommand) command, taskId);
+            case "DelUnixUserCommand" -> handleDelUnixUser((DelUnixUserCommand) command, taskId);
+            case "DelUnixGroupCommand" -> handleDelUnixGroup((DelUnixGroupCommand) command, taskId);
+            case "GenerateKeytabFileCommand" -> handleGenerateKeytab((GenerateKeytabFileCommand) command, taskId);
             default -> throw new UnsupportedOperationException(
                 "Unsupported command type: " + commandType);
         };
@@ -218,17 +229,24 @@ public class TaskExecutor {
 
     private Object handleServiceOperate(ServiceRoleOperateCommand command, String taskId) {
         logger.info("Handling service operate command for task: {}", taskId);
-        String operateType = command.getCommandType();
         
-        return switch (operateType) {
-            case "START" -> serviceOperateService.start(command);
-            case "STOP" -> serviceOperateService.stop(command);
-            case "RESTART" -> serviceOperateService.restart(command);
+        if (command.getCommandType() == null) {
+            logger.error("Command type is null");
+            ExecResult result = new ExecResult();
+            result.setExecResult(false);
+            result.setExecOut("Command type is null");
+            return result;
+        }
+        
+        return switch (command.getCommandType()) {
+            case START_SERVICE, START_WITH_CONFIG -> serviceOperateService.start(command);
+            case STOP_SERVICE -> serviceOperateService.stop(command);
+            case RESTART_SERVICE, RESTART_WITH_CONFIG, ROLLING_RESTART_SERVICE -> serviceOperateService.restart(command);
             default -> {
-                logger.warn("Unknown operate type: {}", operateType);
+                logger.warn("Unknown operate type: {}", command.getCommandType());
                 ExecResult result = new ExecResult();
                 result.setExecResult(false);
-                result.setExecOut("Unknown operate type: " + operateType);
+                result.setExecOut("Unknown operate type: " + command.getCommandType());
                 yield result;
             }
         };
@@ -264,27 +282,27 @@ public class TaskExecutor {
         return logService.getLog(command);
     }
 
-    private Object handleCreateUnixUser(com.datasophon.common.command.remote.CreateUnixUserCommand command, String taskId) {
+    private Object handleCreateUnixUser(CreateUnixUserCommand command, String taskId) {
         logger.info("Handling create unix user command for task: {}", taskId);
         return unixUserService.createUser(command);
     }
 
-    private Object handleCreateUnixGroup(com.datasophon.common.command.remote.CreateUnixGroupCommand command, String taskId) {
+    private Object handleCreateUnixGroup(CreateUnixGroupCommand command, String taskId) {
         logger.info("Handling create unix group command for task: {}", taskId);
         return unixGroupService.createGroup(command);
     }
 
-    private Object handleDelUnixUser(com.datasophon.common.command.remote.DelUnixUserCommand command, String taskId) {
+    private Object handleDelUnixUser(DelUnixUserCommand command, String taskId) {
         logger.info("Handling delete unix user command for task: {}", taskId);
         return unixUserService.deleteUser(command);
     }
 
-    private Object handleDelUnixGroup(com.datasophon.common.command.remote.DelUnixGroupCommand command, String taskId) {
+    private Object handleDelUnixGroup(DelUnixGroupCommand command, String taskId) {
         logger.info("Handling delete unix group command for task: {}", taskId);
         return unixGroupService.deleteGroup(command);
     }
 
-    private Object handleGenerateKeytab(com.datasophon.common.command.remote.GenerateKeytabFileCommand command, String taskId) {
+    private Object handleGenerateKeytab(GenerateKeytabFileCommand command, String taskId) {
         logger.info("Handling generate keytab command for task: {}", taskId);
         // TODO: 创建KerberosService后实现
         ExecResult result = new ExecResult();

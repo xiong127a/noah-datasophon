@@ -18,8 +18,9 @@
 package com.datasophon.common.command;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.io.Serializable;
+import java.io.Serial;
 
 /**
  * 收集系统信息命令
@@ -27,7 +28,12 @@ import java.io.Serializable;
  * @author DataSophon Team
  */
 @Data
-public class CollectSystemInfoCommand implements Serializable {
+@EqualsAndHashCode(callSuper = false)
+public class CollectSystemInfoCommand extends BaseCommand {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
     private Long clusterId;
     private String hostname;
 }

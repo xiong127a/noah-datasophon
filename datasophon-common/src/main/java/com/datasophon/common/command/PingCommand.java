@@ -18,8 +18,9 @@
 package com.datasophon.common.command;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-import java.io.Serializable;
+import java.io.Serial;
 
 /**
  *
@@ -27,7 +28,11 @@ import java.io.Serializable;
  * @author zhenqin
  */
 @Data
-public class PingCommand implements Serializable {
+@EqualsAndHashCode(callSuper = false)
+public class PingCommand extends BaseCommand {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private String message;
 

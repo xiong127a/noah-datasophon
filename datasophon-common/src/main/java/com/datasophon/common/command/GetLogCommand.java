@@ -17,12 +17,17 @@
 
 package com.datasophon.common.command;
 
-import java.io.Serializable;
+import java.io.Serial;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-public class GetLogCommand implements Serializable {
+@EqualsAndHashCode(callSuper = false)
+public class GetLogCommand extends BaseCommand {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private String logFile;
 

@@ -21,15 +21,16 @@ import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceConfig;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
-import java.io.Serializable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Data
-public class GenerateServiceConfigCommand implements Serializable {
+@EqualsAndHashCode(callSuper = false)
+public class GenerateServiceConfigCommand extends BaseCommand {
 
     @Serial
     private static final long serialVersionUID = -4211566568993105684L;

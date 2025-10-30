@@ -17,12 +17,18 @@
 
 package com.datasophon.common.command.remote;
 
-import java.io.Serializable;
+import com.datasophon.common.command.BaseCommand;
+import java.io.Serial;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 @Data
-public class CreateUnixUserCommand implements Serializable {
+@EqualsAndHashCode(callSuper = false)
+public class CreateUnixUserCommand extends BaseCommand {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private String username;
 
