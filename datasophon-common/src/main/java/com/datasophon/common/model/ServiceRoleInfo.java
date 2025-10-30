@@ -61,6 +61,8 @@ public class ServiceRoleInfo implements Serializable, Comparable<ServiceRoleInfo
 
     private Map<Generators, List<ServiceConfig>> configFileMap;
 
+    private Map<Generators, List<AlertItem>> alertFileMap;
+
     private String logFile;
 
     private String jmxPort;

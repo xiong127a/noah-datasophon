@@ -31,6 +31,7 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.command.GenerateAlertConfigCommand;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.command.GenerateSRPromConfigCommand;
 import com.datasophon.common.dto.ClusterServiceInstanceDTO;
@@ -310,6 +311,41 @@ public class PrometheusIntegrationServiceImpl implements PrometheusIntegrationSe
 
     private String buildReloadUrl(String hostname, boolean isKubernetes) {
         return "http://" + hostname + ":" + (isKubernetes ? PROMETHEUS_NODE_PORT : PROMETHEUS_PORT) + RELOAD_PATH;
+    }
+    
+    @Override
+    @Async("taskExecutor")
+    public void generateAlertConfig(GenerateAlertConfigCommand command) {
+        try {
+            Long clusterId = command.getClusterId();
+            
+            ClusterServiceRoleInstanceDTO prometheusInstance = roleInstanceService.getOneServiceRole(
+                    PROMETHEUS_SERVICE_NAME, null, clusterId);
+            
+            if (prometheusInstance == null) {
+                logger.warn("未找到Prometheus实例，跳过告警配置生成: clusterId={}", clusterId);
+                return;
+            }
+            
+            ClusterType depType = clusterInfoService.getById(clusterId).getDepType();
+            boolean isKubernetes = depType == ClusterType.KUBERNETES;
+            
+            logger.info("开始生成Prometheus告警配置: clusterId={}", clusterId);
+            
+            ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
+            serviceRoleInfo.setClusterId(clusterId);
+            serviceRoleInfo.setName("alertmanager");
+            serviceRoleInfo.setParentName("PROMETHEUS");
+            serviceRoleInfo.setAlertFileMap(command.getConfigFileMap());
+            serviceRoleInfo.setDecompressPackageName(PROMETHEUS_PACKAGE_NAME);
+            serviceRoleInfo.setHostname(prometheusInstance.hostname());
+            
+            reloadPrometheusConfig(prometheusInstance, isKubernetes, serviceRoleInfo);
+            
+            logger.info("Prometheus告警配置生成完成: clusterId={}", clusterId);
+        } catch (Exception e) {
+            logger.error("生成Prometheus告警配置失败: clusterId={}", command.getClusterId(), e);
+        }
     }
 }
 
