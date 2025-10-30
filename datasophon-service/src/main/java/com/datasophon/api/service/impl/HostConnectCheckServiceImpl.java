@@ -33,8 +33,6 @@ import com.mybatisflex.core.query.QueryChain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -53,38 +51,9 @@ public class HostConnectCheckServiceImpl implements HostConnectCheckService {
 
     @Autowired
     private ClusterHostService clusterHostService;
-
-    // SSH连接服务 - 延迟初始化以避免在Spring上下文就绪前访问
-    private SshConnectionService sshService;
     
-    /**
-     * 监听ApplicationReadyEvent，在应用完全启动后初始化SSH服务
-     * 这样可以确保SpringContextUtils已经完成初始化
-     */
-    @EventListener(ApplicationReadyEvent.class)
-    public void onApplicationReady() {
-        try {
-            this.sshService = SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
-            logger.info("SSH连接服务初始化完成");
-        } catch (Exception e) {
-            logger.warn("SSH连接服务初始化失败，将在首次使用时重试: {}", e.getMessage());
-        }
-    }
-    
-    /**
-     * 获取SSH服务，如果未初始化则尝试初始化
-     */
-    private SshConnectionService getSshService() {
-        if (sshService == null) {
-            synchronized (this) {
-                if (sshService == null) {
-                    logger.info("SSH服务未初始化，正在初始化...");
-                    sshService = SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
-                }
-            }
-        }
-        return sshService;
-    }
+    @Autowired
+    private SshServiceInitializer sshServiceInitializer;
 
     @Override
     @Async("taskExecutor")
@@ -172,7 +141,7 @@ public class HostConnectCheckServiceImpl implements HostConnectCheckService {
         try {
             // 通过SSH插件适配器测试连接
             HostCheckContext context = buildHostCheckContext(hostInfo);
-            CommandResult connectionTest = getSshService().testConnection(context);
+            CommandResult connectionTest = sshServiceInitializer.getSshService().testConnection(context);
             boolean connectionSuccess = connectionTest.isSuccess();
 
             if (connectionSuccess) {
