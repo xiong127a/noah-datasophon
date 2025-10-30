@@ -23,7 +23,6 @@ import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.command.KubernetesGenerateHostTagCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.kubernetes.actor.KubernetesTagHostActor;
 import com.datasophon.api.utils.ClusterInfoUtils;
 
 import java.util.Objects;

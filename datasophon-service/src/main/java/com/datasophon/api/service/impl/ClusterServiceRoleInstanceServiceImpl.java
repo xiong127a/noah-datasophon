@@ -51,7 +51,6 @@ import com.datasophon.common.enums.ServiceRoleState;
 import com.datasophon.dao.mapper.ClusterServiceRoleInstanceMapper;
 import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
-import com.datasophon.kubernetes.actor.KubernetesLogActor;
 import com.datasophon.kubernetes.util.CommonUtil;
 // QueryChain已迁移到DAO层，不再在Service层使用
 import com.mybatisflex.spring.service.impl.ServiceImpl;

@@ -7,7 +7,6 @@ import com.datasophon.common.KubernetesServiceScaleCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.api.utils.ClusterInfoUtils;
-import com.datasophon.kubernetes.actor.KubernetesScaleServiceActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
