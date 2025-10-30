@@ -48,23 +48,40 @@ public class ClusterQueueCapacityEntity extends BaseEntity {
 
 
     private Long clusterId;
+    
     /**
-     * 
+     * 队列名称
      */
     private String queueName;
+    
     /**
-     * 
+     * 父队列名称
+     */
+    private String parentQueueName;
+    
+    /**
+     * 容量
      */
     private String capacity;
+    
     /**
-     * 
+     * 最大容量
+     */
+    private String maxCapacity;
+    
+    /**
+     * 节点标签
      */
     private String nodeLabel;
+    
     /**
-     * 
+     * ACL 用户
      */
     private String aclUsers;
 
+    /**
+     * 父队列（兼容旧字段）
+     */
     private String parent;
 
 }

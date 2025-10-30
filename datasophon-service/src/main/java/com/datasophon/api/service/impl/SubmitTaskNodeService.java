@@ -29,5 +29,10 @@ public interface SubmitTaskNodeService {
      * 提交活动任务节点
      */
     void submitActiveTaskNode(SubmitActiveTaskNodeCommand command);
+    
+    /**
+     * 处理提交活动任务节点
+     */
+    void handleSubmitActiveTaskNode(SubmitActiveTaskNodeCommand command);
 }
 

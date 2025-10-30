@@ -55,6 +55,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Prometheus集成服务实现
@@ -346,6 +347,26 @@ public class PrometheusIntegrationServiceImpl implements PrometheusIntegrationSe
         } catch (Exception e) {
             logger.error("生成Prometheus告警配置失败: clusterId={}", command.getClusterId(), e);
         }
+    }
+    
+    @Override
+    public void generateHostPrometheusConfigDelayed(Long clusterId, int delaySeconds) {
+        // 使用异步方式延迟生成主机Prometheus配置
+        CompletableFuture.runAsync(() -> {
+            try {
+                if (delaySeconds > 0) {
+                    Thread.sleep(delaySeconds * 1000L);
+                }
+                logger.info("开始生成主机Prometheus配置: clusterId={}", clusterId);
+                // TODO: 实现主机Prometheus配置生成逻辑
+                // 这里需要根据实际需求调用相应的配置生成方法
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                logger.error("生成主机Prometheus配置被中断: clusterId={}", clusterId, e);
+            } catch (Exception e) {
+                logger.error("生成主机Prometheus配置失败: clusterId={}", clusterId, e);
+            }
+        });
     }
 }
 

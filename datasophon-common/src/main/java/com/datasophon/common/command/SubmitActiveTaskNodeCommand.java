@@ -25,6 +25,7 @@ import com.datasophon.common.model.ServiceNode;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.List;
 import java.util.Map;
 
 import lombok.Data;
@@ -44,5 +45,10 @@ public class SubmitActiveTaskNodeCommand implements Serializable {
     private Map<String, String> readyToSubmitTaskList;
     private Map<String, String> completeTaskList;
     private RollingRestartInfo rollingRestartInfo;
+    
+    /**
+     * 起始节点列表
+     */
+    private List<String> startNodes;
 
 }

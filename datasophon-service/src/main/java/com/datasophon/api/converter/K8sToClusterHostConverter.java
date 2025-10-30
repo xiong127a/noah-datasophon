@@ -19,7 +19,6 @@ package com.datasophon.api.converter;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
-import cn.hutool.core.lang.TypeReference;
 import com.datasophon.common.dto.HostInfoDTO;
 import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.kubernetes.model.K8sNodeInfo;
@@ -28,9 +27,6 @@ import com.datasophon.common.enums.HostState;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;
-
-import java.util.Map;
-
 
 import java.util.ArrayList;
 import java.util.List;
@@ -142,8 +138,8 @@ public interface K8sToClusterHostConverter {
         }
         
         try {
-            Map<String, Object> k8sInfo = JSONUtil.toBean(k8sNodeInfoJson, new TypeReference<Map<String, Object>>() {});
-            return (String) k8sInfo.getOrDefault("roles", "<none>");
+            var jsonObj = JSONUtil.parseObj(k8sNodeInfoJson);
+            return jsonObj.getStr("roles", "<none>");
         } catch (Exception e) {
             return "<none>";
         }
@@ -159,8 +155,8 @@ public interface K8sToClusterHostConverter {
         }
         
         try {
-            Map<String, Object> k8sInfo = JSONUtil.toBean(k8sNodeInfoJson, new TypeReference<Map<String, Object>>() {});
-            return (String) k8sInfo.getOrDefault("version", "unknown");
+            var jsonObj = JSONUtil.parseObj(k8sNodeInfoJson);
+            return jsonObj.getStr("version", "unknown");
         } catch (Exception e) {
             return "unknown";
         }
@@ -176,8 +172,8 @@ public interface K8sToClusterHostConverter {
         }
         
         try {
-            Map<String, Object> k8sInfo = JSONUtil.toBean(k8sNodeInfoJson, new TypeReference<Map<String, Object>>() {});
-            return (String) k8sInfo.getOrDefault("age", "unknown");
+            var jsonObj = JSONUtil.parseObj(k8sNodeInfoJson);
+            return jsonObj.getStr("age", "unknown");
         } catch (Exception e) {
             return "unknown";
         }

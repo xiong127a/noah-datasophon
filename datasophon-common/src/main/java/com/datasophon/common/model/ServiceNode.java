@@ -31,5 +31,10 @@ public class ServiceNode {
     private Long commandId;
 
     private Long serviceInstanceId;
+    
+    /**
+     * 是否可以提交执行
+     */
+    private Boolean canSubmit = false;
 
 }

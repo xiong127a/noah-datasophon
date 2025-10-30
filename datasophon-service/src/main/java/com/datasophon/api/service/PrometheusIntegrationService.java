@@ -41,5 +41,10 @@ public interface PrometheusIntegrationService {
      * 生成告警配置
      */
     void generateAlertConfig(GenerateAlertConfigCommand command);
+    
+    /**
+     * 延迟生成主机Prometheus配置
+     */
+    void generateHostPrometheusConfigDelayed(Long clusterId, int delaySeconds);
 }
 

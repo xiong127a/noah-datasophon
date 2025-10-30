@@ -18,7 +18,17 @@ public class TenantYarnResource extends TenantFrameResource {
     private String queueName;
 
     /**
-     * 队列容量占比
+     * 队列容量
+     */
+    private String capacity;
+    
+    /**
+     * 队列最大容量
+     */
+    private String maxCapacity;
+
+    /**
+     * 队列容量占比（兼容旧字段）
      */
     private String capacityPercent;
 

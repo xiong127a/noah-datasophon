@@ -110,25 +110,38 @@ public class TenantRangerServiceImpl implements TenantRangerService {
     }
 
     private ExecResult operateRangerPolicy(TenantResource resource) throws Exception {
-        RangerClient rangerClient = getRangerClient(resource.getClusterId());
         ExecResult execResult = new ExecResult();
-        AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(
-                resource.getServiceName(), resource.getClusterId());
-        if (rangerStrategy != null) {
-            rangerStrategy.assignResource(rangerClient, resource);
+        
+        // 处理各种资源类型
+        if (resource.getHdfsResourceList() != null && !resource.getHdfsResourceList().isEmpty()) {
+            AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy("HDFS", resource.getClusterId());
+            rangerStrategy.operatePolicy(resource);
         }
+        
+        if (resource.getYarnResourceList() != null && !resource.getYarnResourceList().isEmpty()) {
+            AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy("YARN", resource.getClusterId());
+            rangerStrategy.operatePolicy(resource);
+        }
+        
+        if (resource.getHiveResourceList() != null && !resource.getHiveResourceList().isEmpty()) {
+            AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy("HIVE", resource.getClusterId());
+            rangerStrategy.operatePolicy(resource);
+        }
+        
+        if (resource.getHbaseResourceList() != null && !resource.getHbaseResourceList().isEmpty()) {
+            AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy("HBASE", resource.getClusterId());
+            rangerStrategy.operatePolicy(resource);
+        }
+        
         execResult.setExecResult(true);
         return execResult;
     }
 
     private ExecResult deleteRangerPolicy(String roleName, Long clusterId) throws Exception {
-        RangerClient rangerClient = getRangerClient(clusterId);
         ExecResult execResult = new ExecResult();
         for (String service : SUPPORT_SERVICE) {
             AbstractRangerStrategy rangerStrategy = RangerStrategyFactory.createRangerStrategy(service, clusterId);
-            if (rangerStrategy != null) {
-                rangerStrategy.deletePolicy(rangerClient, roleName);
-            }
+            rangerStrategy.deletePolicy(roleName);
         }
         execResult.setExecResult(true);
         return execResult;
@@ -136,7 +149,13 @@ public class TenantRangerServiceImpl implements TenantRangerService {
 
     private void deleteRangerRole(String roleName, Long clusterId) throws Exception {
         RangerClient rangerClient = getRangerClient(clusterId);
-        RangerUtil.deleteRole(rangerClient, roleName);
+        try {
+            rangerClient.getRoles().deleteRoleByName(roleName);
+            logger.info("成功删除Ranger角色: {}", roleName);
+        } catch (Exception e) {
+            logger.error("删除Ranger角色失败: {}", roleName, e);
+            throw e;
+        }
     }
 }
 

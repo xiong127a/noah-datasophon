@@ -60,6 +60,12 @@ public class SubmitTaskNodeServiceImpl implements SubmitTaskNodeService {
     private MasterServiceExecutionService masterServiceExecutionService;
 
     @Override
+    public void handleSubmitActiveTaskNode(SubmitActiveTaskNodeCommand command) {
+        // handleSubmitActiveTaskNode 直接调用 submitActiveTaskNode
+        submitActiveTaskNode(command);
+    }
+
+    @Override
     @Async("taskExecutor")
     public void submitActiveTaskNode(SubmitActiveTaskNodeCommand submitActiveTaskNodeCommand) {
         try {
