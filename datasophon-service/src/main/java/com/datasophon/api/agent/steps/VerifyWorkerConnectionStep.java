@@ -65,14 +65,14 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
         String hostname = context.getHostname();
         
         logWriter.logInfo(clusterId, hostIp, "verify", "开始验证Worker连接", null);
-        log.info("开始验证Worker连接: {}", hostname);
+        log.info("开始验证Worker连接: hostname={}, ip={}", hostname, hostIp);
         
         try {
             // 1. 等待Worker服务完全启动（Pekko系统初始化需要时间）
             logWriter.logInfo(clusterId, hostIp, "verify", "等待Worker服务完全启动...", null);
             Thread.sleep(5000); // 等待5秒
             
-            // 2. 尝试连接Worker并发送Ping命令
+            // 2. 尝试连接Worker并发送Ping命令（使用hostname，Master能解析Worker的hostname）
             logWriter.logInfo(clusterId, hostIp, "verify", "尝试连接Worker节点...", null);
             boolean pingSuccess = pingWorker(hostname);
             
@@ -93,7 +93,7 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
             logWriter.logSuccess(clusterId, hostIp, "verify", 
                     "Worker连接成功", pingInfo);
             
-            // 3. 收集硬件信息
+            // 3. 收集硬件信息（使用hostname）
             logWriter.logInfo(clusterId, hostIp, "verify", "开始收集硬件信息...", null);
             SystemInfoResult systemInfo = collectSystemInfo(hostname, clusterId);
             

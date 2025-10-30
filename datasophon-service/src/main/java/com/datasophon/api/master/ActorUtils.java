@@ -71,9 +71,11 @@ public class ActorUtils {
      */
     public static void init() throws UnknownHostException, NoSuchAlgorithmException {
         String hostname = InetAddress.getLocalHost().getHostName();
-        Config config = ConfigFactory.parseString(PEKKO_REMOTE_CANONICAL_HOSTNAME + "=" + hostname);
+        String hostAddress = InetAddress.getLocalHost().getHostAddress();
+        // Master使用IP地址作为地址标识，Worker无需真正连接Master（通过已建立的TCP连接回复）
+        Config config = ConfigFactory.parseString(PEKKO_REMOTE_CANONICAL_HOSTNAME + "=" + hostAddress);
         actorSystem = ActorSystem.create("datasophon", config.withFallback(ConfigFactory.load()));
-        logger.info("Pekko ActorSystem已初始化 - 管理端，主机名: {}", hostname);
+        logger.info("Pekko ActorSystem已初始化 - 管理端，主机名: {}, Pekko地址: {}", hostname, hostAddress);
         ActorRef serviceRoleCheckActor = actorSystem.actorOf(Props.create(ServiceRoleCheckActor.class),
                 getActorRefName(ServiceRoleCheckActor.class));
         ActorRef hostCheckActor = actorSystem.actorOf(Props.create(HostCheckActor.class),

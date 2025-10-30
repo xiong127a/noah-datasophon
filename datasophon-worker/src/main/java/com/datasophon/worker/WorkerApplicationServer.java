@@ -74,7 +74,7 @@ public class WorkerApplicationServer {
         String cpuArchitecture = ShellUtils.getCpuArchitecture();
 
         CacheUtils.put(Constants.HOSTNAME, hostname);
-        // init actor
+        // init actor（使用hostname，Master能够解析Worker的hostname）
         ActorSystem system = initActor(hostname);
 
         subscribeRemoteEvent(system);
