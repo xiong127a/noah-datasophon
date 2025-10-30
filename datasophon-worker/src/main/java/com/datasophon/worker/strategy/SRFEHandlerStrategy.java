@@ -17,17 +17,11 @@
 
 package com.datasophon.worker.strategy;
 
-import org.apache.pekko.actor.ActorRef;
 import cn.hutool.json.JSONUtil;
-import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.command.OlapOpsType;
-import com.datasophon.common.command.OlapSqlExecCommand;
 import com.datasophon.common.command.ServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.model.ServiceRoleRunner;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.worker.handler.ServiceHandler;
 import java.util.ArrayList;
 import java.util.List;

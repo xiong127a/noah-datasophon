@@ -17,14 +17,12 @@
 
 package com.datasophon.worker.utils;
 
-import org.apache.pekko.actor.ActorSystem;
 import com.datasophon.common.Constants;
 import com.datasophon.common.model.AlertItem;
 import com.datasophon.common.model.Generators;
 import com.datasophon.common.model.ServiceConfig;
 import com.datasophon.common.utils.FreemarkerUtils;
 import com.datasophon.common.utils.PropertyUtils;
-import lombok.Setter;
 import lombok.experimental.UtilityClass;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +34,7 @@ import static com.datasophon.common.utils.HostUtils.GetMasterHost;
 
 /**
  * Worker扩展版Freemarker工具类
- * 作为桥接器，负责从Pekko获取模板内容，然后传递给common中的FreemarkerUtils处理
+ * 负责从命令对象获取模板内容，然后传递给common中的FreemarkerUtils处理
  */
 @UtilityClass
 public class WorkerFreemarkerUtils {
@@ -45,14 +43,6 @@ public class WorkerFreemarkerUtils {
 
     // Master主机地址
     private static final String MASTER_HOST = PropertyUtils.getString(GetMasterHost().getFirst(), "localhost");
-
-
-    /**
-     * 设置ActorSystem实例，在Worker启动时调用
-     *
-     */
-    @Setter
-    private static ActorSystem actorSystem;
 
     /**
      * 生成配置文件（从命令对象获取模板）

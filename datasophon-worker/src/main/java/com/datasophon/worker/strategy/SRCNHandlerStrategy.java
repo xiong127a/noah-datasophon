@@ -17,15 +17,9 @@
 
 package com.datasophon.worker.strategy;
 
-import org.apache.pekko.actor.ActorRef;
-import com.datasophon.common.Constants;
-import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.command.OlapOpsType;
-import com.datasophon.common.command.OlapSqlExecCommand;
 import com.datasophon.common.command.ServiceRoleOperateCommand;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.common.utils.ThrowableUtils;
 import com.datasophon.worker.handler.ServiceHandler;
 
 public class SRCNHandlerStrategy extends AbstractHandlerStrategy implements ServiceRoleStrategy {
