@@ -52,28 +52,70 @@ public class SystemInfoService {
             // 获取主机名
             String hostname = InetAddress.getLocalHost().getHostName();
             result.setHostname(hostname);
+            logger.debug("Hostname: {}", hostname);
             
             // 获取IP地址
             String ipAddress = InetAddress.getLocalHost().getHostAddress();
             result.setIpAddress(ipAddress);
+            logger.debug("IP Address: {}", ipAddress);
             
             // 获取CPU架构
             String cpuArchitecture = ShellUtils.getCpuArchitecture();
             result.setCpuArchitecture(cpuArchitecture);
+            logger.debug("CPU Architecture: {}", cpuArchitecture);
             
             // 获取CPU核心数
             int cpuCores = Runtime.getRuntime().availableProcessors();
             result.setCpuCores(cpuCores);
+            logger.debug("CPU Cores: {}", cpuCores);
             
             // 获取操作系统信息
-            String osVersion = System.getProperty("os.name") + " " + System.getProperty("os.version");
-            result.setOsVersion(osVersion);
+            String osName = System.getProperty("os.name");
+            String osVersion = System.getProperty("os.version");
+            String osArch = System.getProperty("os.arch");
+            String fullOsVersion = osName + " " + osVersion + " (" + osArch + ")";
+            result.setOsVersion(fullOsVersion);
+            logger.debug("OS Version: {}", fullOsVersion);
             
-            // 获取系统负载（简化版本）
-            result.setSystemLoad(String.valueOf(cpuCores));
+            // 获取内存信息
+            Runtime runtime = Runtime.getRuntime();
+            long totalMemory = runtime.maxMemory(); // 最大内存
+            long freeMemory = runtime.freeMemory();  // 空闲内存
+            long usedMemory = totalMemory - freeMemory;
+            String memoryInfo = String.format("Total: %d MB, Used: %d MB, Free: %d MB", 
+                totalMemory / 1024 / 1024, 
+                usedMemory / 1024 / 1024, 
+                freeMemory / 1024 / 1024);
+            result.setMemoryInfo(memoryInfo);
+            logger.debug("Memory Info: {}", memoryInfo);
+            
+            // 获取磁盘信息
+            java.io.File root = new java.io.File("/");
+            long totalSpace = root.getTotalSpace();
+            long freeSpace = root.getFreeSpace();
+            long usedSpace = totalSpace - freeSpace;
+            String diskInfo = String.format("Total: %d GB, Used: %d GB, Free: %d GB",
+                totalSpace / 1024 / 1024 / 1024,
+                usedSpace / 1024 / 1024 / 1024,
+                freeSpace / 1024 / 1024 / 1024);
+            result.setDiskInfo(diskInfo);
+            logger.debug("Disk Info: {}", diskInfo);
+            
+            // 获取系统负载
+            try {
+                java.lang.management.OperatingSystemMXBean osBean = 
+                    java.lang.management.ManagementFactory.getOperatingSystemMXBean();
+                double loadAverage = osBean.getSystemLoadAverage();
+                result.setSystemLoad(loadAverage > 0 ? String.format("%.2f", loadAverage) : "N/A");
+                logger.debug("System Load: {}", result.getSystemLoad());
+            } catch (Exception e) {
+                result.setSystemLoad("N/A");
+                logger.debug("System load not available: {}", e.getMessage());
+            }
             
             result.setExecResult(true);
-            logger.info("System information collected successfully for host: {}", hostname);
+            logger.info("System information collected successfully for host: {} - IP: {}, OS: {}, CPU: {}cores", 
+                hostname, ipAddress, fullOsVersion, cpuCores);
             
         } catch (Exception e) {
             logger.error("Failed to collect system information", e);
