@@ -28,6 +28,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONException;
 import com.alibaba.fastjson2.TypeReference;
 import com.datasophon.api.exceptions.ServiceException;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.exception.BusinessException;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
@@ -47,6 +48,7 @@ import com.datasophon.common.dto.ClusterServiceInstanceRoleGroupDTO;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.dto.ClusterVariableDTO;
+import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 
 import com.datasophon.common.dto.ServiceConfigGroupDTO;
 
@@ -607,7 +609,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
         try {
             // 查询集群的所有服务角色实例
             List<ClusterServiceRoleInstanceDTO> roleInstances = 
-                    roleInstanceService.getAllServiceRoleInstancesByClusterId(clusterId);
+                    roleInstanceService.getServiceRoleInstanceListByClusterId(clusterId);
             
             if (roleInstances == null || roleInstances.isEmpty()) {
                 logger.warn("集群 {} 没有服务角色实例", clusterId);
