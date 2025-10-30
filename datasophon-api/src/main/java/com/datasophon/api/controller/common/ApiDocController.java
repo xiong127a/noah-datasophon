@@ -171,16 +171,25 @@ public class ApiDocController {
             try {
                 Object pathPatternsCondition = info.getClass().getMethod("getPathPatternsCondition").invoke(info);
                 if (pathPatternsCondition != null) {
-                    @SuppressWarnings("unchecked")
-                    Set<String> pathPatterns = (Set<String>) pathPatternsCondition.getClass()
+                    Object pathPatternsObj = pathPatternsCondition.getClass()
                             .getMethod("getPatternValues").invoke(pathPatternsCondition);
 
-                    if (pathPatterns != null && !pathPatterns.isEmpty()) {
-                        // 处理路径，添加上下文前缀
-                        patterns.addAll(pathPatterns.stream()
-                                .map(this::normalizeAndPrefixPath)
-                                .collect(Collectors.toSet()));
-                        return patterns;
+                    // 类型安全地检查和转换
+                    if (pathPatternsObj instanceof Set<?> rawSet) {
+                        Set<String> pathPatterns = new java.util.HashSet<>();
+                        for (Object item : rawSet) {
+                            if (item instanceof String str) {
+                                pathPatterns.add(str);
+                            }
+                        }
+                        
+                        if (!pathPatterns.isEmpty()) {
+                            // 处理路径，添加上下文前缀
+                            patterns.addAll(pathPatterns.stream()
+                                    .map(this::normalizeAndPrefixPath)
+                                    .collect(Collectors.toSet()));
+                            return patterns;
+                        }
                     }
                 }
             } catch (Exception e) {

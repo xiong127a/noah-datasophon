@@ -94,51 +94,85 @@ public class CacheOperateUtils {
      * @param typeReference 类型引用
      * @return 对应类型的空对象
      */
-    @SuppressWarnings("unchecked")
     private static <T> T createEmptyObject(TypeReference<T> typeReference) {
         Type type = typeReference.getType();
+        Object result;
 
         // 处理原始类型（Class）
         if (type instanceof Class<?> clazz) {
-            return (T) createEmptyObjectByClass(clazz);
+            result = createEmptyObjectByRawClass(clazz);
         }
-
         // 处理泛型类型（ParameterizedType）
-        if (type instanceof ParameterizedType parameterizedType) {
+        else if (type instanceof ParameterizedType parameterizedType) {
             Type rawType = parameterizedType.getRawType();
 
             if (rawType instanceof Class<?> rawClass) {
+                result = createEmptyCollectionByRawClass(rawClass);
+            } else {
+                result = null;
+            }
+        } else {
+            // 其他情况返回null
+            log.debug("无法为类型 [{}] 创建空对象，返回null", type);
+            result = null;
+        }
 
-                // Map类型
-                if (Map.class.isAssignableFrom(rawClass)) {
-                    if (ConcurrentHashMap.class.isAssignableFrom(rawClass)) {
-                        return (T) new ConcurrentHashMap<>();
-                    } else {
-                        return (T) new HashMap<>();
-                    }
-                }
+        // 类型安全地转换：先检查类型兼容性
+        if (result != null && type instanceof Class<?> targetClass) {
+            if (targetClass.isInstance(result)) {
+                return (T) targetClass.cast(result);
+            }
+        }
+        
+        // 对于泛型类型，使用JSON序列化/反序列化来确保类型安全
+        // 这样可以避免unchecked转换，利用JSON库的类型转换能力
+        if (result != null) {
+            try {
+                String jsonString = JSON.toJSONString(result);
+                return JSON.parseObject(jsonString, typeReference);
+            } catch (Exception e) {
+                log.warn("通过JSON转换空对象失败: 期望类型 {}, 实际对象 {}, 错误: {}", 
+                        type, result, e.getMessage());
+                // JSON转换失败，返回null
+                return null;
+            }
+        }
+        
+        return null;
+    }
 
-                // List类型
-                if (List.class.isAssignableFrom(rawClass)) {
-                    return (T) new ArrayList<>();
-                }
-
-                // Set类型
-                if (Set.class.isAssignableFrom(rawClass)) {
-                    return (T) new HashSet<>();
-                }
+    /**
+     * 根据原始类创建空集合对象
+     * 返回Object类型，由调用方负责类型安全
+     */
+    private static Object createEmptyCollectionByRawClass(Class<?> rawClass) {
+        // Map类型
+        if (Map.class.isAssignableFrom(rawClass)) {
+            if (ConcurrentHashMap.class.isAssignableFrom(rawClass)) {
+                return new ConcurrentHashMap<>();
+            } else {
+                return new HashMap<>();
             }
         }
 
-        // 其他情况返回null
-        log.debug("无法为类型 [{}] 创建空对象，返回null", type);
+        // List类型
+        if (List.class.isAssignableFrom(rawClass)) {
+            return new ArrayList<>();
+        }
+
+        // Set类型
+        if (Set.class.isAssignableFrom(rawClass)) {
+            return new HashSet<>();
+        }
+
         return null;
     }
 
     /**
      * 根据Class创建空对象
+     * 返回Object类型，由调用方负责类型安全
      */
-    private static Object createEmptyObjectByClass(Class<?> clazz) {
+    private static Object createEmptyObjectByRawClass(Class<?> clazz) {
         // String类型
         if (String.class.equals(clazz)) {
             return "";
@@ -146,38 +180,23 @@ public class CacheOperateUtils {
 
         // 基本类型和包装类型
         if (Integer.class.equals(clazz) || int.class.equals(clazz)) {
-            return 0;
+            return Integer.valueOf(0);
         }
         if (Long.class.equals(clazz) || long.class.equals(clazz)) {
-            return 0L;
+            return Long.valueOf(0L);
         }
         if (Boolean.class.equals(clazz) || boolean.class.equals(clazz)) {
-            return false;
+            return Boolean.FALSE;
         }
         if (Double.class.equals(clazz) || double.class.equals(clazz)) {
-            return 0.0;
+            return Double.valueOf(0.0);
         }
         if (Float.class.equals(clazz) || float.class.equals(clazz)) {
-            return 0.0f;
+            return Float.valueOf(0.0f);
         }
 
-        // 集合类型
-        if (Map.class.isAssignableFrom(clazz)) {
-            if (ConcurrentHashMap.class.isAssignableFrom(clazz)) {
-                return new ConcurrentHashMap<>();
-            } else {
-                return new HashMap<>();
-            }
-        }
-        if (List.class.isAssignableFrom(clazz)) {
-            return new ArrayList<>();
-        }
-        if (Set.class.isAssignableFrom(clazz)) {
-            return new HashSet<>();
-        }
-
-        // 其他情况返回null
-        return null;
+        // 集合类型委托给专门的方法处理
+        return createEmptyCollectionByRawClass(clazz);
     }
 
     public static boolean containsKey(String key) {

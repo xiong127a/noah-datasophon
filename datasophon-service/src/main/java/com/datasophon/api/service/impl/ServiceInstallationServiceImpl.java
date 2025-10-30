@@ -277,9 +277,28 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
                         if (!serviceConfig.getName().endsWith("node_port_mappings")) {
                             continue;
                         }
-                        @SuppressWarnings("unchecked")
-                        List<Map<String, String>> portMappings = (List<Map<String, String>>) serviceConfig
-                                .getValue();
+                        
+                        // 类型安全地获取端口映射列表
+                        Object valueObj = serviceConfig.getValue();
+                        if (!(valueObj instanceof List<?> rawList)) {
+                            continue;
+                        }
+                        
+                        List<Map<String, String>> portMappings = new java.util.ArrayList<>();
+                        for (Object item : rawList) {
+                            if (item instanceof Map<?, ?> rawMap) {
+                                Map<String, String> mapping = new java.util.HashMap<>();
+                                for (Map.Entry<?, ?> mapEntry : rawMap.entrySet()) {
+                                    if (mapEntry.getKey() instanceof String key && 
+                                        mapEntry.getValue() instanceof String value) {
+                                        mapping.put(key, value);
+                                    }
+                                }
+                                if (!mapping.isEmpty()) {
+                                    portMappings.add(mapping);
+                                }
+                            }
+                        }
 
                         for (Map<String, String> portMapping : portMappings) {
                             String mappedPorts = portMapping.get(port.toString());

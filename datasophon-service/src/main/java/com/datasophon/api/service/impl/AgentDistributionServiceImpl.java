@@ -143,9 +143,17 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
         for (String hostIp : hostIps) {
             String hostname = hostIp; // 默认使用IP作为主机名
             if (connectionParams.containsKey("hostnames")) {
-                @SuppressWarnings("unchecked")
-                Map<String, String> hostnameMap = (Map<String, String>) connectionParams.get("hostnames");
-                hostname = hostnameMap.getOrDefault(hostIp, hostIp);
+                Object hostnamesObj = connectionParams.get("hostnames");
+                if (hostnamesObj instanceof Map<?, ?> rawMap) {
+                    // 检查Map的键值对类型
+                    Map<String, String> hostnameMap = new java.util.HashMap<>();
+                    for (Map.Entry<?, ?> entry : rawMap.entrySet()) {
+                        if (entry.getKey() instanceof String key && entry.getValue() instanceof String value) {
+                            hostnameMap.put(key, value);
+                        }
+                    }
+                    hostname = hostnameMap.getOrDefault(hostIp, hostIp);
+                }
             }
             
             // 初始化主机状态

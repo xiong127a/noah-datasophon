@@ -195,8 +195,9 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             ClusterInfoEntity clusterInfo = clusterInfoService.getById(clusterId);
             String clusterCode = clusterInfo.getClusterCode();
             String distributeAgentKey = clusterCode + Constants.UNDERLINE + Constants.START_DISTRIBUTE_AGENT;
-            @SuppressWarnings("unchecked")
-            Map<String, HostInfo> map = (Map<String, HostInfo>) CacheUtils.get(clusterCode + Constants.HOST_MAP);
+            Map<String, HostInfo> map = CacheUtils.getGeneric(
+                    clusterCode + Constants.HOST_MAP, 
+                    new com.alibaba.fastjson2.TypeReference<Map<String, HostInfo>>() {});
             List<HostInfo> list = map.entrySet().stream()
                     .sorted(Map.Entry.comparingByKey())
                     .map(Map.Entry::getValue)
