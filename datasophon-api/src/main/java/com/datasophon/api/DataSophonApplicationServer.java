@@ -18,7 +18,6 @@
 package com.datasophon.api;
 
 import cn.hutool.extra.spring.EnableSpringUtil;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
 import org.mybatis.spring.annotation.MapperScan;
@@ -36,7 +35,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import jakarta.annotation.PostConstruct;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.security.NoSuchAlgorithmException;
 
 
 @SpringBootApplication
@@ -63,10 +61,9 @@ public class DataSophonApplicationServer extends SpringBootServletInitializer {
     }
 
     @PostConstruct
-    public void init() throws UnknownHostException, NoSuchAlgorithmException {
+    public void init() throws UnknownHostException {
         String hostName = InetAddress.getLocalHost().getHostName();
         CacheUtils.put(Constants.HOSTNAME, hostName);
-        ActorUtils.init();
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -79,6 +76,8 @@ public class DataSophonApplicationServer extends SpringBootServletInitializer {
      * Master 关闭时调用
      */
     public static void shutdown() {
-        ActorUtils.shutdown();
+        logger.info("DataSophon-API 正在关闭...");
+        // 清理资源
+        // 注：已移除 Actor 系统，使用 Spring 的生命周期管理
     }
 }
