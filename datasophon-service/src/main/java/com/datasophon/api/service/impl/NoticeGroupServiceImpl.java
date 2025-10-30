@@ -66,6 +66,7 @@ public class NoticeGroupServiceImpl extends ServiceImpl<NoticeGroupMapper, Notic
     private NoticeGroupConverter noticeGroupConverter;
 
     @Autowired
+    @Lazy
     private ClusterAlertQuotaService clusterAlertQuotaService;
 
     @Autowired
