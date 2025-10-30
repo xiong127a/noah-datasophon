@@ -56,7 +56,8 @@ public class ActorUtils {
 
     public static ActorSystem actorSystem;
 
-    public static final String AKKA_REMOTE_NETTY_TCP_HOSTNAME = "akka.remote.netty.tcp.hostname";
+    // Pekko使用Artery协议替代旧的Netty TCP
+    public static final String PEKKO_REMOTE_CANONICAL_HOSTNAME = "pekko.remote.artery.canonical.hostname";
 
     private static Random rand;
 
@@ -70,8 +71,9 @@ public class ActorUtils {
      */
     public static void init() throws UnknownHostException, NoSuchAlgorithmException {
         String hostname = InetAddress.getLocalHost().getHostName();
-        Config config = ConfigFactory.parseString(AKKA_REMOTE_NETTY_TCP_HOSTNAME + "=" + hostname);
+        Config config = ConfigFactory.parseString(PEKKO_REMOTE_CANONICAL_HOSTNAME + "=" + hostname);
         actorSystem = ActorSystem.create("datasophon", config.withFallback(ConfigFactory.load()));
+        logger.info("Pekko ActorSystem已初始化 - 管理端，主机名: {}", hostname);
         ActorRef serviceRoleCheckActor = actorSystem.actorOf(Props.create(ServiceRoleCheckActor.class),
                 getActorRefName(ServiceRoleCheckActor.class));
         ActorRef hostCheckActor = actorSystem.actorOf(Props.create(HostCheckActor.class),
@@ -160,15 +162,15 @@ public class ActorUtils {
     }
 
     public static ActorRef getRemoteActor(String hostname, String actorName) {
-        String actorPath = "akka.tcp://datasophon@" + hostname + ":2552/user/worker/" + actorName;
+        String actorPath = "pekko://datasophon@" + hostname + ":2552/user/worker/" + actorName;
         ActorSelection actorSelection = actorSystem.actorSelection(actorPath);
         Timeout timeout = new Timeout(Duration.create(30, TimeUnit.SECONDS));
         Future<ActorRef> future = actorSelection.resolveOne(timeout);
         ActorRef actorRef = null;
         try {
-            actorRef = Await.result(future, Duration.create(30, TimeUnit.SECONDS));
+            actorRef = Await.result(future, timeout.duration());
         } catch (Exception e) {
-            logger.error(e.getMessage(), e);
+            logger.error("无法连接到远程Actor: {}, 错误: {}", actorPath, e.getMessage(), e);
         }
 
         return actorRef;

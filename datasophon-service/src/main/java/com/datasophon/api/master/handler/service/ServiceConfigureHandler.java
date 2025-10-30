@@ -65,7 +65,7 @@ public class ServiceConfigureHandler extends ServiceHandler {
         packTemplateContents(generateServiceConfigCommand, serviceRoleInfo.getConfigFileMap());
         
         ActorSelection configActor = ActorUtils.actorSystem.actorSelection(
-                "akka.tcp://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/configureServiceActor");
+                "pekko://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/configureServiceActor");
 
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> configureFuture = Patterns.ask(configActor, generateServiceConfigCommand, timeout);

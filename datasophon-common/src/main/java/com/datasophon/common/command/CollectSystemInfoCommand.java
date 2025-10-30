@@ -19,13 +19,15 @@ package com.datasophon.common.command;
 
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * 收集系统信息命令
  * 
  * @author DataSophon Team
  */
 @Data
-public class CollectSystemInfoCommand {
+public class CollectSystemInfoCommand implements Serializable {
     private Long clusterId;
     private String hostname;
 }

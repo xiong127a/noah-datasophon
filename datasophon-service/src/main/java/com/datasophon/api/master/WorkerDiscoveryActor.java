@@ -91,7 +91,7 @@ public class WorkerDiscoveryActor extends AbstractActor {
             
             // 构建ActorSelection连接到Worker
             ActorSelection workerActor = getContext().getSystem().actorSelection(
-                    "akka://datasophon@" + hostname + ":2552/user/worker");
+                    "pekko://datasophon@" + hostname + ":2552/user/worker");
             
             // 发送Ping命令检查Worker状态
             PingCommand pingCommand = new PingCommand();
@@ -133,7 +133,7 @@ public class WorkerDiscoveryActor extends AbstractActor {
         try {
             // 向Worker请求系统信息
             ActorSelection workerActor = getContext().getSystem().actorSelection(
-                    "akka://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
+                    "pekko://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
             
             // 构建系统信息收集命令
             CollectSystemInfoCommand collectCommand = new CollectSystemInfoCommand();

@@ -55,7 +55,7 @@ public class ServiceCacheSyncHandler {
                 throw new RuntimeException(e);
             }
             ActorSelection cacheSyncActor = ActorUtils.actorSystem.actorSelection(
-                    "akka.tcp://datasophon@" + hostname + ":2551/user/serviceCacheSyncActor");
+                    "pekko://datasophon@" + hostname + ":2551/user/serviceCacheSyncActor");
             Future<Object> future = Patterns.ask(cacheSyncActor, object, timeout);
             try {
                 ExecResult result = (ExecResult) Await.result(future, timeout.duration());

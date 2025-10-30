@@ -57,7 +57,7 @@ public class ServiceConfigureAsyncHandler extends ServiceHandler {
     }
     generateServiceConfigCommand.setServiceRoleName(serviceRoleInfo.getName());
     ActorSelection configActor = ActorUtils.actorSystem.actorSelection(
-        "akka.tcp://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/configureServiceActor");
+        "pekko://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/configureServiceActor");
 
     Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
     final Future<Object> configureFuture = Patterns.ask(configActor, generateServiceConfigCommand, timeout);

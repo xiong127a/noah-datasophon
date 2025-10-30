@@ -39,7 +39,7 @@ public class HueHandlerStrategy extends ServiceHandlerAbstract implements Servic
 
     private void createHdfsDir(String nnHost) {
         ActorSelection execCmdActor = ActorUtils.actorSystem.actorSelection(
-                "akka.tcp://datasophon@" + nnHost + ":2552/user/worker/executeShellActor");
+                "pekko://datasophon@" + nnHost + ":2552/user/worker/executeShellActor");
         StringJoiner commands = new StringJoiner(" ");
         commands.add("sudo");
         commands.add("-u");

@@ -22,8 +22,8 @@ datasophon-api/src/main/resources/worker/templates/ - 存放所有模板文件
 Worker端需要在配置文件中设置如下参数：
 
 ```properties
-# 是否从Akka获取模板文件
-template.from.akka=true
+# 是否从Pekko获取模板文件
+template.from.pekko=true
 ```
 
 ## 添加新模板

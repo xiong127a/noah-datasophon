@@ -143,7 +143,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         for (ClusterHostEntity clusterHost : hostList) {
 
             ActorSelection unixUserActor = ActorUtils.actorSystem.actorSelection(
-                    "akka.tcp://datasophon@" + clusterHost.getHostname() + ":2552/user/worker/unixUserActor");
+                    "pekko://datasophon@" + clusterHost.getHostname() + ":2552/user/worker/unixUserActor");
 
             CreateUnixUserCommand createUnixUserCommand = new CreateUnixUserCommand();
             createUnixUserCommand.setUsername(username);
@@ -170,7 +170,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         // create ldap user
         Map<String, String> globalVariables = GlobalVariables.get(clusterId);
-        // akka.tcp://datasophon@hadoop1:2552/user/worker/openldapActor
+        // pekko://datasophon@hadoop1:2552/user/worker/openldapActor
         ActorRef ldapActor = ActorUtils.getRemoteActor(globalVariables.get("${openldapIp}"), "openldapActor");
 
         LdapCommand ldapCommand = new LdapCommand();
@@ -378,7 +378,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
         // sync to all hosts
         for (ClusterHostEntity clusterHost : hostList) {
             ActorSelection unixUserActor = ActorUtils.actorSystem.actorSelection(
-                    "akka.tcp://datasophon@" + clusterHost.getHostname() + ":2552/user/worker/unixUserActor");
+                    "pekko://datasophon@" + clusterHost.getHostname() + ":2552/user/worker/unixUserActor");
             DelUnixUserCommand createUnixUserCommand = new DelUnixUserCommand();
             Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
             createUnixUserCommand.setUsername(clusterUserEntity.getUsername());
@@ -398,7 +398,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
 
         // delete ldap user
         Map<String, String> globalVariables = GlobalVariables.get(clusterUserEntity.getClusterId());
-        // akka.tcp://datasophon@hadoop1:2552/user/worker/openldapActor
+        // pekko://datasophon@hadoop1:2552/user/worker/openldapActor
         ActorRef ldapActor = ActorUtils.getRemoteActor(globalVariables.get("${openldapIp}"), "openldapActor");
 
         LdapCommand ldapCommand = new LdapCommand();
@@ -491,7 +491,7 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
                     .collect(java.util.stream.Collectors.joining(","));
         }
         ActorSelection unixUserActor = ActorUtils.actorSystem
-                .actorSelection("akka.tcp://datasophon@" + hostname + ":2552/user/worker/unixUserActor");
+                .actorSelection("pekko://datasophon@" + hostname + ":2552/user/worker/unixUserActor");
 
         CreateUnixUserCommand createUnixUserCommand = new CreateUnixUserCommand();
         createUnixUserCommand.setUsername(clusterUserDTO.username());

@@ -319,7 +319,7 @@ public class PrometheusActor extends AbstractActor {
                             return;
                         } else {
                             ActorSelection alertConfigActor = ActorUtils.actorSystem.actorSelection(
-                                    "akka.tcp://datasophon@"
+                                    "pekko://datasophon@"
                                             + prometheusInstance.hostname()
                                             + ":2552/user/worker/alertConfigActor");
                             Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));

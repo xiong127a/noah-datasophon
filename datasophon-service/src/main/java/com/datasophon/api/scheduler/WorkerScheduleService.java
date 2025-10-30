@@ -410,7 +410,7 @@ public class WorkerScheduleService {
     private boolean checkWorkerConnection(String hostname) {
         try {
             ActorSelection workerActor = ActorUtils.actorSystem.actorSelection(
-                "akka://datasophon@" + hostname + ":2552/user/worker");
+                "pekko://datasophon@" + hostname + ":2552/user/worker");
             
             PingCommand pingCommand = new PingCommand();
             pingCommand.setMessage("db_scheduler_discovery");
@@ -433,7 +433,7 @@ public class WorkerScheduleService {
     private boolean quickHealthCheck(String hostname) {
         try {
             ActorSelection pingActor = ActorUtils.actorSystem.actorSelection(
-                "akka://datasophon@" + hostname + ":2552/user/worker/pingActor");
+                "pekko://datasophon@" + hostname + ":2552/user/worker/pingActor");
             
             PingCommand pingCommand = new PingCommand();
             pingCommand.setMessage("quick_health");
@@ -516,7 +516,7 @@ public class WorkerScheduleService {
     private void collectWorkerSystemInfo(String hostname) {
         try {
             ActorSelection systemInfoActor = ActorUtils.actorSystem.actorSelection(
-                "akka://datasophon@" + hostname + ":2552/user/worker/systemInfoActor");
+                "pekko://datasophon@" + hostname + ":2552/user/worker/systemInfoActor");
             
             // 系统信息收集命令
             var collectCommand = new Object();

@@ -83,7 +83,7 @@ public class ServiceInstallHandler extends ServiceHandler {
         installServiceRoleCommand.setPackageMd5(md5);
 
         ActorSelection actorSelection = ActorUtils.actorSystem.actorSelection(
-                "akka.tcp://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/installServiceActor");
+                "pekko://datasophon@" + serviceRoleInfo.getHostname() + ":2552/user/worker/installServiceActor");
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         Future<Object> future = Patterns.ask(actorSelection, installServiceRoleCommand, timeout);
         try {

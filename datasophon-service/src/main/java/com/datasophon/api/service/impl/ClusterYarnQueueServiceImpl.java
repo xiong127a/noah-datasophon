@@ -160,7 +160,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
             }
         }
         ActorSelection execCmdActor = ActorUtils.actorSystem
-                .actorSelection("akka.tcp://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
+                .actorSelection("pekko://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
         ExecuteCmdCommand command = new ExecuteCmdCommand();
         Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
         ArrayList<String> commands = new ArrayList<>();

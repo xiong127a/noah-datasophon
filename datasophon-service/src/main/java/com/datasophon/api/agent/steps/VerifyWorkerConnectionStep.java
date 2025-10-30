@@ -139,22 +139,25 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
      * Ping Worker节点
      */
     private boolean pingWorker(String hostname) {
+        String actorPath = "pekko://datasophon@" + hostname + ":2552/user/worker/pingActor";
         try {
-            // ✅ 正确的路径：/user/worker/pingActor
-            ActorSelection pingActor = ActorUtils.actorSystem.actorSelection(
-                    "pekko://datasophon@" + hostname + ":2552/user/worker/pingActor");
+            log.info("尝试连接Worker节点: {}, 完整路径: {}", hostname, actorPath);
+            
+            ActorSelection pingActor = ActorUtils.actorSystem.actorSelection(actorPath);
             
             PingCommand pingCommand = new PingCommand();
             pingCommand.setMessage("agent_distribution_verify");
             
+            log.info("发送Ping命令到: {}", actorPath);
             Timeout timeout = new Timeout(Duration.create(10, TimeUnit.SECONDS));
             Future<Object> future = Patterns.ask(pingActor, pingCommand, timeout);
             
             ExecResult result = (ExecResult) Await.result(future, timeout.duration());
+            log.info("收到Worker节点{}的Ping响应: {}", hostname, result.getExecOut());
             return result.getExecResult();
             
         } catch (Exception e) {
-            log.debug("Ping Worker节点{}失败: {}", hostname, e.getMessage());
+            log.error("Ping Worker节点{}失败 (路径: {}): {}", hostname, actorPath, e.getMessage(), e);
             return false;
         }
     }

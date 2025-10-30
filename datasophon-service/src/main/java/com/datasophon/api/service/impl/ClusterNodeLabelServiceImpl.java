@@ -146,7 +146,7 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
             String hostname = roleList.getFirst().getHostname();
             if (depMode == ClusterType.PVM) {
                 ActorSelection execCmdActor = ActorUtils.actorSystem
-                        .actorSelection("akka.tcp://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
+                        .actorSelection("pekko://datasophon@" + hostname + ":2552/user/worker/executeCmdActor");
                 ExecuteCmdCommand command = new ExecuteCmdCommand();
                 Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
                 command.setCommands(commands);

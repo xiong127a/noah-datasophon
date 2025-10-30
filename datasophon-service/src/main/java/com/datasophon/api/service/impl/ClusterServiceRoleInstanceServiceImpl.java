@@ -253,7 +253,7 @@ public class ClusterServiceRoleInstanceServiceImpl
             command.setDecompressPackageName(frameServiceEntity.getDecompressPackageName());
             ActorSelection configActor = ActorUtils.actorSystem
                     .actorSelection(
-                            "akka.tcp://datasophon@" + roleInstance.getHostname() + ":2552/user/worker/logActor");
+                            "pekko://datasophon@" + roleInstance.getHostname() + ":2552/user/worker/logActor");
             logFuture = Patterns.ask(configActor, command, timeout);
         }
         ExecResult logResult = (ExecResult) Await.result(logFuture, timeout.duration());
