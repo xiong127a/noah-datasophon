@@ -22,10 +22,11 @@ import java.io.Serializable;
 import lombok.Data;
 
 @Data
-public class AkkaRemoteException implements Serializable {
+public class PekkoRemoteException implements Serializable {
 
     private String hostCommandId;
 
     private String errMsg;
 
 }
+

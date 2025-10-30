@@ -43,7 +43,7 @@ import java.util.concurrent.Executors;
 public class LogSSEController {
 
     private static final Logger logger = LoggerFactory.getLogger(LogSSEController.class);
-    private static final String AKKA_TCP_PREFIX = "pekko.tcp://datasophon@";
+    private static final String PEKKO_PREFIX = "pekko://datasophon@";
     private static final int DEFAULT_LOG_TIMEOUT_SECONDS = 30;
     private static final long SSE_TIMEOUT_MS = 30 * 60 * 1000; // 30分钟超时
     
@@ -287,7 +287,7 @@ public class LogSSEController {
         
         var timeout = new Timeout(Duration.create(DEFAULT_LOG_TIMEOUT_SECONDS, TimeUnit.SECONDS));
         var configActor = ActorUtils.actorSystem
-                .actorSelection(AKKA_TCP_PREFIX + logInfo.hostCommand().hostname() + ":2552/user/worker/logActor");
+                .actorSelection(PEKKO_PREFIX + logInfo.hostCommand().hostname() + ":2552/user/worker/logActor");
         
         var logFuture = Patterns.ask(configActor, command, timeout);
         var logResult = (ExecResult) Await.result(logFuture, timeout.duration());

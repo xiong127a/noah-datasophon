@@ -2,7 +2,7 @@
 
 ## 概述
 
-为了方便管理模板文件，我们将模板文件统一放在API服务端管理，Worker端通过Akka Actor获取模板内容。
+为了方便管理模板文件，我们将模板文件统一放在API服务端管理，Worker端通过Pekko Actor获取模板内容。
 
 ## 目录结构
 
@@ -12,10 +12,10 @@ datasophon-api/src/main/resources/worker/templates/ - 存放所有模板文件
 
 ## 通信方式
 
-系统使用Akka Actor模式进行通信：
+系统使用Pekko Actor模式进行通信：
 
 1. Master端提供`TemplateServiceActor`，负责响应模板请求
-2. Worker端通过Akka远程调用获取模板内容
+2. Worker端通过Pekko远程调用获取模板内容
 
 ## Worker端使用
 
@@ -33,4 +33,4 @@ template.from.pekko=true
 
 ## 备注
 
-如果从Akka获取模板失败，系统会自动回退到本地模板文件。 
+如果从Pekko获取模板失败，系统会自动回退到本地模板文件。 

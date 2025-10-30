@@ -68,7 +68,7 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
         log.info("开始验证Worker连接: {}", hostname);
         
         try {
-            // 1. 等待Worker服务完全启动（Akka系统初始化需要时间）
+            // 1. 等待Worker服务完全启动（Pekko系统初始化需要时间）
             logWriter.logInfo(clusterId, hostIp, "verify", "等待Worker服务完全启动...", null);
             Thread.sleep(5000); // 等待5秒
             

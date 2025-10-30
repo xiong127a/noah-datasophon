@@ -226,21 +226,28 @@ data:
             min-idle: 0
 
   application.conf: |-
-    akka {
+    pekko {
+      loglevel = "INFO"
+      loggers = ["org.apache.pekko.event.slf4j.Slf4jLogger"]
+      logging-filter = "org.apache.pekko.event.slf4j.Slf4jLoggingFilter"
+      
       actor {
-        provider = "akka.remote.RemoteActorRefProvider"
+        provider = "remote"
       }
+      
       remote {
-        enabled-transports = ["akka.remote.netty.tcp"]
-        netty.tcp {
-          hostname = "0.0.0.0"
-          port = 2551
-          bind-hostname = "0.0.0.0"
-          bind-port = 2551
+        artery {
+          transport = tcp
+          canonical {
+            hostname = "0.0.0.0"
+            port = 2551
+          }
+          bind {
+            hostname = "0.0.0.0"
+            port = 2551
+          }
         }
-        log-config-on-start = on
-        log-sent-messages = on
-        log-received-messages = on
+        log-remote-lifecycle-events = on
       }
     }
     my-forkjoin-dispatcher{
@@ -408,7 +415,7 @@ spec:
       name: metrics
     - port: 2551
       targetPort: 2551
-      name: akka
+      name: pekko
   type: ClusterIP
 
 ---
@@ -489,7 +496,7 @@ spec:
             - containerPort: 8586
               name: metrics
             - containerPort: 2551
-              name: akka
+              name: pekko
             - containerPort: 8000
               name: debug
           resources:

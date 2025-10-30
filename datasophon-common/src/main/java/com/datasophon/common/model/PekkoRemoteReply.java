@@ -23,7 +23,7 @@ import java.io.Serializable;
 
 import lombok.Data;
 @Data
-public class AkkaRemoteReply implements Serializable {
+public class PekkoRemoteReply implements Serializable {
 
     private ReplyType replyType;
 
@@ -35,3 +35,4 @@ public class AkkaRemoteReply implements Serializable {
 
     private String msg;
 }
+
