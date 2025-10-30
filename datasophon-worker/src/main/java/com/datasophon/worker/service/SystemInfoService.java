@@ -58,15 +58,17 @@ public class SystemInfoService {
             result.setIpAddress(ipAddress);
             logger.debug("Host: {} ({})", hostname, ipAddress);
             
-            // 获取CPU架构（使用OSHI）
+            // 获取CPU架构（使用OSHI）- 指令集架构，用于选择正确的二进制包
             String cpuArchitecture = HardwareInfoUtils.getCpuArchitecture();
             result.setCpuArchitecture(cpuArchitecture);
-            logger.debug("CPU Architecture: {}", cpuArchitecture);
             
             // 获取CPU核心数（使用OSHI）
             int cpuCores = HardwareInfoUtils.getCpuCores();
             result.setCpuCores(cpuCores);
-            logger.debug("CPU Logical Cores: {}", cpuCores);
+            
+            // 获取CPU完整信息用于日志
+            String cpuFullDesc = HardwareInfoUtils.getCpuFullDescription();
+            logger.debug("CPU Info: {}", cpuFullDesc);
             
             // 获取操作系统信息（使用OSHI）
             String osInfo = HardwareInfoUtils.getOsInfo();
@@ -89,8 +91,8 @@ public class SystemInfoService {
             logger.debug("System Load (1min): {}", systemLoad);
             
             result.setExecResult(true);
-            logger.info("System information collected successfully - Host: {}, IP: {}, OS: {}, CPU: {} cores, Arch: {}", 
-                hostname, ipAddress, osInfo, cpuCores, cpuArchitecture);
+            logger.info("✓ 硬件信息收集成功: CPU={}核, 架构={}, 系统={}", 
+                cpuCores, cpuArchitecture, osInfo);
             
         } catch (Exception e) {
             logger.error("Failed to collect system information", e);

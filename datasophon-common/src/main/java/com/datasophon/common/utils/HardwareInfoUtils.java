@@ -40,25 +40,95 @@ public class HardwareInfoUtils {
     private static final OperatingSystem OS = SYSTEM_INFO.getOperatingSystem();
     
     /**
-     * 获取 CPU 架构
+     * 获取 CPU 指令集架构（用于选择正确的二进制包）
      * 
-     * @return CPU 架构字符串 (如: x86_64, aarch64, arm64)
+     * @return CPU 架构字符串 (如: x86_64, amd64, aarch64, arm64)
      */
     public static String getCpuArchitecture() {
         try {
-            CentralProcessor processor = HAL.getProcessor();
-            String arch = processor.getProcessorIdentifier().getMicroarchitecture();
+            // 使用系统属性获取指令集架构
+            String osArch = System.getProperty("os.arch");
             
-            // 如果微架构信息为空，使用系统属性作为后备
-            if (arch == null || arch.isEmpty() || arch.equals("unknown")) {
-                arch = System.getProperty("os.arch");
+            // 标准化架构名称
+            String normalizedArch = normalizeArchitecture(osArch);
+            
+            log.debug("CPU Architecture: {} (os.arch={})", normalizedArch, osArch);
+            return normalizedArch;
+        } catch (Exception e) {
+            log.warn("Failed to get CPU architecture", e);
+            return "unknown";
+        }
+    }
+    
+    /**
+     * 获取 CPU 微架构信息（如 Broadwell, Skylake 等）
+     * 
+     * @return CPU 微架构字符串
+     */
+    public static String getCpuMicroarchitecture() {
+        try {
+            CentralProcessor processor = HAL.getProcessor();
+            String microarch = processor.getProcessorIdentifier().getMicroarchitecture();
+            
+            if (microarch == null || microarch.isEmpty()) {
+                microarch = "unknown";
             }
             
-            log.debug("CPU Architecture: {}", arch);
-            return arch;
+            log.debug("CPU Microarchitecture: {}", microarch);
+            return microarch;
         } catch (Exception e) {
-            log.warn("Failed to get CPU architecture via OSHI, falling back to system property", e);
-            return System.getProperty("os.arch", "unknown");
+            log.warn("Failed to get CPU microarchitecture", e);
+            return "unknown";
+        }
+    }
+    
+    /**
+     * 标准化 CPU 架构名称
+     * 将各种架构名称统一为标准格式
+     * 
+     * @param osArch 原始架构名称
+     * @return 标准化后的架构名称
+     */
+    private static String normalizeArchitecture(String osArch) {
+        if (osArch == null || osArch.isEmpty()) {
+            return "unknown";
+        }
+        
+        String arch = osArch.toLowerCase();
+        
+        // AMD/Intel 64位架构
+        if (arch.contains("amd64") || arch.contains("x86_64") || arch.contains("x64")) {
+            return "x86_64";
+        }
+        
+        // ARM 64位架构
+        if (arch.contains("aarch64") || arch.contains("arm64")) {
+            return "aarch64";
+        }
+        
+        // ARM 32位架构
+        if (arch.contains("arm")) {
+            return "arm";
+        }
+        
+        // 其他架构保持原样
+        return osArch;
+    }
+    
+    /**
+     * 获取 CPU 型号名称
+     * 
+     * @return CPU 型号字符串
+     */
+    public static String getCpuModel() {
+        try {
+            CentralProcessor processor = HAL.getProcessor();
+            String model = processor.getProcessorIdentifier().getName();
+            log.debug("CPU Model: {}", model);
+            return model != null ? model.trim() : "unknown";
+        } catch (Exception e) {
+            log.warn("Failed to get CPU model", e);
+            return "unknown";
         }
     }
     
@@ -93,6 +163,27 @@ public class HardwareInfoUtils {
         } catch (Exception e) {
             log.warn("Failed to get physical CPU cores", e);
             return getCpuCores();
+        }
+    }
+    
+    /**
+     * 获取 CPU 完整描述信息
+     * 包含架构、核心数、微架构等信息
+     * 
+     * @return CPU 完整描述字符串
+     */
+    public static String getCpuFullDescription() {
+        try {
+            String arch = getCpuArchitecture();
+            int logicalCores = getCpuCores();
+            int physicalCores = getPhysicalCpuCores();
+            String microarch = getCpuMicroarchitecture();
+            
+            return String.format("%d核 (物理%d核), 架构=%s, 微架构=%s", 
+                logicalCores, physicalCores, arch, microarch);
+        } catch (Exception e) {
+            log.warn("Failed to get CPU full description", e);
+            return "unknown";
         }
     }
     
