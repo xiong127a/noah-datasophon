@@ -22,7 +22,6 @@ import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.CancelCommandMap;
 import com.datasophon.api.service.*;
 import com.datasophon.api.utils.ConfigGroupUtils;
-import com.datasophon.api.utils.ProcessUtils;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
 import com.datasophon.common.dto.ClusterServiceRoleGroupConfigDTO;
@@ -169,7 +168,7 @@ public class MasterServiceExecutionServiceImpl implements MasterServiceExecution
         logger.debug("enableRangerPlugin={}, needReConfig={}", enableRangerPlugin, needReConfig);
         serviceRoleInfo.setConfigFileMap(configFileMap);
         serviceRoleInfo.setEnableRangerPlugin(enableRangerPlugin);
-        serviceRoleInfo.setNeedReConfig(needReConfig);
+        // 注意：needReConfig状态存储在方法局部变量中，稍后传递给执行命令
     }
 
     /**
@@ -177,30 +176,41 @@ public class MasterServiceExecutionServiceImpl implements MasterServiceExecution
      */
     private ExecResult executeCommand(ServiceRoleInfo serviceRoleInfo, ExecuteServiceRoleCommand command) {
         CommandType commandType = command.getCommandType();
-        boolean needReConfig = serviceRoleInfo.isNeedReConfig();
+        // 检查是否需要重新配置（从prepareServiceRoleConfig获取的needReConfig状态）
+        boolean needReConfig = false;
+        
+        // 从serviceRoleInfo的配置文件映射判断是否需要重新配置
+        if (serviceRoleInfo.getConfigFileMap() != null && !serviceRoleInfo.getConfigFileMap().isEmpty()) {
+            needReConfig = true;
+        }
 
-        return switch (commandType) {
-            case INSTALL_SERVICE -> {
-                logger.info("开始安装 {} 在主机 {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
-                yield serviceInstallationService.startInstallService(serviceRoleInfo);
-            }
-            case START_SERVICE -> {
-                logger.info("开始启动 {} 在主机 {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
-                yield serviceInstallationService.startService(serviceRoleInfo, needReConfig);
-            }
-            case STOP_SERVICE -> {
-                logger.info("开始停止 {} 在主机 {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
-                yield serviceInstallationService.stopService(serviceRoleInfo);
-            }
-            case RESTART_SERVICE -> {
-                logger.info("开始重启 {} 在主机 {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
-                yield serviceInstallationService.restartService(serviceRoleInfo, needReConfig);
-            }
-            default -> {
-                logger.warn("未知的命令类型: {}", commandType);
-                yield null;
-            }
-        };
+        try {
+            return switch (commandType) {
+                case INSTALL_SERVICE -> {
+                    logger.info("开始安装 {} 在主机 {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
+                    yield serviceInstallationService.startInstallService(serviceRoleInfo);
+                }
+                case START_SERVICE -> {
+                    logger.info("开始启动 {} 在主机 {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
+                    yield serviceInstallationService.startService(serviceRoleInfo, needReConfig);
+                }
+                case STOP_SERVICE -> {
+                    logger.info("开始停止 {} 在主机 {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
+                    yield serviceInstallationService.stopService(serviceRoleInfo);
+                }
+                case RESTART_SERVICE -> {
+                    logger.info("开始重启 {} 在主机 {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
+                    yield serviceInstallationService.restartService(serviceRoleInfo, needReConfig);
+                }
+                default -> {
+                    logger.warn("未知的命令类型: {}", commandType);
+                    yield null;
+                }
+            };
+        } catch (Exception e) {
+            logger.error("执行命令失败: {}", commandType, e);
+            return null;
+        }
     }
 
     /**

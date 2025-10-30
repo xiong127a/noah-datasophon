@@ -55,7 +55,6 @@ public class OlapSqlExecutionServiceImpl implements OlapSqlExecutionService {
 
             String operationDesc = command.getOpsType().getDesc();
             String hostname = command.getHostName();
-            String feMaster = command.getFeMaster();
 
             // 第一次尝试执行
             ExecResult execResult = executeOperation(command);

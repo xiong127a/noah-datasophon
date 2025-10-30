@@ -14,13 +14,7 @@ import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.kubernetes.actor.KubernetesYamlDeploymentActor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import org.springframework.util.ObjectUtils;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
 import java.util.List;

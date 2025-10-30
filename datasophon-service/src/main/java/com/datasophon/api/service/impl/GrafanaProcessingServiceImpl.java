@@ -59,8 +59,8 @@ public class GrafanaProcessingServiceImpl implements GrafanaProcessingService {
 
             String grafanaIp = command.getGrafanaIp();
             String url = command.getUrl();
-            String dbFilePath = command.getDbFilePath() != null ? 
-                                command.getDbFilePath() : DEFAULT_GRAFANA_DB_PATH;
+            // 使用默认路径，如需自定义可扩展Sqlite3ExecCommand类
+            String dbFilePath = DEFAULT_GRAFANA_DB_PATH;
 
             // 第一次尝试更新
             ExecResult execResult = Sqlite3Utils.updateDatasource(dbFilePath, url);

@@ -57,17 +57,10 @@ import com.datasophon.kubernetes.util.CommonUtil;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.actor.ActorSelection;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.ArrayList;
 import java.util.Collection;

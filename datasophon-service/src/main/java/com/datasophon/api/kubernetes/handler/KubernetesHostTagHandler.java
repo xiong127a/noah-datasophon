@@ -17,9 +17,6 @@
 
 package com.datasophon.api.kubernetes.handler;
 
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
@@ -29,9 +26,6 @@ import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.kubernetes.actor.KubernetesTagHostActor;
 import com.datasophon.api.utils.ClusterInfoUtils;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;

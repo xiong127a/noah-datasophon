@@ -1,8 +1,5 @@
 package com.datasophon.api.kubernetes.handler;
 
-import org.apache.pekko.actor.ActorRef;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.master.ActorUtils;
@@ -16,9 +13,6 @@ import com.datasophon.api.utils.ClusterInfoUtils;
 import com.datasophon.kubernetes.actor.KubernetesStartServiceActor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import scala.concurrent.Await;
-import scala.concurrent.Future;
-import scala.concurrent.duration.Duration;
 
 import java.util.Arrays;
 import java.util.List;

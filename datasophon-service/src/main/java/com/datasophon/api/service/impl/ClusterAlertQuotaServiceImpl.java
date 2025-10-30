@@ -19,9 +19,8 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.PrometheusActor;
 import com.datasophon.api.service.AlertGroupService;
+import com.datasophon.api.service.PrometheusIntegrationService;
 import com.datasophon.api.service.ClusterAlertQuotaService;
 import com.datasophon.api.service.NoticeGroupService;
 import com.datasophon.common.command.GenerateAlertConfigCommand;
@@ -38,7 +37,6 @@ import com.datasophon.common.enums.QuotaState;
 import com.datasophon.dao.mapper.ClusterAlertQuotaMapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pekko.actor.ActorRef;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -73,6 +71,9 @@ public class ClusterAlertQuotaServiceImpl
     // ✅ NoticeGroupService已完成改造，启用代码
     @Autowired
     private NoticeGroupService noticeGroupService;
+    
+    @Autowired
+    private PrometheusIntegrationService prometheusIntegrationService;
 
     @Override
     public PageResult<ClusterAlertQuotaEntity> getAlertQuotaList(Long clusterId, Integer alertGroupId,
@@ -190,11 +191,7 @@ public class ClusterAlertQuotaServiceImpl
             configFileMap.put(generators, alertItems);
         }
 
-        // 发送命令生成告警配置文件
-        ActorRef prometheusActor = ActorUtils.getLocalActor(
-                PrometheusActor.class,
-                ActorUtils.getActorRefName(PrometheusActor.class));
-
+        // 使用PrometheusIntegrationService生成告警配置文件
         var alertConfigCommand = new GenerateAlertConfigCommand();
         alertConfigCommand.setClusterId(clusterId);
         alertConfigCommand.setConfigFileMap(configFileMap);
@@ -202,7 +199,7 @@ public class ClusterAlertQuotaServiceImpl
         // 打包模板内容到命令对象
         packAlertTemplateContents(alertConfigCommand, configFileMap);
         
-        prometheusActor.tell(alertConfigCommand, ActorRef.noSender());
+        prometheusIntegrationService.generateAlertConfig(alertConfigCommand);
     }
 
     /**

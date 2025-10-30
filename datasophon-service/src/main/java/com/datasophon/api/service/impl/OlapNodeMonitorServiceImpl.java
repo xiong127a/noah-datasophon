@@ -129,7 +129,7 @@ public class OlapNodeMonitorServiceImpl implements OlapNodeMonitorService {
         olapSqlExecutionService.executeOlapSqlCommand(sqlCommand);
 
         // 更新节点状态为已添加到集群
-        node.setAddedToCluster(1);
+        node.setAddedToCluster(true);
         node.setUpdateTime(LocalDateTime.now());
         roleInstanceMapper.update(node);
 
