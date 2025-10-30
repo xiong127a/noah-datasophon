@@ -1,7 +1,6 @@
 package com.datasophon.api.kubernetes.handler;
 
 import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
 import com.datasophon.common.Constants;
@@ -59,12 +58,20 @@ public class KubernetesServiceInstallHandler extends ServiceHandler {
         installServiceRoleCommand.setClusterId(serviceRoleInfo.getClusterId()); // 设置集群ID
         installServiceRoleCommand.setCofigFileMap(configFileMap);
 
-        ActorRef actorRef =
-                ActorUtils.getLocalActor(KubernetesInstallServiceActor.class, ActorUtils.getActorRefName(KubernetesInstallServiceActor.class));
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> future = Patterns.ask(actorRef, installServiceRoleCommand, timeout);
+        // 直接调用KubernetesInstallServiceHandler处理，无需通过Actor
         try {
-            ExecResult installResult = (ExecResult) Await.result(future, timeout.duration());
+            logger.info("Start install package {}", installServiceRoleCommand.getPackageName());
+            
+            com.datasophon.kubernetes.actor.handler.KubernetesInstallServiceHandler serviceHandler = 
+                    new com.datasophon.kubernetes.actor.handler.KubernetesInstallServiceHandler(
+                            installServiceRoleCommand.getServiceName(), 
+                            installServiceRoleCommand.getServiceRoleName());
+            
+            ExecResult installResult = serviceHandler.install();
+            
+            logger.info("Install {} {}", installServiceRoleCommand.getPackageName(),
+                    installResult.getExecResult() ? "success" : "failed");
+            
             if (Objects.nonNull(installResult) && installResult.getExecResult()) {
                 if (Objects.nonNull(getNext())) {
                     return getNext().handlerRequest(serviceRoleInfo);
@@ -72,6 +79,7 @@ public class KubernetesServiceInstallHandler extends ServiceHandler {
             }
             return installResult;
         } catch (Exception e) {
+            logger.error("安装服务失败", e);
             return new ExecResult();
         }
     }

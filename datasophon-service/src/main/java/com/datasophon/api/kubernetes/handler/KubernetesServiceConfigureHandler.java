@@ -1,18 +1,18 @@
 package com.datasophon.api.kubernetes.handler;
 
 import cn.hutool.core.util.ObjectUtil;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.common.cache.CacheUtils;
 import com.datasophon.common.command.GenerateServiceConfigCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.api.utils.ClusterInfoUtils;
-import com.datasophon.kubernetes.actor.KubernetesConfigureServiceActor;
+import com.datasophon.kubernetes.actor.handler.KubernetesConfigureServiceHandler;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
+@Slf4j
 public class KubernetesServiceConfigureHandler extends ServiceHandler {
 
     @Override
@@ -33,12 +33,30 @@ public class KubernetesServiceConfigureHandler extends ServiceHandler {
         generateServiceConfigCommand.setNamespace(namespace);
         generateServiceConfigCommand.setServiceRoleName(serviceRoleInfo.getName());
         generateServiceConfigCommand.setHostName(serviceRoleInfo.getHostname());
-        ActorRef actorRef = ActorUtils.getLocalActor(KubernetesConfigureServiceActor.class,
-                ActorUtils.getActorRefName(KubernetesConfigureServiceActor.class));
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> configureFuture = Patterns.ask(actorRef, generateServiceConfigCommand, timeout);
+        
+        // 直接调用KubernetesConfigureServiceHandler处理，无需通过Actor
         try {
-            ExecResult configResult = (ExecResult) Await.result(configureFuture, timeout.duration());
+            log.info("start configure {}", generateServiceConfigCommand.getServiceName());
+            
+            KubernetesConfigureServiceHandler serviceHandler = new KubernetesConfigureServiceHandler(
+                    generateServiceConfigCommand.getServiceName(), 
+                    generateServiceConfigCommand.getServiceRoleName());
+            
+            // 设置集群ID到handler，更新logger路径
+            serviceHandler.setClusterId(generateServiceConfigCommand.getClusterId());
+            
+            ExecResult configResult = serviceHandler.configure(
+                    generateServiceConfigCommand.getNamespace(),
+                    generateServiceConfigCommand.getCofigFileMap(),
+                    generateServiceConfigCommand.getDecompressPackageName(),
+                    generateServiceConfigCommand.getMyid(),
+                    generateServiceConfigCommand.getServiceRoleName(),
+                    generateServiceConfigCommand.getRunAs(),
+                    generateServiceConfigCommand.getHostName());
+            
+            log.info("{} configure result: {}", generateServiceConfigCommand.getServiceName(),
+                    configResult.getExecResult() ? "success" : "failed");
+            
             if (Objects.nonNull(configResult) && configResult.getExecResult()) {
                 if (Objects.nonNull(getNext())) {
                     return getNext().handlerRequest(cloneByStream);
@@ -46,6 +64,7 @@ public class KubernetesServiceConfigureHandler extends ServiceHandler {
             }
             return configResult;
         } catch (Exception e) {
+            log.error("配置服务失败", e);
             return new ExecResult();
         }
     }

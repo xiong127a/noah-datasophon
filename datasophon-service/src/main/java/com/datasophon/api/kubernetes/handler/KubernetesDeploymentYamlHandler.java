@@ -1,7 +1,6 @@
 package com.datasophon.api.kubernetes.handler;
 
 import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.utils.CacheOperateUtils;
@@ -12,7 +11,7 @@ import com.datasophon.common.model.RunAs;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterInfoEntity;
-import com.datasophon.kubernetes.actor.KubernetesYamlDeploymentActor;
+import com.datasophon.kubernetes.actor.handler.KubernetesYamlDeploymentHandler;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.util.ObjectUtils;
 
@@ -20,7 +19,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 import static com.datasophon.api.utils.ProcessUtils.enableKerberos;
 import static com.datasophon.api.utils.ProcessUtils.enableRangerPlugin;
@@ -78,12 +76,34 @@ public class KubernetesDeploymentYamlHandler extends ServiceHandler {
 
         kubernetesGenerateDeploymentYamlCommand.setEnableKerberos(enableKerberos(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName()));
         kubernetesGenerateDeploymentYamlCommand.setEnableRangerPlugin(enableRangerPlugin(serviceRoleInfo.getClusterId(),serviceRoleInfo.getParentName()));
-        ActorRef actorRef =
-                ActorUtils.getLocalActor(KubernetesYamlDeploymentActor.class, ActorUtils.getActorRefName(KubernetesYamlDeploymentActor.class));
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> configureFuture = Patterns.ask(actorRef, kubernetesGenerateDeploymentYamlCommand, timeout);
+        
+        // 直接调用KubernetesYamlDeploymentHandler处理，无需通过Actor
         try {
-            ExecResult configResult = (ExecResult) Await.result(configureFuture, timeout.duration());
+            log.info("start configure {} Kubernetes yaml file", kubernetesGenerateDeploymentYamlCommand.getServiceRoleName());
+            
+            KubernetesYamlDeploymentHandler serviceHandler = new KubernetesYamlDeploymentHandler(
+                    kubernetesGenerateDeploymentYamlCommand.getServiceName(), 
+                    kubernetesGenerateDeploymentYamlCommand.getServiceRoleName());
+            
+            ExecResult configResult = serviceHandler.configure(
+                    kubernetesGenerateDeploymentYamlCommand.getNamespace(),
+                    kubernetesGenerateDeploymentYamlCommand.getCofigFileMap(),
+                    kubernetesGenerateDeploymentYamlCommand.getRunAs(),
+                    kubernetesGenerateDeploymentYamlCommand.getStartRunner(),
+                    kubernetesGenerateDeploymentYamlCommand.getStatusRunner(),
+                    kubernetesGenerateDeploymentYamlCommand.getRoleNodeCnt(),
+                    kubernetesGenerateDeploymentYamlCommand.getDecompressPackageName(),
+                    kubernetesGenerateDeploymentYamlCommand.getLogFile(),
+                    kubernetesGenerateDeploymentYamlCommand.getServiceRoleName(),
+                    kubernetesGenerateDeploymentYamlCommand.getMasterHost(),
+                    kubernetesGenerateDeploymentYamlCommand.getEnableKerberos(),
+                    kubernetesGenerateDeploymentYamlCommand.getEnableRangerPlugin(),
+                    kubernetesGenerateDeploymentYamlCommand.getCommandType());
+            
+            log.info("{} configure Kubernetes yaml file result: {}", 
+                    kubernetesGenerateDeploymentYamlCommand.getServiceRoleName(),
+                    configResult.getExecResult() ? "success" : "failed");
+            
             if (Objects.nonNull(configResult) && configResult.getExecResult()) {
                 if (Objects.nonNull(getNext())) {
                     return getNext().handlerRequest(serviceRoleInfo);
@@ -91,6 +111,7 @@ public class KubernetesDeploymentYamlHandler extends ServiceHandler {
             }
             return configResult;
         } catch (Exception e) {
+            log.error("配置Kubernetes yaml文件失败", e);
             return new ExecResult();
         }
     }

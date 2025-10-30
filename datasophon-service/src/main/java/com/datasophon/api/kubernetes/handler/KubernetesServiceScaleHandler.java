@@ -1,7 +1,6 @@
 package com.datasophon.api.kubernetes.handler;
 
 import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.KubernetesServiceScaleCommand;
@@ -32,12 +31,24 @@ public class KubernetesServiceScaleHandler extends ServiceHandler {
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(serviceRoleInfo.getClusterId());
         kubernetesServiceScaleCommand.setKubeConfig(kubeConfig);
         kubernetesServiceScaleCommand.setCommandType(serviceRoleInfo.getCommandType());
-        ActorRef startActor =
-                ActorUtils.getLocalActor(KubernetesScaleServiceActor.class, ActorUtils.getActorRefName(KubernetesScaleServiceActor.class));
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> startFuture = Patterns.ask(startActor, kubernetesServiceScaleCommand, timeout);
+        
+        // 直接调用KubernetesScaleServiceHandler处理，无需通过Actor
         try {
-            ExecResult startResult = (ExecResult) Await.result(startFuture, timeout.duration());
+            logger.info("start scale service role {}", kubernetesServiceScaleCommand.getServiceRoleName());
+            
+            com.datasophon.kubernetes.actor.handler.KubernetesScaleServiceHandler serviceHandler = 
+                    new com.datasophon.kubernetes.actor.handler.KubernetesScaleServiceHandler(
+                            kubernetesServiceScaleCommand.getServiceName(), 
+                            kubernetesServiceScaleCommand.getServiceRoleName());
+            
+            ExecResult startResult = serviceHandler.scaleService(
+                    kubernetesServiceScaleCommand.getNamespace(),
+                    kubernetesServiceScaleCommand.getKubeConfig(),
+                    kubernetesServiceScaleCommand.getCommandType());
+            
+            logger.info("{} scale: {}", kubernetesServiceScaleCommand.getServiceRoleName(),
+                    startResult.getExecResult() ? "success" : "failed");
+            
             if (Objects.nonNull(startResult) && startResult.getExecResult()) {
                 // 角色启动成功
                 if (Objects.nonNull(getNext())) {
@@ -46,6 +57,7 @@ public class KubernetesServiceScaleHandler extends ServiceHandler {
             }
             return startResult;
         } catch (Exception e) {
+            logger.error("扩缩服务失败", e);
             return new ExecResult();
         }
     }

@@ -1,7 +1,6 @@
 package com.datasophon.api.kubernetes.handler;
 
 import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
@@ -44,13 +43,25 @@ public class KubernetesServiceRoleStopHandler extends ServiceHandler {
             return execResult;
         }
 
-        ActorRef startActor =
-                ActorUtils.getLocalActor(KubernetesStopRolePodActor.class, ActorUtils.getActorRefName(KubernetesStopRolePodActor.class));
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> startFuture = Patterns.ask(startActor, kubernetesServiceRoleOperateCommand, timeout);
+        // 直接调用KubernetesStopRolePodHandler处理，无需通过Actor
         try {
-            ExecResult startResult = (ExecResult) Await.result(startFuture, timeout.duration());
-            if (Objects.nonNull(startResult) && startResult.getExecResult()) {
+            logger.info("start to stop service role {} on Kubernetes", kubernetesServiceRoleOperateCommand.getServiceRoleName());
+            
+            com.datasophon.kubernetes.actor.handler.KubernetesStopRolePodHandler kubernetesStopRolePodHandler = 
+                    new com.datasophon.kubernetes.actor.handler.KubernetesStopRolePodHandler(
+                            kubernetesServiceRoleOperateCommand.getServiceName(), 
+                            kubernetesServiceRoleOperateCommand.getServiceRoleName());
+            
+            ExecResult startResult = kubernetesStopRolePodHandler.stop(
+                    kubernetesServiceRoleOperateCommand.getNamespace(), 
+                    kubernetesServiceRoleOperateCommand.getKubeConfig(),
+                    kubernetesServiceRoleOperateCommand.getHostname());
+            
+            logger.info("service role {} stop on Kubernetes result: {}", 
+                    kubernetesServiceRoleOperateCommand.getServiceRoleName(),
+                    startResult.getExecResult() ? "success" : "failed");
+            
+            if (startResult.getExecResult()) {
                 // 角色启动成功
                 if (Objects.nonNull(getNext())) {
                     return getNext().handlerRequest(serviceRoleInfo);
@@ -58,6 +69,7 @@ public class KubernetesServiceRoleStopHandler extends ServiceHandler {
             }
             return startResult;
         } catch (Exception e) {
+            logger.error("停止服务角色失败", e);
             return new ExecResult();
         }
     }

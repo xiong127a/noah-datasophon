@@ -2,7 +2,6 @@ package com.datasophon.api.kubernetes.handler;
 
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
@@ -69,12 +68,31 @@ public class KubernetesServiceStartHandler extends ServiceHandler {
             return execResult;
         }
 
-        ActorRef startActor = ActorUtils.getLocalActor(KubernetesStartServiceActor.class,
-                ActorUtils.getActorRefName(KubernetesStartServiceActor.class));
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> startFuture = Patterns.ask(startActor, kubernetesServiceRoleOperateCommand, timeout);
+        // 直接调用KubernetesServiceHandler处理，无需通过Actor
         try {
-            ExecResult startResult = (ExecResult) Await.result(startFuture, timeout.duration());
+            logger.info("start to start service role {} on Kubernetes", kubernetesServiceRoleOperateCommand.getServiceRoleName());
+            
+            com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler serviceHandler = 
+                    new com.datasophon.kubernetes.actor.handler.KubernetesServiceHandler(
+                            kubernetesServiceRoleOperateCommand.getServiceName(),
+                            kubernetesServiceRoleOperateCommand.getServiceRoleName());
+            
+            // 检查是否有ServiceRoleStrategy
+            com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategy serviceRoleHandler = 
+                    com.datasophon.kubernetes.strategy.KubernetesServiceRoleStrategyContext
+                            .getServiceRoleHandler(kubernetesServiceRoleOperateCommand.getServiceRoleName());
+            
+            ExecResult startResult;
+            if (Objects.nonNull(serviceRoleHandler)) {
+                startResult = serviceRoleHandler.handler(kubernetesServiceRoleOperateCommand);
+            } else {
+                startResult = serviceHandler.start(kubernetesServiceRoleOperateCommand);
+            }
+            
+            logger.info("service role {} start on Kubernetes result: {}", 
+                    kubernetesServiceRoleOperateCommand.getServiceRoleName(),
+                    startResult.getExecResult() ? "success" : "failed");
+            
             if (Objects.nonNull(startResult) && startResult.getExecResult()) {
                 // 角色启动成功
                 if (Objects.nonNull(getNext())) {
@@ -83,6 +101,7 @@ public class KubernetesServiceStartHandler extends ServiceHandler {
             }
             return startResult;
         } catch (Exception e) {
+            logger.error("启动服务失败", e);
             return new ExecResult();
         }
     }

@@ -18,7 +18,6 @@
 package com.datasophon.api.kubernetes.handler;
 
 import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.master.handler.service.ServiceHandler;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.common.command.KubernetesGenerateHostTagCommand;
@@ -55,12 +54,28 @@ public class KubernetesHostTagHandler extends ServiceHandler {
         kubernetesGenerateHostTagCommand.setKubeConfig(kubeConfig);
         String namespace = ClusterInfoUtils.getKubernetesNamespace(clusterId);
         kubernetesGenerateHostTagCommand.setNamespace(namespace);
-        ActorRef actorRef =
-                ActorUtils.getLocalActor(KubernetesTagHostActor.class, ActorUtils.getActorRefName(KubernetesTagHostActor.class));
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> configureFuture = Patterns.ask(actorRef, kubernetesGenerateHostTagCommand, timeout);
+        
+        // 直接调用KubernetesTagHostHandler处理，无需通过Actor
         try {
-            ExecResult configResult = (ExecResult) Await.result(configureFuture, timeout.duration());
+            logger.info("start add service tag {}", kubernetesGenerateHostTagCommand.getServiceRoleName());
+            
+            com.datasophon.kubernetes.actor.handler.KubernetesTagHostHandler serviceHandler = 
+                    new com.datasophon.kubernetes.actor.handler.KubernetesTagHostHandler(
+                            kubernetesGenerateHostTagCommand.getNamespace(),
+                            kubernetesGenerateHostTagCommand.getServiceName(), 
+                            kubernetesGenerateHostTagCommand.getServiceRoleName());
+            
+            ExecResult configResult = serviceHandler.operateTag(
+                    kubernetesGenerateHostTagCommand.getClusterId(),
+                    kubernetesGenerateHostTagCommand.getHostName(),
+                    kubernetesGenerateHostTagCommand.getKubeConfig(),
+                    kubernetesGenerateHostTagCommand.getCommandType());
+            
+            logger.info("{} tag at host {}: {}",
+                    kubernetesGenerateHostTagCommand.getServiceRoleName(),
+                    kubernetesGenerateHostTagCommand.getHostName(),
+                    configResult.getExecResult() ? "success" : "failed");
+            
             if (Objects.nonNull(configResult) && configResult.getExecResult()) {
                 if (Objects.nonNull(getNext())) {
                     return getNext().handlerRequest(serviceRoleInfo);
@@ -68,6 +83,7 @@ public class KubernetesHostTagHandler extends ServiceHandler {
             }
             return configResult;
         } catch (Exception e) {
+            logger.error("主机打标签失败", e);
             return new ExecResult();
         }
     }
