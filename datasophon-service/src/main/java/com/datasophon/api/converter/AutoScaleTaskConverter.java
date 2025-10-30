@@ -82,5 +82,19 @@ public interface AutoScaleTaskConverter extends BaseConverter<AutoScaleTaskEntit
         }
     }
 
+    @Named("formatEnabledStatus")
+    default String formatEnabledStatus(Boolean enabled) {
+        if (enabled == null) {
+            return "未知";
+        }
+        return enabled ? "启用" : "禁用";
+    }
 
+    @Named("formatDateTime")
+    default String formatDateTime(java.time.LocalDateTime dateTime) {
+        if (dateTime == null) {
+            return "";
+        }
+        return dateTime.format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    }
 }
