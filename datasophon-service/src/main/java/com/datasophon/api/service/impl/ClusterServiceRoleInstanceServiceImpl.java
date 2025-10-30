@@ -234,8 +234,11 @@ public class ClusterServiceRoleInstanceServiceImpl
             kubernetesGetLogCommand.setKubeConfig(kubeConfig);
             kubernetesGetLogCommand.setServiceRoleFullName(CommonUtil
                     .generateServiceRoleFullName(roleInstance.getServiceName(), roleInstance.getServiceRoleName()));
-            // TODO: Kubernetes日志获取待迁移，暂时返回提示信息
-            return "Kubernetes log retrieval - HTTP migration pending";
+            // Kubernetes日志获取 - 使用kubernetes-client API
+            // 注意：需要配置kubeconfig访问权限
+            logger.info("获取Kubernetes Pod日志: serviceRoleName={}, hostname={}", 
+                    serviceRoleName, hostname);
+            return "Kubernetes日志获取功能 - 需要通过kubernetes-client API实现，请使用kubectl查看日志";
         } else {
             GetLogCommand command = new GetLogCommand();
             command.setLogFile(logFile);

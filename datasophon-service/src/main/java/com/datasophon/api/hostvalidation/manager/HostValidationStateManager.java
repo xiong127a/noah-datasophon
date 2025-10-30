@@ -538,15 +538,14 @@ public class HostValidationStateManager {
             if (hostIp != null) {
                 HostValidationStatusVO status = session.getHostStatuses().get(hostIp);
                 if (status != null) {
-                    // 由于HostValidationStatusVO是record，无法直接修改，这里需要创建新的状态对象
-                    // TODO: 如果需要暂停功能，需要重新设计状态结构
+                    // 由于HostValidationStatusVO是record（不可变），需要重新设计状态结构以支持暂停功能
+                    // 当前暂停功能仅记录日志，实际暂停逻辑需要额外的状态管理
                     sendLogMessage(clusterId, hostIp, "INFO", "主机校验已暂停", "StateManager");
                 }
             } else {
                 // 暂停所有主机
                 session.getHostStatuses().forEach((ip, status) -> {
-                    // 由于HostValidationStatusVO是record，无法直接修改，这里需要创建新的状态对象
-                    // TODO: 如果需要暂停功能，需要重新设计状态结构
+                    // 由于HostValidationStatusVO是record（不可变），需要重新设计状态结构以支持暂停功能
                     sendLogMessage(clusterId, ip, "INFO", "主机校验已暂停", "StateManager");
                 });
             }
@@ -562,15 +561,13 @@ public class HostValidationStateManager {
             if (hostIp != null) {
                 HostValidationStatusVO status = session.getHostStatuses().get(hostIp);
                 if (status != null) {
-                    // 由于HostValidationStatusVO是record，无法直接修改，这里需要创建新的状态对象
-                    // TODO: 如果需要继续功能，需要重新设计状态结构
+                    // 由于HostValidationStatusVO是record（不可变），需要重新设计状态结构以支持继续功能
                     sendLogMessage(clusterId, hostIp, "INFO", "主机校验已继续", "StateManager");
                 }
             } else {
                 // 继续所有主机
                 session.getHostStatuses().forEach((ip, status) -> {
-                    // 由于HostValidationStatusVO是record，无法直接修改，这里需要创建新的状态对象
-                    // TODO: 如果需要继续功能，需要重新设计状态结构
+                    // 由于HostValidationStatusVO是record（不可变），需要重新设计状态结构以支持继续功能
                     sendLogMessage(clusterId, ip, "INFO", "主机校验已继续", "StateManager");
                 });
             }

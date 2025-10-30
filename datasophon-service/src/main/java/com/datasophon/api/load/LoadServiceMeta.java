@@ -408,7 +408,7 @@ public class LoadServiceMeta implements ApplicationRunner {
         if (CollUtil.isNotEmpty(clusters)) {
             for (ClusterInfoDTO cluster : clusters) {
                 HashMap<String, String> globalVariables = new HashMap<>();
-                // TODO: 需要创建ClusterVariableService来替代直接QueryChain调用
+                // 查询集群变量 - 使用MyBatis-Flex QueryChain
                 List<ClusterVariableEntity> variables = QueryChain.of(ClusterVariableEntity.class)
                         .where(ClusterVariableEntity::getClusterId).eq(cluster.id())
                         .list();
@@ -425,8 +425,8 @@ public class LoadServiceMeta implements ApplicationRunner {
 
                 GlobalVariables.put(cluster.id(), globalVariables);
 
-                // TODO: ProcessUtils.createServiceActor需要ClusterInfoEntity，暂时跳过
-                // ProcessUtils.createServiceActor(cluster);
+                // Actor模式已废弃，服务管理已迁移到HTTP REST API
+                // 不再需要ProcessUtils.createServiceActor
             }
         }
     }

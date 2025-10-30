@@ -60,8 +60,13 @@ public class HostGroupSyncServiceImpl implements HostGroupSyncService {
                 // 注意：这里需要实际的SSH执行逻辑，暂时只记录日志
                 log.debug("在主机 {} 上执行命令: {}", host.getHostname(), cmdStr);
                 
-                // TODO: 实际的SSH命令执行逻辑需要根据系统架构实现
-                // ExecResult result = sshService.executeCommand(host, execCmdCommand);
+                // 使用WorkerHttpClient提交SSH命令执行任务
+                com.datasophon.api.client.WorkerHttpClient workerHttpClient = 
+                        cn.hutool.extra.spring.SpringUtil.getBean(com.datasophon.api.client.WorkerHttpClient.class);
+                
+                // 提交任务到Worker执行SSH命令
+                String taskId = workerHttpClient.submitTask(host.getHostname(), execCmdCommand);
+                log.info("已提交SSH命令执行任务到Worker: hostname={}, taskId={}", host.getHostname(), taskId);
                 
             } catch (Exception e) {
                 log.error("在主机 {} 上同步用户组 {} 失败: {}", host.getHostname(), groupName, e.getMessage(), e);

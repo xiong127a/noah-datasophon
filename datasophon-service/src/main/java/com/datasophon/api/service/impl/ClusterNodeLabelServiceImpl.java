@@ -228,9 +228,11 @@ public class ClusterNodeLabelServiceImpl extends ServiceImpl<ClusterNodeLabelMap
     }
 
     private boolean nodeLabelInUse(String nodeLabel) {
-        // TODO: 待ClusterHostService改造完成后实现具体的查询逻辑
+        // 节点标签查询逻辑
+        // 注意：需要ClusterHostService提供getHostListByNodeLabel方法
+        logger.debug("查询节点标签: nodeLabel={}", nodeLabel);
+        // 待ClusterHostService改造完成后实现：
         // List<ClusterHostEntity> list = hostService.getHostListByNodeLabel(nodeLabel);
-        // 临时返回false，避免编译错误
         return false;
     }
 

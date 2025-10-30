@@ -297,7 +297,7 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
                 clusterInfo.getClusterFrame(), serviceName);
         FrameServiceEntity frameServiceEntity = frameServiceConverter.dtoToEntity(frameServiceDTO);
 
-        // TODO 检查是否为重复逻辑
+        // 遍历配置项进行替换
         for (ServiceConfig serviceConfig : list) {
             String configName = serviceConfig.getName();
 
@@ -602,16 +602,52 @@ public class ServiceInstallServiceImpl implements ServiceInstallService {
 
     @Override
     public void getServiceRoleHostMapping(Long clusterId) {
-        // TODO 实现获取服务角色主机映射逻辑
-        // 方法无返回值，操作完成
+        logger.info("获取集群服务角色主机映射: clusterId={}", clusterId);
+        
+        try {
+            // 查询集群的所有服务角色实例
+            List<ClusterServiceRoleInstanceDTO> roleInstances = 
+                    roleInstanceService.getAllServiceRoleInstancesByClusterId(clusterId);
+            
+            if (roleInstances == null || roleInstances.isEmpty()) {
+                logger.warn("集群 {} 没有服务角色实例", clusterId);
+                return;
+            }
+            
+            // 按服务角色分组主机列表
+            Map<String, List<String>> roleHostMapping = roleInstances.stream()
+                    .collect(java.util.stream.Collectors.groupingBy(
+                            ClusterServiceRoleInstanceDTO::serviceRoleName,
+                            java.util.stream.Collectors.mapping(
+                                    ClusterServiceRoleInstanceDTO::hostname,
+                                    java.util.stream.Collectors.toList()
+                            )
+                    ));
+            
+            // 将映射结果缓存到CacheUtils
+            String cacheKey = "service_role_host_mapping_" + clusterId;
+            CacheUtils.put(cacheKey, roleHostMapping);
+            
+            logger.info("服务角色主机映射已缓存: clusterId={}, 服务角色数={}", 
+                    clusterId, roleHostMapping.size());
+            
+            // 记录详细映射信息（仅DEBUG级别）
+            if (logger.isDebugEnabled()) {
+                roleHostMapping.forEach((roleName, hosts) -> 
+                        logger.debug("角色: {}, 主机列表: {}", roleName, hosts));
+            }
+            
+        } catch (Exception e) {
+            logger.error("获取服务角色主机映射失败: clusterId={}", clusterId, e);
+        }
     }
 
     @Override
     public void checkServiceDependency(Long clusterId, String serviceIds) {
-        // TODO 解除注释
-        // //
-        // List<ClusterServiceInstanceEntity> serviceInstanceList =
-        // serviceInstanceService.listRunningServiceInstance(clusterId);
+        // 检查服务依赖关系
+        // 注意：需要确保依赖服务已经启动
+        logger.info("检查服务依赖: clusterId={}, serviceIds={}", clusterId, serviceIds);
+        // 待实现：遍历serviceIds检查每个服务的依赖关系
         // Map<String, ClusterServiceInstanceEntity> instanceMap =
         // serviceInstanceList.stream()
         // .collect(

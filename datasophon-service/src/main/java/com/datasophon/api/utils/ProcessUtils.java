@@ -228,15 +228,28 @@ public class ProcessUtils {
     }
 
     /**
-     * HDFS EC方法 - 临时保留，待进一步重构到专用Service
-     * TODO: 将此方法迁移到HDFS相关的Service中
+     * HDFS EC方法 - 已迁移到HdfsEcService
+     * 此方法保留作为兼容性适配器，实际逻辑已移至HdfsEcServiceImpl
+     * 
+     * @deprecated 使用 HdfsEcService.handleHdfsEcCommand() 代替
      */
+    @Deprecated
     public static void hdfsEcMethond(Long serviceInstanceId, java.util.TreeSet<String> hosts,
             String type, String roleName) {
-        logger.warn("hdfsEcMethond called - this method needs to be migrated to HDFS service");
-        logger.debug("Parameters: serviceInstanceId={}, hosts={}, type={}, roleName={}",
-                serviceInstanceId, hosts, type, roleName);
-        // TODO: 实现HDFS EC逻辑或调用相应的Service
+        logger.info("调用HDFS EC方法（已迁移至HdfsEcService）: serviceInstanceId={}, type={}, roleName={}", 
+                serviceInstanceId, type, roleName);
+        
+        try {
+            // 获取HdfsEcService实例并委托调用
+            com.datasophon.api.service.HdfsEcService hdfsEcService = 
+                    cn.hutool.extra.spring.SpringUtil.getBean(com.datasophon.api.service.HdfsEcService.class);
+            
+            hdfsEcService.handleHdfsEcCommand(serviceInstanceId, hosts, type, roleName);
+            
+        } catch (Exception e) {
+            logger.error("HDFS EC操作失败: serviceInstanceId={}", serviceInstanceId, e);
+            throw new RuntimeException("HDFS EC操作失败", e);
+        }
     }
 
     /**

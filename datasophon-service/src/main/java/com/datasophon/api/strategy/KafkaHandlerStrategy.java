@@ -92,7 +92,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
 
                 if (enableKerberos) {
                         addConfigWithKerberos(globalVariables, map, configs, kbConfigs);
-                        // TODO 当kafka开启kerberos认证时，efak也要开启
+                        // 当kafka开启kerberos认证时，efak也要开启
                         enableSasl = true;
                         for (ServiceConfig config : list) {
                                 if ("cluster1.efak.sasl.enable".equals(config.getName())) {
@@ -101,7 +101,7 @@ public class KafkaHandlerStrategy extends ServiceHandlerAbstract implements Serv
                         }
                 } else {
                         removeConfigWithKerberos(list, map, configs);
-                        // TODO 当kafka关闭kerberos认证时，efak也要关闭
+                        // 当kafka关闭kerberos认证时，efak也要关闭
                         enableSasl = false;
                         for (ServiceConfig config : list) {
                                 if ("cluster1.efak.sasl.enable".equals(config.getName())) {

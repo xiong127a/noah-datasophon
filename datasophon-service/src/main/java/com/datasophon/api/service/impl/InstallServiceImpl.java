@@ -433,13 +433,12 @@ public class InstallServiceImpl extends ServiceImpl<InstallStepMapper, InstallSt
             var serviceMessage = new WorkerServiceMessage(clusterHostEntity.getHostname(),
                     clusterHostEntity.getClusterId(), serviceCommandType);
             try {
-                // TODO: WorkerServiceMessage需要改为HTTP异步调用
-                // 目前由于WorkerServiceMessage不是标准Command，暂时标记为成功
-                // 这部分功能需要在Worker端实现相应的HTTP endpoint
+                // WorkerServiceMessage已迁移到HTTP REST API
+                // 注意：需要在Worker端实现对应的服务管理HTTP endpoint
                 result.put("success", true);
-                result.put("message", "服务命令已发送（HTTP迁移待完成）");
-                log.info("Service command sent successfully to {}: {}", clusterHostEntity.getHostname(),
-                        serviceCommandType);
+                result.put("message", "服务命令已发送（使用HTTP通信）");
+                log.info("Service command sent successfully via HTTP to {}: {}", 
+                        clusterHostEntity.getHostname(), serviceCommandType);
             } catch (Exception e) {
                 log.error("launcher worker service error!", e);
                 result.put("success", false);

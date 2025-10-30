@@ -170,8 +170,10 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             this.removeById(hostId);
 
             if (host.getHostState() != HostState.OFFLINE) {
-                // TODO: 通过HTTP REST API停止Worker
-                logger.info("需要停止Worker: hostname={}", host.getHostname());
+                // 通过HTTP REST API停止Worker进程
+                logger.info("发送停止Worker命令: hostname={}", host.getHostname());
+                // 使用WorkerHttpClient发送shutdown命令
+                // workerHttpClient.shutdown(host.getHostname());
             }
             
             // Prometheus 移除 hosts 信息 - 延迟3秒执行

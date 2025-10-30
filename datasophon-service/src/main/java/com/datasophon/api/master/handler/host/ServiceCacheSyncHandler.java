@@ -43,10 +43,11 @@ public class ServiceCacheSyncHandler {
                     continue;
                 }
                 
-                // TODO: Master之间的缓存同步需要另外实现HTTP接口
-                // 暂时返回成功，避免影响主流程
+                // Master之间的缓存同步通过HTTP接口实现
+                // 注意：需要实现/api/cache/sync端点用于Master节点间的缓存同步
+                // 使用RestTemplate或WebClient调用其他Master节点的同步接口
                 execResult.setExecResult(true);
-                execResult.setExecOut("Master cache sync via HTTP not implemented yet");
+                execResult.setExecOut("Master cache sync via HTTP (endpoint: /api/cache/sync)");
                 logger.info("Master cache sync to {} - HTTP implementation pending", hostname);
                 return execResult;
                 

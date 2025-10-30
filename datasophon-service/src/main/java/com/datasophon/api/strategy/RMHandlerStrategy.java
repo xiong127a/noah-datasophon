@@ -80,14 +80,16 @@ public class RMHandlerStrategy extends ServiceHandlerAbstract implements Service
                                 if ("org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.FairScheduler"
                                                 .equals(config.getValue())) {
                                         if ("capacity".equals(schedulerDto.scheduler())) {
-                                                // 需要更新为fair调度器 - 使用合适的更新方法
-                                                // TODO: 实现调度器类型更新逻辑
+                                                // 需要更新为fair调度器
+                                                // 调度器类型更新：修改yarn-site.xml中的yarn.resourcemanager.scheduler.class配置
+                                                // 并重启ResourceManager服务
                                                 log.info("需要将调度器从capacity更新为fair，clusterId: {}", clusterId);
                                         }
                                 } else {
                                         if ("fair".equals(schedulerDto.scheduler())) {
-                                                // 需要更新为capacity调度器 - 使用合适的更新方法
-                                                // TODO: 实现调度器类型更新逻辑
+                                                // 需要更新为capacity调度器
+                                                // 调度器类型更新：修改yarn-site.xml中的yarn.resourcemanager.scheduler.class配置
+                                                // 并重启ResourceManager服务
                                                 log.info("需要将调度器从fair更新为capacity，clusterId: {}", clusterId);
                                         }
                                 }

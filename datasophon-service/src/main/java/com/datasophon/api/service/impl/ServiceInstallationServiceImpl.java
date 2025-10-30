@@ -30,7 +30,9 @@ import com.datasophon.api.kubernetes.handler.KubernetesHostTagHandler;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceConfigureHandler;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceInstallHandler;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceStartHandler;
+import com.datasophon.api.kubernetes.handler.KubernetesServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
+import com.datasophon.api.master.handler.service.ServiceStopHandler;
 import com.datasophon.api.load.ServiceConfigMap;
 import com.datasophon.api.master.handler.service.ServiceConfigureHandler;
 import com.datasophon.api.master.handler.service.ServiceHandler;
@@ -433,25 +435,28 @@ public class ServiceInstallationServiceImpl implements ServiceInstallationServic
         ClusterType depMode = getDepMode(serviceRoleInfo.getClusterId());
         ExecResult execResult;
 
-        if (depMode != null && depMode.isPvm()) {
-            // PVM模式：执行停止操作
-            // TODO: 需要实现ServiceStopHandler
-            logger.info("PVM模式停止服务暂未实现，模拟成功");
+        try {
+            if (depMode != null && depMode.isPvm()) {
+                // PVM模式：使用ServiceStopHandler执行停止操作
+                logger.info("PVM模式停止服务: {} on {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
+                ServiceStopHandler handler = new ServiceStopHandler();
+                execResult = handler.handlerRequest(serviceRoleInfo);
+            } else {
+                // Kubernetes模式：使用KubernetesServiceStopHandler停止Pod
+                logger.info("Kubernetes模式停止服务: {} on {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname());
+                KubernetesServiceStopHandler handler = new KubernetesServiceStopHandler();
+                execResult = handler.handlerRequest(serviceRoleInfo);
+            }
+        } catch (Exception e) {
+            logger.error("停止服务失败: {} on {}", serviceRoleInfo.getName(), serviceRoleInfo.getHostname(), e);
             execResult = new ExecResult();
-            execResult.setExecResult(true);
-            execResult.setExecOut("Service stopped successfully in PVM mode");
-        } else {
-            // Kubernetes模式：停止Pod
-            // TODO: 需要实现KubernetesServiceStopHandler
-            logger.info("Kubernetes模式停止服务暂未实现，模拟成功");
-            execResult = new ExecResult();
-            execResult.setExecResult(true);
-            execResult.setExecOut("Service stopped successfully in Kubernetes mode");
+            execResult.setExecResult(false);
+            execResult.setExecOut("Failed to stop service: " + e.getMessage());
         }
         
         logger.info("服务停止完成: {} on {}, 结果: {}", 
                 serviceRoleInfo.getName(), serviceRoleInfo.getHostname(),
-                execResult.getExecResult());
+                execResult != null ? execResult.getExecResult() : "null");
         return execResult;
     }
 

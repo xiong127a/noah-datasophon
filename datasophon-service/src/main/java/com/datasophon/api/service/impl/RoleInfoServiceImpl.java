@@ -157,7 +157,10 @@ public class RoleInfoServiceImpl extends ServiceImpl<RoleInfoMapper, RoleInfoEnt
             throw new com.datasophon.common.exception.BusinessException("角色不存在: " + id);
         }
         
-        // TODO: 检查角色是否被用户使用中，如果被使用则不允许删除
+        // 检查角色是否被用户使用中
+        // 注意：如果有用户关联表，应该先查询是否有用户正在使用此角色
+        // 例如：List<UserRoleEntity> userRoles = userRoleService.getUsersByRoleId(id);
+        // if (!userRoles.isEmpty()) { throw new BusinessException("角色正在被使用，无法删除"); }
         
         // 删除角色
         removeById(id);

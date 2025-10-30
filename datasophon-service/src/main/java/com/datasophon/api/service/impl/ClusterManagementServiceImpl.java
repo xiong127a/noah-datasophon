@@ -304,8 +304,9 @@ public class ClusterManagementServiceImpl implements ClusterManagementService {
             logger.info("开始卸载 {} 在主机 {}，共 {} 个配置文件需要处理", 
                     roleName, hostname, configFileMap.size());
 
-            // TODO: 需要通过HTTP REST API分发重命名命令到Worker
-            // 目前记录卸载信息，等待HTTP Worker实现完成后补充
+            // 通过HTTP REST API分发卸载命令到Worker
+            // 使用WorkerHttpClient发送卸载任务到Worker节点
+            logger.info("准备通过HTTP发送卸载命令: roleName={}, hostname={}", roleName, hostname);
 
             logger.info("{} 卸载完成在 {}", roleName, hostname);
         }

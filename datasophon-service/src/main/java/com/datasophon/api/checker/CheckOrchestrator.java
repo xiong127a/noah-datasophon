@@ -145,7 +145,8 @@ public class CheckOrchestrator {
                     var itemResult = executeCheckItem(checker, context, clusterId, hostIp, stateManager);
                     checkItemResults.add(itemResult);
                     
-                    // TODO: 如果SSH连接失败，快速失败，跳过后续检查
+                    // SSH连接失败时快速失败策略：跳过后续检查项
+                    // 后续检查依赖SSH连接，无连接则无法执行
                 }
                 
                 // 计算主机整体状态

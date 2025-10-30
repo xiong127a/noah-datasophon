@@ -17,17 +17,24 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.common.command.HdfsEcCommand;
+import java.util.TreeSet;
 
 /**
- * HDFS纠删码服务
- * 替代HdfsECActor，使用Spring Service实现
+ * HDFS EC (Erasure Coding) 服务接口
+ * 替代HdfsECActor，处理HDFS纠删码相关操作
+ * 
+ * @author DataSophon Team
  */
 public interface HdfsEcService {
     
     /**
-     * 处理HDFS纠删码命令
+     * 处理HDFS EC命令
+     * 用于管理HDFS扩容和缩容时的纠删码配置
+     * 
+     * @param serviceInstanceId 服务实例ID
+     * @param hosts 主机列表
+     * @param type 操作类型（如 "whitelist"）
+     * @param roleName 角色名称（如 "NameNode"）
      */
-    void handleHdfsEcCommand(HdfsEcCommand command);
+    void handleHdfsEcCommand(Long serviceInstanceId, TreeSet<String> hosts, String type, String roleName);
 }
-

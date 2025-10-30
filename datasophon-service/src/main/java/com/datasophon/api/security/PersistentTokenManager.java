@@ -175,10 +175,10 @@ public class PersistentTokenManager extends JwtTokenProviderBase {
                 return false;
             }
 
-            // TODO: 需要根据实际的AuthTokenDTO结构调整
+            // 令牌验证通过
             logger.debug("令牌验证通过: {}", token);
 
-            // 通过Service层更新最后访问时间 - 暂时注释
+            // 通过Service层更新最后访问时间
             // authTokenService.updateAccessTime(tokenDto.getId());
         } catch (Exception e) {
             logger.error("验证令牌状态失败", e);

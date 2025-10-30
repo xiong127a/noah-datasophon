@@ -55,7 +55,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 
 /**
  * Prometheus集成服务实现
@@ -101,6 +100,9 @@ public class PrometheusIntegrationServiceImpl implements PrometheusIntegrationSe
     
     @Autowired
     private ClusterHostService clusterHostService;
+    
+    @Autowired
+    private com.datasophon.api.scheduler.AsyncTaskScheduler asyncTaskScheduler;
 
     @Override
     // @Async removed - 改为同步执行，避免Spring线程池卡死问题
@@ -352,22 +354,130 @@ public class PrometheusIntegrationServiceImpl implements PrometheusIntegrationSe
     
     @Override
     public void generateHostPrometheusConfigDelayed(Long clusterId, int delaySeconds) {
-        // 使用异步方式延迟生成主机Prometheus配置
-        CompletableFuture.runAsync(() -> {
+        // 使用 db-scheduler 异步执行，避免Spring @Async线程池卡死问题
+        logger.info("提交主机Prometheus配置生成任务到db-scheduler: clusterId={}, delaySeconds={}", 
+                clusterId, delaySeconds);
+        asyncTaskScheduler.executeAsync("prometheus-host-config-gen", () -> {
             try {
-                if (delaySeconds > 0) {
-                    Thread.sleep(delaySeconds * 1000L);
-                }
-                logger.info("开始生成主机Prometheus配置: clusterId={}", clusterId);
-                // TODO: 实现主机Prometheus配置生成逻辑
-                // 这里需要根据实际需求调用相应的配置生成方法
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                logger.error("生成主机Prometheus配置被中断: clusterId={}", clusterId, e);
+                logger.info("开始生成主机Prometheus配置（db-scheduler异步任务）: clusterId={}", clusterId);
+                generateHostPrometheusConfigInternal(clusterId);
+                logger.info("主机Prometheus配置生成完成: clusterId={}", clusterId);
             } catch (Exception e) {
                 logger.error("生成主机Prometheus配置失败: clusterId={}", clusterId, e);
+                throw new RuntimeException("生成主机Prometheus配置失败", e);
             }
-        });
+        }, delaySeconds);
+    }
+    
+    /**
+     * 内部实际执行主机Prometheus配置生成逻辑
+     * 从PrometheusActor恢复的GenerateHostPrometheusConfig处理逻辑
+     * 
+     * 生成配置文件：
+     * - worker.json: Worker节点监控配置（仅PVM模式）
+     * - linux.json: Linux节点监控配置（node_exporter）
+     * - master.json: Master节点监控配置
+     */
+    private void generateHostPrometheusConfigInternal(Long clusterId) throws Exception {
+        logger.info("内部执行主机Prometheus配置生成: clusterId={}", clusterId);
+        
+        HashMap<Generators, List<ServiceConfig>> configFileMap = new HashMap<>();
+        
+        // 获取集群部署类型
+        ClusterType depType = clusterInfoService.getById(clusterId).getDepType();
+        boolean isKubernetes = depType == ClusterType.KUBERNETES;
+        
+        // 获取所有管理的主机列表
+        List<ClusterHostEntity> hostList = clusterHostService.getAllManagedHostsByClusterId(clusterId);
+        if (hostList == null || hostList.isEmpty()) {
+            logger.warn("集群 {} 没有管理的主机，跳过配置生成", clusterId);
+            return;
+        }
+        
+        logger.info("集群 {} 共有 {} 个主机，部署类型: {}", clusterId, hostList.size(), depType);
+        
+        // 获取Prometheus实例
+        ClusterServiceRoleInstanceDTO prometheusInstance = roleInstanceService.getOneServiceRole(
+                PROMETHEUS_SERVICE_NAME, null, clusterId);
+        
+        if (prometheusInstance == null) {
+            logger.warn("集群 {} 未找到Prometheus实例，跳过配置生成", clusterId);
+            return;
+        }
+        
+        // 创建Worker配置生成器（仅PVM模式）
+        Generators workerGenerators = new Generators();
+        workerGenerators.setFilename(WORKER_CONFIG_FILENAME);
+        workerGenerators.setOutputDirectory(CONFIG_OUTPUT_DIRECTORY);
+        workerGenerators.setConfigFormat(CONFIG_FORMAT_CUSTOM);
+        workerGenerators.setTemplateName(SCRAPE_TEMPLATE_NAME);
+
+        // 创建Node配置生成器（Linux节点监控）
+        Generators nodeGenerators = new Generators();
+        nodeGenerators.setFilename(NODE_CONFIG_FILENAME);
+        nodeGenerators.setOutputDirectory(CONFIG_OUTPUT_DIRECTORY);
+        nodeGenerators.setConfigFormat(CONFIG_FORMAT_CUSTOM);
+        nodeGenerators.setTemplateName(SCRAPE_TEMPLATE_NAME);
+
+        // 创建Master配置生成器
+        Generators masterGenerators = new Generators();
+        masterGenerators.setFilename(MASTER_CONFIG_FILENAME);
+        masterGenerators.setOutputDirectory(CONFIG_OUTPUT_DIRECTORY);
+        masterGenerators.setConfigFormat(CONFIG_FORMAT_CUSTOM);
+        masterGenerators.setTemplateName(SCRAPE_TEMPLATE_NAME);
+
+        ArrayList<ServiceConfig> workerServiceConfigs = new ArrayList<>();
+        ArrayList<ServiceConfig> nodeServiceConfigs = new ArrayList<>();
+        ArrayList<ServiceConfig> masterServiceConfigs = new ArrayList<>();
+
+        // 添加Master配置
+        ServiceConfig masterConfig = new ServiceConfig();
+        masterConfig.setName("master_" + CacheUtils.get(Constants.HOSTNAME));
+        masterConfig.setValue(CacheUtils.get(Constants.HOSTNAME) + ":" + MASTER_PORT);
+        masterConfig.setRequired(true);
+        masterServiceConfigs.add(masterConfig);
+
+        // 为每个主机添加Worker和Node配置
+        for (ClusterHostEntity clusterHostEntity : hostList) {
+            // 非Kubernetes模式才生成worker配置
+            if (!isKubernetes) {
+                ServiceConfig serviceConfig = new ServiceConfig();
+                serviceConfig.setName("worker_" + clusterHostEntity.getHostname());
+                serviceConfig.setValue(clusterHostEntity.getHostname() + ":" + WORKER_PORT);
+                serviceConfig.setRequired(true);
+                workerServiceConfigs.add(serviceConfig);
+            }
+
+            // 所有模式都生成node_exporter配置
+            ServiceConfig nodeConfig = new ServiceConfig();
+            nodeConfig.setName("node_" + clusterHostEntity.getHostname());
+            nodeConfig.setValue(clusterHostEntity.getHostname() + ":" + NODE_PORT);
+            nodeConfig.setRequired(true);
+            nodeServiceConfigs.add(nodeConfig);
+        }
+
+        // 添加配置到configFileMap
+        configFileMap.put(masterGenerators, masterServiceConfigs);
+        configFileMap.put(nodeGenerators, nodeServiceConfigs);
+        if (!isKubernetes) {
+            configFileMap.put(workerGenerators, workerServiceConfigs);
+            logger.info("生成Worker配置: {} 个Worker节点", workerServiceConfigs.size());
+        }
+        
+        logger.info("生成Node配置: {} 个Node节点", nodeServiceConfigs.size());
+        logger.info("生成Master配置: {} 个Master节点", masterServiceConfigs.size());
+
+        // 准备ServiceRoleInfo
+        ServiceRoleInfo serviceRoleInfo = new ServiceRoleInfo();
+        serviceRoleInfo.setClusterId(clusterId);
+        serviceRoleInfo.setName(PROMETHEUS_SERVICE_NAME);
+        serviceRoleInfo.setParentName("PROMETHEUS");
+        serviceRoleInfo.setConfigFileMap(configFileMap);
+        serviceRoleInfo.setDecompressPackageName(PROMETHEUS_PACKAGE_NAME);
+        serviceRoleInfo.setHostname(prometheusInstance.hostname());
+        
+        // 重新加载Prometheus配置
+        reloadPrometheusConfig(prometheusInstance, isKubernetes, serviceRoleInfo);
     }
 }
 
