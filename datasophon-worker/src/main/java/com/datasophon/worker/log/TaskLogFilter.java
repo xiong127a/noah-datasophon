@@ -49,9 +49,14 @@ public class TaskLogFilter extends Filter<ILoggingEvent> {
      */
     @Override
     public FilterReply decide(ILoggingEvent event) {
+        // 防御性检查：如果 event 为 null，直接拒绝
+        if (event == null) {
+            return FilterReply.DENY;
+        }
+        
         FilterReply filterReply = FilterReply.DENY;
         if ((event.getLoggerName().startsWith(TaskConstants.TASK_LOG_LOGGER_NAME))
-                || event.getLevel().isGreaterOrEqual(level)) {
+                || (level != null && event.getLevel().isGreaterOrEqual(level))) {
             filterReply = FilterReply.ACCEPT;
         }
         logger.debug("task log filter, thread name:{}, loggerName:{}, filterReply:{}, level:{}", event.getThreadName(),

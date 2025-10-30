@@ -36,6 +36,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import jakarta.annotation.PostConstruct;
+
 /**
  * 主机连接检查服务实现
  * 替代HostConnectActor，负责检查主机SSH连接和受管状态
@@ -52,9 +54,15 @@ public class HostConnectCheckServiceImpl implements HostConnectCheckService {
     @Autowired
     private ClusterHostService clusterHostService;
 
-    // SSH连接服务
-    private final SshConnectionService sshService = 
-            SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+    // SSH连接服务 - 延迟初始化以避免在Spring上下文就绪前访问
+    private SshConnectionService sshService;
+    
+    @PostConstruct
+    public void init() {
+        // 在Spring上下文初始化完成后获取SSH连接服务
+        this.sshService = SshConnectionServiceFactory.getInstance().getDefaultSshConnectionService();
+        logger.info("SSH连接服务初始化完成");
+    }
 
     @Override
     @Async("taskExecutor")
