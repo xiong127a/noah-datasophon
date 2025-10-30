@@ -19,7 +19,9 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.service.CommandExecutionService;
+import com.datasophon.api.service.MasterServiceExecutionService;
 import com.datasophon.api.utils.RollingRestartUtils;
+import com.datasophon.common.command.ExecuteServiceRoleCommand;
 import com.datasophon.common.command.SubmitActiveTaskNodeCommand;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.enums.ServiceRoleType;
@@ -53,6 +55,9 @@ public class SubmitTaskNodeServiceImpl implements SubmitTaskNodeService {
     
     @Autowired(required = false)
     private WorkerServiceExecutionService workerServiceExecutionService;
+    
+    @Autowired(required = false)
+    private MasterServiceExecutionService masterServiceExecutionService;
 
     @Override
     @Async("taskExecutor")
@@ -122,8 +127,24 @@ public class SubmitTaskNodeServiceImpl implements SubmitTaskNodeService {
                                   List<ServiceRoleInfo> masterRoles) {
         logger.info("开始提交 {} master角色", node);
         
-        // TODO: 实现Master角色的实际执行逻辑
-        logger.warn("Master角色执行逻辑待实现: {}", node);
+        if (masterServiceExecutionService != null) {
+            // 构建执行命令
+            ExecuteServiceRoleCommand command = new ExecuteServiceRoleCommand(
+                    submitActiveTaskNodeCommand.getClusterId(), node, masterRoles);
+            command.setServiceRoleType(ServiceRoleType.MASTER);
+            command.setCommandType(submitActiveTaskNodeCommand.getCommandType());
+            command.setDag(dag);
+            command.setClusterCode(submitActiveTaskNodeCommand.getClusterCode());
+            command.setActiveTaskList(activeTaskList);
+            command.setErrorTaskList(errorTaskList);
+            command.setReadyToSubmitTaskList(readyToSubmitTaskList);
+            command.setCompleteTaskList(completeTaskList);
+            
+            // 调用Master服务执行
+            masterServiceExecutionService.executeServiceRoleCommand(command);
+        } else {
+            logger.error("MasterServiceExecutionService未找到，无法执行Master角色: {}", node);
+        }
     }
 
     private void submitWorkerRoles(SubmitActiveTaskNodeCommand submitActiveTaskNodeCommand,
@@ -156,21 +177,7 @@ public class SubmitTaskNodeServiceImpl implements SubmitTaskNodeService {
                         elseRole,
                         ServiceRoleType.WORKER);
             } else {
-                // 降级处理：使用CommandExecutionService
-                commandExecutionService.buildExecuteServiceRoleCommand(
-                        submitActiveTaskNodeCommand.getClusterId(),
-                        submitActiveTaskNodeCommand.getCommandType(),
-                        submitActiveTaskNodeCommand.getClusterCode(),
-                        dag,
-                        activeTaskList,
-                        errorTaskList,
-                        readyToSubmitTaskList,
-                        completeTaskList,
-                        node,
-                        serviceNode.getElseRoles(),
-                        elseRole,
-                        null, // ActorRef已废弃
-                        ServiceRoleType.WORKER);
+                logger.warn("WorkerServiceExecutionService未找到，跳过Worker角色执行: {}", node);
             }
 
             // 滚动重启控制

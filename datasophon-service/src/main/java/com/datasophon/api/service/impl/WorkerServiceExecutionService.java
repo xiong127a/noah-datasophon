@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.enums.ServiceRoleType;
 import com.datasophon.common.model.DAGGraph;
@@ -37,7 +38,7 @@ public interface WorkerServiceExecutionService {
      */
     void executeWorkerServiceRole(
             Long clusterId,
-            Integer commandType,
+            CommandType commandType,
             String clusterCode,
             DAGGraph<String, ServiceNode, String> dag,
             Map<String, ServiceExecuteState> activeTaskList,
