@@ -23,7 +23,8 @@ import com.datasophon.common.command.BaseCommand;
 import com.datasophon.common.command.SystemInfoResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -72,12 +73,14 @@ public class WorkerHttpClient {
                     .contentType(MediaType.APPLICATION_JSON)
                     .bodyValue(command)
                     .retrieve()
-                    .onStatus(HttpStatus::isError, clientResponse -> {
-                        logger.error("Failed to submit task to worker: {}, status: {}", 
-                                workerHost, clientResponse.statusCode());
-                        return Mono.error(new RuntimeException("Failed to submit task: " + clientResponse.statusCode()));
-                    })
-                    .bodyToMono(Map.class)
+                    .onStatus(HttpStatusCode::isError, clientResponse ->
+                        clientResponse.bodyToMono(String.class).flatMap(errorBody -> {
+                            logger.error("Failed to submit task to worker: {}, status: {}, error: {}", 
+                                    workerHost, clientResponse.statusCode(), errorBody);
+                            return Mono.error(new RuntimeException("Failed to submit task: " + clientResponse.statusCode()));
+                        })
+                    )
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                     .timeout(DEFAULT_TIMEOUT)
                     .block();
             
@@ -107,13 +110,14 @@ public class WorkerHttpClient {
         logger.debug("Getting task status from worker: {}, taskId: {}", workerHost, taskId);
         
         try {
-            return webClientBuilder.build()
+            Map<String, Object> result = webClientBuilder.build()
                     .get()
                     .uri(url)
                     .retrieve()
-                    .bodyToMono(Map.class)
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                     .timeout(Duration.ofSeconds(30))
                     .block();
+            return result;
         } catch (Exception e) {
             logger.error("Failed to get task status from worker: {}, taskId: {}", workerHost, taskId, e);
             throw new RuntimeException("Failed to get task status", e);
@@ -136,7 +140,7 @@ public class WorkerHttpClient {
                     .delete()
                     .uri(url)
                     .retrieve()
-                    .bodyToMono(Map.class)
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                     .timeout(Duration.ofSeconds(30))
                     .block();
             
@@ -224,13 +228,14 @@ public class WorkerHttpClient {
         logger.debug("Checking health of worker: {}", workerHost);
         
         try {
-            return webClientBuilder.build()
+            Map<String, Object> result = webClientBuilder.build()
                     .get()
                     .uri(url)
                     .retrieve()
-                    .bodyToMono(Map.class)
+                    .bodyToMono(new ParameterizedTypeReference<Map<String, Object>>() {})
                     .timeout(Duration.ofSeconds(10))
                     .block();
+            return result;
         } catch (Exception e) {
             logger.error("Failed to check health of worker: {}", workerHost, e);
             return Map.of("status", "DOWN", "error", e.getMessage());
