@@ -56,7 +56,6 @@ import com.datasophon.kubernetes.util.CommonUtil;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -68,8 +67,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 
 @Service("clusterServiceRoleInstanceService")
 public class ClusterServiceRoleInstanceServiceImpl
@@ -226,8 +223,7 @@ public class ClusterServiceRoleInstanceServiceImpl
         }
         logger.info("start to get {} log from {}", serviceRole.serviceRoleName(), roleInstance.getHostname());
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(roleInstance.getClusterId());
-        Future<Object> logFuture;
-        Timeout timeout = new Timeout(Duration.create(60, TimeUnit.SECONDS));
+        
         if (clusterInfo.getDepType() != null && clusterInfo.getDepType().isKubernetes()) {
             KubernetesGetLogCommand kubernetesGetLogCommand = new KubernetesGetLogCommand();
             kubernetesGetLogCommand.setLogFile(logFile);

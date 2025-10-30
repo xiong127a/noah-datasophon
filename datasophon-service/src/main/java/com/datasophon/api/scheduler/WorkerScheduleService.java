@@ -22,14 +22,14 @@ import com.datasophon.api.service.host.ClusterHostService;
 import com.datasophon.dao.entity.ClusterInfoEntity;
 import com.datasophon.dao.entity.ClusterHostEntity;
 import com.datasophon.common.enums.ManagementStatus;
-import com.datasophon.common.command.PingCommand;
-import com.datasophon.common.utils.ExecResult;
+import com.datasophon.common.command.SystemInfoResult;
 import com.datasophon.api.client.WorkerHttpClient;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
@@ -63,6 +63,9 @@ public class WorkerScheduleService {
     
     @Autowired
     private ClusterHostService clusterHostService;
+    
+    @Autowired
+    private WorkerHttpClient workerHttpClient;
 
     // ================== 定时任务业务方法 ==================
 
@@ -403,9 +406,7 @@ public class WorkerScheduleService {
      */
     private boolean checkWorkerConnection(String hostname) {
         try {
-            String result = workerHttpClient.ping(hostname)
-                    .block(java.time.Duration.ofSeconds(30));
-            return "pong".equals(result);
+            return workerHttpClient.ping(hostname);
         } catch (Exception e) {
             log.debug("Worker节点{}连接检查失败: {}", hostname, e.getMessage());
             return false;
@@ -417,9 +418,8 @@ public class WorkerScheduleService {
      */
     private boolean quickHealthCheck(String hostname) {
         try {
-            String result = workerHttpClient.checkHealth(hostname)
-                    .block(java.time.Duration.ofSeconds(10));
-            return "OK".equals(result);
+            Map<String, Object> result = workerHttpClient.checkHealth(hostname);
+            return "UP".equals(result.get("status"));
         } catch (Exception e) {
             return false;
         }
@@ -491,9 +491,12 @@ public class WorkerScheduleService {
      */
     private void collectWorkerSystemInfo(String hostname) {
         try {
-            workerHttpClient.getSystemInfo(hostname)
-                    .block(java.time.Duration.ofSeconds(60));
-            log.debug("成功收集Worker节点{}的系统信息", hostname);
+            SystemInfoResult systemInfo = workerHttpClient.getSystemInfo(hostname);
+            if (systemInfo != null && systemInfo.getExecResult()) {
+                log.debug("成功收集Worker节点{}的系统信息", hostname);
+            } else {
+                log.debug("收集Worker节点{}系统信息失败", hostname);
+            }
         } catch (Exception e) {
             log.debug("收集Worker节点{}系统信息失败: {}", hostname, e.getMessage());
         }

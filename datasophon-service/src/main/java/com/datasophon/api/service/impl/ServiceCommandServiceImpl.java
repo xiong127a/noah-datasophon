@@ -247,9 +247,8 @@ public class ServiceCommandServiceImpl implements ServiceCommandService {
             }
 
             if (newWebUi != null) {
-                var webuisConverter = org.springframework.beans.factory.BeanFactoryUtils
-                        .beanOfType(org.springframework.context.ApplicationContext.class,
-                                com.datasophon.api.converter.ClusterServiceRoleInstanceWebuisConverter.class);
+                var webuisConverter = cn.hutool.extra.spring.SpringUtil
+                        .getBean(com.datasophon.api.converter.ClusterServiceRoleInstanceWebuisConverter.class);
                 if (webuisConverter != null) {
                     var webuisEntity = webuisConverter.dtoToEntity(webUiDTO);
                     webuisEntity.setWebUrl(newWebUi);

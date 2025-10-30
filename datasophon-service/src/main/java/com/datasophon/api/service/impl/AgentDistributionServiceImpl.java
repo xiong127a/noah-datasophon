@@ -53,6 +53,7 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
     private final ParcelRepositoryService repositoryService;
     private final ConfigBean configBean;
     private final RepositoryDownloaderFactory downloaderFactory;
+    private final com.datasophon.api.client.WorkerHttpClient workerHttpClient;
     
     // SSH连接服务（懒加载，第一次使用时才初始化）
     private volatile SshConnectionService sshService;
@@ -165,10 +166,8 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
             // 启动异步分发任务（从本地上传，跳过下载步骤）
             // 添加30分钟超时控制，防止长时间阻塞
             String finalHostname = hostname;
-            CompletableFuture.runAsync(() -> {
-                distributeToHost(clusterId, hostIp, finalHostname, sshUser, sshPort, sshPassword,
-                        localPackagePath, cluster.getClusterFrame());
-            }, executorService)
+            CompletableFuture.runAsync(() -> distributeToHost(clusterId, hostIp, finalHostname, sshUser, sshPort, sshPassword,
+                    localPackagePath, cluster.getClusterFrame()), executorService)
             .orTimeout(30, TimeUnit.MINUTES)  // 30分钟超时
             .exceptionally(ex -> {
                 log.error("Agent分发失败或超时: 集群={}, 主机={}, 错误={}", 
@@ -220,12 +219,12 @@ public class AgentDistributionServiceImpl implements AgentDistributionService {
                     .build();
             
             // 创建分发步骤列表（跳过下载步骤，直接从本地上传）
-            List<AgentDistributionStep> steps = Arrays.asList(
+            List<AgentDistributionStep> steps = List.of(
                     new UploadAgentStep(getSshService()),
                     new VerifyMd5Step(getSshService()),
                     new DecompressAgentStep(getSshService()),
                     new StartAgentStep(getSshService(), configBean, clusterFrame),
-                    new VerifyWorkerConnectionStep(clusterHostService)  // ✅ 验证Worker连接并收集硬件信息
+                    new VerifyWorkerConnectionStep(clusterHostService, workerHttpClient)  // ✅ 验证Worker连接并收集硬件信息
             );
             
             int totalSteps = steps.size();

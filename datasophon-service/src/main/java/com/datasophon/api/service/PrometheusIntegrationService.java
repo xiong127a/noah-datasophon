@@ -17,6 +17,7 @@
 
 package com.datasophon.api.service;
 
+import com.datasophon.common.command.GenerateAlertConfigCommand;
 import com.datasophon.common.command.GeneratePrometheusConfigCommand;
 import com.datasophon.common.command.GenerateSRPromConfigCommand;
 
@@ -35,5 +36,10 @@ public interface PrometheusIntegrationService {
      * 生成StarRocks/Doris的Prometheus配置
      */
     void generateStarRocksPrometheusConfig(GenerateSRPromConfigCommand command);
+    
+    /**
+     * 生成告警配置
+     */
+    void generateAlertConfig(GenerateAlertConfigCommand command);
 }
 
