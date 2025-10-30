@@ -1,19 +1,15 @@
 package com.datasophon.api.master.alert;
 
 import cn.hutool.extra.spring.SpringUtil;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ServiceStateManagementService;
-import com.datasophon.common.command.KubernetesServiceRoleOperateCommand;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.dto.ClusterServiceRoleInstanceDTO;
 import com.datasophon.common.enums.AlertLevel;
 import com.datasophon.api.utils.ClusterInfoUtils;
-import com.datasophon.kubernetes.actor.KubernetesStatusServiceActor;
+import com.datasophon.kubernetes.actor.handler.KubernetesStatusHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.concurrent.TimeUnit;
 
 
 /**
@@ -30,40 +26,36 @@ public class KubernetesServiceRoleStatusService {
 
     public void checkStatusAndOpAlert(ClusterServiceRoleInstanceDTO roleInstanceDto) {
 
-        //logger.info("start to check service status {} in {}", roleInstanceDto.serviceRoleName(), roleInstanceDto.hostname());
+        logger.info("start to check service status {} in {}", roleInstanceDto.serviceRoleName(), roleInstanceDto.hostname());
 
         //准备调用参数
-        KubernetesServiceRoleOperateCommand kubernetesServiceRoleOperateCommand = new KubernetesServiceRoleOperateCommand();
-        kubernetesServiceRoleOperateCommand.setClusterId(roleInstanceDto.clusterId());
-        kubernetesServiceRoleOperateCommand.setServiceName(roleInstanceDto.serviceName());
-        kubernetesServiceRoleOperateCommand.setServiceRoleName(roleInstanceDto.serviceRoleName());
-        kubernetesServiceRoleOperateCommand.setHostname(roleInstanceDto.hostname());
         ClusterInfoService clusterInfoService = SpringUtil.getBean(ClusterInfoService.class);
         String kubeConfig = clusterInfoService.getKubeConfigByClusterId(roleInstanceDto.clusterId());
-        kubernetesServiceRoleOperateCommand.setKubeConfig(kubeConfig);
         String namespace = ClusterInfoUtils.getKubernetesNamespace(roleInstanceDto.clusterId());
-        kubernetesServiceRoleOperateCommand.setNamespace(namespace);
-
-        //调用查询状态
-        ActorRef startActor = ActorUtils.getLocalActor(KubernetesStatusServiceActor.class, ActorUtils.getActorRefName(KubernetesStatusServiceActor.class));
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> startFuture = Patterns.ask(startActor, kubernetesServiceRoleOperateCommand, timeout);
 
         try {
+            // 直接调用KubernetesStatusHandler检查状态
+            KubernetesStatusHandler statusHandler = new KubernetesStatusHandler(
+                    roleInstanceDto.serviceName(), 
+                    roleInstanceDto.serviceRoleName());
+            ExecResult execResult = statusHandler.status(namespace, kubeConfig, roleInstanceDto.hostname());
+            
             ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
 
             //处理状态告警
-            ExecResult execResult = (ExecResult) Await.result(startFuture, timeout.duration());
             if (execResult.getExecResult()) {
                 //状态正常   恢复alert
                 serviceStateManagementService.recoverAlert(roleInstanceDto);
+                logger.info("Service role {} on {} is healthy", roleInstanceDto.serviceRoleName(), roleInstanceDto.hostname());
             } else {
                 //保存alert
                 String alertTargetName = roleInstanceDto.serviceRoleName() + " Survive";
                 serviceStateManagementService.saveAlert(roleInstanceDto, alertTargetName, AlertLevel.EXCEPTION, "restart");
+                logger.warn("Service role {} on {} is unhealthy", roleInstanceDto.serviceRoleName(), roleInstanceDto.hostname());
             }
 
         } catch (Exception e) {
+            logger.error("Failed to check service status {} on {}", roleInstanceDto.serviceRoleName(), roleInstanceDto.hostname(), e);
             ServiceStateManagementService serviceStateManagementService = SpringUtil.getBean(ServiceStateManagementService.class);
             // save alert
             String alertTargetName = roleInstanceDto.serviceRoleName() + " Survive";

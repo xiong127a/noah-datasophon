@@ -80,10 +80,6 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
         </dependency>
-        <dependency>
-            <groupId>org.apache.pekko</groupId>
-            <artifactId>pekko-slf4j_3</artifactId>
-        </dependency>
         
         <!-- 序列化和注解 -->
         <dependency>
