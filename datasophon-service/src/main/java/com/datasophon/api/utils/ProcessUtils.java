@@ -240,41 +240,13 @@ public class ProcessUtils {
     }
 
     /**
-     * 为集群创建Service Actor
-     * 为每个集群创建对应的MasterServiceActor，用于处理集群内的服务角色执行命令
+     * 为集群创建Service Actor（已改造为无操作）
+     * 原MasterServiceActor功能已迁移到Spring Service，不再需要创建Actor
      * 
      * @param clusterInfo 集群信息实体
      */
     public static void createServiceActor(ClusterInfoEntity clusterInfo) {
-        try {
-            logger.info("开始为集群 {} 创建Service Actor", clusterInfo.getClusterCode());
-
-            // 获取集群主机列表，为每个主机创建对应的MasterServiceActor
-            ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
-
-            // 获取集群中所有管理的主机
-            List<ClusterHostEntity> hostList = clusterHostService.getHostListByClusterIdAndManaged(clusterInfo.getId());
-
-            for (ClusterHostEntity host : hostList) {
-                if (ManagementStatus.MANAGED.equals(host.getManagementStatus())) { // 只为受管理的主机创建Actor
-                    String actorName = clusterInfo.getClusterCode() + "-serviceActor-" + host.getHostname();
-
-                    try {
-                        // 使用ActorUtils直接创建MasterServiceActor
-                        com.datasophon.api.master.ActorUtils.getLocalActor(
-                                com.datasophon.api.master.MasterServiceActor.class,
-                                actorName);
-
-                        logger.info("成功创建MasterServiceActor: {}", actorName);
-                    } catch (Exception e) {
-                        logger.error("创建MasterServiceActor失败: {}", actorName, e);
-                    }
-                }
-            }
-
-            logger.info("集群 {} 的Service Actor创建完成", clusterInfo.getClusterCode());
-        } catch (Exception e) {
-            logger.error("为集群 {} 创建Service Actor时发生错误", clusterInfo.getClusterCode(), e);
-        }
+        // Actor功能已迁移到Spring Service，此方法保留仅为兼容性
+        logger.info("集群 {} 无需创建Actor（已使用Spring Service替代）", clusterInfo.getClusterCode());
     }
 }

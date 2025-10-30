@@ -39,7 +39,6 @@ import com.datasophon.dao.entity.NoticeGroupUserEntity;
 import com.datasophon.dao.mapper.NoticeGroupMapper;
 
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import org.apache.pekko.actor.ActorRef;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 

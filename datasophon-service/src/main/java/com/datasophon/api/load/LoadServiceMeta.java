@@ -23,7 +23,6 @@ package com.datasophon.api.load;
 import com.datasophon.api.load.model.LoadContext;
 import com.datasophon.api.load.model.ParseResult;
 import com.datasophon.api.load.model.ServiceMetaConfig;
-import com.datasophon.api.master.WorkerDiscoveryActor;
 import com.datasophon.api.service.BatchServiceMetadataTransactionService;
 
 import cn.hutool.core.collection.CollUtil;
@@ -32,8 +31,6 @@ import cn.hutool.core.io.file.FileReader;
 import cn.hutool.core.net.NetUtil;
 import cn.hutool.crypto.SecureUtil;
 import com.alibaba.fastjson2.JSONObject;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.serviceCacheSyncActor;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.FrameInfoService;
 import com.datasophon.api.utils.PackageUtils;
@@ -48,7 +45,6 @@ import com.datasophon.dao.entity.FrameInfoEntity;
 import com.datasophon.dao.entity.FrameServiceEntity;
 import com.mybatisflex.core.query.QueryChain;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.pekko.actor.Props;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.BeanUtils;
@@ -65,8 +61,6 @@ import java.util.stream.Collectors;
 import java.util.function.Function;
 
 import org.apache.maven.artifact.versioning.ComparableVersion;
-
-import static com.datasophon.api.master.ActorUtils.getActorRefName;
 
 @Component
 public class LoadServiceMeta implements ApplicationRunner {
@@ -146,13 +140,8 @@ public class LoadServiceMeta implements ApplicationRunner {
             logger.info("框架 {} 处理完成", framePath.getName());
         }
         
-        // 启动服务缓存同步Actor
-        ActorUtils.actorSystem.actorOf(Props.create(serviceCacheSyncActor.class),
-                getActorRefName(serviceCacheSyncActor.class));
-        
-        // 创建Worker发现和管理Actor
-        ActorUtils.actorSystem.actorOf(Props.create(WorkerDiscoveryActor.class),
-                getActorRefName(WorkerDiscoveryActor.class));
+        // 注意：Worker发现和服务缓存同步功能已通过db-scheduler定时任务和Spring Service实现
+        // 无需手动启动Actor
         
         logger.info("服务元数据加载完成");
     }

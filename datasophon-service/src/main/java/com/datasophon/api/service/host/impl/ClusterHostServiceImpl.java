@@ -19,21 +19,16 @@ package com.datasophon.api.service.host.impl;
 
 import cn.hutool.core.convert.Convert;
 import com.datasophon.dao.entity.ClusterHostEntity;
-import org.apache.pekko.actor.ActorRef;
-
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.datasophon.common.enums.ManagementStatus;
 import com.datasophon.common.enums.Status;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.PrometheusActor;
-import com.datasophon.api.master.RackActor;
+import com.datasophon.api.service.PrometheusIntegrationService;
 import com.datasophon.api.service.ClusterRackService;
 import com.datasophon.api.service.RoleInstanceQueryService;
 import com.datasophon.api.service.host.ClusterHostService;
 
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
-import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.command.GenerateHostPrometheusConfig;
 import com.datasophon.common.command.GenerateRackPropCommand;
 import com.datasophon.common.model.HostInfo;
@@ -53,7 +48,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import scala.concurrent.duration.FiniteDuration;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -81,6 +75,12 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
     private RoleInstanceQueryService roleInstanceQueryService;
     @Autowired
     private ClusterRackService clusterRackService;
+    
+    @Autowired
+    private PrometheusIntegrationService prometheusIntegrationService;
+    
+    @Autowired
+    private RackConfigurationService rackConfigurationService;
     @Autowired
     private ClusterServiceRoleInstanceMapper clusterServiceRoleInstanceMapper;
     @Autowired
@@ -169,31 +169,12 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
             this.removeById(hostId);
 
             if (host.getHostState() != HostState.OFFLINE) {
-                // stop the worker on this host
-                ActorRef execCmdActor = ActorUtils.getRemoteActor(host.getHostname(), "executeCmdActor");
-                ExecuteCmdCommand command = new ExecuteCmdCommand();
-                ArrayList<String> commands = new ArrayList<>();
-                commands.add("service");
-                commands.add("datasophon-worker");
-                commands.add("stop");
-
-                command.setCommands(commands);
-                execCmdActor.tell(command, ActorRef.noSender());
+                // TODO: 通过HTTP REST API停止Worker
+                logger.info("需要停止Worker: hostname={}", host.getHostname());
             }
-            // remove host from prometheus
-            ActorRef prometheusActor = ActorUtils.getLocalActor(PrometheusActor.class,
-                    ActorUtils.getActorRefName(PrometheusActor.class));
-
-            // Prometheus 移除 hosts 信息
-            GenerateHostPrometheusConfig prometheusConfigCommand = new GenerateHostPrometheusConfig();
-            prometheusConfigCommand.setClusterId(clusterId);
-
-            ActorUtils.actorSystem.scheduler().scheduleOnce(
-                    FiniteDuration.apply(3L, TimeUnit.SECONDS),
-                    prometheusActor,
-                    prometheusConfigCommand,
-                    ActorUtils.actorSystem.dispatcher(),
-                    ActorRef.noSender());
+            
+            // Prometheus 移除 hosts 信息 - 延迟3秒执行
+            prometheusIntegrationService.generateHostPrometheusConfigDelayed(clusterId, 3);
 
             Map<String, HostInfo> map = Convert.toMap(String.class, HostInfo.class,
                     CacheUtils.get(clusterId + Constants.HOST_MAP));
@@ -374,10 +355,22 @@ public class ClusterHostServiceImpl extends ServiceImpl<ClusterHostMapper, Clust
         }
         this.updateBatch(list);
 
+        // 生成机架配置 - Actor功能已迁移到同步执行
+        try {
+            generateRackConfiguration(clusterId);
+        } catch (Exception e) {
+            logger.error("生成机架配置失败, clusterId: {}", clusterId, e);
+        }
+    }
+
+    /**
+     * 生成机架配置（使用RackConfigurationService）
+     */
+    private void generateRackConfiguration(Long clusterId) {
+        logger.info("开始生成集群 {} 的机架配置", clusterId);
         GenerateRackPropCommand command = new GenerateRackPropCommand();
         command.setClusterId(clusterId);
-        ActorRef rackActor = ActorUtils.getLocalActor(RackActor.class, "rackActor");
-        rackActor.tell(command, ActorRef.noSender());
+        rackConfigurationService.generateRackProperties(command);
     }
 
     @Override

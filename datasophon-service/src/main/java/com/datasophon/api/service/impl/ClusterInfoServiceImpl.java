@@ -53,7 +53,6 @@ import com.datasophon.kubernetes.util.KubeUtil;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import io.fabric8.kubernetes.client.KubernetesClient;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.pekko.actor.ActorRef;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
