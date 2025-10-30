@@ -962,6 +962,12 @@ public class ConfigGroupUtils {
 
         // 1. 解析配置文件JSON
         Map<JSONObject, JSONArray> originalConfigMap = parseConfigJson(config.getConfigFileJson());
+        
+        // 如果配置文件JSON为空或解析失败，直接返回
+        if (originalConfigMap == null || originalConfigMap.isEmpty()) {
+            logger.warn("配置文件JSON为空或解析失败，无法生成配置文件映射");
+            return;
+        }
 
         // 2. 收集服务角色名
         Set<String> roleNames = collectRoleNames(originalConfigMap);
