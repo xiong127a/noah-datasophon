@@ -139,6 +139,49 @@ public class ServiceHandler {
         return execRunner(runner, decompressPackageName, null);
     }
 
+    /**
+     * 重启服务
+     * @param restartRunner 重启命令
+     * @param statusRunner 状态检查命令
+     * @param decompressPackageName 解压包名
+     * @param runAs 运行用户
+     * @return 执行结果
+     */
+    public ExecResult restart(ServiceRoleRunner restartRunner, ServiceRoleRunner statusRunner, 
+                              String decompressPackageName, RunAs runAs) {
+        logger.info("start to restart service {}", decompressPackageName);
+        
+        // 执行重启命令
+        ExecResult restartResult = execRunner(restartRunner, decompressPackageName, runAs);
+        
+        // 检查重启结果
+        if (restartResult.getExecResult()) {
+            int times = PropertyUtils.getInt("times");
+            int count = 0;
+            while (count < times) {
+                logger.info("check restart result at times {}", count + 1);
+                ExecResult result = execRunner(statusRunner, decompressPackageName, runAs);
+                if (result.getExecResult()) {
+                    logger.info("restart success in {}", decompressPackageName);
+                    break;
+                } else {
+                    try {
+                        Thread.sleep(5 * 1000);
+                    } catch (InterruptedException e) {
+                        logger.error("Thread interrupted while checking restart status", e);
+                        Thread.currentThread().interrupt();
+                    }
+                }
+                count++;
+            }
+            if (count == times) {
+                logger.info("restart {} timeout", decompressPackageName);
+                restartResult.setExecResult(false);
+            }
+        }
+        return restartResult;
+    }
+
     public ExecResult status(ServiceRoleRunner runner, String decompressPackageName) {
         return execRunner(runner, decompressPackageName, null);
     }
