@@ -56,5 +56,20 @@ public class InstallServiceRoleCommand extends BaseCommand implements Serializab
     private String hostName;
 
     private String logFile;
+    
+    /**
+     * 存储库URL（用于从远程存储库下载包）
+     */
+    private String repositoryUrl;
+    
+    /**
+     * 包的完整下载URL
+     */
+    private String packageUrl;
+    
+    /**
+     * MD5文件的完整下载URL
+     */
+    private String md5Url;
 
 }
