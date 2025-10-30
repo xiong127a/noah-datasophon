@@ -20,17 +20,12 @@ package com.datasophon.api.service;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceExecuteState;
 import com.datasophon.common.command.ExecuteServiceRoleCommand;
-import com.datasophon.common.enums.ServiceRoleType;
-import com.datasophon.common.model.DAGGraph;
-import com.datasophon.common.model.ServiceNode;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostEntity;
 import com.datasophon.dao.entity.ClusterServiceCommandHostCommandEntity;
 import com.datasophon.common.enums.RoleType;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 命令执行管理服务
@@ -71,37 +66,6 @@ public interface CommandExecutionService {
     void tellCommandActorResult(String serviceName, ExecuteServiceRoleCommand executeServiceRoleCommand,
                                ServiceExecuteState state);
 
-    /**
-     * 构建执行服务角色命令
-     *
-     * @param clusterId             集群ID
-     * @param commandType           命令类型
-     * @param clusterCode           集群代码
-     * @param dag                   DAG图
-     * @param activeTaskList        活跃任务列表
-     * @param errorTaskList         错误任务列表
-     * @param readyToSubmitTaskList 准备提交任务列表
-     * @param completeTaskList      完成任务列表
-     * @param node                  节点
-     * @param masterRoles           主节点角色列表
-     * @param workerRole            工作节点角色
-     * @param serviceActor          服务Actor
-     * @param serviceRoleType       服务角色类型
-     */
-    void buildExecuteServiceRoleCommand(
-            Long clusterId,
-            CommandType commandType,
-            String clusterCode,
-            DAGGraph<String, ServiceNode, String> dag,
-            Map<String, ServiceExecuteState> activeTaskList,
-            Map<String, String> errorTaskList,
-            Map<String, String> readyToSubmitTaskList,
-            Map<String, String> completeTaskList,
-            String node,
-            List<ServiceRoleInfo> masterRoles,
-            ServiceRoleInfo workerRole,
-            ActorRef serviceActor,
-            ServiceRoleType serviceRoleType);
 
     /**
      * 生成命令实体

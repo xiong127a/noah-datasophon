@@ -133,21 +133,8 @@ public class ServiceExecuteResultServiceImpl implements ServiceExecuteResultServ
                             elseRole,
                             ServiceRoleType.WORKER);
                 } else {
-                    // 降级处理：直接调用CommandExecutionService
-                    commandExecutionService.buildExecuteServiceRoleCommand(
-                            result.getClusterId(),
-                            result.getCommandType(),
-                            result.getClusterCode(),
-                            dag,
-                            activeTaskList,
-                            errorTaskList,
-                            readyToSubmitTaskList,
-                            completeTaskList,
-                            node,
-                            serviceNode.getElseRoles(),
-                            elseRole,
-                            null, // ActorRef不再需要
-                            ServiceRoleType.WORKER);
+                    // 降级处理：记录警告
+                    logger.warn("WorkerServiceExecutionService未找到，跳过Worker角色执行: {}", node);
                 }
             }
         } else {

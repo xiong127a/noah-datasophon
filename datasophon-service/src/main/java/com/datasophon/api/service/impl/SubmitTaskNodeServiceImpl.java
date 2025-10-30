@@ -122,22 +122,8 @@ public class SubmitTaskNodeServiceImpl implements SubmitTaskNodeService {
                                   List<ServiceRoleInfo> masterRoles) {
         logger.info("开始提交 {} master角色", node);
         
-        // 注意：buildExecuteServiceRoleCommand已被标记为deprecated
-        // 此处使用它仅为保持向后兼容，实际上它已经是空实现
-        commandExecutionService.buildExecuteServiceRoleCommand(
-                submitActiveTaskNodeCommand.getClusterId(),
-                submitActiveTaskNodeCommand.getCommandType(),
-                submitActiveTaskNodeCommand.getClusterCode(),
-                dag,
-                activeTaskList,
-                errorTaskList,
-                readyToSubmitTaskList,
-                completeTaskList,
-                node,
-                masterRoles,
-                null,
-                null, // ActorRef已废弃
-                ServiceRoleType.MASTER);
+        // TODO: 实现Master角色的实际执行逻辑
+        logger.warn("Master角色执行逻辑待实现: {}", node);
     }
 
     private void submitWorkerRoles(SubmitActiveTaskNodeCommand submitActiveTaskNodeCommand,

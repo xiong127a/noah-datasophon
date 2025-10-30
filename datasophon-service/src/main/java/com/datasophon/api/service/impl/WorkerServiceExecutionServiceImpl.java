@@ -63,23 +63,8 @@ public class WorkerServiceExecutionServiceImpl implements WorkerServiceExecution
         
         logger.info("执行Worker服务角色: {}, 主机: {}", node, elseRole.getHostname());
         
-        // 使用CommandExecutionService执行命令
-        // 注意：buildExecuteServiceRoleCommand已被标记为deprecated
-        // 但这里仍需调用以保持功能完整性
-        commandExecutionService.buildExecuteServiceRoleCommand(
-                clusterId,
-                commandType,
-                clusterCode,
-                dag,
-                activeTaskList,
-                errorTaskList,
-                readyToSubmitTaskList,
-                completeTaskList,
-                node,
-                elseRoles,
-                elseRole,
-                null, // ActorRef已废弃
-                serviceRoleType);
+        // TODO: 实现Worker角色的实际执行逻辑
+        logger.warn("Worker角色执行逻辑待实现: {}, 主机: {}", node, elseRole.getHostname());
     }
 }
 

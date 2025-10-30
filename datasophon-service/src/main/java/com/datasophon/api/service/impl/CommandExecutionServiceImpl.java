@@ -29,10 +29,7 @@ import com.datasophon.common.command.ExecuteServiceRoleCommand;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.enums.CommandType;
 import com.datasophon.common.enums.ServiceExecuteState;
-import com.datasophon.common.model.DAGGraph;
 import com.datasophon.common.model.ServiceExecuteResultMessage;
-import com.datasophon.common.model.ServiceNode;
-import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.model.UpdateCommandHostMessage;
 import com.datasophon.common.utils.PropertyUtils;
 import com.datasophon.dao.entity.ClusterServiceCommandEntity;
@@ -49,7 +46,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 命令执行管理服务实现
@@ -167,40 +163,6 @@ public class CommandExecutionServiceImpl implements CommandExecutionService {
         serviceExecuteResultService.handleServiceExecuteResult(serviceExecuteResultMessage);
     }
 
-    @Override
-    public void buildExecuteServiceRoleCommand(
-            Long clusterId,
-            CommandType commandType,
-            String clusterCode,
-            DAGGraph<String, ServiceNode, String> dag,
-            Map<String, ServiceExecuteState> activeTaskList,
-            Map<String, String> errorTaskList,
-            Map<String, String> readyToSubmitTaskList,
-            Map<String, String> completeTaskList,
-            String node,
-            List<ServiceRoleInfo> masterRoles,
-            ServiceRoleInfo workerRole,
-            ActorRef serviceActor, // DEPRECATED: Actor已废弃，保留参数仅为兼容性
-            ServiceRoleType serviceRoleType) {
-        // 注意：此方法已被ServiceExecuteResultServiceImpl中的WorkerServiceExecutionService替代
-        // ActorRef参数已废弃，保留仅为接口兼容性，后续会完全移除
-        logger.warn("buildExecuteServiceRoleCommand被调用，但此方法已废弃，应使用WorkerServiceExecutionService");
-        
-        // TODO: 完全移除此方法及其调用者
-        // ExecuteServiceRoleCommand executeServiceRoleCommand = new ExecuteServiceRoleCommand(clusterId, node,
-        //         masterRoles);
-        // executeServiceRoleCommand.setServiceRoleType(serviceRoleType);
-        // executeServiceRoleCommand.setCommandType(commandType);
-        // executeServiceRoleCommand.setDag(dag);
-        // executeServiceRoleCommand.setClusterCode(clusterCode);
-        // executeServiceRoleCommand.setClusterId(clusterId);
-        // executeServiceRoleCommand.setActiveTaskList(activeTaskList);
-        // executeServiceRoleCommand.setErrorTaskList(errorTaskList);
-        // executeServiceRoleCommand.setReadyToSubmitTaskList(readyToSubmitTaskList);
-        // executeServiceRoleCommand.setCompleteTaskList(completeTaskList);
-        // executeServiceRoleCommand.setWorkerRole(workerRole);
-        // serviceActor.tell(executeServiceRoleCommand, ActorRef.noSender()); // Actor已废弃
-    }
 
     @Override
     public ClusterServiceCommandEntity generateCommandEntity(Long clusterId, CommandType commandType,
