@@ -48,7 +48,7 @@ public interface ClusterYarnQueueService extends IService<ClusterYarnQueueEntity
     /**
      * 刷新队列到Yarn
      */
-    void refreshQueues(Long clusterId) throws BusinessException;
+    void refreshQueues(Long clusterId) throws Exception;
 
     /**
      * 根据队列名称获取队列

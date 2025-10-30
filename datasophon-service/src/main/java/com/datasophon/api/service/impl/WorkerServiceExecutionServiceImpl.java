@@ -103,7 +103,7 @@ public class WorkerServiceExecutionServiceImpl implements WorkerServiceExecution
     /**
      * 执行Worker命令
      */
-    private ExecResult executeWorkerCommand(ServiceRoleInfo serviceRoleInfo, CommandType commandType) {
+    private ExecResult executeWorkerCommand(ServiceRoleInfo serviceRoleInfo, CommandType commandType) throws Exception {
         // 检查是否需要重新配置
         boolean needReConfig = serviceRoleInfo.getConfigFileMap() != null 
                 && !serviceRoleInfo.getConfigFileMap().isEmpty();

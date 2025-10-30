@@ -284,7 +284,7 @@ public class PrometheusIntegrationServiceImpl implements PrometheusIntegrationSe
 
     private void reloadPrometheusConfig(ClusterServiceRoleInstanceDTO prometheusInstance,
                                        boolean isKubernetes,
-                                       ServiceRoleInfo serviceRoleInfo) {
+                                       ServiceRoleInfo serviceRoleInfo) throws Exception {
         Long clusterId = serviceRoleInfo.getClusterId();
         
         if (prometheusInstance == null || prometheusInstance.hostname() == null) {

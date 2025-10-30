@@ -101,7 +101,7 @@ public class ClusterYarnQueueServiceImpl extends ServiceImpl<ClusterYarnQueueMap
     }
 
     @Override
-    public void refreshQueues(Long clusterId) throws BusinessException {
+    public void refreshQueues(Long clusterId) throws Exception {
         List<ClusterYarnQueueEntity> list = clusterYarnQueueMapper.selectByClusterId(clusterId);
         // 查询resourcemanager节点
         List<ClusterServiceRoleInstanceDTO> roleList = roleInstanceService

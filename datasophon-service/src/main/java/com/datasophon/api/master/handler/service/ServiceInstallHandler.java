@@ -38,7 +38,7 @@ public class ServiceInstallHandler extends ServiceHandler {
     private static final Logger logger = LoggerFactory.getLogger(ServiceInstallHandler.class);
     
     @Override
-    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
+    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
         ClusterServiceRoleInstanceService roleInstanceService =
                 SpringUtil.getBean(ClusterServiceRoleInstanceService.class);
         ClusterHostService clusterHostService = SpringUtil.getBean(ClusterHostService.class);
