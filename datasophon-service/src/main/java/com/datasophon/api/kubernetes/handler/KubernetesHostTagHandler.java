@@ -24,6 +24,7 @@ import com.datasophon.common.command.KubernetesGenerateHostTagCommand;
 import com.datasophon.common.model.ServiceRoleInfo;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.api.utils.ClusterInfoUtils;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +37,7 @@ import java.util.concurrent.TimeUnit;
  * @email 635887935@qq.com
  * @date 2025-08-05
  */
+@Slf4j
 public class KubernetesHostTagHandler extends ServiceHandler {
 
     @Override
@@ -56,7 +58,7 @@ public class KubernetesHostTagHandler extends ServiceHandler {
         
         // 直接调用KubernetesTagHostHandler处理，无需通过Actor
         try {
-            logger.info("start add service tag {}", kubernetesGenerateHostTagCommand.getServiceRoleName());
+            log.info("start add service tag {}", kubernetesGenerateHostTagCommand.getServiceRoleName());
             
             com.datasophon.kubernetes.actor.handler.KubernetesTagHostHandler serviceHandler = 
                     new com.datasophon.kubernetes.actor.handler.KubernetesTagHostHandler(
@@ -69,20 +71,20 @@ public class KubernetesHostTagHandler extends ServiceHandler {
                     kubernetesGenerateHostTagCommand.getHostName(),
                     kubernetesGenerateHostTagCommand.getKubeConfig(),
                     kubernetesGenerateHostTagCommand.getCommandType());
-            
-            logger.info("{} tag at host {}: {}",
+
+            log.info("{} tag at host {}: {}",
                     kubernetesGenerateHostTagCommand.getServiceRoleName(),
                     kubernetesGenerateHostTagCommand.getHostName(),
                     configResult.getExecResult() ? "success" : "failed");
             
-            if (Objects.nonNull(configResult) && configResult.getExecResult()) {
+            if (configResult.getExecResult()) {
                 if (Objects.nonNull(getNext())) {
                     return getNext().handlerRequest(serviceRoleInfo);
                 }
             }
             return configResult;
         } catch (Exception e) {
-            logger.error("主机打标签失败", e);
+            log.error("主机打标签失败", e);
             return new ExecResult();
         }
     }
