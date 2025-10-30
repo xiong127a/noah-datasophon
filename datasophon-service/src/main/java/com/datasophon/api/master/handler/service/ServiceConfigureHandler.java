@@ -38,7 +38,7 @@ public class ServiceConfigureHandler extends ServiceHandler {
     private static final Logger logger = LoggerFactory.getLogger(ServiceConfigureHandler.class);
 
     @Override
-    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) {
+    public ExecResult handlerRequest(ServiceRoleInfo serviceRoleInfo) throws Exception {
         // config
         GenerateServiceConfigCommand generateServiceConfigCommand = new GenerateServiceConfigCommand();
         generateServiceConfigCommand.setServiceName(serviceRoleInfo.getParentName());
