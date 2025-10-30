@@ -8,16 +8,12 @@ import com.datasophon.api.service.LogTailService;
 import com.datasophon.common.dto.ClusterInfoDTO;
 import com.datasophon.common.dto.ClusterServiceCommandHostCommandDTO;
 import com.datasophon.common.utils.ExecResult;
-import com.datasophon.api.master.ActorUtils;
-import org.apache.pekko.pattern.Patterns;
-import org.apache.pekko.util.Timeout;
+import com.datasophon.api.master.handler.service.WorkerTaskHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import scala.concurrent.Await;
-import scala.concurrent.duration.Duration;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -43,7 +39,6 @@ import java.util.concurrent.Executors;
 public class LogSSEController {
 
     private static final Logger logger = LoggerFactory.getLogger(LogSSEController.class);
-    private static final String PEKKO_PREFIX = "pekko://datasophon@";
     private static final int DEFAULT_LOG_TIMEOUT_SECONDS = 30;
     private static final long SSE_TIMEOUT_MS = 30 * 60 * 1000; // 30分钟超时
     
@@ -119,8 +114,8 @@ public class LogSSEController {
                 // K8s模式：使用Apache Commons IO Tailer
                 startK8sLogTailing(sessionKey, logInfo, sseEmitter);
             } else {
-                // 非K8s模式：使用Actor轮询
-                startActorLogPolling(sessionKey, logInfo, sseEmitter);
+                // 非K8s模式：使用HTTP轮询
+                startHttpLogPolling(sessionKey, logInfo, sseEmitter);
             }
             
         } catch (Exception e) {
@@ -164,14 +159,14 @@ public class LogSSEController {
     }
     
     /**
-     * 非K8s模式：使用Actor轮询
+     * 非K8s模式：使用HTTP轮询
      */
-    private void startActorLogPolling(String sessionKey, LogFileInfo logInfo, SseEmitter sseEmitter) {
-        logger.info("非K8s模式 - 启动SSE Actor轮询: host={}", logInfo.hostCommand().hostname());
+    private void startHttpLogPolling(String sessionKey, LogFileInfo logInfo, SseEmitter sseEmitter) {
+        logger.info("非K8s模式 - 启动SSE HTTP轮询: host={}", logInfo.hostCommand().hostname());
         
         ScheduledFuture<?> task = scheduler.scheduleWithFixedDelay(() -> {
             try {
-                String newLogContent = getActorLogContent(logInfo);
+                String newLogContent = getHttpLogContent(logInfo);
                 String lastContent = lastLogContent.get(sessionKey);
                 
                 // 智能去重：只有内容真正变化才推送
@@ -184,7 +179,7 @@ public class LogSSEController {
                     }
                 }
             } catch (Exception e) {
-                logger.error("SSE Actor日志获取失败: {}", sessionKey, e);
+                logger.error("SSE HTTP日志获取失败: {}", sessionKey, e);
                 try {
                     sseEmitter.send(SseEmitter.event()
                         .name("error")
@@ -275,22 +270,21 @@ public class LogSSEController {
     }
     
     /**
-     * 非K8s模式：通过Actor获取日志内容
+     * 非K8s模式：通过HTTP获取日志内容
      */
-    private String getActorLogContent(LogFileInfo logInfo) throws Exception {
+    private String getHttpLogContent(LogFileInfo logInfo) throws Exception {
         var command = new com.datasophon.common.command.GetLogCommand();
         command.setLogFile(logInfo.relativePath());
         command.setDecompressPackageName("datasophon-worker");
         
-        logger.debug("通过Actor获取历史日志: host={}, file={}", 
+        logger.debug("通过HTTP获取历史日志: host={}, file={}", 
                     logInfo.hostCommand().hostname(), logInfo.relativePath());
         
-        var timeout = new Timeout(Duration.create(DEFAULT_LOG_TIMEOUT_SECONDS, TimeUnit.SECONDS));
-        var configActor = ActorUtils.actorSystem
-                .actorSelection(PEKKO_PREFIX + logInfo.hostCommand().hostname() + ":2552/user/worker/logActor");
-        
-        var logFuture = Patterns.ask(configActor, command, timeout);
-        var logResult = (ExecResult) Await.result(logFuture, timeout.duration());
+        // 使用HTTP方式获取日志
+        ExecResult logResult = WorkerTaskHelper.submitAndWait(
+                logInfo.hostCommand().hostname(), 
+                command, 
+                DEFAULT_LOG_TIMEOUT_SECONDS);
         
         if (Objects.nonNull(logResult) && logResult.getExecResult()) {
             return logResult.getExecOut();

@@ -17,10 +17,10 @@
 
 package com.datasophon.api.service.impl;
 
+import com.datasophon.api.master.handler.service.WorkerTaskHelper;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.kubernetes.handler.KubernetesServiceStopHandler;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterAlertHistoryService;
 import com.datasophon.api.service.ClusterInfoService;
 import com.datasophon.api.service.ClusterServiceCommandService;
@@ -56,6 +56,7 @@ import com.datasophon.kubernetes.util.CommonUtil;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import com.mybatisflex.core.query.QueryWrapper;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.hc.core5.util.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -67,6 +68,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.TreeSet;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 @Service("clusterServiceRoleInstanceService")

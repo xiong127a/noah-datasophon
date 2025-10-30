@@ -19,9 +19,9 @@ package com.datasophon.api.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import com.datasophon.api.converter.ClusterGroupConverter;
+import com.datasophon.api.master.handler.service.WorkerTaskHelper;
 import com.datasophon.common.enums.Status;
 import com.datasophon.api.exceptions.ServiceException;
-import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.ClusterGroupService;
 import com.datasophon.api.service.ClusterUserGroupService;
 import com.datasophon.api.service.HostGroupSyncService;
@@ -53,7 +53,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.concurrent.TimeUnit;
 
 /**
  * 集群组服务实现类

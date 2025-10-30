@@ -2,16 +2,17 @@ package com.datasophon.api.strategy;
 
 import cn.hutool.core.convert.Convert;
 import com.datasophon.api.load.GlobalVariables;
-import com.datasophon.api.master.ActorUtils;
+import com.datasophon.api.master.handler.service.WorkerTaskHelper;
 import cn.hutool.extra.spring.SpringUtil;
 import com.datasophon.api.service.SimpleClusterVariableService;
 import com.datasophon.common.Constants;
 import com.datasophon.common.cache.CacheUtils;
+import com.datasophon.common.command.ExecuteCmdCommand;
 import com.datasophon.common.model.ServiceConfig;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.StringJoiner;
 
 public class HueHandlerStrategy extends ServiceHandlerAbstract implements ServiceRoleStrategy {
 
@@ -36,14 +37,15 @@ public class HueHandlerStrategy extends ServiceHandlerAbstract implements Servic
     }
 
     private void createHdfsDir(String nnHost) {
-        ActorSelection execCmdActor = ActorUtils.actorSystem.actorSelection(
-                "pekko://datasophon@" + nnHost + ":2552/user/worker/executeShellActor");
-        StringJoiner commands = new StringJoiner(" ");
+        // 使用HTTP方式提交命令到Worker
+        ExecuteCmdCommand command = new ExecuteCmdCommand();
+        
+        ArrayList<String> commands = new ArrayList<>();
         commands.add("sudo");
         commands.add("-u");
         commands.add("hdfs");
         commands.add(kinitKbStr("nn"));
-        commands.add(";");
+        commands.add("&&");
         commands.add("sudo");
         commands.add("-u");
         commands.add("hdfs");
@@ -52,14 +54,18 @@ public class HueHandlerStrategy extends ServiceHandlerAbstract implements Servic
         commands.add("-mkdir");
         commands.add("-p");
         commands.add("/user/HTTP");
-        commands.add(";");
+        commands.add("&&");
         commands.add(Constants.INSTALL_PATH + "/hadoop-3.3.3/bin/hdfs");
         commands.add("dfs");
         commands.add("-chmod");
         commands.add("-R");
         commands.add("777");
         commands.add("/user/HTTP");
-        execCmdActor.tell(commands.toString(), ActorRef.noSender());
+        
+        command.setCommands(commands);
+        
+        // 异步提交，不等待结果
+        WorkerTaskHelper.submitAsync(nnHost, command);
     }
 
 

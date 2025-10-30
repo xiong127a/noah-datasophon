@@ -25,9 +25,8 @@ import com.datasophon.api.converter.ClusterServiceRoleGroupConfigConverter;
 import com.datasophon.api.converter.ClusterServiceRoleInstanceConverter;
 import com.datasophon.api.load.GlobalVariables;
 import com.datasophon.api.load.ServiceConfigMap;
-import com.datasophon.api.master.ActorUtils;
-import com.datasophon.api.master.TenantRangerActor;
 import com.datasophon.api.service.ClusterInfoService;
+import com.datasophon.api.service.TenantRangerService;
 import com.datasophon.api.service.ClusterServiceInstanceService;
 import com.datasophon.api.service.ClusterServiceRoleGroupConfigService;
 import com.datasophon.api.service.ClusterServiceRoleInstanceService;
@@ -76,7 +75,8 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
         boolean enableKerberos = false;
         Map<String, ServiceConfig> map = list.stream()
                 .collect(java.util.stream.Collectors.toMap(ServiceConfig::getName, config -> config));
-        ActorRef tenantActor = ActorUtils.getLocalActor(TenantRangerActor.class, "tenantRangerActor");
+        // 获取TenantRangerService服务
+        TenantRangerService tenantRangerService = SpringUtil.getBean(TenantRangerService.class);
         // enable ranger plugin
         for (ServiceConfig config : list) {
             if ("enableHDFSPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
@@ -87,7 +87,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .serviceName("HDFS")
                         .clusterId(clusterId)
                         .operateType(RangerOpType.CREATE_SERVICE).build();
-                tenantActor.tell(hdfsRangerCommand, ActorRef.noSender());
+                tenantRangerService.handleTenantRangerCommand(hdfsRangerCommand);
             }
             if ("enableYARNPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableYARNPlugin");
@@ -97,7 +97,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .serviceName("YARN")
                         .clusterId(clusterId)
                         .operateType(RangerOpType.CREATE_SERVICE).build();
-                tenantActor.tell(yarnRangerCommand, ActorRef.noSender());
+                tenantRangerService.handleTenantRangerCommand(yarnRangerCommand);
             }
             if ("enableHIVEPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableHivePlugin");
@@ -107,7 +107,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .serviceName("HIVE")
                         .clusterId(clusterId)
                         .operateType(RangerOpType.CREATE_SERVICE).build();
-                tenantActor.tell(hiveRangerCommand, ActorRef.noSender());
+                tenantRangerService.handleTenantRangerCommand(hiveRangerCommand);
             }
             if ("enableHBASEPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableHbasePlugin");
@@ -117,7 +117,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .serviceName("HBASE")
                         .clusterId(clusterId)
                         .operateType(RangerOpType.CREATE_SERVICE).build();
-                tenantActor.tell(hbaseRangerCommand, ActorRef.noSender());
+                tenantRangerService.handleTenantRangerCommand(hbaseRangerCommand);
             }
             if ("enableKMSPlugin".equals(config.getName()) && (Boolean) config.getValue()) {
                 logger.info("enableKMSPlugin");
@@ -127,7 +127,7 @@ public class RangerAdminHandlerStrategy extends ServiceHandlerAbstract implement
                         .serviceName("KMS")
                         .clusterId(clusterId)
                         .operateType(RangerOpType.CREATE_SERVICE).build();
-                tenantActor.tell(kmsRangerCommand, ActorRef.noSender());
+                tenantRangerService.handleTenantRangerCommand(kmsRangerCommand);
             }
             if (config.getName().contains("Plugin") && !(Boolean) config.getValue()) {
                 String configName = config.getName();

@@ -451,26 +451,25 @@ public class ClusterUserServiceImpl extends ServiceImpl<ClusterUserMapper, Clust
                     .map(ClusterGroupDTO::groupName)
                     .collect(java.util.stream.Collectors.joining(","));
         }
-        ActorSelection unixUserActor = ActorUtils.actorSystem
-                .actorSelection("pekko://datasophon@" + hostname + ":2552/user/worker/unixUserActor");
 
+        // 使用HTTP方式提交命令到Worker
         CreateUnixUserCommand createUnixUserCommand = new CreateUnixUserCommand();
         createUnixUserCommand.setUsername(clusterUserDTO.username());
         createUnixUserCommand.setMainGroup(mainGroup.groupName());
         createUnixUserCommand.setOtherGroups(otherGroup);
 
-        Timeout timeout = new Timeout(Duration.create(180, TimeUnit.SECONDS));
-        Future<Object> execFuture = Patterns.ask(unixUserActor, createUnixUserCommand, timeout);
-        ExecResult execResult;
         try {
-            execResult = (ExecResult) Await.result(execFuture, timeout.duration());
-            if (execResult.getExecResult()) {
+            ExecResult execResult = com.datasophon.api.master.handler.service.WorkerTaskHelper.submitAndWait(
+                    hostname, createUnixUserCommand, 180);
+            
+            if (execResult != null && execResult.getExecResult()) {
                 logger.info("create unix user {} success at {}", username, hostname);
             } else {
-                logger.info(execResult.getExecOut());
+                logger.info(execResult != null ? execResult.getExecOut() : "No response");
                 throw new ServiceException(500, "create unix user " + username + " failed at " + hostname);
             }
         } catch (Exception e) {
+            logger.error("Failed to create unix user {} at {}", username, hostname, e);
             throw new ServiceException(500, "create unix user " + username + " failed at " + hostname);
         }
 

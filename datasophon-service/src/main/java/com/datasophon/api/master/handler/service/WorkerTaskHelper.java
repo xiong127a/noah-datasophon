@@ -64,6 +64,25 @@ public class WorkerTaskHelper {
     }
 
     /**
+     * 异步提交任务（不等待完成）
+     * @param hostname Worker主机名
+     * @param command 命令对象
+     */
+    public static void submitAsync(String hostname, BaseCommand command) {
+        WorkerHttpClient workerHttpClient = SpringUtil.getBean(WorkerHttpClient.class);
+        
+        try {
+            logger.info("Submitting async task to Worker: {}, command: {}", 
+                    hostname, command.getClass().getSimpleName());
+            
+            workerHttpClient.submitTask(hostname, command);
+            
+        } catch (Exception e) {
+            logger.error("Failed to submit async task to Worker: {}", hostname, e);
+        }
+    }
+
+    /**
      * 等待任务完成
      */
     private static ExecResult waitForTaskCompletion(WorkerHttpClient client, String hostname, 
