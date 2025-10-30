@@ -17,7 +17,7 @@
 
 package com.datasophon.api.service;
 
-import com.datasophon.dao.entity.tenantResource.TenantFrameResource;
+import com.datasophon.common.model.tenant.resource.TenantFrameResource;
 
 /**
  * 租户资源分发服务
