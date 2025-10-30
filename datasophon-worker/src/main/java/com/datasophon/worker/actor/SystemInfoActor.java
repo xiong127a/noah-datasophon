@@ -17,6 +17,8 @@
 
 package com.datasophon.worker.actor;
 
+import com.datasophon.common.command.CollectSystemInfoCommand;
+import com.datasophon.common.command.SystemInfoResult;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.common.utils.ShellUtils;
 import org.apache.pekko.actor.AbstractActor;
@@ -166,59 +168,5 @@ public class SystemInfoActor extends AbstractActor {
         }
         
         return "系统负载获取失败";
-    }
-
-    // 内部类定义
-    public static class CollectSystemInfoCommand {
-        private Long clusterId;
-        private String hostname;
-        
-        public Long getClusterId() { return clusterId; }
-        public void setClusterId(Long clusterId) { this.clusterId = clusterId; }
-        public String getHostname() { return hostname; }
-        public void setHostname(String hostname) { this.hostname = hostname; }
-    }
-
-    public static class SystemInfoResult extends ExecResult {
-        private Long clusterId;
-        private String hostname;
-        private String ipAddress;
-        private String cpuArchitecture;
-        private String osVersion;
-        private String memoryInfo;
-        private String diskInfo;
-        private int cpuCores;
-        private String systemLoad;
-        
-        public SystemInfoResult() {
-            super();
-            setExecResult(true); // 默认设置为成功
-        }
-        
-        // Getters and setters
-        public Long getClusterId() { return clusterId; }
-        public void setClusterId(Long clusterId) { this.clusterId = clusterId; }
-        public String getHostname() { return hostname; }
-        public void setHostname(String hostname) { this.hostname = hostname; }
-        public String getIpAddress() { return ipAddress; }
-        public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
-        public String getCpuArchitecture() { return cpuArchitecture; }
-        public void setCpuArchitecture(String cpuArchitecture) { this.cpuArchitecture = cpuArchitecture; }
-        public String getOsVersion() { return osVersion; }
-        public void setOsVersion(String osVersion) { this.osVersion = osVersion; }
-        public String getMemoryInfo() { return memoryInfo; }
-        public void setMemoryInfo(String memoryInfo) { this.memoryInfo = memoryInfo; }
-        public String getDiskInfo() { return diskInfo; }
-        public void setDiskInfo(String diskInfo) { this.diskInfo = diskInfo; }
-        public int getCpuCores() { return cpuCores; }
-        public void setCpuCores(int cpuCores) { this.cpuCores = cpuCores; }
-        public String getSystemLoad() { return systemLoad; }
-        public void setSystemLoad(String systemLoad) { this.systemLoad = systemLoad; }
-        
-        @Override
-        public String toString() {
-            return String.format("SystemInfo{hostname='%s', ip='%s', arch='%s', os='%s', cpuCores=%d}", 
-                    hostname, ipAddress, cpuArchitecture, osVersion, cpuCores);
-        }
     }
 }

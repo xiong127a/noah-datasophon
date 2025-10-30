@@ -22,6 +22,9 @@ import com.datasophon.api.agent.AgentDistributionStep;
 import com.datasophon.api.agent.util.AgentLogWriter;
 import com.datasophon.api.master.ActorUtils;
 import com.datasophon.api.service.host.ClusterHostService;
+import com.datasophon.common.command.CollectSystemInfoCommand;
+import com.datasophon.common.command.PingCommand;
+import com.datasophon.common.command.SystemInfoResult;
 import com.datasophon.common.utils.ExecResult;
 import com.datasophon.dao.entity.ClusterHostEntity;
 import lombok.RequiredArgsConstructor;
@@ -137,14 +140,15 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
      */
     private boolean pingWorker(String hostname) {
         try {
-            ActorSelection workerActor = ActorUtils.actorSystem.actorSelection(
-                    "pekko://datasophon@" + hostname + ":2552/user/worker");
+            // ✅ 正确的路径：/user/worker/pingActor
+            ActorSelection pingActor = ActorUtils.actorSystem.actorSelection(
+                    "pekko://datasophon@" + hostname + ":2552/user/worker/pingActor");
             
             PingCommand pingCommand = new PingCommand();
             pingCommand.setMessage("agent_distribution_verify");
             
             Timeout timeout = new Timeout(Duration.create(10, TimeUnit.SECONDS));
-            Future<Object> future = Patterns.ask(workerActor, pingCommand, timeout);
+            Future<Object> future = Patterns.ask(pingActor, pingCommand, timeout);
             
             ExecResult result = (ExecResult) Await.result(future, timeout.duration());
             return result.getExecResult();
@@ -247,63 +251,6 @@ public class VerifyWorkerConnectionStep implements AgentDistributionStep {
             log.warn("解析磁盘信息失败: {}", e.getMessage());
         }
         return null;
-    }
-    
-    // 内部类：Ping命令
-    public static class PingCommand {
-        private String message;
-        
-        public String getMessage() { return message; }
-        public void setMessage(String message) { this.message = message; }
-    }
-    
-    // 内部类：收集系统信息命令
-    public static class CollectSystemInfoCommand {
-        private Long clusterId;
-        private String hostname;
-        
-        public Long getClusterId() { return clusterId; }
-        public void setClusterId(Long clusterId) { this.clusterId = clusterId; }
-        public String getHostname() { return hostname; }
-        public void setHostname(String hostname) { this.hostname = hostname; }
-    }
-    
-    // 内部类：系统信息结果
-    public static class SystemInfoResult extends ExecResult {
-        private Long clusterId;
-        private String hostname;
-        private String ipAddress;
-        private String cpuArchitecture;
-        private String osVersion;
-        private String memoryInfo;
-        private String diskInfo;
-        private int cpuCores;
-        private String systemLoad;
-        
-        public SystemInfoResult() {
-            super();
-            setExecResult(true);
-        }
-        
-        // Getters and setters
-        public Long getClusterId() { return clusterId; }
-        public void setClusterId(Long clusterId) { this.clusterId = clusterId; }
-        public String getHostname() { return hostname; }
-        public void setHostname(String hostname) { this.hostname = hostname; }
-        public String getIpAddress() { return ipAddress; }
-        public void setIpAddress(String ipAddress) { this.ipAddress = ipAddress; }
-        public String getCpuArchitecture() { return cpuArchitecture; }
-        public void setCpuArchitecture(String cpuArchitecture) { this.cpuArchitecture = cpuArchitecture; }
-        public String getOsVersion() { return osVersion; }
-        public void setOsVersion(String osVersion) { this.osVersion = osVersion; }
-        public String getMemoryInfo() { return memoryInfo; }
-        public void setMemoryInfo(String memoryInfo) { this.memoryInfo = memoryInfo; }
-        public String getDiskInfo() { return diskInfo; }
-        public void setDiskInfo(String diskInfo) { this.diskInfo = diskInfo; }
-        public int getCpuCores() { return cpuCores; }
-        public void setCpuCores(int cpuCores) { this.cpuCores = cpuCores; }
-        public String getSystemLoad() { return systemLoad; }
-        public void setSystemLoad(String systemLoad) { this.systemLoad = systemLoad; }
     }
 }
 
