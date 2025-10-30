@@ -33,4 +33,10 @@ public class ExecuteCmdCommand extends BaseCommand {
     private List<String> commands;
 
     private String commandLine;
+    
+    private String commandId;
+    
+    private Long timeout;
+    
+    private String commandType;
 }

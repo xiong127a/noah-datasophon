@@ -72,7 +72,7 @@ public class UnixUserService {
         ExecResult result = new ExecResult();
         
         try {
-            UnixUtils.deleteUnixUser(command.getUsername());
+            UnixUtils.delUnixUser(command.getUsername());
             
             result.setExecResult(true);
             result.setExecOut("User deleted successfully");

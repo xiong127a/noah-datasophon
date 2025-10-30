@@ -40,19 +40,19 @@ public class UnixGroupService {
      * 创建Unix组
      */
     public ExecResult createGroup(CreateUnixGroupCommand command) {
-        logger.info("Creating Unix group: {}", command.getGroupname());
+        logger.info("Creating Unix group: {}", command.getGroupName());
         
         ExecResult result = new ExecResult();
         
         try {
-            UnixUtils.createUnixGroup(command.getGroupname());
+            UnixUtils.createUnixGroup(command.getGroupName());
             
             result.setExecResult(true);
             result.setExecOut("Group created successfully");
-            logger.info("Group created successfully: {}", command.getGroupname());
+            logger.info("Group created successfully: {}", command.getGroupName());
             
         } catch (Exception e) {
-            logger.error("Failed to create group: {}", command.getGroupname(), e);
+            logger.error("Failed to create group: {}", command.getGroupName(), e);
             result.setExecResult(false);
             result.setExecOut("Failed to create group: " + e.getMessage());
         }
@@ -64,19 +64,19 @@ public class UnixGroupService {
      * 删除Unix组
      */
     public ExecResult deleteGroup(DelUnixGroupCommand command) {
-        logger.info("Deleting Unix group: {}", command.getGroupname());
+        logger.info("Deleting Unix group: {}", command.getGroupName());
         
         ExecResult result = new ExecResult();
         
         try {
-            UnixUtils.deleteUnixGroup(command.getGroupname());
+            UnixUtils.delUnixGroup(command.getGroupName());
             
             result.setExecResult(true);
             result.setExecOut("Group deleted successfully");
-            logger.info("Group deleted successfully: {}", command.getGroupname());
+            logger.info("Group deleted successfully: {}", command.getGroupName());
             
         } catch (Exception e) {
-            logger.error("Failed to delete group: {}", command.getGroupname(), e);
+            logger.error("Failed to delete group: {}", command.getGroupName(), e);
             result.setExecResult(false);
             result.setExecOut("Failed to delete group: " + e.getMessage());
         }

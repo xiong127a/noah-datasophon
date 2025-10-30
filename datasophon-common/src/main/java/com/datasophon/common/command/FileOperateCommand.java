@@ -35,4 +35,10 @@ public class FileOperateCommand extends BaseCommand {
     private String content;
 
     private String path;
+    
+    private String operateType;
+    
+    private String sourcePath;
+    
+    private String targetPath;
 }

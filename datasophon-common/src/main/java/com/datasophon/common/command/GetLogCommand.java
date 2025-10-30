@@ -32,5 +32,7 @@ public class GetLogCommand extends BaseCommand {
     private String logFile;
 
     private String decompressPackageName;
+    
+    private Integer lines;
 
 }

@@ -60,7 +60,7 @@ public class LogService {
             while ((line = reader.readLine()) != null) {
                 logLines.add(line);
                 if (lines > 0 && logLines.size() > lines) {
-                    logLines.remove(0);
+                    logLines.removeFirst();
                 }
             }
         }
