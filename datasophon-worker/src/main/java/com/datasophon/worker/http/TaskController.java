@@ -21,7 +21,7 @@ package com.datasophon.worker.http;
 
 import com.datasophon.common.command.BaseCommand;
 import com.datasophon.common.command.SystemInfoResult;
-import com.datasophon.common.utils.ShellUtils;
+import com.datasophon.common.utils.HardwareInfoUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -178,44 +178,45 @@ public class TaskController {
     /**
      * 获取Worker系统信息
      * 替代原来的Pekko SystemInfoActor，Master用此接口获取硬件信息
+     * 使用 OSHI 库获取准确的跨平台硬件信息
      */
     @GetMapping("/info")
     public ResponseEntity<SystemInfoResult> getSystemInfo() {
         try {
             SystemInfoResult systemInfo = new SystemInfoResult();
             
-            // 获取主机名
-            systemInfo.setHostname(InetAddress.getLocalHost().getHostName());
+            // 获取主机名和IP地址
+            String hostname = InetAddress.getLocalHost().getHostName();
+            String ipAddress = InetAddress.getLocalHost().getHostAddress();
+            systemInfo.setHostname(hostname);
+            systemInfo.setIpAddress(ipAddress);
             
-            // 获取CPU架构
-            String cpuArchitecture = ShellUtils.getCpuArchitecture();
+            // 获取CPU架构（使用OSHI）
+            String cpuArchitecture = HardwareInfoUtils.getCpuArchitecture();
             systemInfo.setCpuArchitecture(cpuArchitecture);
             
-            // 获取CPU核心数
-            int cpuCores = Runtime.getRuntime().availableProcessors();
+            // 获取CPU核心数（使用OSHI）
+            int cpuCores = HardwareInfoUtils.getCpuCores();
             systemInfo.setCpuCores(cpuCores);
             
-            // 获取内存信息
-            try {
-                ProcessBuilder memBuilder = new ProcessBuilder("free", "-m");
-                Process memProcess = memBuilder.start();
-                memProcess.waitFor();
-                systemInfo.setMemoryInfo("Memory info available");
-            } catch (Exception e) {
-                logger.warn("Failed to get memory info", e);
-            }
+            // 获取操作系统信息（使用OSHI）
+            String osInfo = HardwareInfoUtils.getOsInfo();
+            systemInfo.setOsVersion(osInfo);
             
-            // 获取磁盘信息
-            try {
-                ProcessBuilder diskBuilder = new ProcessBuilder("df", "-h");
-                Process diskProcess = diskBuilder.start();
-                diskProcess.waitFor();
-                systemInfo.setDiskInfo("Disk info available");
-            } catch (Exception e) {
-                logger.warn("Failed to get disk info", e);
-            }
+            // 获取系统物理内存信息（使用OSHI）
+            String memoryInfo = HardwareInfoUtils.getMemoryInfoString();
+            systemInfo.setMemoryInfo(memoryInfo);
+            
+            // 获取磁盘信息（使用OSHI）
+            String diskInfo = HardwareInfoUtils.getDiskInfoString();
+            systemInfo.setDiskInfo(diskInfo);
+            
+            // 获取系统负载（使用OSHI）
+            String systemLoad = HardwareInfoUtils.getSystemLoad();
+            systemInfo.setSystemLoad(systemLoad);
             
             systemInfo.setExecResult(true);
+            logger.info("System info retrieved: Host={}, CPU={}cores, Arch={}", hostname, cpuCores, cpuArchitecture);
             return ResponseEntity.ok(systemInfo);
             
         } catch (Exception e) {

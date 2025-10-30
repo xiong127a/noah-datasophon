@@ -107,29 +107,14 @@ public class ShellUtils {
         return result;
     }
 
-    // 获取cpu架构 arm或x86
+    /**
+     * 获取CPU架构 (arm/aarch64/x86_64等)
+     * 使用 OSHI 库替代原有的 shell 脚本调用，提供跨平台支持
+     * 
+     * @return CPU架构字符串
+     */
     public static String getCpuArchitecture() {
-        try {
-            Process ps = Runtime.getRuntime().exec("arch");
-            StringBuilder stringBuffer = new StringBuilder();
-            int exitValue = ps.waitFor();
-            if (0 == exitValue) {
-                // 只能接收脚本echo打印的数据，并且是echo打印的最后一次数据
-                BufferedInputStream in = new BufferedInputStream(ps.getInputStream());
-                BufferedReader br = new BufferedReader(new InputStreamReader(in));
-                String line;
-                while ((line = br.readLine()) != null) {
-                    log.info("脚本返回的数据如下： {}", line);
-                    stringBuffer.append(line);
-                }
-                in.close();
-                br.close();
-                return stringBuffer.toString();
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return null;
+        return HardwareInfoUtils.getCpuArchitecture();
     }
 
     public static ExecResult execWithStatus(String workPath, List<String> command, long timeout) {
